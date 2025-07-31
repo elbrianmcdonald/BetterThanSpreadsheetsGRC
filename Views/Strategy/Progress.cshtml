@@ -1,0 +1,378 @@
+@{
+    ViewData["Title"] = "Progress Report";
+    var plan = ViewBag.Plan as CyberRiskApp.Models.StrategyPlan;
+    var dashboardData = ViewBag.DashboardData as Dictionary<string, object> ?? new Dictionary<string, object>();
+    var overdueCapabilities = ViewBag.OverdueCapabilities as IEnumerable<CyberRiskApp.Models.CapabilityRequirement> ?? new List<CyberRiskApp.Models.CapabilityRequirement>();
+    var upcomingMilestones = ViewBag.UpcomingMilestones as IEnumerable<CyberRiskApp.Models.ImplementationMilestone> ?? new List<CyberRiskApp.Models.ImplementationMilestone>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-chart-bar text-primary me-2"></i>
+            Progress Report: @plan?.PlanName
+        </h2>
+        <div>
+            <button class="btn btn-primary me-2" onclick="window.print()">
+                <i class="fas fa-print me-1"></i>Print Report
+            </button>
+            <button class="btn btn-success me-2" onclick="exportReport()">
+                <i class="fas fa-file-excel me-1"></i>Export to Excel
+            </button>
+            <a asp-action="Details" asp-route-id="@plan?.Id" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Plan
+            </a>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Executive Summary</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <h1 class="display-4 text-primary">@plan?.OverallProgressPercentage.ToString("F0")%</h1>
+                    <p class="lead">Overall Progress</p>
+                    <div class="progress mb-3" style="height: 30px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: @plan?.OverallProgressPercentage%">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-success bg-opacity-10 p-3 rounded me-3">
+                                    <i class="fas fa-check-circle fa-2x text-success"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">@dashboardData.GetValueOrDefault("CompletedGoals", 0)</h5>
+                                    <small class="text-muted">Goals Completed</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-info bg-opacity-10 p-3 rounded me-3">
+                                    <i class="fas fa-cogs fa-2x text-info"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">@dashboardData.GetValueOrDefault("CompletedCapabilities", 0)</h5>
+                                    <small class="text-muted">Capabilities Delivered</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-warning bg-opacity-10 p-3 rounded me-3">
+                                    <i class="fas fa-calendar-check fa-2x text-warning"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">@plan?.DaysRemaining</h5>
+                                    <small class="text-muted">Days Remaining</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-secondary bg-opacity-10 p-3 rounded me-3">
+                                    <i class="fas fa-dollar-sign fa-2x text-secondary"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">@(((decimal?)dashboardData.GetValueOrDefault("BudgetUsage", 0m))?.ToString("F0") ?? "0")%</h5>
+                                    <small class="text-muted">Budget Utilized</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress by Goal -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-bullseye me-2"></i>Progress by Maturity Goal</h5>
+        </div>
+        <div class="card-body">
+            @if (plan?.Goals.Any() == true)
+            {
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Goal</th>
+                                <th>Framework</th>
+                                <th>Maturity Progress</th>
+                                <th>Capabilities</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var goal in plan.Goals.OrderBy(g => g.FunctionDomain))
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@goal.FunctionDomain</strong>
+                                        <br>
+                                        <small class="text-muted">Target: @goal.TargetDate.ToString("MMM yyyy")</small>
+                                    </td>
+                                    <td>@goal.MaturityFramework?.Name</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-secondary me-2">L@goal.CurrentMaturityLevel</span>
+                                            <div class="progress flex-grow-1" style="height: 20px;">
+                                                <div class="progress-bar" role="progressbar" style="width: @((goal.CurrentMaturityLevel / (decimal)goal.TargetMaturityLevel * 100))%">
+                                                </div>
+                                            </div>
+                                            <span class="badge bg-primary ms-2">L@goal.TargetMaturityLevel</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">@goal.Capabilities.Count(c => c.Status == CyberRiskApp.Models.CapabilityStatus.Completed)</span> /
+                                        <span class="badge bg-info">@goal.Capabilities.Count</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(goal.Status.ToString().ToLower())">@goal.Status</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center">No goals defined for this strategy plan.</p>
+            }
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Capability Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="capabilityStatusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-layer-group me-2"></i>Capability Type Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="capabilityTypeChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Areas -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Overdue Capabilities</h5>
+                </div>
+                <div class="card-body">
+                    @if (overdueCapabilities.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var capability in overdueCapabilities.Take(5))
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">@capability.CapabilityName</h6>
+                                            <small class="text-danger">
+                                                <i class="fas fa-clock me-1"></i>Due: @capability.TargetDate?.ToString("MMM dd, yyyy")
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-@capability.PriorityColor">@capability.Priority</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (overdueCapabilities.Count() > 5)
+                        {
+                            <p class="text-center mt-3 mb-0">
+                                <small class="text-muted">And @(overdueCapabilities.Count() - 5) more...</small>
+                            </p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-success text-center mb-0">
+                            <i class="fas fa-check-circle me-1"></i>No overdue capabilities
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Upcoming Milestones (30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    @if (upcomingMilestones.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var milestone in upcomingMilestones.Take(5))
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">@milestone.MilestoneName</h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>@milestone.TargetDate.ToString("MMM dd, yyyy")
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-@milestone.StatusColor">@milestone.Status</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center mb-0">No milestones in the next 30 days</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Progress -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Timeline Progress</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>Start: @plan?.StartDate.ToString("MMM dd, yyyy")</span>
+                    <span>Today: @DateTime.UtcNow.ToString("MMM dd, yyyy")</span>
+                    <span>End: @plan?.EndDate.ToString("MMM dd, yyyy")</span>
+                </div>
+                <div class="progress mt-2" style="height: 30px;">
+                    @{
+                        var timeElapsed = (DateTime.UtcNow - plan?.StartDate)?.TotalDays ?? 0;
+                        var totalTime = plan?.TotalDays ?? 1;
+                        var timeProgress = Math.Min(100, (timeElapsed / totalTime) * 100);
+                    }
+                    <div class="progress-bar bg-info" role="progressbar" style="width: @timeProgress%">
+                        @($"{timeProgress:F0}% Time Elapsed")
+                    </div>
+                </div>
+            </div>
+            <p class="text-muted mb-0">
+                <i class="fas fa-info-circle me-1"></i>
+                @if (plan?.OverallProgressPercentage > (decimal)timeProgress)
+                {
+                    <span class="text-success">Progress is ahead of schedule</span>
+                }
+                else if (plan?.OverallProgressPercentage < (decimal)(timeProgress - 10))
+                {
+                    <span class="text-danger">Progress is behind schedule</span>
+                }
+                else
+                {
+                    <span>Progress is on track</span>
+                }
+            </p>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .icon-box {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @@media print {
+            .btn-group, button {
+                display: none !important;
+            }
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Capability Status Chart
+        const statusCtx = document.getElementById('capabilityStatusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Not Started', 'In Progress', 'Completed', 'On Hold'],
+                datasets: [{
+                    data: [
+                        @(dashboardData.GetValueOrDefault("NotStartedCapabilities", 0)),
+                        @(dashboardData.GetValueOrDefault("InProgressCapabilities", 0)),
+                        @(dashboardData.GetValueOrDefault("CompletedCapabilities", 0)),
+                        @(dashboardData.GetValueOrDefault("OnHoldCapabilities", 0))
+                    ],
+                    backgroundColor: ['#6c757d', '#0dcaf0', '#198754', '#ffc107']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        // Capability Type Chart
+        const typeCtx = document.getElementById('capabilityTypeChart').getContext('2d');
+        new Chart(typeCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Process', 'Technology', 'People', 'Governance'],
+                datasets: [{
+                    label: 'Capabilities',
+                    data: [
+                        @(dashboardData.GetValueOrDefault("ProcessCapabilities", 0)),
+                        @(dashboardData.GetValueOrDefault("TechnologyCapabilities", 0)),
+                        @(dashboardData.GetValueOrDefault("PeopleCapabilities", 0)),
+                        @(dashboardData.GetValueOrDefault("GovernanceCapabilities", 0))
+                    ],
+                    backgroundColor: ['#0d6efd', '#198754', '#dc3545', '#ffc107']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        function exportReport() {
+            // Placeholder for export functionality
+            alert('Export functionality will be implemented');
+        }
+    </script>
+}

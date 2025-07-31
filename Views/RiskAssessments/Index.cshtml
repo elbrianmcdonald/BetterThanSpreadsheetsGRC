@@ -1,0 +1,351 @@
+﻿@model IEnumerable<CyberRiskApp.Models.RiskAssessment>
+@using CyberRiskApp.Extensions
+@{
+    ViewData["Title"] = "Risk Assessments";
+}
+
+@functions {
+    private string GetRiskLevelColor(string riskLevel)
+    {
+        return riskLevel switch
+        {
+            "Critical" => "danger",
+            "High" => "warning",
+            "Medium" => "info",
+            "Low" => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetRiskLevelIcon(string riskLevel)
+    {
+        return riskLevel switch
+        {
+            "Critical" => "exclamation-triangle",
+            "High" => "exclamation-circle",
+            "Medium" => "exclamation",
+            "Low" => "check-circle",
+            _ => "question-circle"
+        };
+    }
+
+    private string GetAssessmentTypeColor(CyberRiskApp.Models.AssessmentType assessmentType)
+    {
+        return assessmentType switch
+        {
+            CyberRiskApp.Models.AssessmentType.FAIR => "primary",
+            CyberRiskApp.Models.AssessmentType.Qualitative => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetAssessmentTypeIcon(CyberRiskApp.Models.AssessmentType assessmentType)
+    {
+        return assessmentType switch
+        {
+            CyberRiskApp.Models.AssessmentType.FAIR => "calculator",
+            CyberRiskApp.Models.AssessmentType.Qualitative => "chart-bar",
+            _ => "question-circle"
+        };
+    }
+}
+
+<style>
+    .assessment-card {
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+        .assessment-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+    .assessment-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .risk-badge {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    .ale-display {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    .assessment-meta {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+
+    .assessment-actions {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .assessment-card:hover .assessment-actions {
+        opacity: 1;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-shield-alt me-2 text-primary"></i>Risk Assessments
+    </h2>
+    <div>
+        <button type="button" class="btn btn-outline-info me-2" onclick="exportSelected()">
+            <i class="fas fa-file-pdf me-1"></i>Export Selected PDF
+        </button>
+        <a asp-action="Create" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i>Create Assessment
+        </a>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="card-grid">
+        @foreach (var assessment in Model)
+        {
+            <div class="card assessment-card">
+                <input type="checkbox" class="assessment-checkbox position-absolute" 
+                       style="top: 10px; left: 10px; z-index: 10;" 
+                       value="@assessment.Id" />
+                <!-- Header with Assessment Type -->
+                <div class="assessment-header card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-@GetAssessmentTypeColor(assessment.AssessmentType) me-2">
+                            <i class="fas fa-@GetAssessmentTypeIcon(assessment.AssessmentType) me-1"></i>
+                            @assessment.AssessmentType
+                        </span>
+                        <div class="assessment-actions">
+                            <a asp-action="ExportToPdf" asp-route-id="@assessment.Id"
+                               class="btn btn-sm btn-outline-info me-1" title="Export to PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </a>
+                            <a asp-action="Details" asp-route-id="@assessment.Id"
+                               class="btn btn-sm btn-outline-primary" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@assessment.Id"
+                               class="btn btn-sm btn-outline-secondary" title="Edit Assessment">
+                                <i class="fas fa-edit"></i>
+                            </a>
+
+                            @* Admin-only delete button *@
+                            @if (User.IsUserAdmin())
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal"
+                                        data-assessment-id="@assessment.Id"
+                                        data-assessment-title="@assessment.Title"
+                                        data-assessment-asset="@assessment.Asset"
+                                        title="Delete Assessment (Admin Only)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <!-- Title and Asset -->
+                    <h5 class="card-title mb-2">@assessment.Title</h5>
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-server me-1"></i>@assessment.Asset
+                        @if (!string.IsNullOrEmpty(assessment.BusinessUnit))
+                        {
+                            <span class="ms-3"><i class="fas fa-building me-1"></i>@assessment.BusinessUnit</span>
+                        }
+                    </p>
+
+                    <!-- Risk Score/ALE Display -->
+                    @if (assessment.AssessmentType == CyberRiskApp.Models.AssessmentType.FAIR && assessment.AnnualLossExpectancy.HasValue)
+                    {
+                        <div class="row mb-3">
+                            <div class="col-8">
+                                <div class="text-success ale-display">
+                                    @assessment.AnnualLossExpectancy?.ToString("C0")
+                                </div>
+                                <div class="text-muted">Annual Loss Expectancy</div>
+                            </div>
+                            <div class="col-4 text-end">
+                                @{
+                                    var riskLevel = "Low"; // Default value
+                                    if (assessment.AnnualLossExpectancy >= 100000) riskLevel = "Critical";
+                                    else if (assessment.AnnualLossExpectancy >= 50000) riskLevel = "High";
+                                    else if (assessment.AnnualLossExpectancy >= 10000) riskLevel = "Medium";
+                                }
+                                <span class="badge bg-@GetRiskLevelColor(riskLevel) risk-badge">
+                                    <i class="fas fa-@GetRiskLevelIcon(riskLevel) me-1"></i>@riskLevel
+                                </span>
+                            </div>
+                        </div>
+                    }
+                    else if (assessment.AssessmentType == CyberRiskApp.Models.AssessmentType.Qualitative && assessment.QualitativeRiskScore.HasValue)
+                    {
+                        <div class="row mb-3">
+                            <div class="col-4">
+                                <div class="fw-bold text-warning">@((int?)assessment.QualitativeLikelihood ?? 0)</div>
+                                <div class="text-muted">Likelihood</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-danger">@((int?)assessment.QualitativeImpact ?? 0)</div>
+                                <div class="text-muted">Impact</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-info">@assessment.QualitativeRiskScore?.ToString("F1")</div>
+                                <div class="text-muted">Risk Score</div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Assessment Details -->
+                    <div class="row small text-muted mb-3">
+                        <div class="col-6">
+                            <i class="fas fa-user me-1"></i>@assessment.Assessor
+                        </div>
+                        <div class="col-6 text-end">
+                            <i class="fas fa-calendar me-1"></i>@assessment.DateCompleted?.ToString("MMM dd, yyyy")
+                        </div>
+                    </div>
+
+                    @if (assessment.IdentifiedRisks?.Any() == true)
+                    {
+                        <div class="small text-muted mb-3">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            @assessment.IdentifiedRisks.Count risk(s) identified
+                        </div>
+                    }
+
+                    <!-- Threat Scenario Preview -->
+                    @if (!string.IsNullOrEmpty(assessment.ThreatScenario))
+                    {
+                        <div class="small text-muted mb-3">
+                            <i class="fas fa-shield-alt me-1"></i>
+                            @(assessment.ThreatScenario.Length > 60 ?
+                                assessment.ThreatScenario.Substring(0, 60) + "..." :
+                                assessment.ThreatScenario)
+                        </div>
+                    }
+
+                    <!-- Status -->
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <span class="badge bg-@(assessment.Status switch {
+                                CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+                                CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
+                                CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+                                CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
+                                _ => "secondary" })">
+                                @assessment.Status
+                            </span>
+                        </div>
+                        <div class="col text-end">
+                            <a asp-action="Details" asp-route-id="@assessment.Id" class="btn btn-outline-primary btn-sm">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No Risk Assessments Found</h4>
+        <p class="text-muted">Get started by creating your first risk assessment.</p>
+        <a asp-action="Create" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i>Create Assessment
+        </a>
+    </div>
+}
+
+@* Admin-only Delete Confirmation Modal *@
+@if (User.IsUserAdmin())
+{
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Delete Risk Assessment
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone.
+                    </div>
+                    <p>Are you sure you want to delete the assessment "<strong id="assessmentTitle"></strong>"?</p>
+                    <p><strong>Asset:</strong> <span id="assessmentAsset"></span></p>
+                    <p class="text-muted">This will permanently remove the assessment and all associated data.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form id="deleteForm" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>Delete Assessment
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Handle delete modal population
+        document.addEventListener('DOMContentLoaded', function() {
+            var deleteModal = document.getElementById('deleteModal');
+            if (deleteModal) {
+                deleteModal.addEventListener('show.bs.modal', function (event) {
+                    var button = event.relatedTarget;
+                    var assessmentId = button.getAttribute('data-assessment-id');
+                    var assessmentTitle = button.getAttribute('data-assessment-title');
+                    var assessmentAsset = button.getAttribute('data-assessment-asset');
+
+                    // Update modal content
+                    document.getElementById('assessmentTitle').textContent = assessmentTitle;
+                    document.getElementById('assessmentAsset').textContent = assessmentAsset;
+
+                    // Update form action
+                    var form = document.getElementById('deleteForm');
+                    form.action = '@Url.Action("DeleteConfirmed", "RiskAssessments")' + '/' + assessmentId;
+                });
+            }
+        });
+
+        // Handle bulk PDF export
+        function exportSelected() {
+            var checkboxes = document.querySelectorAll('.assessment-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('Please select at least one assessment to export.');
+                return;
+            }
+            
+            var ids = Array.from(checkboxes).map(cb => cb.value).join(',');
+            window.location.href = '@Url.Action("ExportMultipleToPdf", "RiskAssessments")?ids=' + ids;
+        }
+    </script>
+}

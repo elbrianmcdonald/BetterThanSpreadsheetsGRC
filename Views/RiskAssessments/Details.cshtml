@@ -1,0 +1,464 @@
+﻿@model CyberRiskApp.Models.RiskAssessment
+@{
+    ViewData["Title"] = "Risk Assessment Details";
+}
+
+@functions {
+    private string GetRiskLevelColor(string riskLevel)
+    {
+        return riskLevel switch
+        {
+            "Critical" => "danger",
+            "High" => "warning",
+            "Medium" => "info",
+            "Low" => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetRiskLevelIcon(string riskLevel)
+    {
+        return riskLevel switch
+        {
+            "Critical" => "exclamation-triangle",
+            "High" => "exclamation-circle",
+            "Medium" => "exclamation",
+            "Low" => "check-circle",
+            _ => "question-circle"
+        };
+    }
+
+    private string GetStatusColor(CyberRiskApp.Models.AssessmentStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+            CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
+            CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+            CyberRiskApp.Models.AssessmentStatus.Approved => "info",
+            _ => "secondary"
+        };
+    }
+
+    private string GetRiskStatusColor(CyberRiskApp.Models.RiskStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.RiskStatus.Open => "danger",
+            CyberRiskApp.Models.RiskStatus.UnderReview => "warning",
+            CyberRiskApp.Models.RiskStatus.Closed => "success",
+            CyberRiskApp.Models.RiskStatus.Accepted => "info",
+            _ => "secondary"
+        };
+    }
+
+    private string GetRiskLevelColorFromEnum(CyberRiskApp.Models.RiskLevel riskLevel)
+    {
+        return riskLevel switch
+        {
+            CyberRiskApp.Models.RiskLevel.Critical => "danger",
+            CyberRiskApp.Models.RiskLevel.High => "warning",
+            CyberRiskApp.Models.RiskLevel.Medium => "info",
+            CyberRiskApp.Models.RiskLevel.Low => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetAssessmentTypeColor(CyberRiskApp.Models.AssessmentType assessmentType)
+    {
+        return assessmentType switch
+        {
+            CyberRiskApp.Models.AssessmentType.FAIR => "primary",
+            CyberRiskApp.Models.AssessmentType.Qualitative => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetAssessmentTypeIcon(CyberRiskApp.Models.AssessmentType assessmentType)
+    {
+        return assessmentType switch
+        {
+            CyberRiskApp.Models.AssessmentType.FAIR => "calculator",
+            CyberRiskApp.Models.AssessmentType.Qualitative => "chart-bar",
+            _ => "question-circle"
+        };
+    }
+
+    private decimal GetExposureRating(CyberRiskApp.Models.ExposureLevel? exposureLevel)
+    {
+        return exposureLevel switch
+        {
+            CyberRiskApp.Models.ExposureLevel.SlightlyExposed => 0.2m,
+            CyberRiskApp.Models.ExposureLevel.Exposed => 0.4m,
+            CyberRiskApp.Models.ExposureLevel.ModeratelyExposed => 0.8m,
+            CyberRiskApp.Models.ExposureLevel.HighlyExposed => 1.0m,
+            _ => 0.0m
+        };
+    }
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-@GetAssessmentTypeIcon(Model.AssessmentType) me-2"></i>
+                        @Model.Title
+                    </h2>
+                    <div class="mb-2">
+                        <span class="badge bg-@GetAssessmentTypeColor(Model.AssessmentType) me-2">
+                            @Model.AssessmentType Assessment
+                        </span>
+                        <span class="badge bg-@GetStatusColor(Model.Status) me-2">@Model.Status</span>
+                        <span class="badge bg-@GetRiskLevelColor(Model.CalculateRiskLevel()) fs-6">
+                            <i class="fas fa-@GetRiskLevelIcon(Model.CalculateRiskLevel()) me-1"></i>
+                            @Model.CalculateRiskLevel() Risk
+                        </span>
+                    </div>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-server me-1"></i>@Model.Asset
+                        @if (!string.IsNullOrEmpty(Model.BusinessUnit))
+                        {
+                            <span class="ms-3"><i class="fas fa-building me-1"></i>@Model.BusinessUnit</span>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.BusinessOwner))
+                        {
+                            <span class="ms-3"><i class="fas fa-user me-1"></i>@Model.BusinessOwner</span>
+                        }
+                    </p>
+                </div>
+                <div>
+                    <a asp-action="ExportToPdf" asp-route-id="@Model.Id" class="btn btn-outline-danger me-2">
+                        <i class="fas fa-file-pdf me-2"></i>Export PDF
+                    </a>
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Edit
+                    </a>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to List
+                    </a>
+                </div>
+            </div>
+
+            <!-- Risk Score/ALE Card -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            @if (Model.AssessmentType == CyberRiskApp.Models.AssessmentType.FAIR)
+                            {
+                                <div class="mb-3">
+                                    <div class="display-6 fw-bold text-success">
+                                        @Model.AnnualLossExpectancy?.ToString("C0")
+                                    </div>
+                                    <div class="text-muted">Annual Loss Expectancy</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <span class="badge bg-@GetRiskLevelColor(Model.CalculateRiskLevel()) fs-5">
+                                        @Model.CalculateRiskLevel() Risk
+                                    </span>
+                                </div>
+                                    <div class="col-6">
+                                        <div class="fw-bold text-info">@string.Format("{0:F2}", Model.LossEventFrequency)</div>
+                                        <div class="text-muted">LEF/Year</div>
+                                    </div>
+                                                         }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <div class="display-6 fw-bold text-success">
+                                        @Model.QualitativeRiskScore?.ToString("F1")
+                                    </div>
+                                    <div class="text-muted">Risk Score</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <span class="badge bg-@GetRiskLevelColor(Model.CalculateRiskLevel()) fs-5">
+                                        @Model.CalculateRiskLevel() Risk
+                                    </span>
+                                </div>
+
+                                <div class="row text-center small">
+                                    <div class="col-4">
+                                        <div class="fw-bold text-warning">@((int?)Model.QualitativeLikelihood ?? 0)</div>
+                                        <div class="text-muted">Likelihood</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="fw-bold text-danger">@((int?)Model.QualitativeImpact ?? 0)</div>
+                                        <div class="text-muted">Impact</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="fw-bold text-info">@GetExposureRating(Model.QualitativeExposure).ToString("F1")</div>
+                                        <div class="text-muted">Exposure</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Assessment Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row small">
+                                <div class="col-12 mb-2">
+                                    <strong>Assessor:</strong><br>
+                                    @Model.Assessor
+                                </div>
+                                <div class="col-12 mb-2">
+                                    <strong>Date Completed:</strong><br>
+                                    @Model.DateCompleted?.ToString("MMMM dd, yyyy")
+                                </div>
+                                <div class="col-12">
+                                    <strong>Status:</strong><br>
+                                    <span class="badge bg-@GetStatusColor(Model.Status)">@Model.Status</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assessment Details -->
+            @if (Model.AssessmentType == CyberRiskApp.Models.AssessmentType.FAIR)
+            {
+                <!-- FAIR Analysis Details -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-user-secret me-2"></i>Threat Analysis
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label fw-bold text-muted">Threat Scenario</label>
+                                        <div class="bg-light p-3 rounded">@Model.ThreatScenario</div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label fw-bold text-muted">Threat Community</label>
+                                        <div>@Model.ThreatCommunity</div>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="form-label fw-bold text-muted">Threat Action</label>
+                                        <div>@Model.ThreatAction</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label fw-bold text-muted">TEF</label>
+                                        <div class="fw-bold text-primary">@Model.ThreatEventFrequency</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label fw-bold text-muted">Contact %</label>
+                                        <div class="fw-bold text-warning">@Model.ContactFrequency%</div>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label fw-bold text-muted">Success %</label>
+                                        <div class="fw-bold text-danger">@Model.ActionSuccess%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header bg-danger bg-opacity-10">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-dollar-sign me-2"></i>Loss Magnitude
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row small">
+                                    <!-- Productivity Loss -->
+                                    <div class="col-12 mb-3">
+                                        <label class="fw-bold text-primary">Productivity Loss</label>
+                                        <div class="row">
+                                            <div class="col-4">Min: @Model.ProductivityLossMin.ToString("C0")</div>
+                                            <div class="col-4">ML: @Model.ProductivityLossMostLikely.ToString("C0")</div>
+                                            <div class="col-4">Max: @Model.ProductivityLossMax.ToString("C0")</div>
+                                        </div>
+                                    </div>
+                                    <!-- Response Costs -->
+                                    <div class="col-12 mb-3">
+                                        <label class="fw-bold text-info">Response Costs</label>
+                                        <div class="row">
+                                            <div class="col-4">Min: @Model.ResponseCostsMin.ToString("C0")</div>
+                                            <div class="col-4">ML: @Model.ResponseCostsMostLikely.ToString("C0")</div>
+                                            <div class="col-4">Max: @Model.ResponseCostsMax.ToString("C0")</div>
+                                        </div>
+                                    </div>
+                                    <!-- Replacement Costs -->
+                                    <div class="col-12 mb-3">
+                                        <label class="fw-bold text-warning">Replacement Costs</label>
+                                        <div class="row">
+                                            <div class="col-4">Min: @Model.ReplacementCostMin.ToString("C0")</div>
+                                            <div class="col-4">ML: @Model.ReplacementCostMostLikely.ToString("C0")</div>
+                                            <div class="col-4">Max: @Model.ReplacementCostMax.ToString("C0")</div>
+                                        </div>
+                                    </div>
+                                    <!-- Fines -->
+                                    <div class="col-12">
+                                        <label class="fw-bold text-danger">Fines/Penalties</label>
+                                        <div class="row">
+                                            <div class="col-4">Min: @Model.FinesMin.ToString("C0")</div>
+                                            <div class="col-4">ML: @Model.FinesMostLikely.ToString("C0")</div>
+                                            <div class="col-4">Max: @Model.FinesMax.ToString("C0")</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- Qualitative Analysis Details -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card mb-4">
+                            <div class="card-header bg-success bg-opacity-10">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-chart-bar me-2"></i>Qualitative Risk Factors
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-12 mb-4">
+                                        <label class="form-label fw-bold text-muted">Threat Scenario</label>
+                                        <div class="bg-light p-3 rounded">@Model.ThreatScenario</div>
+                                    </div>
+                                    @if (Model.Controls?.Any() == true)
+                                    {
+                                        <div class="col-12 mb-4">
+                                            <label class="form-label fw-bold text-muted">Security Controls in Place</label>
+                                            <div class="bg-light p-3 rounded">
+                                                @foreach (var control in Model.Controls)
+                                                {
+                                                    <div class="mb-2">
+                                                        <strong>@control.ControlName</strong> (@control.ControlType) - 
+                                                        <span class="badge bg-@(control.ImplementationStatus == "Implemented" ? "success" : control.ImplementationStatus == "Planned" ? "warning" : "secondary")">
+                                                            @control.ImplementationStatus
+                                                        </span>
+                                                        @if (control.ImplementationStatus == "Implemented")
+                                                        {
+                                                            <span class="text-muted">(@control.ControlEffectiveness% effective)</span>
+                                                        }
+                                                        @if (!string.IsNullOrEmpty(control.ControlDescription))
+                                                        {
+                                                            <div class="small text-muted">@control.ControlDescription</div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                    <div class="col-4">
+                                        <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
+                                            <div class="h3 mb-2 text-warning">@((int?)Model.QualitativeLikelihood ?? 0)</div>
+                                            <div class="fw-bold">Likelihood</div>
+                                            <div class="small text-muted">@Model.QualitativeLikelihood</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center p-3 bg-danger bg-opacity-10 rounded">
+                                            <div class="h3 mb-2 text-danger">@((int?)Model.QualitativeImpact ?? 0)</div>
+                                            <div class="fw-bold">Impact</div>
+                                            <div class="small text-muted">@Model.QualitativeImpact</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center p-3 bg-info bg-opacity-10 rounded">
+                                            <div class="h3 mb-2 text-info">@GetExposureRating(Model.QualitativeExposure)</div>
+                                            <div class="fw-bold">Exposure</div>
+                                            <div class="small text-muted">@Model.QualitativeExposure</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-4">
+                                    <div class="col-12">
+                                        <div class="bg-success bg-opacity-10 p-3 rounded text-center">
+                                            <h5 class="mb-1">Risk Calculation</h5>
+                                            <div class="fw-bold">
+                                                (@((int?)Model.QualitativeLikelihood ?? 0) × @((int?)Model.QualitativeImpact ?? 0)) × @GetExposureRating(Model.QualitativeExposure) = @Model.QualitativeRiskScore?.ToString("F1")
+                                            </div>
+                                            <div class="small text-muted">(Likelihood × Impact) × Exposure Rating</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card mb-4">
+                            <div class="card-header bg-info bg-opacity-10">
+                                <h6 class="mb-0">Risk Level Matrix</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="small">
+                                    <div class="mb-2">
+                                        <span class="badge bg-danger">Critical</span> 16.0
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge bg-warning">High</span> 10.0 - 15.9
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge bg-info">Medium</span> 4.0 - 9.9
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge bg-success">Low</span> 0.0 - 3.9
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Identified Risks -->
+            @if (Model.IdentifiedRisks?.Any() == true)
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Identified Risks (@Model.IdentifiedRisks.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var risk in Model.IdentifiedRisks)
+                            {
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">@risk.Title</h6>
+                                            <div class="mb-2">
+                                                <span class="badge bg-@GetRiskLevelColorFromEnum(risk.RiskLevel)">@risk.RiskLevel</span>
+                                                <span class="badge bg-@GetRiskStatusColor(risk.Status)">@risk.Status</span>
+                                            </div>
+                                            <p class="card-text small">@risk.Description</p>
+                                            <div class="small text-muted">
+                                                <div>ALE: @risk.ALE.ToString("C0")</div>
+                                                <div>Owner: @risk.Owner</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

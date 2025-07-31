@@ -1,0 +1,221 @@
+﻿@model CyberRiskApp.Models.MaturityFramework
+@{
+    ViewData["Title"] = "Edit Maturity Framework";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-edit me-2"></i>Edit Maturity Framework</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="UploadedBy" />
+                    <input type="hidden" asp-for="UploadedDate" />
+                    <input type="hidden" asp-for="CreatedAt" />
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Name" class="form-label">Framework Name</label>
+                                <input asp-for="Name" class="form-control" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Version" class="form-label">Version</label>
+                                <input asp-for="Version" class="form-control" />
+                                <span asp-validation-for="Version" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Type" class="form-label">Framework Type</label>
+                                <select asp-for="Type" class="form-select">
+                                    <option value="@CyberRiskApp.Models.FrameworkType.NISTCSF">NIST CSF 2.0</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.C2M2">C2M2</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.Custom">Custom</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.ISO27001">ISO 27001</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.NIST">NIST 800-53</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.SOX">SOX</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.GDPR">GDPR</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.HIPAA">HIPAA</option>
+                                </select>
+                                <span asp-validation-for="Type" class="text-danger"></span>
+                                @if (Model.Controls.Any())
+                                {
+                                    <div class="form-text text-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Changing the type may affect how controls are displayed and assessed.
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Status" class="form-label">Status</label>
+                                <select asp-for="Status" class="form-select">
+                                    <option value="@CyberRiskApp.Models.FrameworkStatus.Draft">Draft</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkStatus.Active">Active</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkStatus.Archived">Archived</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkStatus.Deprecated">Deprecated</option>
+                                </select>
+                                <span asp-validation-for="Status" class="text-danger"></span>
+                                @if (Model.Assessments.Any())
+                                {
+                                    <div class="form-text text-info">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        This framework is used in @Model.Assessments.Count() assessment(s).
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <!-- Framework Information -->
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">Total Controls</label>
+                                <input type="text" class="form-control" value="@Model.Controls.Count()" readonly />
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">Assessments</label>
+                                <input type="text" class="form-control" value="@Model.Assessments.Count()" readonly />
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">Uploaded By</label>
+                                <input type="text" class="form-control" value="@Model.UploadedBy" readonly />
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">Upload Date</label>
+                                <input type="text" class="form-control" value="@Model.UploadedDate.ToString("MMM dd, yyyy")" readonly />
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.Status == CyberRiskApp.Models.FrameworkStatus.Deprecated && Model.Assessments.Any())
+                    {
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle me-1"></i>Framework Status Warning</h6>
+                            <p class="mb-1">This framework is marked as <strong>Deprecated</strong> but is still being used in active assessments.</p>
+                            <p class="mb-0">Consider migrating assessments to a newer framework version before fully deprecating.</p>
+                        </div>
+                    }
+
+                    @if (Model.Status == CyberRiskApp.Models.FrameworkStatus.Archived)
+                    {
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-1"></i>Archived Framework</h6>
+                            <p class="mb-0">Archived frameworks cannot be used for new assessments but existing assessments will continue to function.</p>
+                        </div>
+                    }
+
+                    <!-- Framework Type Information -->
+                    <div class="alert alert-light border" id="frameworkInfo">
+                        @if (Model.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
+                        {
+                            <h6 class="text-primary"><i class="fas fa-chart-line me-1"></i>NIST CSF 2.0 Framework</h6>
+                            <p class="mb-1"><strong>Maturity Levels:</strong> 0 (Not Implemented) to 4 (Managed)</p>
+                            <p class="mb-0"><strong>Structure:</strong> Functions → Categories → Subcategories</p>
+                        }
+                        else if (Model.Type == CyberRiskApp.Models.FrameworkType.C2M2)
+                        {
+                            <h6 class="text-warning"><i class="fas fa-chart-bar me-1"></i>C2M2 Framework</h6>
+                            <p class="mb-1"><strong>Maturity Levels:</strong> 1 (Initial) to 3 (Defined)</p>
+                            <p class="mb-0"><strong>Structure:</strong> Domains → MIL → Practices</p>
+                        }
+                        else
+                        {
+                            <h6 class="text-secondary"><i class="fas fa-cog me-1"></i>@Model.Type Framework</h6>
+                            <p class="mb-0">Custom framework configuration</p>
+                        }
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Frameworks
+                            </a>
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info">
+                                <i class="fas fa-eye me-1"></i>View Details
+                            </a>
+                        </div>
+                        <div>
+                            @if (Model.Status == CyberRiskApp.Models.FrameworkStatus.Draft || Model.Status == CyberRiskApp.Models.FrameworkStatus.Active)
+                            {
+                                <a asp-controller="MaturityAssessments" asp-action="Create" class="btn btn-success me-2">
+                                    <i class="fas fa-plus me-1"></i>Create Assessment
+                                </a>
+                            }
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const typeSelect = document.querySelector('select[name="Type"]');
+            const frameworkInfo = document.getElementById('frameworkInfo');
+
+            function updateFrameworkInfo() {
+                const selectedType = typeSelect.value;
+
+                let infoHTML = '';
+                if (selectedType === '@CyberRiskApp.Models.FrameworkType.NISTCSF') {
+                    infoHTML = `
+                        <h6 class="text-primary"><i class="fas fa-chart-line me-1"></i>NIST CSF 2.0 Framework</h6>
+                        <p class="mb-1"><strong>Maturity Levels:</strong> 0 (Not Implemented) to 4 (Managed)</p>
+                        <p class="mb-0"><strong>Structure:</strong> Functions → Categories → Subcategories</p>
+                    `;
+                } else if (selectedType === '@CyberRiskApp.Models.FrameworkType.C2M2') {
+                    infoHTML = `
+                        <h6 class="text-warning"><i class="fas fa-chart-bar me-1"></i>C2M2 Framework</h6>
+                        <p class="mb-1"><strong>Maturity Levels:</strong> 1 (Initial) to 3 (Defined)</p>
+                        <p class="mb-0"><strong>Structure:</strong> Domains → MIL → Practices</p>
+                    `;
+                } else {
+                    infoHTML = `
+                        <h6 class="text-secondary"><i class="fas fa-cog me-1"></i>${selectedType} Framework</h6>
+                        <p class="mb-0">Custom framework configuration</p>
+                    `;
+                }
+
+                frameworkInfo.innerHTML = infoHTML;
+            }
+
+            typeSelect.addEventListener('change', updateFrameworkInfo);
+        });
+    </script>
+}

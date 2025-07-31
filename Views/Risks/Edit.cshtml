@@ -1,0 +1,294 @@
+@model CyberRiskApp.Models.Risk
+@using CyberRiskApp.Models
+@{
+    ViewData["Title"] = "Edit Risk";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4><i class="fas fa-edit me-2"></i>Edit Risk @Model.RiskNumber</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input asp-for="Id" type="hidden" />
+                        <input asp-for="CreatedAt" type="hidden" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <!-- Basic Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">Basic Information</h5>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="RiskNumber" class="form-label"></label>
+                                    <input asp-for="RiskNumber" class="form-control" readonly />
+                                    <span asp-validation-for="RiskNumber" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label asp-for="Title" class="form-label"></label>
+                                    <input asp-for="Title" class="form-control" />
+                                    <span asp-validation-for="Title" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risk Scenario -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">Risk Scenario</h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ThreatScenario" class="form-label"></label>
+                                    <textarea asp-for="ThreatScenario" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="ThreatScenario" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Description" class="form-label"></label>
+                                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="CIATriad" class="form-label"></label>
+                                    <select asp-for="CIATriad" class="form-select" asp-items="Html.GetEnumSelectList<CIATriad>()">
+                                        <option value="">Select CIA Triad</option>
+                                    </select>
+                                    <span asp-validation-for="CIATriad" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Organization & Assets -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">Organization & Assets</h5>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="BusinessUnit" class="form-label"></label>
+                                    @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="Asset" class="form-label"></label>
+                                    @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="Owner" class="form-label"></label>
+                                    @Html.BusinessOwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risk Assessment -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">Risk Assessment</h5>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label asp-for="Impact" class="form-label"></label>
+                                    <select asp-for="Impact" class="form-select" asp-items="Html.GetEnumSelectList<ImpactLevel>()">
+                                        <option value="">Select Impact</option>
+                                    </select>
+                                    <span asp-validation-for="Impact" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label asp-for="Likelihood" class="form-label"></label>
+                                    <select asp-for="Likelihood" class="form-select" asp-items="Html.GetEnumSelectList<LikelihoodLevel>()">
+                                        <option value="">Select Likelihood</option>
+                                    </select>
+                                    <span asp-validation-for="Likelihood" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label asp-for="Exposure" class="form-label"></label>
+                                    <select asp-for="Exposure" class="form-select" asp-items="Html.GetEnumSelectList<ExposureLevel>()">
+                                        <option value="">Select Exposure</option>
+                                    </select>
+                                    <span asp-validation-for="Exposure" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label asp-for="InherentRiskLevel" class="form-label"></label>
+                                    <input asp-for="InherentRiskLevel" type="hidden" id="InherentRiskLevel" />
+                                    <div id="inherentRiskDisplay" class="form-control text-center fw-bold" style="background-color: #f8f9fa; color: #6c757d;">
+                                        Auto-calculated
+                                    </div>
+                                    <small class="form-text text-muted">Calculated from Impact × Likelihood × Exposure</small>
+                                    <span asp-validation-for="InherentRiskLevel" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Treatment -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">Risk Treatment</h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Treatment" class="form-label"></label>
+                                    <select asp-for="Treatment" class="form-select" asp-items="Html.GetEnumSelectList<TreatmentStrategy>()">
+                                        <option value="">Select Treatment</option>
+                                    </select>
+                                    <span asp-validation-for="Treatment" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ResidualRiskLevel" class="form-label"></label>
+                                    <select asp-for="ResidualRiskLevel" class="form-select" asp-items="Html.GetEnumSelectList<RiskLevel>()">
+                                        <option value="">Select Residual Risk</option>
+                                    </select>
+                                    <span asp-validation-for="ResidualRiskLevel" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label asp-for="TreatmentPlan" class="form-label"></label>
+                                    <textarea asp-for="TreatmentPlan" class="form-control" rows="4"></textarea>
+                                    <span asp-validation-for="TreatmentPlan" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dates & Status -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">Status & Dates</h5>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="Status" class="form-label"></label>
+                                    <select asp-for="Status" class="form-select" asp-items="Html.GetEnumSelectList<RiskStatus>()">
+                                        <option value="">Select Status</option>
+                                    </select>
+                                    <span asp-validation-for="Status" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="OpenDate" class="form-label"></label>
+                                    <input asp-for="OpenDate" type="date" class="form-control" />
+                                    <span asp-validation-for="OpenDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="NextReviewDate" class="form-label"></label>
+                                    <input asp-for="NextReviewDate" type="date" class="form-control" />
+                                    <span asp-validation-for="NextReviewDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Risk Register
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-save me-1"></i>Update Risk
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Auto-calculate Inherent Risk Level when Impact, Likelihood, or Exposure changes
+            $('#Impact, #Likelihood, #Exposure').change(function() {
+                calculateInherentRisk();
+            });
+            
+            // Also trigger on page load and when form is reset
+            $(document).on('reset', 'form', function() {
+                setTimeout(calculateInherentRisk, 10);
+            });
+            
+            function calculateInherentRisk() {
+                var impact = parseInt($('#Impact').val()) || 0;
+                var likelihood = parseInt($('#Likelihood').val()) || 0;
+                var exposure = parseInt($('#Exposure').val()) || 0;
+                
+                if (impact > 0 && likelihood > 0 && exposure > 0) {
+                    // Calculate average risk score (0-4 scale)
+                    var avgScore = (impact + likelihood + exposure) / 3;
+                    var riskLevel;
+                    
+                    // Map average to risk level (assuming 0=Very Low, 1=Low, 2=Medium, 3=High, 4=Critical)
+                    if (avgScore >= 3.0) {
+                        riskLevel = 4; // Critical
+                    } else if (avgScore >= 2.5) {
+                        riskLevel = 3; // High
+                    } else if (avgScore >= 1.5) {
+                        riskLevel = 2; // Medium
+                    } else if (avgScore >= 0.5) {
+                        riskLevel = 1; // Low
+                    } else {
+                        riskLevel = 0; // Very Low
+                    }
+                    
+                    $('#InherentRiskLevel').val(riskLevel);
+                    
+                    // Update display
+                    var riskText = ['Very Low', 'Low', 'Medium', 'High', 'Critical'][riskLevel];
+                    var riskColors = ['#28a745', '#28a745', '#17a2b8', '#ffc107', '#dc3545']; // Green, Green, Blue, Yellow, Red
+                    var textColors = ['white', 'white', 'white', 'black', 'white'];
+                    
+                    $('#inherentRiskDisplay')
+                        .text(riskText)
+                        .css({
+                            'background-color': riskColors[riskLevel],
+                            'color': textColors[riskLevel],
+                            'border-color': riskColors[riskLevel]
+                        });
+                } else {
+                    $('#InherentRiskLevel').val('');
+                    $('#inherentRiskDisplay')
+                        .text('Auto-calculated')
+                        .css({
+                            'background-color': '#f8f9fa',
+                            'color': '#6c757d',
+                            'border-color': '#ced4da'
+                        });
+                }
+            }
+            
+            // Calculate on page load if values are already set
+            calculateInherentRisk();
+        });
+    </script>
+}

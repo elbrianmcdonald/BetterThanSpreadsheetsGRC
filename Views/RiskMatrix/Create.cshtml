@@ -1,0 +1,156 @@
+@model CyberRiskApp.Models.RiskMatrix
+@{
+    ViewData["Title"] = "Create Risk Matrix";
+}
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-plus text-primary me-2"></i>
+                    Create Risk Matrix
+                </h2>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to List
+                </a>
+            </div>
+
+            <form asp-action="Create" method="post">
+                <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+                <div class="card">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Matrix Configuration
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Name" class="form-label fw-bold">Matrix Name <span class="text-danger">*</span></label>
+                                    <input asp-for="Name" class="form-control" placeholder="Enter matrix name" required />
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="MatrixSize" class="form-label fw-bold">Matrix Size <span class="text-danger">*</span></label>
+                                    <select asp-for="MatrixSize" class="form-control" required>
+                                        <option value="">Select Size</option>
+                                        <option value="3">3×3 (Simple)</option>
+                                        <option value="4">4×4 (Standard)</option>
+                                        <option value="5" selected>5×5 (Detailed)</option>
+                                    </select>
+                                    <span asp-validation-for="MatrixSize" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="MatrixType" class="form-label fw-bold">Matrix Type <span class="text-danger">*</span></label>
+                                    <select asp-for="MatrixType" class="form-control" id="matrixType" required>
+                                        <option value="">Select Type</option>
+                                        <option value="1">Impact × Likelihood (2D)</option>
+                                        <option value="2">Impact × Likelihood × Exposure (3D)</option>
+                                    </select>
+                                    <span asp-validation-for="MatrixType" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mt-4 pt-2">
+                                    <input asp-for="IsActive" type="checkbox" class="form-check-input" checked />
+                                    <label asp-for="IsActive" class="form-check-label fw-bold">
+                                        Active Matrix
+                                    </label>
+                                    <small class="form-text text-muted d-block">Inactive matrices cannot be used for assessments</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-bold">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="3" 
+                                     placeholder="Enter a description for this risk matrix (optional)"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <!-- Matrix Type Info -->
+                        <div class="alert alert-info" id="matrixTypeInfo" style="display: none;">
+                            <h6><i class="fas fa-info-circle me-2"></i>Matrix Type Information</h6>
+                            <div id="twoDInfo" style="display: none;">
+                                <strong>2D Matrix (Impact × Likelihood):</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Traditional risk matrix approach</li>
+                                    <li>Simpler to configure and use</li>
+                                    <li>Risk = Impact × Likelihood</li>
+                                    <li>Best for quick assessments</li>
+                                </ul>
+                            </div>
+                            <div id="threeDInfo" style="display: none;">
+                                <strong>3D Matrix (Impact × Likelihood × Exposure):</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Advanced risk assessment with exposure factor</li>
+                                    <li>More granular risk calculation</li>
+                                    <li>Risk = (Impact × Likelihood) × Exposure</li>
+                                    <li>Better for detailed risk analysis</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-2"></i>Create Matrix
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                        <small class="form-text text-muted mt-2">
+                            After creating the matrix, you'll configure the risk levels and generate the matrix cells.
+                        </small>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const matrixTypeSelect = document.getElementById('matrixType');
+            const matrixTypeInfo = document.getElementById('matrixTypeInfo');
+            const twoDInfo = document.getElementById('twoDInfo');
+            const threeDInfo = document.getElementById('threeDInfo');
+
+            matrixTypeSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                
+                if (selectedValue === '1') {
+                    // 2D Matrix
+                    matrixTypeInfo.style.display = 'block';
+                    twoDInfo.style.display = 'block';
+                    threeDInfo.style.display = 'none';
+                } else if (selectedValue === '2') {
+                    // 3D Matrix
+                    matrixTypeInfo.style.display = 'block';
+                    twoDInfo.style.display = 'none';
+                    threeDInfo.style.display = 'block';
+                } else {
+                    matrixTypeInfo.style.display = 'none';
+                }
+            });
+
+            // Trigger initial display
+            matrixTypeSelect.dispatchEvent(new Event('change'));
+        });
+    </script>
+}

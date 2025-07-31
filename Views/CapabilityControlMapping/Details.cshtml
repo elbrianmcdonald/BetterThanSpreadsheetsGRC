@@ -1,0 +1,191 @@
+@model CyberRiskApp.Models.CapabilityControlMapping
+
+@{
+    ViewData["Title"] = "Capability Control Mapping Details";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-project-diagram"></i> Capability Control Mapping Details</h2>
+                </div>
+                <div>
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <a asp-action="Index" asp-route-capabilityRequirementId="@Model.CapabilityRequirementId" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Basic Information Card -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0"><i class="fas fa-info-circle"></i> Basic Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-4">Strategy Plan:</dt>
+                                <dd class="col-sm-8">@Html.DisplayFor(model => model.CapabilityRequirement.StrategyGoal.StrategyPlan.PlanName)</dd>
+
+                                <dt class="col-sm-4">Capability:</dt>
+                                <dd class="col-sm-8">@Html.DisplayFor(model => model.CapabilityRequirement.CapabilityName)</dd>
+
+                                <dt class="col-sm-4">Framework:</dt>
+                                <dd class="col-sm-8">@Html.DisplayFor(model => model.ComplianceControl.Framework.Name)</dd>
+
+                                <dt class="col-sm-4">Control ID:</dt>
+                                <dd class="col-sm-8"><strong>@Html.DisplayFor(model => model.ComplianceControl.ControlId)</strong></dd>
+
+                                <dt class="col-sm-4">Control Title:</dt>
+                                <dd class="col-sm-8">@Html.DisplayFor(model => model.ComplianceControl.Title)</dd>
+
+                                <dt class="col-sm-4">Status:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-@Model.StatusColor">
+                                        @Html.DisplayFor(model => model.Status)
+                                    </span>
+                                </dd>
+
+                                <dt class="col-sm-4">Priority:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-@Model.PriorityColor">
+                                        @Html.DisplayFor(model => model.Priority)
+                                    </span>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress and Tracking Card -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0"><i class="fas fa-chart-line"></i> Progress & Tracking</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-4">Estimated Hours:</dt>
+                                <dd class="col-sm-8">@(Model.EstimatedHours?.ToString("F1") ?? "Not specified")</dd>
+
+                                <dt class="col-sm-4">Actual Hours:</dt>
+                                <dd class="col-sm-8">@(Model.ActualHours?.ToString("F1") ?? "Not recorded")</dd>
+
+                                @if (Model.HoursVariance.HasValue)
+                                {
+                                    <dt class="col-sm-4">Hours Variance:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="@(Model.HoursVariance.Value > 0 ? "text-danger" : "text-success")">
+                                            @Model.HoursVariance.Value.ToString("F1") hours
+                                        </span>
+                                    </dd>
+                                }
+
+                                <dt class="col-sm-4">Start Date:</dt>
+                                <dd class="col-sm-8">@(Model.StartDate?.ToString("MMM dd, yyyy") ?? "Not set")</dd>
+
+                                <dt class="col-sm-4">Target Date:</dt>
+                                <dd class="col-sm-8">
+                                    @if (Model.TargetDate.HasValue)
+                                    {
+                                        <span class="@(Model.IsOverdue ? "text-danger" : "")">
+                                            @Model.TargetDate.Value.ToString("MMM dd, yyyy")
+                                        </span>
+                                        @if (Model.IsOverdue)
+                                        {
+                                            <br /><small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Overdue by @Math.Abs(Model.DaysUntilTarget) days</small>
+                                        }
+                                        else if (Model.DaysUntilTarget > 0)
+                                        {
+                                            <br /><small class="text-info">@Model.DaysUntilTarget days remaining</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not set</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Completion Date:</dt>
+                                <dd class="col-sm-8">@(Model.CompletionDate?.ToString("MMM dd, yyyy") ?? (Model.IsCompleted ? "Completed (date not recorded)" : "Not completed"))</dd>
+
+                                <dt class="col-sm-4">Assigned To:</dt>
+                                <dd class="col-sm-8">@(Model.AssignedTo ?? "Unassigned")</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Implementation Notes Card -->
+            @if (!string.IsNullOrEmpty(Model.ImplementationNotes))
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-cogs"></i> Implementation Notes</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>@Html.DisplayFor(model => model.ImplementationNotes)</p>
+                    </div>
+                </div>
+            }
+
+            <!-- Notes Card -->
+            @if (!string.IsNullOrEmpty(Model.Notes))
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-sticky-note"></i> Notes</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>@Html.DisplayFor(model => model.Notes)</p>
+                    </div>
+                </div>
+            }
+
+            <!-- Control Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-shield-alt"></i> Control Details</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Control Category:</dt>
+                        <dd class="col-sm-9">@Html.DisplayFor(model => model.ComplianceControl.Category)</dd>
+
+                        <dt class="col-sm-3">Control Priority:</dt>
+                        <dd class="col-sm-9">@Html.DisplayFor(model => model.ComplianceControl.Priority)</dd>
+
+                        @if (!string.IsNullOrEmpty(Model.ComplianceControl.Description))
+                        {
+                            <dt class="col-sm-3">Description:</dt>
+                            <dd class="col-sm-9">@Html.DisplayFor(model => model.ComplianceControl.Description)</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Audit Information Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-clock"></i> Audit Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Created At:</dt>
+                        <dd class="col-sm-9">@Model.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</dd>
+
+                        <dt class="col-sm-3">Last Updated:</dt>
+                        <dd class="col-sm-9">@Model.UpdatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

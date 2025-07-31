@@ -1,0 +1,186 @@
+@model IEnumerable<CyberRiskApp.Models.ReferenceDataViewModel>
+@{
+    ViewData["Title"] = "Select Technical Control";
+    var mappedControls = ViewBag.MappedControls as IEnumerable<CyberRiskApp.Models.ReferenceDataViewModel> ?? new List<CyberRiskApp.Models.ReferenceDataViewModel>();
+    var unmappedControls = ViewBag.UnmappedControls as IEnumerable<CyberRiskApp.Models.ReferenceDataViewModel> ?? new List<CyberRiskApp.Models.ReferenceDataViewModel>();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-shield-alt me-2 text-primary"></i>Select Technical Control</h2>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Mappings
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="alert alert-info mb-4">
+        <h5><i class="fas fa-info-circle me-2"></i>How to Map Technical Controls</h5>
+        <p class="mb-2">Select a technical control below to create mappings to compliance assessment controls. This helps demonstrate how your technical implementations satisfy compliance requirements.</p>
+        <ul class="mb-0">
+            <li><strong>Mapped Controls:</strong> Already have compliance mappings</li>
+            <li><strong>Unmapped Controls:</strong> Need compliance mappings</li>
+        </ul>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">@Model.Count()</h3>
+                    <p class="mb-0">Total Technical Controls</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">@mappedControls.Count()</h3>
+                    <p class="mb-0">Mapped Controls</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h3 class="mb-0">@unmappedControls.Count()</h3>
+                    <p class="mb-0">Unmapped Controls</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <input type="text" id="searchBox" class="form-control" 
+                           placeholder="Search technical controls by name or description...">
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="showOnlyUnmapped">
+                        <label class="form-check-label" for="showOnlyUnmapped">
+                            Show only unmapped controls
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Controls List -->
+    <div class="row" id="controlsList">
+        @foreach (var control in Model.OrderBy(c => c.Value))
+        {
+            var isMapped = mappedControls.Any(m => m.Id == control.Id);
+            var cardClass = isMapped ? "border-success" : "border-warning";
+            var badgeClass = isMapped ? "bg-success" : "bg-warning";
+            var badgeText = isMapped ? "Mapped" : "Unmapped";
+            
+            <div class="col-md-6 col-lg-4 mb-3 control-card" 
+                 data-mapped="@isMapped.ToString().ToLower()" 
+                 data-search="@control.Value.ToLower() @control.Description.ToLower()">
+                <div class="card h-100 @cardClass">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0 text-truncate" title="@control.Value">
+                            @control.Value
+                        </h6>
+                        <span class="badge @badgeClass">@badgeText</span>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(control.Description))
+                        {
+                            <p class="card-text text-muted small">@control.Description</p>
+                        }
+                        else
+                        {
+                            <p class="card-text text-muted small font-italic">No description available</p>
+                        }
+                    </div>
+                    <div class="card-footer d-flex justify-content-between">
+                        @if (isMapped)
+                        {
+                            <a asp-action="Details" asp-route-technicalControlId="@control.Id" 
+                               class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-eye me-1"></i>View Mappings
+                            </a>
+                            <a asp-action="BulkCreate" asp-route-technicalControlId="@control.Id" 
+                               class="btn btn-success btn-sm">
+                                <i class="fas fa-plus me-1"></i>Add More
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="text-muted small">No mappings yet</span>
+                            <a asp-action="BulkCreate" asp-route-technicalControlId="@control.Id" 
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i>Create Mappings
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- No Results Message -->
+    <div id="noResults" class="alert alert-info text-center" style="display: none;">
+        <i class="fas fa-search fa-2x mb-3"></i>
+        <h5>No technical controls found</h5>
+        <p class="mb-0">Try adjusting your search terms or filters.</p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            const searchBox = $('#searchBox');
+            const showOnlyUnmapped = $('#showOnlyUnmapped');
+            const controlCards = $('.control-card');
+            const noResults = $('#noResults');
+
+            function filterControls() {
+                const searchTerm = searchBox.val().toLowerCase();
+                const onlyUnmapped = showOnlyUnmapped.is(':checked');
+                let visibleCount = 0;
+
+                controlCards.each(function() {
+                    const card = $(this);
+                    const searchData = card.data('search');
+                    const isMapped = card.data('mapped') === true;
+                    
+                    const matchesSearch = searchTerm === '' || searchData.includes(searchTerm);
+                    const matchesFilter = !onlyUnmapped || !isMapped;
+                    
+                    if (matchesSearch && matchesFilter) {
+                        card.show();
+                        visibleCount++;
+                    } else {
+                        card.hide();
+                    }
+                });
+
+                if (visibleCount === 0) {
+                    noResults.show();
+                } else {
+                    noResults.hide();
+                }
+            }
+
+            // Bind events
+            searchBox.on('input', filterControls);
+            showOnlyUnmapped.on('change', filterControls);
+
+            // Initial filter to show only unmapped by default
+            showOnlyUnmapped.prop('checked', true);
+            filterControls();
+        });
+    </script>
+}

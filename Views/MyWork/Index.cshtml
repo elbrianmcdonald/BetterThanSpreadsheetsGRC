@@ -1,0 +1,383 @@
+@model CyberRiskApp.ViewModels.MyWorkViewModel
+@{
+    ViewData["Title"] = "My Work";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-briefcase me-2"></i>My Work</h2>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">@Model.TotalAssignedRequests</h3>
+                    <p class="mb-0">Total Assigned</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">@Model.PendingRequests</h3>
+                    <p class="mb-0">Pending</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h3 class="text-info">@Model.InProgressRequests</h3>
+                    <p class="mb-0">In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h3 class="text-success">@Model.CompletedRequests</h3>
+                    <p class="mb-0">Completed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.TotalAssignedRequests > 0)
+    {
+        <!-- Tabs for different request types -->
+        <ul class="nav nav-tabs" id="workTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="assessments-tab" data-bs-toggle="tab" data-bs-target="#assessments"
+                        type="button" role="tab" aria-controls="assessments" aria-selected="true">
+                    <i class="fas fa-chart-line me-2"></i>Risk Assessments (@Model.AssignedAssessmentRequests.Count())
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="acceptances-tab" data-bs-toggle="tab" data-bs-target="#acceptances"
+                        type="button" role="tab" aria-controls="acceptances" aria-selected="false">
+                    <i class="fas fa-handshake me-2"></i>Risk Acceptances (@Model.AssignedAcceptanceRequests.Count())
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="closures-tab" data-bs-toggle="tab" data-bs-target="#closures"
+                        type="button" role="tab" aria-controls="closures" aria-selected="false">
+                    <i class="fas fa-times-circle me-2"></i>Finding Closures (@Model.AssignedClosureRequests.Count())
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="workTabsContent">
+            <!-- Risk Assessment Requests Tab -->
+            <div class="tab-pane fade show active" id="assessments" role="tabpanel" aria-labelledby="assessments-tab">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Assigned Risk Assessment Requests
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.AssignedAssessmentRequests.Any())
+                        {
+                            <div class="row">
+                                @foreach (var request in Model.AssignedAssessmentRequests)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-4">
+                                        <div class="card h-100 border-primary">
+                                            <div class="card-body">
+                                                <h6 class="card-title">@request.Scope</h6>
+                                                <p class="card-text">
+                                                    <strong>Requester:</strong> @request.RequesterName<br>
+                                                    <strong>Priority:</strong>
+                                                    @switch (request.Priority)
+                                                    {
+                                                        case Priority.Urgent:
+                                                            <span class="badge bg-danger">Urgent</span>
+                                                            break;
+                                                        case Priority.High:
+                                                            <span class="badge bg-warning">High</span>
+                                                            break;
+                                                        case Priority.Medium:
+                                                            <span class="badge bg-info">Medium</span>
+                                                            break;
+                                                        case Priority.Low:
+                                                            <span class="badge bg-success">Low</span>
+                                                            break;
+                                                    }
+                                                </p>
+                                                <p class="card-text">
+                                                    <strong>Status:</strong>
+                                                    @switch (request.Status)
+                                                    {
+                                                        case RequestStatus.Pending:
+                                                            <span class="badge bg-warning">Pending</span>
+                                                            break;
+                                                        case RequestStatus.InProgress:
+                                                            <span class="badge bg-info">In Progress</span>
+                                                            break;
+                                                        case RequestStatus.Completed:
+                                                            <span class="badge bg-success">Completed</span>
+                                                            break;
+                                                    }
+                                                </p>
+                                                <p class="card-text">
+                                                    <strong>Assigned:</strong> @(request.AssignmentDate?.ToString("MM/dd/yyyy") ?? "Not assigned")
+                                                    @if (request.EstimatedHours.HasValue)
+                                                    {
+                                                        <br>
+                                                        <strong>Estimated:</strong> @(Math.Round(request.EstimatedHours.Value, 1) + " hours")
+                                                    }
+                                                </p>
+                                            </div>
+                                            <div class="card-footer">
+                                                @if (request.Status == RequestStatus.Pending)
+                                                {
+                                                    <form asp-action="Start" asp-route-id="@request.Id" method="post" style="display:inline;">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="btn btn-success btn-sm">
+                                                            <i class="fas fa-play me-1"></i>Start Work
+                                                        </button>
+                                                    </form>
+                                                }
+                                                @if (request.Status == RequestStatus.InProgress)
+                                                {
+                                                    <a asp-action="Complete" asp-route-id="@request.Id" class="btn btn-primary btn-sm">
+                                                        <i class="fas fa-check me-1"></i>Complete Work
+                                                    </a>
+                                                }
+                                                @if (request.Status == RequestStatus.Completed)
+                                                {
+                                                    <span class="text-success">
+                                                        <i class="fas fa-check-circle me-1"></i>Work Completed
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                <p class="mb-0">No risk assessment requests assigned</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Acceptance Requests Tab -->
+            <div class="tab-pane fade" id="acceptances" role="tabpanel" aria-labelledby="acceptances-tab">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-handshake me-2"></i>Assigned Risk Acceptance Requests
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.AssignedAcceptanceRequests.Any())
+                        {
+                            <div class="row">
+                                @foreach (var request in Model.AssignedAcceptanceRequests)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-4">
+                                        <div class="card h-100 border-warning">
+                                            <div class="card-body">
+                                                <h6 class="card-title">@request.Description</h6>
+                                                <p class="card-text">
+                                                    <strong>Requester:</strong> @request.Requester<br>
+                                                    <strong>Linked To:</strong>
+                                                    @if (request.LinkedFinding != null)
+                                                    {
+                                                        <span class="badge bg-info">
+                                                            <i class="fas fa-search me-1"></i>@request.LinkedFinding.FindingNumber
+                                                        </span>
+                                                    }
+                                                    else if (request.LinkedRisk != null)
+                                                    {
+                                                        <span class="badge bg-warning">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>@request.LinkedRisk.RiskNumber
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">None</span>
+                                                    }
+                                                </p>
+                                                <p class="card-text">
+                                                    <strong>Status:</strong>
+                                                    @switch (request.Status)
+                                                    {
+                                                        case RequestStatus.PendingApproval:
+                                                            <span class="badge bg-warning">Pending</span>
+                                                            break;
+                                                        case RequestStatus.InProgress:
+                                                            <span class="badge bg-info">In Progress</span>
+                                                            break;
+                                                        case RequestStatus.Completed:
+                                                            <span class="badge bg-success">Completed</span>
+                                                            break;
+                                                        case RequestStatus.Approved:
+                                                            <span class="badge bg-success">Approved</span>
+                                                            break;
+                                                        case RequestStatus.Rejected:
+                                                            <span class="badge bg-danger">Rejected</span>
+                                                            break;
+                                                    }
+                                                </p>
+                                                <p class="card-text">
+                                                    <strong>Assigned:</strong> @(request.AssignmentDate?.ToString("MM/dd/yyyy") ?? "Not assigned")
+                                                </p>
+                                            </div>
+                                            <div class="card-footer">
+                                                @if (request.Status == RequestStatus.InProgress)
+                                                {
+                                                    <a href="#" class="btn btn-warning btn-sm">
+                                                        <i class="fas fa-gavel me-1"></i>Review Request
+                                                    </a>
+                                                }
+                                                @if (request.Status == RequestStatus.Completed || request.Status == RequestStatus.Approved || request.Status == RequestStatus.Rejected)
+                                                {
+                                                    <span class="text-success">
+                                                        <i class="fas fa-check-circle me-1"></i>Review Complete
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-handshake fa-2x mb-2"></i>
+                                <p class="mb-0">No risk acceptance requests assigned</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finding Closure Requests Tab -->
+            <div class="tab-pane fade" id="closures" role="tabpanel" aria-labelledby="closures-tab">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-times-circle me-2"></i>Assigned Finding Closure Requests
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.AssignedClosureRequests.Any())
+                        {
+                            <div class="row">
+                                @foreach (var request in Model.AssignedClosureRequests)
+                                {
+                                    <div class="col-md-6 col-lg-4 mb-4">
+                                        <div class="card h-100 border-success">
+                                            <div class="card-body">
+                                                <h6 class="card-title">
+                                                    @if (request.LinkedFinding != null)
+                                                    {
+                                                        @request.LinkedFinding.FindingNumber
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>Finding Closure Request</span>
+                                                    }
+                                                </h6>
+                                                <p class="card-text">
+                                                    <strong>Requester:</strong> @request.Requester<br>
+                                                    @if (request.LinkedFinding != null)
+                                                    {
+                                                        <strong>Finding:</strong> @request.LinkedFinding.Title<br>
+                                                    }
+                                                    <strong>Request Date:</strong> @request.RequestDate.ToString("MM/dd/yyyy")
+                                                </p>
+                                                <p class="card-text">
+                                                    <strong>Status:</strong>
+                                                    @switch (request.Status)
+                                                    {
+                                                        case RequestStatus.PendingApproval:
+                                                            <span class="badge bg-warning">Pending</span>
+                                                            break;
+                                                        case RequestStatus.InProgress:
+                                                            <span class="badge bg-info">In Progress</span>
+                                                            break;
+                                                        case RequestStatus.Completed:
+                                                            <span class="badge bg-success">Completed</span>
+                                                            break;
+                                                        case RequestStatus.Approved:
+                                                            <span class="badge bg-success">Approved</span>
+                                                            break;
+                                                        case RequestStatus.Rejected:
+                                                            <span class="badge bg-danger">Rejected</span>
+                                                            break;
+                                                    }
+                                                </p>
+                                                <p class="card-text">
+                                                    <strong>Assigned:</strong> @(request.AssignmentDate?.ToString("MM/dd/yyyy") ?? "Not assigned")
+                                                </p>
+                                                <p class="card-text small">
+                                                    <strong>Justification:</strong> @(request.ClosureJustification.Length > 80 ? request.ClosureJustification.Substring(0, 80) + "..." : request.ClosureJustification)
+                                                </p>
+                                            </div>
+                                            <div class="card-footer">
+                                                @if (request.Status == RequestStatus.InProgress)
+                                                {
+                                                    <a asp-controller="FindingClosure" asp-action="Review" asp-route-id="@request.Id" class="btn btn-success btn-sm">
+                                                        <i class="fas fa-clipboard-check me-1"></i>Review Request
+                                                    </a>
+                                                }
+                                                @if (request.Status == RequestStatus.Completed || request.Status == RequestStatus.Approved || request.Status == RequestStatus.Rejected)
+                                                {
+                                                    <span class="text-success">
+                                                        <i class="fas fa-check-circle me-1"></i>Review Complete
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-times-circle fa-2x mb-2"></i>
+                                <p class="mb-0">No finding closure requests assigned</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <h5>No work assigned yet</h5>
+            <p>Your assigned requests will appear here once they are assigned to you by an administrator.</p>
+        </div>
+    }
+</div>

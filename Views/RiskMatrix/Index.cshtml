@@ -1,0 +1,156 @@
+@model IEnumerable<CyberRiskApp.Models.RiskMatrix>
+@{
+    ViewData["Title"] = "Risk Matrix Management";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-th text-primary me-2"></i>
+            Risk Matrix Management
+        </h2>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Create New Matrix
+        </a>
+    </div>
+
+    <div class="row">
+        @foreach (var matrix in Model)
+        {
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 @(matrix.IsDefault ? "border-success" : "")">
+                    @if (matrix.IsDefault)
+                    {
+                        <div class="card-header bg-success text-white">
+                            <i class="fas fa-star me-2"></i>Default Matrix
+                        </div>
+                    }
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            @matrix.Name
+                            @if (!matrix.IsActive)
+                            {
+                                <span class="badge bg-secondary ms-2">Inactive</span>
+                            }
+                        </h5>
+                        
+                        <p class="card-text text-muted">@matrix.Description</p>
+                        
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <small class="text-muted d-block">Size</small>
+                                <strong>@(matrix.MatrixSize)×@(matrix.MatrixSize)</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block">Type</small>
+                                <strong>
+                                    @if (matrix.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihood)
+                                    {
+                                        <span class="text-primary">2D Matrix</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-info">3D Matrix</span>
+                                    }
+                                </strong>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Created by</small>
+                            <strong>@matrix.CreatedBy</strong>
+                            <small class="text-muted">on @matrix.CreatedAt.ToString("MMM dd, yyyy")</small>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-light">
+                        <div class="btn-group w-100" role="group">
+                            <a asp-action="Preview" asp-route-id="@matrix.Id" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-eye"></i> Preview
+                            </a>
+                            <a asp-action="Configure" asp-route-id="@matrix.Id" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-cog"></i> Configure
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@matrix.Id" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                        </div>
+                        
+                        <div class="mt-2">
+                            @if (!matrix.IsDefault)
+                            {
+                                <form asp-action="SetDefault" asp-route-id="@matrix.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-star"></i> Set Default
+                                    </button>
+                                </form>
+                            }
+                            
+                            @if (!matrix.IsDefault)
+                            {
+                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                        onclick="confirmDelete(@matrix.Id, '@matrix.Name')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-th fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No Risk Matrices Found</h4>
+            <p class="text-muted">Create your first risk matrix to get started.</p>
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Create Risk Matrix
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2"></i>Delete Risk Matrix
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the risk matrix "<strong id="matrixName"></strong>"?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This action cannot be undone and will affect any assessments using this matrix.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete Matrix
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(matrixId, matrixName) {
+            document.getElementById('matrixName').textContent = matrixName;
+            document.getElementById('deleteForm').action = '/RiskMatrix/Delete/' + matrixId;
+            
+            var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        }
+    </script>
+}

@@ -1,0 +1,123 @@
+@model CyberRiskApp.Models.CapabilityControlMapping
+
+@{
+    ViewData["Title"] = "Delete Capability Control Mapping";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="text-danger"><i class="fas fa-trash"></i> Delete Capability Control Mapping</h2>
+                    <p class="text-muted">Are you sure you want to delete this mapping?</p>
+                </div>
+                <div>
+                    <a asp-action="Index" asp-route-capabilityRequirementId="@Model.CapabilityRequirementId" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Warning:</strong> This action cannot be undone. All mapping data including implementation notes, progress tracking, and audit history will be permanently deleted.
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">Mapping to be Deleted</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Strategy Plan:</dt>
+                        <dd class="col-sm-9">@Html.DisplayFor(model => model.CapabilityRequirement.StrategyGoal.StrategyPlan.PlanName)</dd>
+
+                        <dt class="col-sm-3">Capability:</dt>
+                        <dd class="col-sm-9">@Html.DisplayFor(model => model.CapabilityRequirement.CapabilityName)</dd>
+
+                        <dt class="col-sm-3">Framework:</dt>
+                        <dd class="col-sm-9">@Html.DisplayFor(model => model.ComplianceControl.Framework.Name)</dd>
+
+                        <dt class="col-sm-3">Control:</dt>
+                        <dd class="col-sm-9">
+                            <strong>@Html.DisplayFor(model => model.ComplianceControl.ControlId)</strong> - 
+                            @Html.DisplayFor(model => model.ComplianceControl.Title)
+                        </dd>
+
+                        <dt class="col-sm-3">Status:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-@Model.StatusColor">
+                                @Html.DisplayFor(model => model.Status)
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-3">Priority:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge bg-@Model.PriorityColor">
+                                @Html.DisplayFor(model => model.Priority)
+                            </span>
+                        </dd>
+
+                        @if (Model.EstimatedHours.HasValue)
+                        {
+                            <dt class="col-sm-3">Estimated Hours:</dt>
+                            <dd class="col-sm-9">@Model.EstimatedHours.Value.ToString("F1")</dd>
+                        }
+
+                        @if (Model.ActualHours.HasValue)
+                        {
+                            <dt class="col-sm-3">Actual Hours:</dt>
+                            <dd class="col-sm-9">@Model.ActualHours.Value.ToString("F1")</dd>
+                        }
+
+                        @if (Model.TargetDate.HasValue)
+                        {
+                            <dt class="col-sm-3">Target Date:</dt>
+                            <dd class="col-sm-9">@Model.TargetDate.Value.ToString("MMM dd, yyyy")</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.AssignedTo))
+                        {
+                            <dt class="col-sm-3">Assigned To:</dt>
+                            <dd class="col-sm-9">@Html.DisplayFor(model => model.AssignedTo)</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.ImplementationNotes))
+                        {
+                            <dt class="col-sm-3">Implementation Notes:</dt>
+                            <dd class="col-sm-9">@Html.DisplayFor(model => model.ImplementationNotes)</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.Notes))
+                        {
+                            <dt class="col-sm-3">Notes:</dt>
+                            <dd class="col-sm-9">@Html.DisplayFor(model => model.Notes)</dd>
+                        }
+
+                        <dt class="col-sm-3">Created:</dt>
+                        <dd class="col-sm-9">@Model.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</dd>
+
+                        <dt class="col-sm-3">Last Updated:</dt>
+                        <dd class="col-sm-9">@Model.UpdatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <form asp-action="Delete" class="d-inline">
+                    <input type="hidden" asp-for="Id" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Confirm Delete
+                    </button>
+                </form>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-info">
+                    <i class="fas fa-eye"></i> View Details Instead
+                </a>
+                <a asp-action="Index" asp-route-capabilityRequirementId="@Model.CapabilityRequirementId" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

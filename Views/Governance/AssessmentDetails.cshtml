@@ -1,0 +1,534 @@
+@model CyberRiskApp.ViewModels.AssessmentDetailsViewModel
+@{
+    ViewData["Title"] = "Assessment Details";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1>@Model.Title</h1>
+            <p class="text-muted">
+                <span class="badge bg-secondary">@Model.AssessmentType Assessment</span>
+                <span class="ms-2">@Model.FrameworkName @Model.FrameworkVersion</span>
+            </p>
+        </div>
+        <div>
+            <a href="@Url.Action("AssessmentDashboard", "Governance")" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Assessment Info -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Assessment Information</h5>
+                    <p>@Model.Description</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong> <span class="badge @GetStatusBadgeClass(Model.Status)">@Model.Status</span></p>
+                            <p><strong>Assessor:</strong> @Model.Assessor</p>
+                            <p><strong>Start Date:</strong> @Model.StartDate.ToShortDateString()</p>
+                            @if (Model.CompletedDate.HasValue)
+                            {
+                                <p><strong>Completed Date:</strong> @Model.CompletedDate.Value.ToShortDateString()</p>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Total Controls:</strong> @Model.TotalControls</p>
+                            <p><strong>Assessed Controls:</strong> @Model.AssessedControls</p>
+                            <p><strong>Progress:</strong> @Model.Progress.ToString("F0")%</p>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: @Model.Progress%" 
+                                     aria-valuenow="@Model.Progress" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            @if (Model.AssessmentType == "Maturity")
+            {
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Maturity Levels</h5>
+                        <div class="row">
+                            <div class="col-6">
+                                <h6 class="text-muted">Current</h6>
+                                <h2 class="text-primary">@(Model.OverallCurrentMaturity?.ToString("F1") ?? "N/A")</h2>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-muted">Target</h6>
+                                <h2 class="text-success">@(Model.OverallTargetMaturity?.ToString("F1") ?? "N/A")</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (Model.AssessmentType == "Compliance")
+            {
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Overall Compliance</h5>
+                        <h2 class="@(Model.OverallCompliancePercentage >= 80 ? "text-success" : Model.OverallCompliancePercentage >= 60 ? "text-warning" : "text-danger")">
+                            @(Model.OverallCompliancePercentage?.ToString("F0") ?? "0")%
+                        </h2>
+                        <p class="text-muted">Compliance Rate</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Charts for Maturity Assessments -->
+    @if (Model.AssessmentType == "Maturity" && Model.FunctionMaturityData != null && Model.FunctionMaturityData.Any())
+    {
+        var isC2M2 = Model.FrameworkName.Contains("C2M2", StringComparison.OrdinalIgnoreCase);
+        
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">@(isC2M2 ? "C2M2 Domain" : "NIST CSF 2.0 Function") Maturity Analysis</h5>
+                        <div style="position: relative; height: @(isC2M2 ? "500px" : "400px");">
+                            <canvas id="@(isC2M2 ? "maturityBarChart" : "maturitySpiderChart")"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">@(isC2M2 ? "Domain" : "Function") Details</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>@(isC2M2 ? "Domain" : "Function")</th>
+                                        <th>Current</th>
+                                        <th>Target</th>
+                                        <th>Gap</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var function in Model.FunctionMaturityData)
+                                    {
+                                        var gap = function.TargetMaturity - function.CurrentMaturity;
+                                        <tr>
+                                            <td>@function.FunctionName</td>
+                                            <td>@function.CurrentMaturity.ToString("F1")</td>
+                                            <td>@function.TargetMaturity.ToString("F1")</td>
+                                            <td class="@(gap > 1 ? "text-danger" : gap > 0.5 ? "text-warning" : "text-success")">
+                                                @gap.ToString("F1")
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Compliance Category Stats -->
+    @if (Model.AssessmentType == "Compliance" && Model.CategoryStats != null && Model.CategoryStats.Any())
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Compliance by Category</h5>
+                        <div class="row">
+                            @foreach (var category in Model.CategoryStats)
+                            {
+                                <div class="col-md-4 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-subtitle mb-2 text-muted">@category.Value.CategoryName</h6>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h4 class="mb-0 @(category.Value.CompliancePercentage >= 80 ? "text-success" : category.Value.CompliancePercentage >= 60 ? "text-warning" : "text-danger")">
+                                                    @category.Value.CompliancePercentage.ToString("F0")%
+                                                </h4>
+                                                <small class="text-muted">@category.Value.CompliantControls / @category.Value.TotalControls</small>
+                                            </div>
+                                            <div class="progress mb-2">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     style="width: @category.Value.CompliancePercentage%" 
+                                                     aria-valuenow="@category.Value.CompliancePercentage" 
+                                                     aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">
+                                                <span class="text-danger">@category.Value.NonCompliantControls non-compliant</span>,
+                                                <span class="text-warning">@category.Value.PartiallyCompliantControls partial</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Control Details -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Control Assessments</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="controlsTable">
+                    <thead>
+                        <tr>
+                            <th>Control ID</th>
+                            <th>Title</th>
+                            <th>Category</th>
+                            @if (Model.AssessmentType == "Maturity")
+                            {
+                                <th>Current Level</th>
+                                <th>Target Level</th>
+                            }
+                            else
+                            {
+                                <th>Status</th>
+                            }
+                            <th>Assessment Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var control in Model.ControlAssessments)
+                        {
+                            <tr>
+                                <td>@control.ControlId</td>
+                                <td>@control.Title</td>
+                                <td>@control.Category</td>
+                                @if (Model.AssessmentType == "Maturity")
+                                {
+                                    <td>
+                                        @if (control.CurrentMaturityLevel.HasValue)
+                                        {
+                                            <span class="badge bg-primary">@control.CurrentMaturityLevel.Value</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not Assessed</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (control.TargetMaturityLevel.HasValue)
+                                        {
+                                            <span class="badge bg-success">@control.TargetMaturityLevel.Value</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not Set</span>
+                                        }
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td>
+                                        <span class="badge @GetComplianceStatusBadgeClass(control.ComplianceStatus)">
+                                            @control.ComplianceStatus
+                                        </span>
+                                    </td>
+                                }
+                                <td>@(control.AssessmentDate?.ToShortDateString() ?? "Not Assessed")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#controlDetailsModal"
+                                            data-control-id="@control.ControlId"
+                                            data-control-title="@control.Title"
+                                            data-control-description="@control.Description"
+                                            data-control-notes="@control.Notes"
+                                            data-control-findings="@control.Findings">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Control Details Modal -->
+<div class="modal fade" id="controlDetailsModal" tabindex="-1" aria-labelledby="controlDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="controlDetailsModalLabel">Control Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="modalControlId"></h6>
+                <h5 id="modalControlTitle"></h5>
+                <p id="modalControlDescription"></p>
+                <hr>
+                <h6>Assessment Notes</h6>
+                <p id="modalControlNotes" class="text-muted"></p>
+                <h6>Findings</h6>
+                <p id="modalControlFindings" class="text-muted"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTable
+            $('#controlsTable').DataTable({
+                pageLength: 25,
+                order: [[0, 'asc']]
+            });
+            
+            // Control Details Modal
+            $('#controlDetailsModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var modal = $(this);
+                modal.find('#modalControlId').text(button.data('control-id'));
+                modal.find('#modalControlTitle').text(button.data('control-title'));
+                modal.find('#modalControlDescription').text(button.data('control-description'));
+                modal.find('#modalControlNotes').text(button.data('control-notes') || 'No notes available');
+                modal.find('#modalControlFindings').text(button.data('control-findings') || 'No findings available');
+            });
+            
+            // Charts for Maturity Assessments
+            @if (Model.AssessmentType == "Maturity" && Model.FunctionMaturityData != null && Model.FunctionMaturityData.Any())
+            {
+                var isC2M2 = Model.FrameworkName.Contains("C2M2", StringComparison.OrdinalIgnoreCase);
+                
+                if (isC2M2)
+                {
+                    <text>
+                    // Bar Chart for C2M2
+                    var ctx = document.getElementById('maturityBarChart').getContext('2d');
+                    var domainNames = @Html.Raw(Json.Serialize(Model.FunctionMaturityData.Select(f => f.FunctionName)));
+                    var currentData = @Html.Raw(Json.Serialize(Model.FunctionMaturityData.Select(f => f.CurrentMaturity)));
+                    var targetData = @Html.Raw(Json.Serialize(Model.FunctionMaturityData.Select(f => f.TargetMaturity)));
+                    
+                    // Function to get color based on maturity level
+                    function getMaturityColor(level) {
+                        switch(Math.round(level)) {
+                            case 0: return 'rgba(139, 0, 0, 0.8)';      // Dark red
+                            case 1: return 'rgba(220, 53, 69, 0.8)';    // Regular red
+                            case 2: return 'rgba(40, 167, 69, 0.8)';    // Green
+                            case 3: return 'rgba(0, 123, 39, 0.8)';     // Better looking green
+                            default: return 'rgba(108, 117, 125, 0.8)'; // Gray for unknown
+                        }
+                    }
+                    
+                    function getMaturityBorderColor(level) {
+                        switch(Math.round(level)) {
+                            case 0: return 'rgba(139, 0, 0, 1)';      // Dark red
+                            case 1: return 'rgba(220, 53, 69, 1)';    // Regular red
+                            case 2: return 'rgba(40, 167, 69, 1)';    // Green
+                            case 3: return 'rgba(0, 123, 39, 1)';     // Better looking green
+                            default: return 'rgba(108, 117, 125, 1)'; // Gray for unknown
+                        }
+                    }
+                    
+                    // Create color arrays based on current maturity levels
+                    var currentBackgroundColors = currentData.map(level => getMaturityColor(level));
+                    var currentBorderColors = currentData.map(level => getMaturityBorderColor(level));
+                    
+                    var barChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: domainNames,
+                            datasets: [{
+                                label: 'Current Maturity Level',
+                                data: currentData,
+                                backgroundColor: currentBackgroundColors,
+                                borderColor: currentBorderColors,
+                                borderWidth: 1
+                            }, {
+                                label: 'Target Maturity Level',
+                                data: targetData,
+                                backgroundColor: 'rgba(52, 58, 64, 0.8)',
+                                borderColor: 'rgba(52, 58, 64, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 3,
+                                    ticks: {
+                                        stepSize: 1,
+                                        callback: function(value) {
+                                            switch(value) {
+                                                case 0: return '0 - Not Performed';
+                                                case 1: return '1 - Initial';
+                                                case 2: return '2 - Developing';
+                                                case 3: return '3 - Defined';
+                                                default: return value;
+                                            }
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Maturity Level'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'C2M2 Domains'
+                                    },
+                                    ticks: {
+                                        autoSkip: false,
+                                        maxRotation: 45,
+                                        minRotation: 45
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            var label = context.dataset.label || '';
+                                            var value = context.parsed.y;
+                                            var levelName = '';
+                                            switch(Math.round(value)) {
+                                                case 0: levelName = ' (Not Performed)'; break;
+                                                case 1: levelName = ' (Initial)'; break;
+                                                case 2: levelName = ' (Developing)'; break;
+                                                case 3: levelName = ' (Defined)'; break;
+                                            }
+                                            return label + ': ' + value.toFixed(1) + levelName;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    </text>
+                }
+                else
+                {
+                    <text>
+                    // Spider Chart for NIST CSF 2.0
+                    var ctx = document.getElementById('maturitySpiderChart').getContext('2d');
+                    var functionNames = @Html.Raw(Json.Serialize(Model.FunctionMaturityData.Select(f => f.FunctionName)));
+                    var currentData = @Html.Raw(Json.Serialize(Model.FunctionMaturityData.Select(f => f.CurrentMaturity)));
+                    var targetData = @Html.Raw(Json.Serialize(Model.FunctionMaturityData.Select(f => f.TargetMaturity)));
+                    
+                    var spiderChart = new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: functionNames,
+                            datasets: [{
+                                label: 'Current Maturity',
+                                data: currentData,
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
+                            }, {
+                                label: 'Target Maturity',
+                                data: targetData,
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgba(75, 192, 192, 1)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                r: {
+                                    beginAtZero: true,
+                                    max: 4,
+                                    ticks: {
+                                        stepSize: 1
+                                    },
+                                    pointLabels: {
+                                        font: {
+                                            size: 12
+                                        }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.dataset.label + ': ' + context.parsed.r.toFixed(1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    </text>
+                }
+            }
+        });
+    </script>
+}
+
+@functions {
+    string GetStatusBadgeClass(CyberRiskApp.Models.AssessmentStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.AssessmentStatus.Draft => "bg-secondary",
+            CyberRiskApp.Models.AssessmentStatus.InProgress => "bg-warning",
+            CyberRiskApp.Models.AssessmentStatus.Completed => "bg-success",
+            CyberRiskApp.Models.AssessmentStatus.Approved => "bg-info",
+            _ => "bg-secondary"
+        };
+    }
+    
+    string GetComplianceStatusBadgeClass(CyberRiskApp.Models.ComplianceStatus? status)
+    {
+        if (!status.HasValue) return "bg-secondary";
+        
+        return status.Value switch
+        {
+            CyberRiskApp.Models.ComplianceStatus.NonCompliant => "bg-danger",
+            CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "bg-warning",
+            CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "bg-info",
+            CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "bg-success",
+            CyberRiskApp.Models.ComplianceStatus.NotApplicable => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+}

@@ -1,0 +1,496 @@
+@model CyberRiskApp.Models.RiskMatrix
+@{
+    ViewData["Title"] = "Configure Risk Matrix";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-cog text-primary me-2"></i>
+            Configure Risk Matrix: @Model.Name
+        </h2>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to List
+        </a>
+    </div>
+
+    <!-- Matrix Info Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>Matrix Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <strong>Size:</strong> @(Model.MatrixSize)×@(Model.MatrixSize)
+                </div>
+                <div class="col-md-3">
+                    <strong>Type:</strong> 
+                    @if (Model.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihood)
+                    {
+                        <span class="text-primary">2D Matrix</span>
+                    }
+                    else
+                    {
+                        <span class="text-info">3D Matrix</span>
+                    }
+                </div>
+                <div class="col-md-3">
+                    <strong>Status:</strong> 
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Inactive</span>
+                    }
+                </div>
+                <div class="col-md-3">
+                    @if (Model.IsDefault)
+                    {
+                        <span class="badge bg-warning">Default Matrix</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Level Configuration Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-layer-group me-2"></i>Risk Level Configuration
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Impact Levels -->
+                <div class="col-md-4">
+                    <h6 class="text-primary"><i class="fas fa-exclamation-triangle me-2"></i>Impact Levels</h6>
+                    <div id="impactLevels">
+                        @for (int i = 1; i <= Model.MatrixSize; i++)
+                        {
+                            <div class="mb-3 level-config" data-level-type="Impact" data-level-value="@i">
+                                <label class="form-label fw-bold">Level @i</label>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <input type="text" class="form-control level-name" placeholder="Enter level name" value="Level @i" />
+                                    </div>
+                                    <div class="col-4">
+                                        <input type="color" class="form-control form-control-color level-color" value="#@(GetDefaultColor(i, Model.MatrixSize))" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Likelihood Levels -->
+                <div class="col-md-4">
+                    <h6 class="text-success"><i class="fas fa-percentage me-2"></i>Likelihood Levels</h6>
+                    <div id="likelihoodLevels">
+                        @for (int i = 1; i <= Model.MatrixSize; i++)
+                        {
+                            <div class="mb-3 level-config" data-level-type="Likelihood" data-level-value="@i">
+                                <label class="form-label fw-bold">Level @i</label>
+                                <div class="row">
+                                    <div class="col-8">
+                                        <input type="text" class="form-control level-name" placeholder="Enter level name" value="Level @i" />
+                                    </div>
+                                    <div class="col-4">
+                                        <input type="color" class="form-control form-control-color level-color" value="#@(GetDefaultColor(i, Model.MatrixSize))" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Exposure Levels (3D Only) -->
+                @if (Model.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihoodExposure)
+                {
+                    <div class="col-md-4">
+                        <h6 class="text-warning"><i class="fas fa-shield-alt me-2"></i>Exposure Levels</h6>
+                        <div id="exposureLevels">
+                            @for (int i = 1; i <= Model.MatrixSize; i++)
+                            {
+                                <div class="mb-3 level-config" data-level-type="Exposure" data-level-value="@i">
+                                    <label class="form-label fw-bold">Level @i</label>
+                                    <div class="row">
+                                        <div class="col-8">
+                                            <input type="text" class="form-control level-name" placeholder="Enter level name" value="Level @i" />
+                                        </div>
+                                        <div class="col-4">
+                                            <input type="color" class="form-control form-control-color level-color" value="#@(GetDefaultColor(i, Model.MatrixSize))" />
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="mt-4">
+                <button type="button" class="btn btn-primary" id="saveLevels">
+                    <i class="fas fa-save me-2"></i>Save Level Configuration
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="resetLevels">
+                    <i class="fas fa-undo me-2"></i>Reset to Defaults
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matrix Preview Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-success bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-eye me-2"></i>Matrix Preview
+            </h5>
+        </div>
+        <div class="card-body">
+            <div id="matrixPreview" class="table-responsive">
+                <!-- Matrix will be dynamically generated here -->
+            </div>
+            
+            <div class="mt-4">
+                <button type="button" class="btn btn-success" id="generateMatrix">
+                    <i class="fas fa-magic me-2"></i>Generate Risk Matrix
+                </button>
+                <button type="button" class="btn btn-info" id="previewMatrix">
+                    <i class="fas fa-eye me-2"></i>Preview Matrix
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Level Mapping Section -->
+    <div class="card">
+        <div class="card-header bg-warning bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-sliders-h me-2"></i>Risk Level Mapping
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">Configure how risk scores map to risk levels (Low, Medium, High, Critical)</p>
+            
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-success">Low Risk</label>
+                        <div class="input-group">
+                            <span class="input-group-text">≤</span>
+                            <input type="number" class="form-control" id="lowThreshold" value="4" min="1" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-warning">Medium Risk</label>
+                        <div class="input-group">
+                            <span class="input-group-text">≤</span>
+                            <input type="number" class="form-control" id="mediumThreshold" value="9" min="2" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-danger">High Risk</label>
+                        <div class="input-group">
+                            <span class="input-group-text">≤</span>
+                            <input type="number" class="form-control" id="highThreshold" value="16" min="3" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Critical Risk</label>
+                        <div class="input-group">
+                            <span class="input-group-text">></span>
+                            <input type="number" class="form-control" id="criticalThreshold" value="16" readonly />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="button" class="btn btn-warning" id="saveThresholds">
+                    <i class="fas fa-save me-2"></i>Save Risk Thresholds
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetDefaultColor(int level, int maxLevel)
+    {
+        // Generate default colors from green to red based on risk level
+        var colors = new string[5] { "28a745", "ffc107", "fd7e14", "dc3545", "6f42c1" };
+        var index = Math.Min(level - 1, colors.Length - 1);
+        return colors[index];
+    }
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const matrixId = @Model.Id;
+            const matrixSize = @Model.MatrixSize;
+            const matrixType = @((int)Model.MatrixType);
+            const is3D = matrixType === 2;
+
+            // Save Level Configuration
+            document.getElementById('saveLevels').addEventListener('click', function() {
+                const levels = [];
+                
+                document.querySelectorAll('.level-config').forEach(function(levelDiv) {
+                    const levelType = levelDiv.getAttribute('data-level-type');
+                    const levelValue = parseInt(levelDiv.getAttribute('data-level-value'));
+                    const levelName = levelDiv.querySelector('.level-name').value;
+                    const levelColor = levelDiv.querySelector('.level-color').value;
+                    
+                    levels.push({
+                        LevelType: levelType,
+                        LevelValue: levelValue,
+                        LevelName: levelName,
+                        ColorCode: levelColor,
+                        Multiplier: levelValue
+                    });
+                });
+
+                fetch(`/RiskMatrix/SaveLevels/${matrixId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify(levels)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Level configuration saved successfully!', 'success');
+                    } else {
+                        showAlert('Error saving configuration: ' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Error saving configuration: ' + error.message, 'danger');
+                });
+            });
+
+            // Generate Matrix
+            document.getElementById('generateMatrix').addEventListener('click', function() {
+                fetch(`/RiskMatrix/GenerateMatrix/${matrixId}`, {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Risk matrix generated successfully!', 'success');
+                        previewMatrix();
+                    } else {
+                        showAlert('Error generating matrix: ' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Error generating matrix: ' + error.message, 'danger');
+                });
+            });
+
+            // Preview Matrix
+            document.getElementById('previewMatrix').addEventListener('click', previewMatrix);
+
+            // Save Risk Thresholds
+            document.getElementById('saveThresholds').addEventListener('click', function() {
+                const thresholds = {
+                    lowThreshold: parseInt(document.getElementById('lowThreshold').value),
+                    mediumThreshold: parseInt(document.getElementById('mediumThreshold').value),
+                    highThreshold: parseInt(document.getElementById('highThreshold').value)
+                };
+
+                fetch(`/RiskMatrix/SaveThresholds/${matrixId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify(thresholds)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Risk thresholds saved successfully!', 'success');
+                    } else {
+                        showAlert('Error saving thresholds: ' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Error saving thresholds: ' + error.message, 'danger');
+                });
+            });
+
+            // Reset Levels
+            document.getElementById('resetLevels').addEventListener('click', function() {
+                if (confirm('Are you sure you want to reset all levels to default values?')) {
+                    location.reload();
+                }
+            });
+
+            // Preview Matrix Function
+            function previewMatrix() {
+                fetch(`/RiskMatrix/GetMatrixData/${matrixId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderMatrixPreview(data.matrix, data.levels, data.cells);
+                    } else {
+                        showAlert('Error loading matrix data: ' + data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Error loading matrix data: ' + error.message, 'danger');
+                });
+            }
+
+            // Render Matrix Preview
+            function renderMatrixPreview(matrix, levels, cells) {
+                const previewDiv = document.getElementById('matrixPreview');
+                
+                let html = '<table class="table table-bordered table-sm matrix-preview">';
+                
+                // Header row
+                html += '<thead><tr><th class="matrix-corner">Risk Matrix</th>';
+                
+                const likelihoodLevels = levels.filter(l => l.levelType === 'Likelihood').sort((a, b) => a.levelValue - b.levelValue);
+                likelihoodLevels.forEach(level => {
+                    html += `<th class="text-center likelihood-header" style="background-color: ${level.color}20">${level.levelName}</th>`;
+                });
+                html += '</tr></thead><tbody>';
+
+                // Matrix rows
+                const impactLevels = levels.filter(l => l.levelType === 'Impact').sort((a, b) => b.levelValue - a.levelValue);
+                impactLevels.forEach(impactLevel => {
+                    html += '<tr>';
+                    html += `<th class="impact-header" style="background-color: ${impactLevel.color}20">${impactLevel.levelName}</th>`;
+                    
+                    likelihoodLevels.forEach(likelihoodLevel => {
+                        const cell = cells.find(c => 
+                            c.impactLevel === impactLevel.levelValue && 
+                            c.likelihoodLevel === likelihoodLevel.levelValue && 
+                            (!is3D || c.exposureLevel === 1)
+                        );
+                        
+                        if (cell) {
+                            const riskLevel = getRiskLevelFromScore(cell.riskScore);
+                            const bgColor = getRiskLevelColor(riskLevel);
+                            html += `<td class="text-center matrix-cell" style="background-color: ${bgColor}; color: white; font-weight: bold;">
+                                        ${cell.riskScore}
+                                        <br><small>${riskLevel}</small>
+                                    </td>`;
+                        } else {
+                            html += '<td class="text-center">-</td>';
+                        }
+                    });
+                    html += '</tr>';
+                });
+
+                html += '</tbody></table>';
+                
+                if (is3D) {
+                    html += '<p class="text-muted mt-2"><small><i class="fas fa-info-circle me-1"></i>This preview shows the base 2D matrix. The 3D matrix includes exposure levels as multipliers.</small></p>';
+                }
+                
+                previewDiv.innerHTML = html;
+            }
+
+            // Helper Functions
+            function getRiskLevelFromScore(score) {
+                const low = parseInt(document.getElementById('lowThreshold').value);
+                const medium = parseInt(document.getElementById('mediumThreshold').value);
+                const high = parseInt(document.getElementById('highThreshold').value);
+                
+                if (score <= low) return 'Low';
+                if (score <= medium) return 'Medium';
+                if (score <= high) return 'High';
+                return 'Critical';
+            }
+
+            function getRiskLevelColor(level) {
+                switch (level) {
+                    case 'Low': return '#28a745';
+                    case 'Medium': return '#ffc107';
+                    case 'High': return '#fd7e14';
+                    case 'Critical': return '#dc3545';
+                    default: return '#6c757d';
+                }
+            }
+
+            function showAlert(message, type) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(alertDiv);
+                
+                setTimeout(() => {
+                    alertDiv.remove();
+                }, 5000);
+            }
+
+            // Auto-update critical threshold
+            document.getElementById('highThreshold').addEventListener('change', function() {
+                document.getElementById('criticalThreshold').value = this.value;
+            });
+
+            // Initial matrix preview
+            previewMatrix();
+        });
+    </script>
+
+    <style>
+        .matrix-preview {
+            font-size: 0.9rem;
+        }
+        
+        .matrix-corner {
+            background-color: #f8f9fa !important;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+        
+        .likelihood-header, .impact-header {
+            background-color: #f8f9fa !important;
+            font-weight: bold;
+        }
+        
+        .matrix-cell {
+            min-width: 80px;
+            height: 60px;
+            vertical-align: middle !important;
+        }
+        
+        .level-config {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+        }
+        
+        .form-control-color {
+            width: 100%;
+            height: 38px;
+        }
+    </style>
+}

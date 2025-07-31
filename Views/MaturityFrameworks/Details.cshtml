@@ -1,0 +1,543 @@
+﻿@model CyberRiskApp.Models.MaturityFramework
+@{
+    ViewData["Title"] = $"Framework Details - {Model.Name}";
+    var isC2M2 = Model.Type == CyberRiskApp.Models.FrameworkType.C2M2;
+    var isNISTCSF = Model.Type == CyberRiskApp.Models.FrameworkType.NISTCSF;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Framework Header -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4>
+                                <i class="fas fa-chart-line me-2"></i>@Model.Name
+                                @if (!string.IsNullOrEmpty(Model.Version))
+                                {
+                                    <span class="badge bg-info">v@Model.Version</span>
+                                }
+                            </h4>
+                            <small class="text-muted">
+                                Type: @Model.Type |
+                                Status: @Model.Status |
+                                Controls: @Model.Controls.Count() |
+                                Uploaded: @Model.UploadedDate.ToString("MMM dd, yyyy")
+                            </small>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge badge-@(Model.Status == CyberRiskApp.Models.FrameworkStatus.Active ? "success" : Model.Status == CyberRiskApp.Models.FrameworkStatus.Draft ? "warning" : "secondary") fs-6">
+                                @Model.Status
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <p class="mb-3">@Model.Description</p>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            @if (isNISTCSF)
+                            {
+                                <h6 class="text-primary"><i class="fas fa-shield-alt me-1"></i>NIST Cybersecurity Framework 2.0</h6>
+                                <p class="mb-1"><strong>Maturity Levels:</strong> 0 (Not Implemented) to 4 (Managed)</p>
+                                <p class="mb-0"><strong>Structure:</strong> Functions → Categories → Subcategories</p>
+                            }
+                            else if (isC2M2)
+                            {
+                                <h6 class="text-warning"><i class="fas fa-chart-bar me-1"></i>Cybersecurity Capability Maturity Model v2.1</h6>
+                                <p class="mb-1"><strong>Maturity Levels:</strong> 1 (Initial) to 3 (Defined)</p>
+                                <p class="mb-0"><strong>Structure:</strong> Domains → MIL → Practices</p>
+                                <p class="mb-0"><strong>Domains:</strong> 10 cybersecurity domains with 356 practices</p>
+                            }
+                            else
+                            {
+                                <h6 class="text-secondary"><i class="fas fa-cog me-1"></i>@Model.Type Framework</h6>
+                                <p class="mb-0">Custom framework configuration</p>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            @if (isC2M2)
+                            {
+                                <!-- C2M2 Domain Summary -->
+                                var domainStats = Model.Controls.GroupBy(c => c.Function)
+                                .Select(g => new
+                                {
+                                    Domain = g.Key,
+                                    Count = g.Count(),
+                                    Critical = g.Count(c => c.Priority == CyberRiskApp.Models.ControlPriority.Critical),
+                                    High = g.Count(c => c.Priority == CyberRiskApp.Models.ControlPriority.High)
+                                })
+                                .OrderBy(d => d.Domain).ToList();
+
+                                <small class="text-muted">
+                                    <strong>Domain Distribution:</strong><br>
+                                    @foreach (var stat in domainStats.Take(5))
+                                    {
+                                        <span class="badge bg-light text-dark me-1 mb-1">@stat.Domain: @stat.Count</span>
+                                    }
+                                    @if (domainStats.Count > 5)
+                                    {
+                                        <span class="text-muted">+@(domainStats.Count - 5) more...</span>
+                                    }
+                                </small>
+                            }
+                            else if (isNISTCSF)
+                            {
+                                <!-- NIST CSF Function Summary -->
+                                var functionStats = Model.Controls.GroupBy(c => c.Function)
+                                .Select(g => new { Function = g.Key, Count = g.Count() })
+                                .OrderBy(f => f.Function).ToList();
+
+                                <small class="text-muted">
+                                    <strong>Function Distribution:</strong><br>
+                                    @foreach (var stat in functionStats)
+                                    {
+                                        <span class="badge bg-light text-dark me-1 mb-1">@stat.Function: @stat.Count</span>
+                                    }
+                                </small>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Priority Management Tools -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6><i class="fas fa-tasks me-1"></i>Priority Management</h6>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="bulkSetPriority('Critical')">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Mark Selected as Critical
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="bulkSetPriority('High')">
+                                <i class="fas fa-arrow-up me-1"></i>Mark Selected as High
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info" onclick="bulkSetPriority('Medium')">
+                                <i class="fas fa-minus me-1"></i>Mark Selected as Medium
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="bulkSetPriority('Low')">
+                                <i class="fas fa-arrow-down me-1"></i>Mark Selected as Low
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @{
+                            var priorityStats = Model.Controls.GroupBy(c => c.Priority)
+                            .Select(g => new { Priority = g.Key, Count = g.Count() })
+                            .OrderByDescending(p => (int)p.Priority).ToList();
+                        }
+                        @foreach (var stat in priorityStats)
+                        {
+                            <div class="col-md-3 col-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-@(stat.Priority == CyberRiskApp.Models.ControlPriority.Critical ? "danger" :
+                                                           stat.Priority == CyberRiskApp.Models.ControlPriority.High ? "warning" :
+                                                           stat.Priority == CyberRiskApp.Models.ControlPriority.Medium ? "info" : "secondary") me-2">
+                                        @stat.Priority
+                                    </span>
+                                    <span>@stat.Count controls</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="selectAllControls" onchange="toggleAllControls(this)">
+                        <label class="form-check-label" for="selectAllControls">
+                            Select All Controls
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-list me-1"></i>Framework Controls (@Model.Controls.Count())</h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.Controls.Any())
+                    {
+                        <!-- Filter and Search Controls -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <input type="text" id="searchControls" class="form-control" placeholder="Search controls..." onkeyup="filterControls()">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filterDomain" class="form-select" onchange="filterControls()">
+                                    <option value="">All @(isC2M2 ? "Domains" : "Functions")</option>
+                                    @foreach (var domain in Model.Controls.Select(c => c.Function).Distinct().OrderBy(d => d))
+                                    {
+                                        <option value="@domain">@domain</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filterPriority" class="form-select" onchange="filterControls()">
+                                    <option value="">All Priorities</option>
+                                    <option value="Critical">Critical</option>
+                                    <option value="High">High</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Low">Low</option>
+                                </select>
+                            </div>
+                            @if (isC2M2)
+                            {
+                                <div class="col-md-2">
+                                    <select id="filterMIL" class="form-select" onchange="filterControls()">
+                                        <option value="">All MILs</option>
+                                        <option value="1">MIL 1</option>
+                                        <option value="2">MIL 2</option>
+                                        <option value="3">MIL 3</option>
+                                    </select>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="controlsTable">
+                                <thead>
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAllTableControls" onchange="toggleAllTableControls(this)">
+                                        </th>
+                                        <th>Control ID</th>
+                                        <th>Title</th>
+                                        <th>@(isC2M2 ? "Domain" : "Function")</th>
+                                        @if (isC2M2)
+                                        {
+                                            <th>MIL</th>
+                                        }
+                                        <th>Priority</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var control in Model.Controls.OrderBy(c => c.Function).ThenBy(c => c.ControlId))
+                                    {
+                                        <tr class="control-row"
+                                            data-domain="@control.Function"
+                                            data-priority="@control.Priority"
+                                            data-mil="@control.Category"
+                                            data-search="@($"{control.ControlId} {control.Title} {control.Function}".ToLower())">
+                                            <td>
+                                                <input type="checkbox" class="control-checkbox" value="@control.Id" name="selectedControls">
+                                            </td>
+                                            <td><strong>@control.ControlId</strong></td>
+                                            <td>
+                                                <div>
+                                                    <strong>@control.Title</strong>
+                                                    @if (!string.IsNullOrEmpty(control.Description) && control.Description.Length > 100)
+                                                    {
+                                                        <br>
+
+                                                        <small class="text-muted">@control.Description.Substring(0, 100)...</small>
+                                                    }
+                                                    else if (!string.IsNullOrEmpty(control.Description))
+                                                    {
+                                                        <br>
+
+                                                        <small class="text-muted">@control.Description</small>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">@control.Function</span>
+                                            </td>
+                                            @if (isC2M2)
+                                            {
+                                                <td>
+                                                    <span class="badge bg-secondary">@control.Category</span>
+                                                </td>
+                                            }
+                                            <td>
+                                                <select class="form-select form-select-sm priority-select"
+                                                        data-control-id="@control.Id"
+                                                        onchange="updateControlPriority(@control.Id, this.value)">
+                                                    @foreach (CyberRiskApp.Models.ControlPriority priority in Enum.GetValues<CyberRiskApp.Models.ControlPriority>())
+                                                    {
+                                                        <option value="@((int)priority)" selected="@(control.Priority == priority ? "selected" : null)">
+                                                            @priority
+                                                        </option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-info"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#controlDetailModal"
+                                                        onclick="showControlDetails(@control.Id, '@Html.Raw(Html.Encode(control.ControlId))', '@Html.Raw(Html.Encode(control.Title))', '@Html.Raw(Html.Encode(control.Description))', '@Html.Raw(Html.Encode(control.ImplementationGuidance))', '@Html.Raw(Html.Encode(control.HelpText))')">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                            <h5>No Controls Found</h5>
+                            <p class="text-muted">This framework doesn't have any controls yet. Upload an Excel file to add controls.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Frameworks
+                            </a>
+                        </div>
+                        <div>
+                            @if (Model.Controls.Any())
+                            {
+                                <a asp-controller="MaturityAssessments" asp-action="Create" asp-route-frameworkId="@Model.Id" class="btn btn-success me-2">
+                                    <i class="fas fa-plus me-1"></i>Create Assessment
+                                </a>
+                            }
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary me-2">
+                                <i class="fas fa-edit me-1"></i>Edit Framework
+                            </a>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Control Detail Modal -->
+<div class="modal fade" id="controlDetailModal" tabindex="-1" aria-labelledby="controlDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="controlDetailModalLabel">Control Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6 id="modalControlId"></h6>
+                <h5 id="modalControlTitle"></h5>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Description:</strong></label>
+                    <p id="modalControlDescription"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>@(isC2M2 ? "Practice Text" : "Implementation Guidance"):</strong></label>
+                    <p id="modalControlGuidance"></p>
+                </div>
+                @if (isC2M2)
+                {
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Help Text:</strong></label>
+                        <p id="modalControlHelpText"></p>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to delete this framework? This will also delete all associated controls and assessments.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Update individual control priority
+        function updateControlPriority(controlId, priority) {
+            const antiForgeryToken = $('input[name="__RequestVerificationToken"]').val();
+
+            $.ajax({
+                url: '@Url.Action("UpdateControlPriority")',
+                type: 'POST',
+                data: {
+                    controlId: controlId,
+                    priority: priority,
+                    __RequestVerificationToken: antiForgeryToken
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update the badge visually
+                        updatePriorityDisplay(controlId, priority);
+                        showAlert('success', 'Priority updated successfully');
+                    } else {
+                        showAlert('danger', response.message);
+                    }
+                },
+                error: function() {
+                    showAlert('danger', 'Error updating priority');
+                }
+            });
+        }
+
+        // Bulk update priorities for selected controls
+        function bulkSetPriority(priority) {
+            const selectedControls = $('.control-checkbox:checked').map(function() {
+                return this.value;
+            }).get();
+
+            if (selectedControls.length === 0) {
+                showAlert('warning', 'Please select at least one control');
+                return;
+            }
+
+            const priorityValue = { 'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4 }[priority];
+
+            selectedControls.forEach(controlId => {
+                updateControlPriority(controlId, priorityValue);
+                // Update the dropdown
+                $(`.priority-select[data-control-id="${controlId}"]`).val(priorityValue);
+            });
+
+            showAlert('success', `Updated ${selectedControls.length} controls to ${priority} priority`);
+        }
+
+        // Toggle all controls selection
+        function toggleAllControls(checkbox) {
+            $('.control-checkbox').prop('checked', checkbox.checked);
+        }
+
+        function toggleAllTableControls(checkbox) {
+            $('.control-row:visible .control-checkbox').prop('checked', checkbox.checked);
+        }
+
+        // Filter controls based on search and filters
+        function filterControls() {
+            const searchTerm = $('#searchControls').val().toLowerCase();
+            const domainFilter = $('#filterDomain').val();
+            const priorityFilter = $('#filterPriority').val();
+            const milFilter = $('#filterMIL').val();
+
+            $('.control-row').each(function() {
+                const row = $(this);
+                const searchData = row.data('search');
+                const domain = row.data('domain');
+                const priority = row.data('priority');
+                const mil = row.data('mil');
+
+                let show = true;
+
+                // Search filter
+                if (searchTerm && !searchData.includes(searchTerm)) {
+                    show = false;
+                }
+
+                // Domain filter
+                if (domainFilter && domain !== domainFilter) {
+                    show = false;
+                }
+
+                // Priority filter
+                if (priorityFilter && priority !== priorityFilter) {
+                    show = false;
+                }
+
+                // MIL filter (for C2M2)
+                if (milFilter && mil !== milFilter) {
+                    show = false;
+                }
+
+                row.toggle(show);
+            });
+        }
+
+        // Show control details in modal
+        function showControlDetails(id, controlId, title, description, guidance, helpText) {
+            $('#modalControlId').text(controlId);
+            $('#modalControlTitle').text(title);
+            $('#modalControlDescription').text(description || 'No description available');
+            $('#modalControlGuidance').text(guidance || 'No guidance available');
+        @if (isC2M2)
+        {
+            <text>$('#modalControlHelpText').text(helpText || 'No help text available');</text>
+        }
+        }
+
+        // Update priority display
+        function updatePriorityDisplay(controlId, priority) {
+            const priorityNames = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Critical' };
+            const priorityColors = { 1: 'secondary', 2: 'info', 3: 'warning', 4: 'danger' };
+
+            // Update any badges or displays if needed
+        }
+
+        // Show alert messages
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            // Add to top of page or specific container
+            $('.container-fluid').prepend(alertHtml);
+
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                $('.alert').alert('close');
+            }, 3000);
+        }
+
+        // Add CSRF token to all AJAX requests
+        $(document).ready(function() {
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("RequestVerificationToken", $('input[name=__RequestVerificationToken]').val());
+                    }
+                }
+            });
+        });
+    </script>
+}
+
+@{
+    // Add anti-forgery token for AJAX requests
+    <input name="__RequestVerificationToken" type="hidden" value="@Html.AntiForgeryToken()" />
+}

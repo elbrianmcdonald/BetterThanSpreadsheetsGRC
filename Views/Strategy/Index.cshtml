@@ -1,0 +1,254 @@
+@model IEnumerable<CyberRiskApp.Models.StrategyPlan>
+@{
+    ViewData["Title"] = "Strategy Planning Dashboard";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-chart-line text-primary me-2"></i>
+            Strategy Planning Dashboard
+        </h2>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>New Strategy Plan
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-primary">
+                <div class="card-body text-center">
+                    <div class="display-4 text-primary mb-2">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <h3 class="text-primary mb-0">@ViewBag.ActivePlansCount</h3>
+                    <p class="text-muted mb-0">Active Plans</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-info">
+                <div class="card-body text-center">
+                    <div class="display-4 text-info mb-2">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3 class="text-info mb-0">@ViewBag.InProgressCount</h3>
+                    <p class="text-muted mb-0">In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-success">
+                <div class="card-body text-center">
+                    <div class="display-4 text-success mb-2">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3 class="text-success mb-0">@ViewBag.CompletedPlansCount</h3>
+                    <p class="text-muted mb-0">Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-warning">
+                <div class="card-body text-center">
+                    <div class="display-4 text-warning mb-2">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3 class="text-warning mb-0">@Model.Count()</h3>
+                    <p class="text-muted mb-0">Total Plans</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategy Plans List -->
+    @if (Model.Any())
+    {
+        <div class="row">
+            @foreach (var plan in Model)
+            {
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 @(plan.Status == StrategyPlanStatus.Active ? "border-primary" : "")">
+                        @if (plan.Status == StrategyPlanStatus.Active)
+                        {
+                            <div class="card-header bg-primary text-white">
+                                <i class="fas fa-star me-2"></i>Active Plan
+                            </div>
+                        }
+                        
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                @plan.PlanName
+                                @if (plan.Status != StrategyPlanStatus.Active)
+                                {
+                                    <span class="badge bg-@(plan.Status.ToString().ToLower()) ms-2">@plan.Status</span>
+                                }
+                            </h5>
+                            
+                            @if (!string.IsNullOrEmpty(plan.Description))
+                            {
+                                <p class="card-text text-muted">@plan.Description</p>
+                            }
+                            
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Organization</small>
+                                    <strong>@plan.Organization.Name</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">Timeline</small>
+                                    <strong>@plan.StartDate.ToString("MMM yyyy") - @plan.EndDate.ToString("MMM yyyy")</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted">Overall Progress</small>
+                                    <small class="text-muted">@plan.OverallProgressPercentage.ToString("F0")%</small>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar @(plan.OverallProgressPercentage >= 80 ? "bg-success" : plan.OverallProgressPercentage >= 50 ? "bg-info" : "bg-warning")" 
+                                         role="progressbar" 
+                                         style="width: @plan.OverallProgressPercentage%">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Plan Stats -->
+                            <div class="row mb-3">
+                                <div class="col-4 text-center">
+                                    <div class="h6 mb-0 text-primary">@plan.Goals.Count</div>
+                                    <small class="text-muted">Goals</small>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <div class="h6 mb-0 text-info">@plan.Goals.SelectMany(g => g.Capabilities).Count()</div>
+                                    <small class="text-muted">Capabilities</small>
+                                </div>
+                                <div class="col-4 text-center">
+                                    <div class="h6 mb-0 text-success">@plan.Milestones.Count</div>
+                                    <small class="text-muted">Milestones</small>
+                                </div>
+                            </div>
+                            
+                            @if (plan.TotalBudget.HasValue)
+                            {
+                                <div class="mb-3">
+                                    <small class="text-muted d-block">Budget Usage</small>
+                                    <div class="d-flex justify-content-between">
+                                        <strong>@plan.SpentBudget?.ToString("C0") / @plan.TotalBudget?.ToString("C0")</strong>
+                                        <small class="text-muted">@plan.RemainingBudget.ToString("C0") remaining</small>
+                                    </div>
+                                </div>
+                            }
+                            
+                            <!-- Days Remaining -->
+                            @if (plan.DaysRemaining > 0)
+                            {
+                                <div class="mb-3">
+                                    <small class="text-muted d-block">Time Remaining</small>
+                                    <strong class="@(plan.DaysRemaining < 30 ? "text-warning" : "text-success")">
+                                        @plan.DaysRemaining days
+                                    </strong>
+                                </div>
+                            }
+                            else if (plan.Status != StrategyPlanStatus.Completed)
+                            {
+                                <div class="mb-3">
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Overdue
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                        
+                        <div class="card-footer bg-light">
+                            <div class="btn-group w-100" role="group">
+                                <a asp-action="Details" asp-route-id="@plan.Id" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <a asp-action="Goals" asp-route-id="@plan.Id" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-bullseye"></i> Goals
+                                </a>
+                                <a asp-action="Capabilities" asp-route-id="@plan.Id" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-cogs"></i> Capabilities
+                                </a>
+                                <a asp-action="Roadmap" asp-route-id="@plan.Id" class="btn btn-outline-warning btn-sm">
+                                    <i class="fas fa-road"></i> Roadmap
+                                </a>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <a asp-action="Edit" asp-route-id="@plan.Id" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                            onclick="confirmDelete(@plan.Id, '@plan.PlanName')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Empty State -->
+        <div class="text-center py-5">
+            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No Strategy Plans Found</h4>
+            <p class="text-muted">Create your first strategy plan to start planning your organization's maturity journey.</p>
+            <a asp-action="Create" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-1"></i>Create Strategy Plan
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2"></i>Delete Strategy Plan
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the strategy plan "<strong id="planName"></strong>"?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This action cannot be undone and will delete all associated goals, capabilities, and milestones.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete Plan
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(planId, planName) {
+            document.getElementById('planName').textContent = planName;
+            document.getElementById('deleteForm').action = '/Strategy/Delete/' + planId;
+            
+            var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        }
+    </script>
+}

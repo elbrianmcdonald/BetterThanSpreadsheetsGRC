@@ -1,0 +1,222 @@
+﻿@model CyberRiskApp.Models.AssessmentRequest
+@{
+    ViewData["Title"] = "Request Risk Assessment";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Request Risk Assessment
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="RequesterName" class="form-label">Requester Name <span class="text-danger">*</span></label>
+                                    <input asp-for="RequesterName" class="form-control" placeholder="Enter your full name" />
+                                    <span asp-validation-for="RequesterName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ContactEmail" class="form-label">Contact Email</label>
+                                    <input asp-for="ContactEmail" class="form-control" type="email" placeholder="your.email@company.com" />
+                                    <span asp-validation-for="ContactEmail" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Department" class="form-label">Department <span class="text-danger">*</span></label>
+                                    <input asp-for="Department" class="form-control" placeholder="e.g., IT, Finance, Operations" />
+                                    <span asp-validation-for="Department" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                                    <select asp-for="Priority" class="form-select">
+                                        <option value="">Select Priority</option>
+                                        <option value="@((int)CyberRiskApp.Models.Priority.Low)">Low</option>
+                                        <option value="@((int)CyberRiskApp.Models.Priority.Medium)">Medium</option>
+                                        <option value="@((int)CyberRiskApp.Models.Priority.High)">High</option>
+                                        <option value="@((int)CyberRiskApp.Models.Priority.Urgent)">Urgent</option>
+                                    </select>
+                                    <span asp-validation-for="Priority" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Scope" class="form-label">Assessment Scope <span class="text-danger">*</span></label>
+                            <textarea asp-for="Scope" class="form-control" rows="4"
+                                      placeholder="Describe what you want assessed (e.g., specific systems, processes, or business units)"></textarea>
+                            <span asp-validation-for="Scope" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Justification" class="form-label">Business Justification <span class="text-danger">*</span></label>
+                            <textarea asp-for="Justification" class="form-control" rows="4"
+                                      placeholder="Explain why this assessment is needed and what business decisions it will support"></textarea>
+                            <span asp-validation-for="Justification" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="RequestedTimeline" class="form-label">Requested Completion Date</label>
+                                    <input asp-for="RequestedTimeline" class="form-control" type="date" />
+                                    <span asp-validation-for="RequestedTimeline" class="text-danger"></span>
+                                    <small class="form-text text-muted">Leave blank if no specific deadline</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Notes" class="form-label">Additional Notes</label>
+                            <textarea asp-for="Notes" class="form-control" rows="2"
+                                      placeholder="Any additional information, special requirements, or context..."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Requests
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Request
+                            </button>
+                        </div>
+
+                        <div asp-validation-summary="ModelOnly" class="text-danger mt-3"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Assessment Process</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6>1. Request Submitted</h6>
+                                <small>Your request will be reviewed by the GRC team</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6>2. Assessment Planning</h6>
+                                <small>Scope and methodology will be determined</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-warning"></div>
+                            <div class="timeline-content">
+                                <h6>3. Assessment Execution</h6>
+                                <small>Risk analysis and data collection</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6>4. Results Delivered</h6>
+                                <small>Risk assessment report and recommendations</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Assessment Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary"><i class="fas fa-check-circle me-1"></i>What to Include:</h6>
+                    <ul class="small">
+                        <li>Specific systems or processes to assess</li>
+                        <li>Business context and objectives</li>
+                        <li>Known concerns or focus areas</li>
+                        <li>Regulatory or compliance drivers</li>
+                    </ul>
+
+                    <h6 class="text-warning mt-3"><i class="fas fa-clock me-1"></i>Typical Timeline:</h6>
+                    <ul class="small">
+                        <li><strong>Low Priority:</strong> 4-6 weeks</li>
+                        <li><strong>Medium Priority:</strong> 2-4 weeks</li>
+                        <li><strong>High Priority:</strong> 1-2 weeks</li>
+                        <li><strong>Urgent:</strong> 1 week or less</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <small>
+                            <i class="fas fa-lightbulb me-1"></i>
+                            <strong>Tip:</strong> The more detailed your scope and justification, the more accurate and useful your assessment will be.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -22px;
+        top: 5px;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 2px #dee2e6;
+    }
+
+    .timeline-content h6 {
+        margin-bottom: 5px;
+        font-size: 0.875rem;
+    }
+
+    .timeline-content small {
+        color: #6c757d;
+        font-size: 0.75rem;
+    }
+</style>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

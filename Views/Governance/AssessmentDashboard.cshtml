@@ -1,0 +1,171 @@
+@model CyberRiskApp.ViewModels.AssessmentDashboardViewModel
+@{
+    ViewData["Title"] = "Assessment Dashboard";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Assessment Dashboard</h1>
+        <div>
+            <a href="@Url.Action("CreateMaturityAssessment", "Maturity")" class="btn btn-success">
+                <i class="fas fa-plus"></i> New Maturity Assessment
+            </a>
+            <a href="@Url.Action("CreateAssessment", "Compliance")" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Compliance Assessment
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Assessments</h5>
+                    <h2 class="text-primary">@Model.TotalAssessments</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">In Progress</h5>
+                    <h2 class="text-warning">@Model.InProgressAssessments</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Completed</h5>
+                    <h2 class="text-success">@Model.CompletedAssessments</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessment Cards -->
+    <div class="row">
+        @foreach (var assessment in Model.Assessments)
+        {
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 assessment-card" onclick="window.location.href='@Url.Action("AssessmentDetails", "Governance", new { id = assessment.Id, type = assessment.AssessmentType })'">
+                    <div class="card-header @assessment.StatusClass text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-light text-dark">@assessment.AssessmentType</span>
+                            <span>@assessment.Status</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">@assessment.Title</h5>
+                        <p class="text-muted small">
+                            <i class="fas fa-building"></i> @assessment.FrameworkName
+                            @if (!string.IsNullOrEmpty(assessment.FrameworkVersion))
+                            {
+                                <span>v@assessment.FrameworkVersion</span>
+                            }
+                        </p>
+                        <p class="card-text">@assessment.Description</p>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small>Progress</small>
+                                <small>@assessment.ProgressText</small>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: @assessment.Progress%" 
+                                     aria-valuenow="@assessment.Progress" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        @if (assessment.AssessmentType == "Maturity" && assessment.CurrentMaturityLevel.HasValue)
+                        {
+                            <div class="row text-center mb-2">
+                                <div class="col-6">
+                                    <small class="text-muted">Current Level</small>
+                                    <h4 class="mb-0">@assessment.CurrentMaturityLevel.Value.ToString("F1")</h4>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Target Level</small>
+                                    <h4 class="mb-0">@assessment.TargetMaturityLevel?.ToString("F1")</h4>
+                                </div>
+                            </div>
+                        }
+                        else if (assessment.AssessmentType == "Compliance" && assessment.CompliancePercentage.HasValue)
+                        {
+                            <div class="text-center mb-2">
+                                <small class="text-muted">Compliance Rate</small>
+                                <h4 class="mb-0">@assessment.CompliancePercentage.Value.ToString("F0")%</h4>
+                            </div>
+                        }
+
+                        <div class="text-muted small">
+                            <div class="mb-1">
+                                <i class="fas fa-user"></i> @assessment.Assessor
+                            </div>
+                            <div class="mb-1">
+                                <i class="fas fa-calendar-alt"></i> Started: @assessment.StartDate.ToShortDateString()
+                            </div>
+                            @if (assessment.CompletedDate.HasValue)
+                            {
+                                <div>
+                                    <i class="fas fa-calendar-check"></i> Completed: @assessment.CompletedDate.Value.ToShortDateString()
+                                </div>
+                            }
+                        </div>
+
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                @assessment.AssessedControls of @assessment.TotalControls controls assessed
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="@Url.Action("AssessmentDetails", "Governance", new { id = assessment.Id, type = assessment.AssessmentType })" 
+                           class="btn btn-sm btn-outline-primary w-100">
+                            View Details <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (Model.Assessments.Count == 0)
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No assessments found</h4>
+            <p class="text-muted">Create your first assessment to get started.</p>
+        </div>
+    }
+</div>
+
+<style>
+    .assessment-card {
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .assessment-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-header.bg-secondary {
+        background-color: #6c757d !important;
+    }
+    
+    .card-header.bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+    
+    .card-header.bg-success {
+        background-color: #28a745 !important;
+    }
+    
+    .card-header.bg-danger {
+        background-color: #dc3545 !important;
+    }
+</style>

@@ -1,0 +1,383 @@
+﻿@model UserManagementViewModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        <i class="fas fa-users me-2"></i>User Management
+    </h2>
+    <a asp-action="Create" class="btn btn-primary btn-lg">
+        <i class="fas fa-plus me-2"></i>Add New User
+    </a>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h4>@Model.TotalUsers</h4>
+                <p class="mb-0">Total Users</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h4>@Model.ActiveUsers</h4>
+                <p class="mb-0">Active</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h4>@Model.AdminUsers</h4>
+                <p class="mb-0">Admins</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h4>@Model.GRCUsers</h4>
+                <p class="mb-0">GRC Users</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h4>@Model.ITUsers</h4>
+                <p class="mb-0">IT Users</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">All Users</h5>
+    </div>
+    <div class="card-body">
+        @if (Model.Users.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th width="300">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model.Users)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-3">
+                                            @{
+                                                string firstInitial = !string.IsNullOrEmpty(user.FirstName) ? user.FirstName.Substring(0, 1).ToUpper() : "?";
+                                                string lastInitial = !string.IsNullOrEmpty(user.LastName) ? user.LastName.Substring(0, 1).ToUpper() : "?";
+                                            }
+                                            @firstInitial@lastInitial
+                                        </div>
+                                        <div>
+                                            <strong>@user.FullName</strong>
+                                            @if (!string.IsNullOrEmpty(user.JobTitle))
+                                            {
+                                                <br>
+                                                <small class="text-muted">@user.JobTitle</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="mailto:@user.Email" class="text-decoration-none">@user.Email</a>
+                                </td>
+                                <td>@(!string.IsNullOrEmpty(user.Department) ? user.Department : "Unassigned")</td>
+                                <td>
+                                    @switch (user.Role)
+                                    {
+                                        case UserRole.Admin:
+                                            <span class="badge bg-danger fs-6">
+                                                <i class="fas fa-crown me-1"></i>Admin
+                                            </span>
+                                            break;
+                                        case UserRole.GRCUser:
+                                            <span class="badge bg-warning text-dark fs-6">
+                                                <i class="fas fa-shield-alt me-1"></i>GRC User
+                                            </span>
+                                            break;
+                                        case UserRole.ITUser:
+                                            <span class="badge bg-info fs-6">
+                                                <i class="fas fa-laptop me-1"></i>IT User
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="badge bg-success fs-6">
+                                            <i class="fas fa-check-circle me-1"></i>Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary fs-6">
+                                            <i class="fas fa-ban me-1"></i>Inactive
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.LastLoginDate.HasValue)
+                                    {
+                                        @user.LastLoginDate.Value.ToString("MM/dd/yyyy")
+                                        <br>
+                                        <small class="text-muted">@user.LastLoginDate.Value.ToString("HH:mm")</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Never</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <!-- View Button -->
+                                        <a asp-action="Details" asp-route-id="@user.Id"
+                                           class="btn btn-outline-primary btn-sm px-3"
+                                           title="View user details">
+                                            <i class="fas fa-eye me-1"></i>View
+                                        </a>
+
+                                        <!-- Edit Button -->
+                                        <a asp-action="Edit" asp-route-id="@user.Id"
+                                           class="btn btn-outline-secondary btn-sm px-3"
+                                           title="Edit user information">
+                                            <i class="fas fa-edit me-1"></i>Edit
+                                        </a>
+
+                                        <!-- Toggle Status Button -->
+                                        <button type="button"
+                                                class="btn @(user.IsActive ? "btn-outline-warning" : "btn-outline-success") btn-sm px-3"
+                                                onclick="toggleUserStatus('@user.Id', '@user.FullName')"
+                                                title="@(user.IsActive ? "Deactivate" : "Activate") user">
+                                            @if (user.IsActive)
+                                            {
+                                                <i class="fas fa-ban me-1"></i>
+
+                                                <text>Disable</text>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-check me-1"></i>
+
+                                                <text>Enable</text>
+                                            }
+                                        </button>
+
+                                        <!-- Reset Password Button -->
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm px-3"
+                                                onclick="resetPassword('@user.Id', '@user.FullName')"
+                                                title="Reset user password">
+                                            <i class="fas fa-key me-1"></i>Reset
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-users text-muted" style="font-size: 4rem;"></i>
+                <h5 class="mt-3 text-muted">No users found</h5>
+                <p class="text-muted mb-4">Click "Add New User" to create your first user.</p>
+                <a asp-action="Create" class="btn btn-primary btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>Create First User
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Toggle Status Form -->
+<form id="toggleStatusForm" asp-action="ToggleStatus" method="post" style="display: none;">
+    <input type="hidden" id="toggleUserId" name="id" />
+</form>
+
+<!-- Reset Password Form -->
+<form id="resetPasswordForm" asp-action="ResetPassword" method="post" style="display: none;">
+    <input type="hidden" id="resetUserId" name="id" />
+</form>
+
+<style>
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    .btn-sm {
+        min-width: 80px;
+        font-weight: 500;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+        .btn-sm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+    .btn-outline-primary:hover {
+        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+        border-color: #0d6efd;
+    }
+
+    .btn-outline-secondary:hover {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        border-color: #6c757d;
+    }
+
+    .btn-outline-warning:hover {
+        background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+        border-color: #ffc107;
+        color: #000;
+    }
+
+    .btn-outline-success:hover {
+        background: linear-gradient(135deg, #198754 0%, #157347 100%);
+        border-color: #198754;
+    }
+
+    .btn-outline-danger:hover {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border-color: #dc3545;
+    }
+
+    .table td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+    }
+
+    .badge.fs-6 {
+        font-size: 0.875rem !important;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-radius: 12px;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 2px solid #dee2e6;
+        border-radius: 12px 12px 0 0 !important;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        function toggleUserStatus(userId, userName) {
+            const modal = `
+                <div class="modal fade" id="toggleModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Confirm Status Change</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to toggle the status for <strong>${userName}</strong>?</p>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    This will change their access to the system.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-warning" onclick="confirmToggle('${userId}')">
+                                    <i class="fas fa-exchange-alt me-1"></i>Toggle Status
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            document.body.insertAdjacentHTML('beforeend', modal);
+            new bootstrap.Modal(document.getElementById('toggleModal')).show();
+        }
+
+        function confirmToggle(userId) {
+            document.getElementById('toggleUserId').value = userId;
+            document.getElementById('toggleStatusForm').submit();
+        }
+
+        function resetPassword(userId, userName) {
+            const modal = `
+                <div class="modal fade" id="resetModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Reset Password</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Are you sure you want to reset the password for <strong>${userName}</strong>?</p>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    They will receive a temporary password and be forced to change it on next login.
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-danger" onclick="confirmReset('${userId}')">
+                                    <i class="fas fa-key me-1"></i>Reset Password
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            document.body.insertAdjacentHTML('beforeend', modal);
+            new bootstrap.Modal(document.getElementById('resetModal')).show();
+        }
+
+        function confirmReset(userId) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetPasswordForm').submit();
+        }
+
+        // Clean up modals after they're hidden
+        document.addEventListener('hidden.bs.modal', function (event) {
+            if (event.target.id === 'toggleModal' || event.target.id === 'resetModal') {
+                event.target.remove();
+            }
+        });
+    </script>
+}

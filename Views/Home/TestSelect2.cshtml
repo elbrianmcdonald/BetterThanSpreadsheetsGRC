@@ -1,0 +1,47 @@
+@{
+    ViewData["Title"] = "Test Select2";
+}
+
+<h2>Test Select2</h2>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Basic Select2 Test</h3>
+            <select id="testSelect" style="width: 100%;">
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+                <option value="3">Option 3</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            console.log('Test page ready');
+            console.log('jQuery:', typeof $);
+            console.log('Select2:', typeof $.fn.select2);
+            
+            if (typeof $.fn.select2 === 'function') {
+                $('#testSelect').select2();
+                console.log('Select2 initialized on test select');
+            } else {
+                console.error('Select2 is not available');
+                
+                // Try loading it directly
+                $.getScript('/lib/select2/js/select2.min.js', function() {
+                    console.log('Select2 loaded via getScript');
+                    console.log('Select2 now:', typeof $.fn.select2);
+                    if (typeof $.fn.select2 === 'function') {
+                        $('#testSelect').select2();
+                        console.log('Select2 initialized after dynamic load');
+                    }
+                }).fail(function(jqxhr, settings, exception) {
+                    console.error('Failed to load Select2:', exception);
+                });
+            }
+        });
+    </script>
+}

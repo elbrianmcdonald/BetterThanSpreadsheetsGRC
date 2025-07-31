@@ -1,0 +1,145 @@
+@model CyberRiskApp.Models.CapabilityRequirement
+@{
+    ViewData["Title"] = "Create Capability Requirement";
+    var goal = ViewBag.Goal as CyberRiskApp.Models.StrategyGoal;
+}
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-plus text-primary me-2"></i>
+                    Create Capability Requirement
+                </h2>
+                <a asp-controller="StrategyGoal" asp-action="Details" asp-route-id="@goal?.Id" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Goal
+                </a>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Creating capability for goal: <strong>@goal?.FunctionDomain</strong>
+            </div>
+
+            <form asp-action="Create" method="post">
+                <input type="hidden" asp-for="StrategyGoalId" />
+                
+                @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ErrorCount > 0)
+                {
+                    <div class="alert alert-danger">
+                        <h6>Please correct the following errors:</h6>
+                        <div asp-validation-summary="All"></div>
+                    </div>
+                }
+
+                <div class="card">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-cogs me-2"></i>Capability Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="CapabilityName" class="form-label fw-bold">Capability Name <span class="text-danger">*</span></label>
+                                    <input asp-for="CapabilityName" class="form-control" placeholder="e.g., Asset Inventory Management" />
+                                    <span asp-validation-for="CapabilityName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="CapabilityType" class="form-label fw-bold">Type <span class="text-danger">*</span></label>
+                                    <select asp-for="CapabilityType" class="form-control" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.CapabilityType>()">
+                                    </select>
+                                    <span asp-validation-for="CapabilityType" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Priority" class="form-label fw-bold">Priority</label>
+                                    <select asp-for="Priority" class="form-control" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.CapabilityPriority>()">
+                                    </select>
+                                    <span asp-validation-for="Priority" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="TargetDate" class="form-label fw-bold">Target Date <span class="text-danger">*</span></label>
+                                    <input asp-for="TargetDate" type="date" class="form-control" />
+                                    <span asp-validation-for="TargetDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="EstimatedEffortMonths" class="form-label fw-bold">Estimated Effort (Months)</label>
+                                    <input asp-for="EstimatedEffortMonths" type="number" class="form-control" step="0.25" min="0" placeholder="e.g., 1.5" />
+                                    <span asp-validation-for="EstimatedEffortMonths" class="text-danger"></span>
+                                    <small class="form-text text-muted">Estimated person-months (0.25 = 1 week, 1 = 1 month, etc.)</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="EstimatedCost" class="form-label fw-bold">Estimated Cost</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input asp-for="EstimatedCost" type="number" class="form-control" placeholder="0.00" step="0.01" />
+                                    </div>
+                                    <span asp-validation-for="EstimatedCost" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-bold">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="4" 
+                                     placeholder="Describe the capability requirements, implementation approach, and success criteria"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Dependencies" class="form-label fw-bold">Dependencies</label>
+                            <textarea asp-for="Dependencies" class="form-control" rows="3" 
+                                     placeholder="List any dependencies or prerequisites for this capability"></textarea>
+                            <span asp-validation-for="Dependencies" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-2"></i>Create Capability
+                            </button>
+                            <a asp-controller="StrategyGoal" asp-action="Details" asp-route-id="@goal?.Id" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set minimum date to today
+            const targetDateInput = document.querySelector('input[name="TargetDate"]');
+            const today = new Date().toISOString().split('T')[0];
+            targetDateInput.min = today;
+        });
+    </script>
+}

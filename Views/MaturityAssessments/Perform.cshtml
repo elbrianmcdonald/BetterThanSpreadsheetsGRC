@@ -1,0 +1,370 @@
+﻿@model CyberRiskApp.ViewModels.PerformMaturityAssessmentViewModel
+@{
+    ViewData["Title"] = $"Perform Assessment - {Model.Assessment.Title}";
+    var isNISTCSF = Model.IsNISTCSF;
+    var isC2M2 = Model.IsC2M2;
+}
+
+<div class="row">
+    <div class="col-12">
+        <!-- Assessment Header -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4><i class="fas fa-tasks me-2"></i>@Model.Assessment.Title</h4>
+                        <small class="text-muted">
+                            @Model.Assessment.Framework?.Name
+                            (@Model.Assessment.Organization?.Name)
+                        </small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div class="progress-bar" role="progressbar" style="width: @Model.ProgressPercentage%;"
+                                 aria-valuenow="@Model.ProgressPercentage" aria-valuemin="0" aria-valuemax="100">
+                                @Model.ProgressPercentage.ToString("F0")%
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            @Model.CompletedControls of @Model.TotalControls controls completed
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.CurrentControl != null)
+        {
+            <!-- Current Control Assessment -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5>
+                                Control @(Model.CurrentControlIndex + 1) of @Model.TotalControls:
+                                @Model.CurrentControl.Control.ControlId
+                            </h5>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="badge bg-primary">
+                                @if (isNISTCSF)
+                                {
+                                    <text>@Model.CurrentControl.Control.Function</text>
+                                }
+                                else if (isC2M2)
+                                {
+                                    <text>@Model.CurrentControl.Control.Function Domain</text>
+                                }
+                                else
+                                {
+                                    <text>@Model.CurrentControl.Control.Function</text>
+                                }
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form asp-action="UpdateControl" method="post">
+                        <input type="hidden" name="controlAssessment.Id" value="@Model.CurrentControl.Id" />
+                        <input type="hidden" name="controlAssessment.MaturityControlId" value="@Model.CurrentControl.MaturityControlId" />
+                        <input type="hidden" name="controlAssessment.MaturityAssessmentId" value="@Model.CurrentControl.MaturityAssessmentId" />
+                        <input type="hidden" name="assessmentId" value="@Model.Assessment.Id" />
+                        <input type="hidden" name="controlIndex" value="@Model.CurrentControlIndex" />
+
+                        <!-- Control Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6>Control Information</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <p><strong>@Model.CurrentControl.Control.Title</strong></p>
+
+                                    @if (isNISTCSF)
+                                    {
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <small><strong>Function:</strong> @Model.CurrentControl.Control.Function</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>Category:</strong> @Model.CurrentControl.Control.Category</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>Subcategory:</strong> @Model.CurrentControl.Control.Subcategory</small>
+                                            </div>
+                                        </div>
+                                    }
+                                    else if (isC2M2)
+                                    {
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <small><strong>Domain:</strong> @Model.CurrentControl.Control.Function</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>MIL:</strong> @Model.CurrentControl.Control.Category</small>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small><strong>Practice:</strong> @Model.CurrentControl.Control.Subcategory</small>
+                                            </div>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(Model.CurrentControl.Control.ImplementationGuidance))
+                                    {
+                                        <div class="mt-2">
+                                            <small>
+                                                <strong>
+                                                    @if (isNISTCSF)
+                                                    {
+                                                        <text>Implementation Examples:</text>
+                                                    }
+                                                    else if (isC2M2)
+                                                    {
+                                                        <text>Practice Text:</text>
+                                                    }
+                                                    else
+                                                    {
+                                                        <text>Implementation Guidance:</text>
+                                                    }
+                                                </strong>
+                                            </small>
+                                            <p class="mb-1">@Model.CurrentControl.Control.ImplementationGuidance</p>
+                                        </div>
+                                    }
+
+                                    @if (isC2M2 && !string.IsNullOrEmpty(Model.CurrentControl.Control.HelpText))
+                                    {
+                                        <div class="mt-2">
+                                            <small><strong>Help Text:</strong></small>
+                                            <p class="mb-0">@Model.CurrentControl.Control.HelpText</p>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Maturity Assessment Form -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Current Maturity Level</label>
+                                    <select name="controlAssessment.CurrentMaturityLevel" class="form-select" required>
+                                        @foreach (var level in Model.AvailableMaturityLevels)
+                                        {
+                                            var isSelected = Model.CurrentControl.CurrentMaturityLevel == level ? "selected" : "";
+                                            <option value="@level" selected="@isSelected">
+                                                @level (@((int)level)) - @GetMaturityLevelDescription(level, isNISTCSF, isC2M2)
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Target Maturity Level</label>
+                                    <select name="controlAssessment.TargetMaturityLevel" class="form-select" required>
+                                        @foreach (var level in Model.AvailableMaturityLevels)
+                                        {
+                                            var isSelected = Model.CurrentControl.TargetMaturityLevel == level ? "selected" : "";
+                                            <option value="@level" selected="@isSelected">
+                                                @level (@((int)level)) - @GetMaturityLevelDescription(level, isNISTCSF, isC2M2)
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Evidence</label>
+                                    <textarea name="controlAssessment.Evidence" class="form-control" rows="3"
+                                              placeholder="Provide evidence supporting the current maturity level assessment...">@Model.CurrentControl.Evidence</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Gap Analysis & Notes</label>
+                                    <textarea name="controlAssessment.GapNotes" class="form-control" rows="3"
+                                              placeholder="Describe gaps and issues identified...">@Model.CurrentControl.GapNotes</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Recommended Actions</label>
+                                    <textarea name="controlAssessment.RecommendedActions" class="form-control" rows="3"
+                                              placeholder="Recommendations to reach target maturity level...">@Model.CurrentControl.RecommendedActions</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Ownership</label>
+                                    <input name="controlAssessment.Ownership" type="text" class="form-control"
+                                           value="@Model.CurrentControl.Ownership" placeholder="Responsible person/team" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Target Completion Date</label>
+                                    <input name="controlAssessment.TargetCompletionDate" type="date" class="form-control"
+                                           value="@(Model.CurrentControl.TargetCompletionDate?.ToString("yyyy-MM-dd"))" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input name="controlAssessment.ProjectNeeded" type="checkbox" class="form-check-input" id="projectNeeded"
+                                               checked="@Model.CurrentControl.ProjectNeeded" />
+                                        <label class="form-check-label" for="projectNeeded">
+                                            Project Required
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" id="projectDetails" style="@(Model.CurrentControl.ProjectNeeded ? "" : "display: none;")">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Project Size (T-Shirt Size)</label>
+                                    <select name="controlAssessment.TShirtSize" class="form-select">
+                                        <option value="">Select Size</option>
+                                        @foreach (TShirtSize size in Enum.GetValues<TShirtSize>())
+                                        {
+                                            var isSelected = Model.CurrentControl.TShirtSize == size ? "selected" : "";
+                                            <option value="@size" selected="@isSelected">
+                                                @size - @GetTShirtSizeDescription(size)
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Project Number</label>
+                                    <input name="controlAssessment.ProjectNumber" type="text" class="form-control"
+                                           value="@Model.CurrentControl.ProjectNumber" placeholder="Project tracking number" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Navigation Buttons -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <div>
+                                @if (Model.CurrentControlIndex > 0)
+                                {
+                                    <button type="submit" name="action" value="previous" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left me-1"></i>Previous
+                                    </button>
+                                }
+                                else
+                                {
+                                    <a asp-action="Details" asp-route-id="@Model.Assessment.Id" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left me-1"></i>Back to Assessment
+                                    </a>
+                                }
+                            </div>
+
+                            <div>
+                                @if (Model.CurrentControlIndex < Model.TotalControls - 1)
+                                {
+                                    <button type="submit" name="action" value="next" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>Save & Next
+                                        <i class="fas fa-arrow-right ms-1"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="submit" name="action" value="complete" class="btn btn-success">
+                                        <i class="fas fa-check me-1"></i>Save & Complete Assessment
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No controls found for this assessment. Please ensure the framework has been properly uploaded with controls.
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const projectNeededCheckbox = document.querySelector('input[name="controlAssessment.ProjectNeeded"]');
+            const projectDetails = document.getElementById('projectDetails');
+
+            function toggleProjectDetails() {
+                if (projectNeededCheckbox.checked) {
+                    projectDetails.style.display = '';
+                } else {
+                    projectDetails.style.display = 'none';
+                }
+            }
+
+            projectNeededCheckbox.addEventListener('change', toggleProjectDetails);
+            toggleProjectDetails(); // Initialize on page load
+        });
+    </script>
+}
+
+@functions {
+    public string GetMaturityLevelDescription(MaturityLevel level, bool isNISTCSF, bool isC2M2)
+    {
+        if (isNISTCSF)
+        {
+            return level switch
+            {
+                MaturityLevel.NotImplemented => "Not Implemented",
+                MaturityLevel.Initial => "Initial/Performed",
+                MaturityLevel.Developing => "Developing/Managed",
+                MaturityLevel.Defined => "Defined/Established",
+                MaturityLevel.Managed => "Managed/Measured",
+                _ => level.ToString()
+            };
+        }
+        else if (isC2M2)
+        {
+            return level switch
+            {
+                MaturityLevel.Initial => "Initial",
+                MaturityLevel.Developing => "Developing",
+                MaturityLevel.Defined => "Defined",
+                _ => level.ToString()
+            };
+        }
+        else
+        {
+            return level.ToString();
+        }
+    }
+
+    public string GetTShirtSizeDescription(TShirtSize size)
+    {
+        return size switch
+        {
+            TShirtSize.XS => "Extra Small (1-2 weeks)",
+            TShirtSize.S => "Small (1 month)",
+            TShirtSize.M => "Medium (2-3 months)",
+            TShirtSize.L => "Large (3-6 months)",
+            TShirtSize.XL => "Extra Large (6-12 months)",
+            TShirtSize.XXL => "Extra Extra Large (1+ years)",
+            _ => size.ToString()
+        };
+    }
+}

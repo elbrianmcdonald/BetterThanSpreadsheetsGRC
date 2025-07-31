@@ -1,0 +1,264 @@
+﻿@model ProfileViewModel
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1 class="display-6 fw-bold mb-1">
+                        <i class="fas fa-user-circle me-3 text-primary"></i>My Profile
+                    </h1>
+                    <p class="lead text-muted mb-0">Manage your account settings and personal information</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Warning"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (ViewData.ModelState.ErrorCount > 0)
+    {
+        <div class="alert alert-danger">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>Please correct the following errors:</h6>
+            <div asp-validation-summary="All" class="mb-0"></div>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Profile Information Card -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-edit me-2"></i>Profile Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Profile" method="post">
+                        <input asp-for="Id" type="hidden" />
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="FirstName" class="form-label fw-bold">
+                                        First Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="FirstName" class="form-control" placeholder="Enter your first name" />
+                                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="LastName" class="form-label fw-bold">
+                                        Last Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="LastName" class="form-control" placeholder="Enter your last name" />
+                                    <span asp-validation-for="LastName" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label fw-bold">
+                                Email Address <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Email" type="email" class="form-control" readonly style="background-color: #f8f9fa;" />
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>Email address cannot be changed. Contact your administrator if needed.
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Department" class="form-label fw-bold">Department</label>
+                                    <input asp-for="Department" class="form-control" placeholder="Enter your department" />
+                                    <span asp-validation-for="Department" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="JobTitle" class="form-label fw-bold">Job Title</label>
+                                    <input asp-for="JobTitle" class="form-control" placeholder="Enter your job title" />
+                                    <span asp-validation-for="JobTitle" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Password Change Section -->
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-lock me-2 text-warning"></i>Change Password (Optional)
+                        </h6>
+                        <div class="alert alert-info">
+                            <small><i class="fas fa-info-circle me-1"></i>Leave password fields empty if you don't want to change your password.</small>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="CurrentPassword" class="form-label">Current Password</label>
+                                    <input asp-for="CurrentPassword" type="password" class="form-control" placeholder="Enter current password" autocomplete="current-password" />
+                                    <span asp-validation-for="CurrentPassword" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="NewPassword" class="form-label">New Password</label>
+                                    <input asp-for="NewPassword" type="password" class="form-control" placeholder="Enter new password" autocomplete="new-password" />
+                                    <span asp-validation-for="NewPassword" class="text-danger"></span>
+                                    <div class="form-text">
+                                        <small>Password must be at least 6 characters long.</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="ConfirmNewPassword" class="form-label">Confirm New Password</label>
+                                    <input asp-for="ConfirmNewPassword" type="password" class="form-control" placeholder="Confirm new password" autocomplete="new-password" />
+                                    <span asp-validation-for="ConfirmNewPassword" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>Update Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Information Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Account Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Full Name:</strong>
+                        <div class="text-muted">@Model.FullName</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Role:</strong>
+                        <div class="text-muted">
+                            @switch (Model.Role)
+                            {
+                                case UserRole.Admin:
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-crown me-1"></i>Administrator
+                                    </span>
+                                    break;
+                                case UserRole.GRCUser:
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-shield-alt me-1"></i>GRC User
+                                    </span>
+                                    break;
+                                case UserRole.ITUser:
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-laptop me-1"></i>IT User
+                                    </span>
+                                    break;
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong>Account Created:</strong>
+                        <div class="text-muted">@Model.CreatedAt.ToString("MMMM dd, yyyy")</div>
+                    </div>
+
+                    @if (Model.LastLoginDate.HasValue)
+                    {
+                        <div class="mb-3">
+                            <strong>Last Login:</strong>
+                            <div class="text-muted">@Model.LastLoginDate.Value.ToString("MMMM dd, yyyy 'at' h:mm tt")</div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Security Tips Card -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Security Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Use a strong, unique password
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Keep your profile information up-to-date
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Log out when using shared computers
+                        </li>
+                        <li class="mb-0">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Report suspicious activities
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Add some interactivity for password fields
+        document.addEventListener('DOMContentLoaded', function() {
+            const newPasswordField = document.getElementById('NewPassword');
+            const currentPasswordField = document.getElementById('CurrentPassword');
+            const confirmPasswordField = document.getElementById('ConfirmNewPassword');
+
+            // If user starts typing in new password, make current password required
+            if (newPasswordField && currentPasswordField) {
+                newPasswordField.addEventListener('input', function() {
+                    if (this.value.length > 0) {
+                        currentPasswordField.setAttribute('required', 'required');
+                        confirmPasswordField.setAttribute('required', 'required');
+                    } else {
+                        currentPasswordField.removeAttribute('required');
+                        confirmPasswordField.removeAttribute('required');
+                    }
+                });
+            }
+        });
+    </script>
+}

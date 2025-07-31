@@ -1,0 +1,126 @@
+﻿@model CyberRiskApp.ViewModels.OrganizationManagementViewModel
+@{
+    ViewData["Title"] = "Business Organizations";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-building me-2"></i>Business Organizations</h2>
+    <a asp-action="Create" class="btn btn-success">
+        <i class="fas fa-plus me-1"></i>Add Organization
+    </a>
+</div>
+
+@if (Model.Organizations.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Code</th>
+                            <th>Type</th>
+                            <th>Compliance Owner</th>
+                            <th>Status</th>
+                            <th>Assessments</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var org in Model.Organizations)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@org.Name</strong>
+                                    @if (!string.IsNullOrEmpty(org.Description))
+                                    {
+                                        <br>
+
+                                        <small class="text-muted">@org.Description</small>
+                                    }
+                                </td>
+                                <td>
+                                    <code>@org.Code</code>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@(org.Type switch
+                                    {
+                                        CyberRiskApp.Models.OrganizationType.IT => "primary",
+                                        CyberRiskApp.Models.OrganizationType.OT => "warning",
+                                        CyberRiskApp.Models.OrganizationType.Finance => "success",
+                                        CyberRiskApp.Models.OrganizationType.HR => "info",
+                                        CyberRiskApp.Models.OrganizationType.Legal => "secondary",
+                                        CyberRiskApp.Models.OrganizationType.Operations => "dark",
+                                        _ => "light"
+                                    })">
+                                        @org.Type
+                                    </span>
+                                </td>
+                                <td>@org.ComplianceOwner</td>
+                                <td>
+                                    <span class="badge bg-@(org.IsActive ? "success" : "danger")">
+                                        @(org.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">@org.Assessments.Count</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@org.Id" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@org.Id" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal@(org.Id)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Delete Modal -->
+                                    <div class="modal fade" id="deleteModal@(org.Id)" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete the organization "<strong>@org.Name</strong>"?
+                                                    This will also delete all associated assessments.
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form asp-action="Delete" asp-route-id="@org.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-trash me-1"></i>Delete
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center">
+            <i class="fas fa-building fa-3x text-muted mb-3"></i>
+            <h4>No Organizations Found</h4>
+            <p class="text-muted">Get started by adding your first business organization.</p>
+            <a asp-action="Create" class="btn btn-success">
+                <i class="fas fa-plus me-1"></i>Add Organization
+            </a>
+        </div>
+    </div>
+}

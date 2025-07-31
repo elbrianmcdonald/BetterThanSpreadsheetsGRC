@@ -1,0 +1,285 @@
+﻿@model CyberRiskApp.Models.AssessmentRequest
+
+@{
+    ViewData["Title"] = "Assign Assessment Request";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">
+                    <i class="fas fa-user-plus me-2"></i>Assign Assessment Request #@Model.Id
+                </h2>
+                <a asp-action="Index" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Requests
+                </a>
+            </div>
+
+            <div class="row">
+                <!-- Request Details -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-clipboard-list me-2"></i>Assessment Request Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Scope:</strong><br>
+                                    <span class="text-muted">@Model.Scope</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Priority:</strong><br>
+                                    <span class="badge bg-@GetPriorityColor(Model.Priority)">@Model.Priority</span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Requester:</strong><br>
+                                    <span class="text-muted">@Model.RequesterName</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Department:</strong><br>
+                                    <span class="text-muted">@Model.Department</span>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Request Date:</strong><br>
+                                    <span class="text-muted">@Model.RequestDate.ToString("yyyy-MM-dd")</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Requested Timeline:</strong><br>
+                                    @if (Model.RequestedTimeline.HasValue)
+                                    {
+                                        <span class="text-muted @(Model.RequestedTimeline < DateTime.Today ? "text-danger fw-bold" : "")">
+                                            @Model.RequestedTimeline.Value.ToString("yyyy-MM-dd")
+                                            @if (Model.RequestedTimeline < DateTime.Today)
+                                            {
+                                                <i class="fas fa-exclamation-triangle ms-1" title="Overdue"></i>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not specified</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong>Business Justification:</strong><br>
+                                <div class="bg-light p-3 rounded mt-2">
+                                    @foreach (var line in Model.Justification.Split('\n'))
+                                    {
+                                        <p class="mb-1">@line</p>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(Model.Notes))
+                            {
+                                <div class="mb-3">
+                                    <strong>Additional Notes:</strong><br>
+                                    <div class="bg-light p-3 rounded mt-2">
+                                        @foreach (var line in Model.Notes.Split('\n'))
+                                        {
+                                            <p class="mb-1">@line</p>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assignment Form -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-user-cog me-2"></i>Assignment Details
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="Assign" asp-route-id="@Model.Id" method="post">
+                                @Html.AntiForgeryToken()
+
+                                <!-- Assign To User -->
+                                <div class="mb-3">
+                                    <label for="assignedToUserId" class="form-label fw-bold">
+                                        <span class="text-danger">*</span> Assign To
+                                    </label>
+                                    <select name="assignedToUserId" id="assignedToUserId" class="form-select" required>
+                                        <option value="">-- Select GRC User --</option>
+                                        @foreach (var user in ViewBag.GRCUsers as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)
+                                        {
+                                            <option value="@user.Value">@user.Text</option>
+                                        }
+                                    </select>
+                                    <div class="form-text">
+                                        Select a GRC user to perform this assessment.
+                                    </div>
+                                </div>
+
+                                <!-- Estimated Hours -->
+                                <div class="mb-3">
+                                    <label for="estimatedHours" class="form-label fw-bold">
+                                        Estimated Hours
+                                    </label>
+                                    <input type="number" name="estimatedHours" id="estimatedHours"
+                                           class="form-control" step="0.5" min="0.5" max="40"
+                                           placeholder="e.g., 8.0" />
+                                    <div class="form-text">
+                                        Optional: Estimated time to complete this assessment.
+                                    </div>
+                                </div>
+
+                                <!-- Assignment Notes -->
+                                <div class="mb-4">
+                                    <label for="notes" class="form-label fw-bold">
+                                        Assignment Notes
+                                    </label>
+                                    <textarea name="notes" id="notes" class="form-control" rows="4"
+                                              placeholder="Optional notes for the assignee about specific requirements, deadlines, or context..."></textarea>
+                                    <div class="form-text">
+                                        Optional: Additional instructions or context for the assignee.
+                                    </div>
+                                </div>
+
+                                <!-- Assignment Actions -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-user-check me-2"></i>Assign Request
+                                    </button>
+                                    <a asp-action="Index" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Assignment Guidelines -->
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-lightbulb me-2"></i>Assignment Guidelines
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-primary">Consider These Factors:</h6>
+                            <ul class="small mb-3">
+                                <li><strong>Workload:</strong> Current assignments of team members</li>
+                                <li><strong>Expertise:</strong> Domain knowledge and technical skills</li>
+                                <li><strong>Priority:</strong> @Model.Priority priority level</li>
+                                <li>
+                                    <strong>Timeline:</strong>
+                                    @if (Model.RequestedTimeline.HasValue)
+                                    {
+                                        <span>Due @Model.RequestedTimeline.Value.ToString("MMM dd")</span>
+                                        @if (Model.RequestedTimeline < DateTime.Today.AddDays(7))
+                                        {
+                                            <span class="text-danger">(Urgent)</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>No specific deadline</span>
+                                    }
+                                </li>
+                            </ul>
+
+                            <h6 class="text-primary">Typical Time Estimates:</h6>
+                            <ul class="small mb-0">
+                                <li><strong>Simple Assessment:</strong> 4-8 hours</li>
+                                <li><strong>Standard Assessment:</strong> 8-16 hours</li>
+                                <li><strong>Complex FAIR Analysis:</strong> 16-24 hours</li>
+                                <li><strong>Comprehensive Review:</strong> 24+ hours</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-suggest estimated hours based on priority
+            const priorityLevel = '@Model.Priority';
+            const estimatedHoursInput = document.getElementById('estimatedHours');
+
+            // Set default estimated hours based on priority
+            switch(priorityLevel) {
+                case 'Urgent':
+                    estimatedHoursInput.value = '8.0';
+                    estimatedHoursInput.placeholder = '8.0 (suggested for urgent requests)';
+                    break;
+                case 'High':
+                    estimatedHoursInput.value = '12.0';
+                    estimatedHoursInput.placeholder = '12.0 (suggested for high priority)';
+                    break;
+                case 'Medium':
+                    estimatedHoursInput.value = '16.0';
+                    estimatedHoursInput.placeholder = '16.0 (suggested for medium priority)';
+                    break;
+                case 'Low':
+                    estimatedHoursInput.value = '8.0';
+                    estimatedHoursInput.placeholder = '8.0 (suggested for low priority)';
+                    break;
+            }
+
+            // Form validation
+            const form = document.querySelector('form');
+            const assignedToSelect = document.getElementById('assignedToUserId');
+
+            form.addEventListener('submit', function(e) {
+                if (!assignedToSelect.value) {
+                    e.preventDefault();
+                    alert('Please select a user to assign this request to.');
+                    assignedToSelect.focus();
+                    return false;
+                }
+
+                const assignedUserName = assignedToSelect.options[assignedToSelect.selectedIndex].text;
+                if (!confirm(`Are you sure you want to assign this assessment to ${assignedUserName}?`)) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Highlight overdue requests
+            const timeline = '@(Model.RequestedTimeline?.ToString("yyyy-MM-dd") ?? "")';
+            if (timeline && new Date(timeline) < new Date()) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-warning mt-3';
+                alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i><strong>Note:</strong> This request is past its requested timeline. Consider assigning to someone who can prioritize this work.';
+                document.querySelector('.card-body form').prepend(alertDiv);
+            }
+        });
+    </script>
+}
+
+@functions {
+    private string GetPriorityColor(CyberRiskApp.Models.Priority priority)
+    {
+        return priority switch
+        {
+            CyberRiskApp.Models.Priority.Urgent => "dark",
+            CyberRiskApp.Models.Priority.High => "danger",
+            CyberRiskApp.Models.Priority.Medium => "warning",
+            CyberRiskApp.Models.Priority.Low => "success",
+            _ => "secondary"
+        };
+    }
+}

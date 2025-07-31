@@ -1,0 +1,874 @@
+@model CyberRiskApp.Models.StrategyPlan
+@{
+    ViewData["Title"] = $"Strategy Plan: {Model.PlanName}";
+    var dashboardData = ViewBag.DashboardData as Dictionary<string, object>;
+}
+
+@* Add anti-forgery token for AJAX requests *@
+@Html.AntiForgeryToken()
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-chart-line text-primary me-2"></i>
+            @Model.PlanName
+            <span class="badge bg-@(Model.Status.ToString().ToLower()) ms-2">@Model.Status</span>
+        </h2>
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i>Edit Plan
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Plan Overview Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>Plan Overview
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <h6 class="text-muted">Progress</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="progress flex-grow-1 me-2" style="height: 20px;">
+                            <div class="progress-bar @(Model.OverallProgressPercentage >= 80 ? "bg-success" : Model.OverallProgressPercentage >= 50 ? "bg-info" : "bg-warning")" 
+                                 role="progressbar" 
+                                 style="width: @Model.OverallProgressPercentage%">
+                            </div>
+                        </div>
+                        <strong>@Model.OverallProgressPercentage.ToString("F0")%</strong>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="text-muted">Timeline</h6>
+                    <div>
+                        <strong>@Model.StartDate.ToString("MMM dd, yyyy") - @Model.EndDate.ToString("MMM dd, yyyy")</strong>
+                        <br>
+                        <small class="@(Model.DaysRemaining < 30 ? "text-warning" : "text-success")">
+                            @(Model.DaysRemaining > 0 ? $"{Model.DaysRemaining} days remaining" : "Overdue")
+                        </small>
+                    </div>
+                </div>
+                @if (Model.TotalBudget.HasValue)
+                {
+                    <div class="col-md-3">
+                        <h6 class="text-muted">Budget</h6>
+                        <div>
+                            <strong>@Model.SpentBudget?.ToString("C0") / @Model.TotalBudget?.ToString("C0")</strong>
+                            <br>
+                            <small class="text-muted">@Model.RemainingBudget.ToString("C0") remaining</small>
+                        </div>
+                    </div>
+                }
+                <div class="col-md-3">
+                    <h6 class="text-muted">Organization</h6>
+                    <div>
+                        <strong>@Model.Organization.Name</strong>
+                        <br>
+                        <small class="text-muted">Created by @Model.CreatedBy</small>
+                    </div>
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="mt-3">
+                    <h6 class="text-muted">Description</h6>
+                    <p class="mb-0">@Model.Description</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Dashboard Stats -->
+    @if (dashboardData != null)
+    {
+        <div class="row mb-4">
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div class="card text-center h-100 border-primary">
+                    <div class="card-body">
+                        <div class="text-primary mb-2">
+                            <i class="fas fa-bullseye fa-2x"></i>
+                        </div>
+                        <h4 class="text-primary mb-0">@dashboardData["CompletedGoals"] / @dashboardData["TotalGoals"]</h4>
+                        <small class="text-muted">Goals</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div class="card text-center h-100 border-info">
+                    <div class="card-body">
+                        <div class="text-info mb-2">
+                            <i class="fas fa-cogs fa-2x"></i>
+                        </div>
+                        <h4 class="text-info mb-0">@dashboardData["CompletedCapabilities"] / @dashboardData["TotalCapabilities"]</h4>
+                        <small class="text-muted">Capabilities</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div class="card text-center h-100 border-warning">
+                    <div class="card-body">
+                        <div class="text-warning mb-2">
+                            <i class="fas fa-play fa-2x"></i>
+                        </div>
+                        <h4 class="text-warning mb-0">@dashboardData["InProgressCapabilities"]</h4>
+                        <small class="text-muted">In Progress</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div class="card text-center h-100 border-success">
+                    <div class="card-body">
+                        <div class="text-success mb-2">
+                            <i class="fas fa-flag-checkered fa-2x"></i>
+                        </div>
+                        <h4 class="text-success mb-0">@dashboardData["CompletedMilestones"] / @dashboardData["TotalMilestones"]</h4>
+                        <small class="text-muted">Milestones</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div class="card text-center h-100 border-secondary">
+                    <div class="card-body">
+                        <div class="text-secondary mb-2">
+                            <i class="fas fa-dollar-sign fa-2x"></i>
+                        </div>
+                        <h4 class="text-secondary mb-0">@(((decimal)dashboardData["BudgetUsage"]).ToString("F0"))%</h4>
+                        <small class="text-muted">Budget Used</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                <div class="card text-center h-100 border-danger">
+                    <div class="card-body">
+                        <div class="text-danger mb-2">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                        <h4 class="text-danger mb-0">@dashboardData["OverdueCapabilities"]</h4>
+                        <small class="text-muted">Overdue</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4" id="planTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="goals-tab" data-bs-toggle="tab" href="#goals" role="tab">
+                <i class="fas fa-bullseye me-1"></i>Maturity Goals (@Model.Goals.Count)
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="capabilities-tab" data-bs-toggle="tab" href="#capabilities" role="tab">
+                <i class="fas fa-cogs me-1"></i>Capabilities (@Model.Goals.SelectMany(g => g.Capabilities).Count())
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="roadmap-tab" data-bs-toggle="tab" href="#roadmap" role="tab">
+                <i class="fas fa-road me-1"></i>Roadmap (@Model.Milestones.Count)
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="progress-tab" data-bs-toggle="tab" href="#progress" role="tab">
+                <i class="fas fa-chart-bar me-1"></i>Progress
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="planTabContent">
+        <!-- Goals Tab -->
+        <div class="tab-pane fade show active" id="goals" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>Maturity Goals</h5>
+                <a href="/StrategyGoal/Create?planId=@Model.Id" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i>Add Goal
+                </a>
+            </div>
+            
+            @if (Model.Goals.Any())
+            {
+                <div class="row">
+                    @foreach (var goal in Model.Goals.OrderBy(g => g.FunctionDomain))
+                    {
+                        <div class="col-lg-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-layer-group me-2"></i>@goal.FunctionDomain
+                                    </h6>
+                                    <span class="badge bg-@(goal.Priority.ToString().ToLower())">@goal.Priority</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <small class="text-muted">Framework</small>
+                                            <div class="fw-bold">@goal.MaturityFramework.Name</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Target Date</small>
+                                            <div class="fw-bold @(goal.IsOverdue ? "text-danger" : "")">
+                                                @goal.TargetDate.ToString("MMM dd, yyyy")
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <small class="text-muted">Maturity Level Progress</small>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-secondary me-2">Level @goal.CurrentMaturityLevel</span>
+                                            <i class="fas fa-arrow-right text-muted me-2"></i>
+                                            <span class="badge bg-primary me-2">Level @goal.TargetMaturityLevel</span>
+                                            <small class="text-muted">(+@goal.MaturityGap levels)</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between">
+                                            <small class="text-muted">Capabilities Progress</small>
+                                            <small class="text-muted">@goal.ProgressPercentage.ToString("F0")%</small>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" style="width: @goal.ProgressPercentage%"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="text-center">
+                                        <span class="badge bg-info">@goal.Capabilities.Count capabilities</span>
+                                        <span class="badge bg-success">@goal.Capabilities.Count(c => c.Status == CyberRiskApp.Models.CapabilityStatus.Completed) completed</span>
+                                    </div>
+                                </div>
+                                <div class="card-footer">
+                                    <a href="/StrategyGoal/Details/@goal.Id" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>View Details
+                                    </a>
+                                    <a href="/StrategyGoal/Edit/@goal.Id" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-edit me-1"></i>Edit
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <i class="fas fa-bullseye fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Goals Defined</h5>
+                    <p class="text-muted">Add maturity goals to define what you want to achieve with this strategy plan.</p>
+                    <a href="/StrategyGoal/Create?planId=@Model.Id" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add First Goal
+                    </a>
+                </div>
+            }
+        </div>
+
+        <!-- Capabilities Tab -->
+        <div class="tab-pane fade" id="capabilities" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>Required Capabilities</h5>
+                <div>
+                    <button class="btn btn-success btn-sm me-2" data-bs-toggle="collapse" data-bs-target="#addCapabilityForm">
+                        <i class="fas fa-plus me-1"></i>Quick Add Capability
+                    </button>
+                    <a asp-action="Capabilities" asp-route-id="@Model.Id" class="btn btn-primary btn-sm">
+                        <i class="fas fa-list me-1"></i>View All Capabilities
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Add Capability Form -->
+            <div class="collapse mb-4" id="addCapabilityForm">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-plus me-2"></i>Add New Capability</h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="quickCapabilityForm">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label class="form-label">Goal</label>
+                                    <select class="form-select" id="capabilityGoalId" required>
+                                        <option value="">Select a goal...</option>
+                                        @foreach (var goal in Model.Goals)
+                                        {
+                                            <option value="@goal.Id">@goal.FunctionDomain</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Capability Name</label>
+                                    <input type="text" class="form-control" id="capabilityName" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Type</label>
+                                    <select class="form-select" id="capabilityType" required>
+                                        <option value="1">Process</option>
+                                        <option value="2">Technology</option>
+                                        <option value="3">People</option>
+                                        <option value="4">Governance</option>
+                                        <option value="5">Infrastructure</option>
+                                        <option value="6">Training</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Priority</label>
+                                    <select class="form-select" id="capabilityPriority">
+                                        <option value="1">Low</option>
+                                        <option value="2" selected>Medium</option>
+                                        <option value="3">High</option>
+                                        <option value="4">Critical</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-success d-block w-100">
+                                        <i class="fas fa-plus me-1"></i>Add
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Target Date</label>
+                                    <input type="date" class="form-control" id="capabilityTargetDate">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Estimated Cost</label>
+                                    <input type="number" class="form-control" id="capabilityEstimatedCost" step="0.01" min="0">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Description</label>
+                                    <input type="text" class="form-control" id="capabilityDescription">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <label class="form-label">Related Controls <small class="text-muted">(Select controls this capability will address)</small></label>
+                                    <div id="controlSelectionArea" style="display: none;">
+                                        <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                            <div id="controlsList">
+                                                <!-- Controls will be loaded here via AJAX -->
+                                            </div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Select the specific controls that this capability will help implement or improve.</small>
+                                    </div>
+                                    <div id="controlsPlaceholder" class="text-muted">
+                                        <small>Select a goal first to see available controls from its maturity framework.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            @if (Model.Goals.SelectMany(g => g.Capabilities).Any())
+            {
+                <div class="row">
+                    @foreach (var capability in Model.Goals.SelectMany(g => g.Capabilities).Take(6))
+                    {
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="card-title">@capability.CapabilityName</h6>
+                                        <span class="badge bg-@capability.StatusColor">@capability.Status</span>
+                                    </div>
+                                    
+                                    <div class="mb-2">
+                                        <small class="text-muted">Type: </small>@capability.CapabilityType
+                                        <br>
+                                        <small class="text-muted">Priority: </small>
+                                        <span class="badge bg-@capability.PriorityColor">@capability.Priority</span>
+                                    </div>
+                                    
+                                    @if (capability.ProgressPercentage > 0)
+                                    {
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between">
+                                                <small class="text-muted">Progress</small>
+                                                <small>@capability.ProgressPercentage%</small>
+                                            </div>
+                                            <div class="progress progress-sm">
+                                                <div class="progress-bar" style="width: @capability.ProgressPercentage%"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                    
+                                    @if (capability.EstimatedCost.HasValue)
+                                    {
+                                        <small class="text-muted">Cost: @capability.EstimatedCost?.ToString("C0")</small>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                @if (Model.Goals.SelectMany(g => g.Capabilities).Count() > 6)
+                {
+                    <div class="text-center">
+                        <a asp-action="Capabilities" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                            View All @Model.Goals.SelectMany(g => g.Capabilities).Count() Capabilities
+                        </a>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Capabilities Defined</h5>
+                    <p class="text-muted">Add specific capabilities to achieve your maturity goals.</p>
+                </div>
+            }
+        </div>
+
+        <!-- Roadmap Tab -->
+        <div class="tab-pane fade" id="roadmap" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5>Implementation Roadmap</h5>
+                <div>
+                    <button class="btn btn-success btn-sm me-2" data-bs-toggle="collapse" data-bs-target="#addMilestoneForm">
+                        <i class="fas fa-plus me-1"></i>Quick Add Milestone
+                    </button>
+                    <a asp-action="Roadmap" asp-route-id="@Model.Id" class="btn btn-primary btn-sm">
+                        <i class="fas fa-road me-1"></i>View Full Roadmap
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Add Milestone Form -->
+            <div class="collapse mb-4" id="addMilestoneForm">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-plus me-2"></i>Add New Milestone</h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="quickMilestoneForm">
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <label class="form-label">Milestone Name</label>
+                                    <input type="text" class="form-control" id="milestoneName" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Target Date</label>
+                                    <input type="date" class="form-control" id="milestoneTargetDate" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Order</label>
+                                    <input type="number" class="form-control" id="milestoneDisplayOrder" value="1" min="1">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-success d-block w-100">
+                                        <i class="fas fa-plus me-1"></i>Add
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Description</label>
+                                    <input type="text" class="form-control" id="milestoneDescription">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Assigned To</label>
+                                    <input type="text" class="form-control" id="milestoneAssignedTo">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Estimated Cost</label>
+                                    <input type="number" class="form-control" id="milestoneEstimatedCost" step="0.01" min="0">
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            @if (Model.Milestones.Any())
+            {
+                <div class="timeline">
+                    @foreach (var milestone in Model.Milestones.OrderBy(m => m.TargetDate).Take(5))
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-@milestone.StatusColor"></div>
+                            <div class="timeline-content">
+                                <h6>@milestone.MilestoneName</h6>
+                                <p class="text-muted mb-1">@milestone.Description</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>@milestone.TargetDate.ToString("MMM dd, yyyy")
+                                    @if (milestone.IsOverdue)
+                                    {
+                                        <span class="badge bg-danger ms-2">Overdue</span>
+                                    }
+                                </small>
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                @if (Model.Milestones.Count > 5)
+                {
+                    <div class="text-center mt-3">
+                        <a asp-action="Roadmap" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                            View All @Model.Milestones.Count Milestones
+                        </a>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <i class="fas fa-road fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Milestones Defined</h5>
+                    <p class="text-muted">Add implementation milestones to track major achievements.</p>
+                </div>
+            }
+        </div>
+
+        <!-- Progress Tab -->
+        <div class="tab-pane fade" id="progress" role="tabpanel">
+            <a asp-action="Progress" asp-route-id="@Model.Id" class="btn btn-primary mb-3">
+                <i class="fas fa-chart-bar me-1"></i>View Detailed Progress Report
+            </a>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Overall Progress</h6>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="progress mb-3" style="height: 30px;">
+                                <div class="progress-bar" style="width: @Model.OverallProgressPercentage%">
+                                    @Model.OverallProgressPercentage.ToString("F0")%
+                                </div>
+                            </div>
+                            <p class="text-muted">Strategy Plan Completion</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Key Metrics</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="h4 text-primary">@Model.Goals.Count(g => g.Status == GoalStatus.Completed)</div>
+                                    <small class="text-muted">Goals Done</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 text-success">@Model.Goals.SelectMany(g => g.Capabilities).Count(c => c.Status == CapabilityStatus.Completed)</div>
+                                    <small class="text-muted">Capabilities Done</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="h4 text-info">@Model.Milestones.Count(m => m.Status == MilestoneStatus.Completed)</div>
+                                    <small class="text-muted">Milestones Done</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .timeline:before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .timeline-marker {
+            position: absolute;
+            left: -22px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #dee2e6;
+        }
+        
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #dee2e6;
+        }
+        
+        .progress-sm {
+            height: 6px;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Handle quick capability form submission
+            $('#quickCapabilityForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                // Collect selected control IDs
+                const selectedControlIds = [];
+                $('.control-checkbox:checked').each(function() {
+                    selectedControlIds.push($(this).val());
+                });
+
+                const formData = {
+                    StrategyGoalId: $('#capabilityGoalId').val(),
+                    CapabilityName: $('#capabilityName').val(),
+                    CapabilityType: $('#capabilityType').val(),
+                    Priority: $('#capabilityPriority').val(),
+                    TargetDate: $('#capabilityTargetDate').val() || null,
+                    EstimatedCost: $('#capabilityEstimatedCost').val() || null,
+                    Description: $('#capabilityDescription').val() || null,
+                    selectedControlIds: selectedControlIds
+                };
+
+                // Add anti-forgery token to form data
+                formData.__RequestVerificationToken = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '/CapabilityRequirement/Create',
+                    type: 'POST',
+                    data: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        // Show success message
+                        showSuccessMessage('Capability created successfully!');
+                        
+                        // Reset form
+                        $('#quickCapabilityForm')[0].reset();
+                        
+                        // Collapse form
+                        $('#addCapabilityForm').collapse('hide');
+                        
+                        // Refresh the page to show new capability
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    },
+                    error: function(xhr, status, error) {
+                        showErrorMessage('Failed to create capability. Please try again.');
+                    }
+                });
+            });
+
+            // Handle quick milestone form submission
+            $('#quickMilestoneForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    StrategyPlanId: @Model.Id,
+                    MilestoneName: $('#milestoneName').val(),
+                    TargetDate: $('#milestoneTargetDate').val(),
+                    SortOrder: $('#milestoneDisplayOrder').val() || 1,
+                    Description: $('#milestoneDescription').val() || null,
+                    AssignedTo: $('#milestoneAssignedTo').val() || null,
+                    EstimatedCost: $('#milestoneEstimatedCost').val() || null
+                };
+
+                // Add anti-forgery token to form data
+                formData.__RequestVerificationToken = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '/ImplementationMilestone/Create',
+                    type: 'POST',
+                    data: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    success: function(response) {
+                        // Show success message
+                        showSuccessMessage('Milestone created successfully!');
+                        
+                        // Reset form
+                        $('#quickMilestoneForm')[0].reset();
+                        $('#milestoneDisplayOrder').val(1); // Reset to default
+                        
+                        // Collapse form
+                        $('#addMilestoneForm').collapse('hide');
+                        
+                        // Refresh the page to show new milestone
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    },
+                    error: function(xhr, status, error) {
+                        showErrorMessage('Failed to create milestone. Please try again.');
+                    }
+                });
+            });
+
+            // Show success message
+            function showSuccessMessage(message) {
+                const alertHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                $('body').prepend(alertHtml);
+                
+                // Auto-dismiss after 3 seconds
+                setTimeout(function() {
+                    $('.alert-success').fadeOut();
+                }, 3000);
+            }
+
+            // Show error message
+            function showErrorMessage(message) {
+                const alertHtml = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                $('body').prepend(alertHtml);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(function() {
+                    $('.alert-danger').fadeOut();
+                }, 5000);
+            }
+
+            // Auto-populate target date for milestones based on strategy plan end date
+            $('#addMilestoneForm').on('shown.bs.collapse', function() {
+                const strategyEndDate = '@Model.EndDate.ToString("yyyy-MM-dd")';
+                if (!$('#milestoneTargetDate').val()) {
+                    $('#milestoneTargetDate').val(strategyEndDate);
+                }
+            });
+
+            // Auto-populate target date for capabilities and load controls based on selected goal
+            $('#capabilityGoalId').on('change', function() {
+                const goalId = $(this).val();
+                if (goalId) {
+                    // Auto-populate target date if not set
+                    if (!$('#capabilityTargetDate').val()) {
+                        @foreach (var goal in Model.Goals)
+                        {
+                            <text>
+                            if (goalId == '@goal.Id') {
+                                $('#capabilityTargetDate').val('@goal.TargetDate.ToString("yyyy-MM-dd")');
+                            }
+                            </text>
+                        }
+                    }
+                    
+                    // Load controls for the selected goal's maturity framework
+                    loadControlsForGoal(goalId);
+                } else {
+                    // Hide controls if no goal selected
+                    $('#controlSelectionArea').hide();
+                    $('#controlsPlaceholder').show();
+                }
+            });
+
+            // Function to load controls for a specific goal
+            function loadControlsForGoal(goalId) {
+                // Get the framework ID for this goal
+                let frameworkId = null;
+                @foreach (var goal in Model.Goals)
+                {
+                    <text>
+                    if (goalId == '@goal.Id') {
+                        frameworkId = @goal.MaturityFrameworkId;
+                    }
+                    </text>
+                }
+                
+                if (frameworkId) {
+                    $('#controlsPlaceholder').hide();
+                    $('#controlSelectionArea').show();
+                    $('#controlsList').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading controls...</div>');
+                    
+                    $.ajax({
+                        url: '/Strategy/GetControlsForFramework',
+                        type: 'GET',
+                        data: { frameworkId: frameworkId },
+                        success: function(response) {
+                            if (response.success && response.controls) {
+                                renderControlsList(response.controls);
+                            } else {
+                                $('#controlsList').html('<div class="text-muted">No controls found for this framework.</div>');
+                            }
+                        },
+                        error: function() {
+                            $('#controlsList').html('<div class="text-danger">Error loading controls. Please try again.</div>');
+                        }
+                    });
+                }
+            }
+
+            // Function to render the controls list with checkboxes
+            function renderControlsList(controls) {
+                let html = '';
+                if (controls.length === 0) {
+                    html = '<div class="text-muted">No controls available for this framework.</div>';
+                } else {
+                    // Group controls by category
+                    const groupedControls = {};
+                    controls.forEach(control => {
+                        const category = control.category || 'Other';
+                        if (!groupedControls[category]) {
+                            groupedControls[category] = [];
+                        }
+                        groupedControls[category].push(control);
+                    });
+                    
+                    // Render grouped controls
+                    Object.keys(groupedControls).sort().forEach(category => {
+                        html += `<div class="mb-3">`;
+                        html += `<h6 class="text-primary mb-2">${category}</h6>`;
+                        groupedControls[category].forEach(control => {
+                            html += `
+                                <div class="form-check form-check-sm mb-1">
+                                    <input class="form-check-input control-checkbox" type="checkbox" value="${control.id}" id="control_${control.id}">
+                                    <label class="form-check-label small" for="control_${control.id}">
+                                        <strong>${control.controlId}</strong> - ${control.title}
+                                        <span class="badge badge-sm bg-secondary ms-1">${control.priority}</span>
+                                    </label>
+                                </div>
+                            `;
+                        });
+                        html += `</div>`;
+                    });
+                }
+                $('#controlsList').html(html);
+            }
+        });
+    </script>
+}

@@ -1,0 +1,104 @@
+﻿@model CyberRiskApp.Models.ComplianceFramework
+@{
+    ViewData["Title"] = "Edit Framework";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-edit me-2"></i>Edit Framework: @Model.Name</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <input asp-for="Id" type="hidden" />
+                    <input asp-for="CreatedAt" type="hidden" />
+                    <input asp-for="UploadedDate" type="hidden" />
+                    <input asp-for="UploadedBy" type="hidden" />
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Name" class="form-label">Framework Name</label>
+                                <input asp-for="Name" class="form-control" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Version" class="form-label">Version</label>
+                                <input asp-for="Version" class="form-control" />
+                                <span asp-validation-for="Version" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Type" class="form-label">Framework Type</label>
+                                <select asp-for="Type" class="form-select">
+                                    <option value="@CyberRiskApp.Models.FrameworkType.ISO27001">ISO 27001</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.NIST">NIST 800-53</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.SOX">SOX</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.GDPR">GDPR</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.HIPAA">HIPAA</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkType.Custom">Custom</option>
+                                </select>
+                                <span asp-validation-for="Type" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Status" class="form-label">Status</label>
+                                <select asp-for="Status" class="form-select">
+                                    <option value="@CyberRiskApp.Models.FrameworkStatus.Draft">Draft</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkStatus.Active">Active</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkStatus.Archived">Archived</option>
+                                    <option value="@CyberRiskApp.Models.FrameworkStatus.Deprecated">Deprecated</option>
+                                </select>
+                                <span asp-validation-for="Status" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-1"></i>Framework Information:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Uploaded by:</strong> @Model.UploadedBy</li>
+                            <li><strong>Upload date:</strong> @Model.UploadedDate.ToString("MMM dd, yyyy")</li>
+                            <li><strong>Controls:</strong> @Model.Controls.Count</li>
+                            <li><strong>Assessments:</strong> @Model.Assessments.Count</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="@Url.Action("Details", "Frameworks", new { id = Model.Id })" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Details
+                        </a>
+                        <div>
+                            <a asp-action="Index" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-list me-1"></i>Back to List
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,46 @@
+﻿@model List<CyberRiskApp.ViewModels.BusinessUnitRiskMetric>
+
+@if (Model.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Business Unit / Owner</th>
+                    <th class="text-center">Accepted Risks</th>
+                    <th class="text-end">Total ALE</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var unit in Model)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@unit.BusinessUnit</div>
+                            <small class="text-muted">Owner: @unit.BusinessOwner</small>
+                            @if (unit.Assets.Any())
+                            {
+                                <br>
+
+                                <small class="text-muted">Assets: @string.Join(", ", unit.Assets.Take(2))@(unit.Assets.Count > 2 ? "..." : "")</small>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-warning">@unit.AcceptedRiskCount</span>
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-semibold">@unit.TotalALE.ToString("C0")</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="text-center py-3">
+        <i class="fas fa-building fa-2x text-muted mb-2"></i>
+        <p class="text-muted mb-0">No business units with accepted risks</p>
+    </div>
+}

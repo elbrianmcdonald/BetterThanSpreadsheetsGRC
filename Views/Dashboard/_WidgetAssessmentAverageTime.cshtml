@@ -1,0 +1,58 @@
+﻿@model List<CyberRiskApp.ViewModels.AssessmentTimeMetric>
+
+@if (Model.Any())
+{
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="text-primary mb-0">
+                Average: @Math.Round(Model.Average(a => a.DaysToComplete), 1) days
+            </h5>
+            <small class="text-muted">Based on @Model.Count completed assessments</small>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Assessment</th>
+                    <th>Asset</th>
+                    <th>Completion Date</th>
+                    <th class="text-end">Days</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var assessment in Model.Take(5))
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@assessment.Title</div>
+                        </td>
+                        <td>@assessment.Asset</td>
+                        <td>@assessment.CompletionDate?.ToString("MMM dd, yyyy")</td>
+                        <td class="text-end">
+                            <span class="badge @(assessment.DaysToComplete <= 7 ? "bg-success" :
+                                                 assessment.DaysToComplete <= 14 ? "bg-warning" : "bg-danger")">
+                                @assessment.DaysToComplete
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Count > 5)
+    {
+        <div class="text-center">
+            <small class="text-muted">Showing 5 of @Model.Count completed assessments</small>
+        </div>
+    }
+}
+else
+{
+    <div class="text-center py-3">
+        <i class="fas fa-chart-line fa-2x text-muted mb-2"></i>
+        <p class="text-muted mb-0">No completed assessments yet</p>
+    </div>
+}

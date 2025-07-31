@@ -1,0 +1,170 @@
+﻿@model AssessmentRequest
+@{
+    ViewData["Title"] = "Request Risk Assessment";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Request Risk Assessment
+                </h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="CreateAssessment" method="post">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="RequesterName" class="form-label">Requester Name *</label>
+                                <input asp-for="RequesterName" class="form-control" />
+                                <span asp-validation-for="RequesterName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="ContactEmail" class="form-label">Contact Email *</label>
+                                <input asp-for="ContactEmail" class="form-control" />
+                                <span asp-validation-for="ContactEmail" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Department" class="form-label">Department *</label>
+                                <input asp-for="Department" class="form-control" />
+                                <span asp-validation-for="Department" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Priority" class="form-label">Priority *</label>
+                                <select asp-for="Priority" class="form-select">
+                                    <option value="">Select Priority</option>
+                                    <option value="@Priority.Low">Low</option>
+                                    <option value="@Priority.Medium">Medium</option>
+                                    <option value="@Priority.High">High</option>
+                                    <option value="@Priority.Urgent">Urgent</option>
+                                </select>
+                                <span asp-validation-for="Priority" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Scope" class="form-label">Assessment Scope *</label>
+                        <textarea asp-for="Scope" class="form-control" rows="3"
+                                  placeholder="Describe what systems, processes, or assets need to be assessed..."></textarea>
+                        <span asp-validation-for="Scope" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Justification" class="form-label">Business Justification *</label>
+                        <textarea asp-for="Justification" class="form-control" rows="3"
+                                  placeholder="Explain why this assessment is needed and the business impact..."></textarea>
+                        <span asp-validation-for="Justification" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="RequestedTimeline" class="form-label">Requested Completion Date</label>
+                                <input asp-for="RequestedTimeline" class="form-control" type="date" />
+                                <span asp-validation-for="RequestedTimeline" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label">Additional Notes</label>
+                        <textarea asp-for="Notes" class="form-control" rows="2"
+                                  placeholder="Any additional information or special requirements..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>Submit Request
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Requests
+                        </a>
+                    </div>
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Assessment Process</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6>1. Request Submitted</h6>
+                            <small>Your request will be reviewed by the GRC team</small>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6>2. Assessment Planning</h6>
+                            <small>Scope and methodology will be determined</small>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <h6>3. Risk Assessment</h6>
+                            <small>FAIR analysis and risk evaluation</small>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6>4. Results & Report</h6>
+                            <small>Final assessment and recommendations</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 20px;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -25px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .timeline-content h6 {
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+
+    .timeline-content small {
+        color: #6c757d;
+    }
+</style>

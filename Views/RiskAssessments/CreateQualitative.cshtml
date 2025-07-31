@@ -1,0 +1,719 @@
+@model CyberRiskApp.ViewModels.FAIRAssessmentViewModel
+@{
+    ViewData["Title"] = "Create Qualitative Risk Assessment";
+}
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-balance-scale text-warning me-2"></i>
+                    Create Qualitative Risk Assessment
+                    <span class="badge bg-warning text-dark ms-2">Qualitative</span>
+                </h2>
+                <div>
+                    <a asp-action="SelectType" class="btn btn-outline-success me-2">
+                        <i class="fas fa-exchange-alt me-1"></i>Change Type
+                    </a>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to List
+                    </a>
+                </div>
+            </div>
+
+            <form asp-action="CreateQualitative" method="post" id="qualitativeAssessmentForm" novalidate>
+                <div asp-validation-summary="All" class="alert alert-danger"></div>
+                
+                <!-- Hidden field to set assessment type -->
+                <input type="hidden" name="Assessment.AssessmentType" value="0" />
+                
+                <!-- Ensure no empty IdentifiedRisks are created by default -->
+                <!-- We'll only add these dynamically through JavaScript -->
+                
+                <!-- Basic Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Basic Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.Title" class="form-label fw-bold">Assessment Title <span class="text-danger">*</span></label>
+                                    <input asp-for="Assessment.Title" class="form-control" placeholder="Enter assessment title" required />
+                                    <span asp-validation-for="Assessment.Title" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.Asset" class="form-label fw-bold">Primary Asset <span class="text-danger">*</span></label>
+                                    @Html.AssetComboboxFor(m => m.Assessment.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"), required: true)
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.BusinessUnit" class="form-label fw-bold">Business Unit</label>
+                                    @Html.BusinessUnitComboboxFor(m => m.Assessment.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.BusinessOwner" class="form-label fw-bold">Business Owner</label>
+                                    @Html.BusinessOwnerComboboxFor(m => m.Assessment.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.CIATriad" class="form-label fw-bold">CIA Triad Impact</label>
+                                    <select asp-for="Assessment.CIATriad" class="form-control">
+                                        <option value="">Select CIA Impact</option>
+                                        <option value="1">Confidentiality</option>
+                                        <option value="2">Integrity</option>
+                                        <option value="3">Availability</option>
+                                        <option value="4">Confidentiality & Integrity</option>
+                                        <option value="5">Confidentiality & Availability</option>
+                                        <option value="6">Integrity & Availability</option>
+                                        <option value="7">All Three (CIA)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="Assessment.ThreatScenario" class="form-label fw-bold">Threat Scenario <span class="text-danger">*</span></label>
+                            <textarea asp-for="Assessment.ThreatScenario" class="form-control" rows="3" placeholder="Describe the threat scenario in detail" required></textarea>
+                            <span asp-validation-for="Assessment.ThreatScenario" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="Assessment.Description" class="form-label fw-bold">Additional Description</label>
+                            <textarea asp-for="Assessment.Description" class="form-control" rows="2" placeholder="Optional additional details"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Qualitative Risk Analysis -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-balance-scale me-2"></i>Qualitative Risk Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Risk Calculation:</strong> Risk Score = (Likelihood × Impact) × Exposure Level
+                            <br><small class="text-muted">Select appropriate levels based on your assessment of the threat scenario.</small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.QualitativeLikelihood" class="form-label fw-bold">Likelihood Level <span class="text-danger">*</span></label>
+                                    <select asp-for="Assessment.QualitativeLikelihood" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.LikelihoodLevel>()" class="form-control" required>
+                                        <option value="">Select Likelihood</option>
+                                    </select>
+                                    <small class="form-text text-muted">How likely is this threat to occur?</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.QualitativeImpact" class="form-label fw-bold">Impact Level <span class="text-danger">*</span></label>
+                                    <select asp-for="Assessment.QualitativeImpact" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.ImpactLevel>()" class="form-control" required>
+                                        <option value="">Select Impact</option>
+                                    </select>
+                                    <small class="form-text text-muted">What would be the impact if this threat occurred?</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.QualitativeExposure" class="form-label fw-bold">Exposure Level <span class="text-danger">*</span></label>
+                                    <select asp-for="Assessment.QualitativeExposure" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.ExposureLevel>()" class="form-control" required>
+                                        <option value="">Select Exposure</option>
+                                    </select>
+                                    <small class="form-text text-muted">How exposed is the asset to this threat?</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risk Calculation Preview -->
+                        <div class="card bg-light border-warning mt-3">
+                            <div class="card-body">
+                                <h6 class="text-warning mb-3">
+                                    <i class="fas fa-calculator me-2"></i>Risk Calculation Preview
+                                </h6>
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <div class="p-2 bg-white rounded shadow-sm">
+                                            <small class="text-muted d-block">Likelihood</small>
+                                            <strong class="text-info"><span id="likelihoodPreview">-</span></strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-2 bg-white rounded shadow-sm">
+                                            <small class="text-muted d-block">Impact</small>
+                                            <strong class="text-primary"><span id="impactPreview">-</span></strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-2 bg-white rounded shadow-sm">
+                                            <small class="text-muted d-block">Exposure</small>
+                                            <strong class="text-secondary"><span id="exposurePreview">-</span></strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="p-2 bg-white rounded shadow-sm">
+                                            <small class="text-muted d-block">Risk Score</small>
+                                            <strong class="text-warning"><span id="riskScorePreview">-</span></strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Threat Analysis -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user-ninja me-2"></i>Threat Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.ThreatCommunity" class="form-label fw-bold">Threat Community</label>
+                                    <select asp-for="Assessment.ThreatCommunity" class="form-control">
+                                        <option value="">Select Threat Community</option>
+                                        <option value="External Actors">External Actors</option>
+                                        <option value="Internal Actors">Internal Actors</option>
+                                        <option value="Trusted Insiders">Trusted Insiders</option>
+                                        <option value="Privileged Insiders">Privileged Insiders</option>
+                                        <option value="Partners">Partners</option>
+                                        <option value="Suppliers">Suppliers</option>
+                                        <option value="Nation States">Nation States</option>
+                                        <option value="Organized Crime">Organized Crime</option>
+                                        <option value="Hacktivists">Hacktivists</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.ThreatAction" class="form-label fw-bold">Threat Action</label>
+                                    <select asp-for="Assessment.ThreatAction" class="form-control">
+                                        <option value="">Select Threat Action</option>
+                                        <option value="Data Exfiltration">Data Exfiltration</option>
+                                        <option value="Ransomware">Ransomware</option>
+                                        <option value="Business Email Compromise">Business Email Compromise</option>
+                                        <option value="Denial of Service">Denial of Service</option>
+                                        <option value="Data Manipulation">Data Manipulation</option>
+                                        <option value="System Compromise">System Compromise</option>
+                                        <option value="Physical Theft">Physical Theft</option>
+                                        <option value="Social Engineering">Social Engineering</option>
+                                        <option value="Supply Chain Attack">Supply Chain Attack</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Defense in Depth Controls for Qualitative Assessments -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>Defense in Depth - Security Controls
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Document security controls that are in place to mitigate this risk. These controls help inform the overall risk assessment.
+                        </div>
+                        
+                        <div id="qualitativeControlsContainer" class="mb-3">
+                            <!-- Controls will be dynamically added here -->
+                        </div>
+                        
+                        <button type="button" class="btn btn-sm btn-primary mb-4" onclick="addQualitativeControl()">
+                            <i class="fas fa-plus me-1"></i>Add Control
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Identified Risks Section -->
+                <div class="card mb-4">
+                    <div class="card-header bg-danger bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Identified Risks
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Add specific risks identified during this qualitative assessment that need to be tracked and managed.
+                        </div>
+                        
+                        <!-- Column Headers -->
+                        <div class="row mb-2 d-none" id="riskHeaders">
+                            <div class="col-md-2">
+                                <small class="text-muted fw-bold">Risk Title</small>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted fw-bold">Risk Description</small>
+                            </div>
+                            <div class="col-md-1">
+                                <small class="text-muted fw-bold">Owner</small>
+                            </div>
+                            <div class="col-md-1">
+                                <small class="text-muted fw-bold">Inherent Risk</small>
+                            </div>
+                            <div class="col-md-1">
+                                <small class="text-muted fw-bold">Treatment</small>
+                            </div>
+                            <div class="col-md-2">
+                                <small class="text-muted fw-bold">Additional Controls</small>
+                            </div>
+                            <div class="col-md-1">
+                                <small class="text-muted fw-bold">Residual Risk</small>
+                            </div>
+                            <div class="col-md-1">
+                                <small class="text-muted fw-bold">Actions</small>
+                            </div>
+                        </div>
+                        
+                        <div id="risksContainer">
+                            <!-- Risks will be added here dynamically - no default empty risks -->
+                        </div>
+                        
+                        <!-- Ensure we don't accidentally create any IdentifiedRisks fields -->
+                        <script>
+                            // Make sure no hidden IdentifiedRisks inputs exist by default
+                            document.addEventListener('DOMContentLoaded', function() {
+                                // Remove any accidental IdentifiedRisks inputs that might be created
+                                const existingRiskInputs = document.querySelectorAll('input[name*="IdentifiedRisks"], select[name*="IdentifiedRisks"], textarea[name*="IdentifiedRisks"]');
+                                existingRiskInputs.forEach(input => {
+                                    const riskItem = input.closest('.risk-item');
+                                    if (!riskItem) {
+                                        console.log('Removing stray risk input:', input.name);
+                                        input.remove();
+                                    }
+                                });
+                            });
+                        </script>
+                        
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="addRisk()">
+                            <i class="fas fa-plus me-2"></i>Add Risk
+                        </button>
+                        <button type="button" class="btn btn-outline-info btn-sm ms-2" onclick="updateAllRiskLevels()">
+                            <i class="fas fa-sync me-2"></i>Update Risk Levels
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-warning btn-lg text-dark">
+                                <i class="fas fa-save me-2"></i>Create Qualitative Assessment
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let qualitativeControlIndex = 0;
+        let riskIndex = 0;
+        
+        // Qualitative control management functions
+        function addQualitativeControl() {
+            const container = document.getElementById('qualitativeControlsContainer');
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const controlHtml = `
+                <div class="control-item card mb-2 border-primary" id="qualitative_control_${qualitativeControlIndex}">
+                    <div class="card-body p-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <select name="QualitativeControls[${qualitativeControlIndex}].ControlName" 
+                                        class="form-select control-name-select" 
+                                        data-category="5" 
+                                        data-can-add-new="${canAddNew ? 'true' : 'false'}"
+                                        data-placeholder="Type to search controls..."
+                                        style="width: 100%;">
+                                    <option value="">Type to search controls...</option>
+                                </select>
+                                <input type="hidden" name="QualitativeControls[${qualitativeControlIndex}].Id" value="0" />
+                            </div>
+                            <div class="col-md-2">
+                                <select name="QualitativeControls[${qualitativeControlIndex}].ControlType" class="form-control form-control-sm">
+                                    <option value="Preventive">Preventive</option>
+                                    <option value="Detective">Detective</option>
+                                    <option value="Responsive">Responsive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select name="QualitativeControls[${qualitativeControlIndex}].ImplementationStatus" 
+                                        class="form-control form-control-sm control-status">
+                                    <option value="Implemented">Implemented</option>
+                                    <option value="Planned">Planned</option>
+                                    <option value="NotImplemented">Not Implemented</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" name="QualitativeControls[${qualitativeControlIndex}].ControlDescription" 
+                                       class="form-control form-control-sm" placeholder="Description" />
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQualitativeControl(${qualitativeControlIndex})" title="Remove Control">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', controlHtml);
+            
+            if (window.initializeSmartComboboxes) {
+                window.initializeSmartComboboxes();
+            }
+            
+            qualitativeControlIndex++;
+        }
+        
+        function removeQualitativeControl(index) {
+            document.getElementById(`qualitative_control_${index}`).remove();
+        }
+        
+        // Risk management functions
+        function addRisk() {
+            const container = document.getElementById('risksContainer');
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const riskHtml = `
+                <div class="risk-item card mb-2 border-danger" id="risk_${riskIndex}">
+                    <div class="card-body p-2">
+                        <div class="row align-items-center">
+                            <div class="col-md-2">
+                                <input type="text" name="IdentifiedRisks[${riskIndex}].Title" 
+                                       class="form-control form-control-sm" 
+                                       placeholder="Risk Title" />
+                            </div>
+                            <div class="col-md-3">
+                                <textarea name="IdentifiedRisks[${riskIndex}].Description" 
+                                          class="form-control form-control-sm" 
+                                          rows="2" placeholder="Risk Description"></textarea>
+                            </div>
+                            <div class="col-md-1">
+                                <select name="IdentifiedRisks[${riskIndex}].Owner" 
+                                        class="form-select form-select-sm risk-owner-select" 
+                                        data-category="2" 
+                                        data-can-add-new="${canAddNew}" 
+                                        data-placeholder="Select owner..." 
+                                        style="width: 100%;">
+                                    <option value="">Select...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1">
+                                <div class="d-flex flex-column align-items-center">
+                                    <span id="inherentRiskLevel_${riskIndex}" class="badge bg-secondary mb-1">TBD</span>
+                                    <input type="hidden" name="IdentifiedRisks[${riskIndex}].InherentRiskLevel" id="inherentRiskLevelValue_${riskIndex}" value="1" />
+                                    <small class="text-muted">Auto-calc</small>
+                                </div>
+                            </div>
+                            <div class="col-md-1">
+                                <select name="IdentifiedRisks[${riskIndex}].Treatment" 
+                                        class="form-select form-select-sm" 
+                                        onchange="updateResidualRisk(${riskIndex})">
+                                    <option value="1">Mitigate</option>
+                                    <option value="2">Transfer</option>
+                                    <option value="3">Accept</option>
+                                    <option value="4">Avoid</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <textarea name="IdentifiedRisks[${riskIndex}].TreatmentPlan" 
+                                          class="form-control form-control-sm" 
+                                          rows="2" 
+                                          placeholder="Additional controls needed..."
+                                          onchange="updateResidualRisk(${riskIndex})"></textarea>
+                            </div>
+                            <div class="col-md-1">
+                                <select name="IdentifiedRisks[${riskIndex}].ResidualRiskLevel" 
+                                        class="form-select form-select-sm" 
+                                        id="residualRiskLevel_${riskIndex}">
+                                    <option value="1">Low</option>
+                                    <option value="2">Medium</option>
+                                    <option value="3">High</option>
+                                    <option value="4">Critical</option>
+                                </select>
+                            </div>
+                            <div class="col-md-1">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRisk(${riskIndex})" title="Remove Risk">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', riskHtml);
+            
+            if (riskIndex === 0) {
+                document.getElementById('riskHeaders').classList.remove('d-none');
+            }
+            
+            if (window.initializeSmartComboboxes) {
+                window.initializeSmartComboboxes();
+            }
+            
+            riskIndex++;
+            
+            setTimeout(() => {
+                updateAllRiskLevels();
+            }, 100);
+        }
+        
+        function removeRisk(index) {
+            document.getElementById(`risk_${index}`).remove();
+            
+            const remainingRisks = document.querySelectorAll('.risk-item');
+            if (remainingRisks.length === 0) {
+                document.getElementById('riskHeaders').classList.add('d-none');
+            }
+        }
+        
+        // Risk level calculation functions
+        function calculateQualitativeRiskLevel() {
+            const likelihoodElement = document.querySelector('[name="Assessment.QualitativeLikelihood"]');
+            const impactElement = document.querySelector('[name="Assessment.QualitativeImpact"]');
+            const exposureElement = document.querySelector('[name="Assessment.QualitativeExposure"]');
+            
+            if (!likelihoodElement?.value || !impactElement?.value || !exposureElement?.value) {
+                return { level: 1, text: 'TBD', class: 'bg-secondary' };
+            }
+            
+            const likelihood = parseInt(likelihoodElement.value);
+            const impact = parseInt(impactElement.value);
+            const exposure = getExposureRating(parseInt(exposureElement.value));
+            
+            const riskScore = (likelihood * impact) * exposure;
+            
+            // Risk level thresholds for qualitative assessments
+            if (riskScore >= 16) return { level: 4, text: 'Critical', class: 'bg-danger' };
+            if (riskScore >= 10) return { level: 3, text: 'High', class: 'bg-warning' };
+            if (riskScore >= 4) return { level: 2, text: 'Medium', class: 'bg-info' };
+            return { level: 1, text: 'Low', class: 'bg-success' };
+        }
+        
+        function getExposureRating(exposureLevel) {
+            // Match the enum values to exposure ratings
+            switch(exposureLevel) {
+                case 1: return 0.2; // SlightlyExposed
+                case 2: return 0.4; // Exposed
+                case 3: return 0.8; // ModeratelyExposed
+                case 4: return 1.0; // HighlyExposed
+                default: return 0.2;
+            }
+        }
+        
+        function updateAllRiskLevels() {
+            const riskLevel = calculateQualitativeRiskLevel();
+            
+            const riskItems = document.querySelectorAll('.risk-item');
+            riskItems.forEach((item, index) => {
+                const badge = item.querySelector(`[id^="inherentRiskLevel_"]`);
+                const hiddenInput = item.querySelector(`[id^="inherentRiskLevelValue_"]`);
+                
+                if (badge && hiddenInput) {
+                    badge.textContent = riskLevel.text;
+                    badge.className = `badge ${riskLevel.class} mb-1`;
+                    hiddenInput.value = riskLevel.level;
+                    
+                    const residualSelect = item.querySelector(`[id^="residualRiskLevel_"]`);
+                    if (residualSelect && !residualSelect.hasAttribute('data-user-modified')) {
+                        residualSelect.value = riskLevel.level;
+                    }
+                }
+            });
+        }
+        
+        function updateResidualRisk(riskIndex) {
+            const treatmentSelect = document.querySelector(`select[name="IdentifiedRisks[${riskIndex}].Treatment"]`);
+            const treatmentPlan = document.querySelector(`textarea[name="IdentifiedRisks[${riskIndex}].TreatmentPlan"]`);
+            const residualSelect = document.querySelector(`select[name="IdentifiedRisks[${riskIndex}].ResidualRiskLevel"]`);
+            const inherentInput = document.querySelector(`input[name="IdentifiedRisks[${riskIndex}].InherentRiskLevel"]`);
+            
+            if (!treatmentSelect || !residualSelect || !inherentInput) return;
+            
+            residualSelect.setAttribute('data-user-modified', 'true');
+            
+            const treatment = parseInt(treatmentSelect.value);
+            const inherentLevel = parseInt(inherentInput.value);
+            const hasTreatmentPlan = treatmentPlan && treatmentPlan.value.trim().length > 0;
+            
+            let suggestedResidual = inherentLevel;
+            
+            if (treatment === 1 && hasTreatmentPlan) {
+                suggestedResidual = Math.max(1, inherentLevel - 1);
+            } else if (treatment === 2) {
+                suggestedResidual = Math.max(1, inherentLevel - 1);
+            } else if (treatment === 4) {
+                suggestedResidual = 1;
+            }
+            
+            const lastChanged = residualSelect.getAttribute('data-last-changed');
+            const now = Date.now();
+            if (!lastChanged || (now - parseInt(lastChanged)) > 5000) {
+                residualSelect.value = suggestedResidual;
+            }
+        }
+        
+        function updateQualitativePreview() {
+            const likelihoodElement = document.querySelector('[name="Assessment.QualitativeLikelihood"]');
+            const impactElement = document.querySelector('[name="Assessment.QualitativeImpact"]');
+            const exposureElement = document.querySelector('[name="Assessment.QualitativeExposure"]');
+            
+            // Update preview displays
+            if (likelihoodElement && likelihoodElement.value) {
+                const likelihoodText = likelihoodElement.options[likelihoodElement.selectedIndex].text;
+                document.getElementById('likelihoodPreview').textContent = likelihoodText;
+            } else {
+                document.getElementById('likelihoodPreview').textContent = '-';
+            }
+            
+            if (impactElement && impactElement.value) {
+                const impactText = impactElement.options[impactElement.selectedIndex].text;
+                document.getElementById('impactPreview').textContent = impactText;
+            } else {
+                document.getElementById('impactPreview').textContent = '-';
+            }
+            
+            if (exposureElement && exposureElement.value) {
+                const exposureText = exposureElement.options[exposureElement.selectedIndex].text;
+                document.getElementById('exposurePreview').textContent = exposureText;
+            } else {
+                document.getElementById('exposurePreview').textContent = '-';
+            }
+            
+            // Calculate and display risk score
+            if (likelihoodElement?.value && impactElement?.value && exposureElement?.value) {
+                const likelihood = parseInt(likelihoodElement.value);
+                const impact = parseInt(impactElement.value);
+                const exposure = getExposureRating(parseInt(exposureElement.value));
+                const riskScore = (likelihood * impact) * exposure;
+                
+                document.getElementById('riskScorePreview').textContent = riskScore.toFixed(1);
+            } else {
+                document.getElementById('riskScorePreview').textContent = '-';
+            }
+            
+            // Update risk levels for identified risks
+            updateAllRiskLevels();
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update risk levels when qualitative fields change
+            document.querySelectorAll('[name="Assessment.QualitativeLikelihood"], [name="Assessment.QualitativeImpact"], [name="Assessment.QualitativeExposure"]').forEach(input => {
+                input.addEventListener('change', updateQualitativePreview);
+            });
+            
+            // Initial preview update
+            updateQualitativePreview();
+            
+            // Handle form submission
+            document.getElementById('qualitativeAssessmentForm').addEventListener('submit', function(e) {
+                console.log('Form submission started');
+                
+                // Remove any empty identified risks to prevent validation errors
+                const emptyRisks = document.querySelectorAll('.risk-item');
+                console.log('Found risk items:', emptyRisks.length);
+                
+                emptyRisks.forEach(riskItem => {
+                    const titleInput = riskItem.querySelector('input[name*="IdentifiedRisks"][name*="Title"]');
+                    if (!titleInput || !titleInput.value.trim()) {
+                        console.log('Removing empty risk item');
+                        riskItem.remove();
+                    }
+                });
+                
+                // Remove any hidden or orphaned risk-related inputs that might have been left behind
+                const orphanedRiskInputs = document.querySelectorAll('input[name*="IdentifiedRisks"], select[name*="IdentifiedRisks"], textarea[name*="IdentifiedRisks"]');
+                orphanedRiskInputs.forEach(input => {
+                    // Check if this input is inside a remaining risk-item
+                    const parentRiskItem = input.closest('.risk-item');
+                    if (!parentRiskItem) {
+                        console.log('Removing orphaned risk input:', input.name);
+                        input.remove();
+                    }
+                });
+                
+                // Basic validation
+                const requiredFields = ['Assessment.Title', 'Assessment.Asset', 'Assessment.ThreatScenario'];
+                let isValid = true;
+                
+                requiredFields.forEach(fieldName => {
+                    const field = document.querySelector(`[name="${fieldName}"]`);
+                    if (!field || !field.value.trim()) {
+                        isValid = false;
+                        field?.classList.add('is-invalid');
+                        console.log('Required field missing:', fieldName);
+                    } else {
+                        field?.classList.remove('is-invalid');
+                    }
+                });
+                
+                // Check qualitative-specific required fields
+                const qualFields = ['Assessment.QualitativeLikelihood', 'Assessment.QualitativeImpact', 'Assessment.QualitativeExposure'];
+                qualFields.forEach(fieldName => {
+                    const field = document.querySelector(`[name="${fieldName}"]`);
+                    if (!field || !field.value) {
+                        isValid = false;
+                        field?.classList.add('is-invalid');
+                        console.log('Qualitative field missing:', fieldName);
+                    } else {
+                        field?.classList.remove('is-invalid');
+                    }
+                });
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    alert('Please fill in all required fields: Title, Asset, Threat Scenario, and all qualitative risk factors (Likelihood, Impact, Exposure)');
+                    return false;
+                }
+                
+                // Log final form data for debugging
+                const formData = new FormData(this);
+                console.log('Final form data:');
+                for (let [key, value] of formData.entries()) {
+                    if (key.includes('IdentifiedRisks')) {
+                        console.log(key, '=', value);
+                    }
+                }
+                
+                console.log('Form validation passed, submitting...');
+                return true;
+            });
+        });
+    </script>
+}

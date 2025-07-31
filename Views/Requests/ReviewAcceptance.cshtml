@@ -1,0 +1,575 @@
+﻿@model CyberRiskApp.Models.RiskAcceptanceRequest
+
+@{
+    ViewData["Title"] = "Review Risk Acceptance Request";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">
+                    <i class="fas fa-gavel me-2"></i>Review Risk Acceptance Request #@Model.Id
+                </h2>
+                <a asp-action="AcceptanceDetails" asp-route-id="@Model.Id" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Details
+                </a>
+            </div>
+
+            <div class="row">
+                <!-- Request Information -->
+                <div class="col-md-8">
+                    <!-- Finding or Risk Information -->
+                    @if (Model.LinkedFinding != null)
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-search me-2"></i>Associated Finding
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6>Finding #@Model.LinkedFinding.FindingNumber - @Model.LinkedFinding.Title</h6>
+                                        <p><strong>Details:</strong> @Model.LinkedFinding.Details</p>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small><strong>Owner:</strong> @Model.LinkedFinding.Owner</small><br>
+                                                <small><strong>Business Unit:</strong> @Model.LinkedFinding.BusinessUnit</small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small><strong>Business Owner:</strong> @Model.LinkedFinding.BusinessOwner</small><br>
+                                                <small><strong>Domain:</strong> @Model.LinkedFinding.Domain</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="mb-2">
+                                            <span class="badge bg-@GetRiskColor(Model.LinkedFinding.RiskRating) fs-5">
+                                                @Model.LinkedFinding.RiskRating Risk
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">
+                                            Impact: @Model.LinkedFinding.Impact<br>
+                                            Likelihood: @Model.LinkedFinding.Likelihood<br>
+                                            Exposure: @Model.LinkedFinding.Exposure
+                                        </small>
+                                        <br><br>
+                                        <a asp-controller="Findings" asp-action="Details" asp-route-id="@Model.LinkedFinding.Id"
+                                           class="btn btn-outline-info btn-sm">
+                                            <i class="fas fa-search me-2"></i>View Finding Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else if (Model.LinkedRisk != null)
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Associated Risk
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h6>Risk #@Model.LinkedRisk.RiskNumber - @Model.LinkedRisk.Title</h6>
+                                        <p><strong>Description:</strong> @Model.LinkedRisk.Description</p>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small><strong>Owner:</strong> @Model.LinkedRisk.Owner</small><br>
+                                                <small><strong>Business Unit:</strong> @Model.LinkedRisk.BusinessUnit</small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small><strong>Asset:</strong> @Model.LinkedRisk.Asset</small><br>
+                                                <small><strong>Treatment:</strong> @Model.LinkedRisk.Treatment</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="mb-2">
+                                            <span class="badge bg-@GetRiskLevelColor(Model.LinkedRisk.RiskLevel) fs-5">
+                                                @Model.LinkedRisk.RiskLevel Risk
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">
+                                            ALE: @Model.LinkedRisk.ALE.ToString("C")<br>
+                                            Next Review: @(Model.LinkedRisk.NextReviewDate?.ToString("yyyy-MM-dd") ?? "Not set")<br>
+                                            Open Date: @Model.LinkedRisk.OpenDate.ToString("yyyy-MM-dd")
+                                        </small>
+                                        <br><br>
+                                        <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.LinkedRisk.Id"
+                                           class="btn btn-outline-warning btn-sm">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>View Risk Details
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Request Details -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>Risk Acceptance Request
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="text-primary">Risk Description</h6>
+                                <p class="bg-light p-3 rounded">@Model.Description</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6 class="text-primary">Business Need</h6>
+                                <div class="bg-light p-3 rounded">
+                                    @foreach (var line in Model.BusinessNeed.Split('\n'))
+                                    {
+                                        <p class="mb-1">@line</p>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Requested By:</strong> @Model.Requester
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Request Date:</strong> @Model.RequestDate.ToString("yyyy-MM-dd")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GRC Analysis Form -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>GRC Risk Analysis (Step 2)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="ReviewAcceptance" asp-route-id="@Model.Id" method="post">
+                                
+                                <!-- Risk Summary with Template -->
+                                <div class="mb-4">
+                                    <label for="riskSummary" class="form-label fw-bold">
+                                        <i class="fas fa-file-alt me-1"></i>Summary of Risk *
+                                    </label>
+                                    <textarea name="riskSummary" id="riskSummary" class="form-control" rows="4" 
+                                              placeholder="There is a risk of [threat action] which would impact the [Confidentiality/Integrity/Availability/Legal/Compliance] through [threat] due to [Architecture/Configuration description] of [Application]."
+                                              required>@Model.RiskSummary</textarea>
+                                    <div class="form-text">
+                                        Describe the risk using the template above, customizing the bracketed sections for this specific risk.
+                                    </div>
+                                </div>
+
+                                <!-- Link Risk Assessment -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-link me-1"></i>Link Risk Assessment (Optional)
+                                    </label>
+                                    <div class="card border-info">
+                                        <div class="card-body p-3">
+                                            <p class="card-text text-muted mb-3">
+                                                Link an existing risk assessment that analyzes this risk in detail. This provides additional context for the acceptance decision.
+                                            </p>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-8">
+                                                    <select id="linkedAssessmentSelect" class="form-select" name="linkedRiskAssessmentId">
+                                                        <option value="">-- Select Risk Assessment --</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadRiskAssessments()">
+                                                        <i class="fas fa-search me-1"></i>Load Assessments
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div id="assessmentPreview" class="mt-3" style="display: none;">
+                                                <div class="border-top pt-3">
+                                                    <h6>Selected Assessment Preview:</h6>
+                                                    <div id="assessmentDetails"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Current Compensating Controls -->
+                                <div class="mb-4">
+                                    <label for="currentCompensatingControls" class="form-label fw-bold">
+                                        <i class="fas fa-shield me-1"></i>Current Compensating Controls
+                                    </label>
+                                    <textarea name="currentCompensatingControls" id="currentCompensatingControls" class="form-control" rows="3"
+                                              placeholder="List existing controls that help mitigate this risk...">@Model.CurrentCompensatingControls</textarea>
+                                </div>
+
+                                <!-- Risk Ratings Row 1 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <label for="currentRiskLevelWithControls" class="form-label fw-bold">
+                                            <i class="fas fa-balance-scale me-1"></i>Risk Level with Current Controls
+                                        </label>
+                                        <select name="currentRiskLevelWithControls" id="currentRiskLevelWithControls" class="form-select">
+                                            <option value="">-- Select Rating --</option>
+                                            <option value="@((int)CyberRiskApp.Models.RiskRating.Low)" selected="@(Model.CurrentRiskLevelWithControls == CyberRiskApp.Models.RiskRating.Low)">Low</option>
+                                            <option value="@((int)CyberRiskApp.Models.RiskRating.Medium)" selected="@(Model.CurrentRiskLevelWithControls == CyberRiskApp.Models.RiskRating.Medium)">Medium</option>
+                                            <option value="@((int)CyberRiskApp.Models.RiskRating.High)" selected="@(Model.CurrentRiskLevelWithControls == CyberRiskApp.Models.RiskRating.High)">High</option>
+                                            <option value="@((int)CyberRiskApp.Models.RiskRating.Critical)" selected="@(Model.CurrentRiskLevelWithControls == CyberRiskApp.Models.RiskRating.Critical)">Critical</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Treatment Plan -->
+                                <div class="mb-4">
+                                    <label for="treatmentPlan" class="form-label fw-bold">
+                                        <i class="fas fa-route me-1"></i>Treatment Plan
+                                    </label>
+                                    <textarea name="treatmentPlan" id="treatmentPlan" class="form-control" rows="4"
+                                              placeholder="Describe the plan for managing or reducing this risk over time...">@Model.TreatmentPlan</textarea>
+                                </div>
+
+                                <!-- Proposed Compensating Controls -->
+                                <div class="mb-4">
+                                    <label for="proposedCompensatingControls" class="form-label fw-bold">
+                                        <i class="fas fa-plus-shield me-1"></i>Proposed Compensating Controls
+                                    </label>
+                                    <textarea name="proposedCompensatingControls" id="proposedCompensatingControls" class="form-control" rows="3"
+                                              placeholder="List additional controls that could be implemented to further mitigate this risk...">@Model.ProposedCompensatingControls</textarea>
+                                </div>
+
+                                <!-- Risk Ratings Row 2 -->
+                                <div class="row mb-4">
+                                    <div class="col-md-12">
+                                        <label for="futureRiskLevelWithMitigations" class="form-label fw-bold">
+                                            <i class="fas fa-check-shield me-1"></i>Risk Level When All Mitigations Are in Place
+                                        </label>
+                                        <select name="futureRiskLevelWithMitigations" id="futureRiskLevelWithMitigations" class="form-select">
+                                            <option value="">-- Select Rating --</option>
+                                            <option value="@((int)CyberRiskApp.Models.RiskRating.Low)" selected="@(Model.FutureRiskLevelWithMitigations == CyberRiskApp.Models.RiskRating.Low)">Low</option>
+                                            <option value="@((int)CyberRiskApp.Models.RiskRating.Medium)" selected="@(Model.FutureRiskLevelWithMitigations == CyberRiskApp.Models.RiskRating.Medium)">Medium</option>
+                                            <option value="@((int)CyberRiskApp.Models.RiskRating.High)" selected="@(Model.FutureRiskLevelWithMitigations == CyberRiskApp.Models.RiskRating.High)">High</option>
+                                            <option value="@((int)CyberRiskApp.Models.RiskRating.Critical)" selected="@(Model.FutureRiskLevelWithMitigations == CyberRiskApp.Models.RiskRating.Critical)">Critical</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- CISO Recommendation -->
+                                <div class="mb-4">
+                                    <label for="cisoRecommendation" class="form-label fw-bold">
+                                        <i class="fas fa-user-tie me-1"></i>Recommendation from CISO Office Assessor
+                                    </label>
+                                    <textarea name="cisoRecommendation" id="cisoRecommendation" class="form-control" rows="4"
+                                              placeholder="Provide your professional recommendation as the CISO office assessor...">@Model.CISORecommendation</textarea>
+                                </div>
+
+                                <hr class="my-4">
+
+                    <!-- Review Decision Form -->
+                    <div class="card">
+                        <div class="card-header bg-dark text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-clipboard-check me-2"></i>Final Review Decision
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">
+                                        <span class="text-danger">*</span> Decision
+                                    </label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card border-success">
+                                                <div class="card-body text-center">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="decision"
+                                                               value="@((int)CyberRiskApp.Models.RequestStatus.Approved)" id="approve" required>
+                                                        <label class="form-check-label fw-bold text-success" for="approve">
+                                                            <i class="fas fa-check-circle fa-2x d-block mb-2"></i>
+                                                            APPROVE
+                                                        </label>
+                                                    </div>
+                                                    <small class="text-muted">
+                                                        Accept the risk and update finding status to "Risk Accepted"
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card border-danger">
+                                                <div class="card-body text-center">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="decision"
+                                                               value="@((int)CyberRiskApp.Models.RequestStatus.Rejected)" id="reject" required>
+                                                        <label class="form-check-label fw-bold text-danger" for="reject">
+                                                            <i class="fas fa-times-circle fa-2x d-block mb-2"></i>
+                                                            REJECT
+                                                        </label>
+                                                    </div>
+                                                    <small class="text-muted">
+                                                        Reject the risk acceptance request - finding remains open
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="reviewComments" class="form-label fw-bold">
+                                        <span class="text-danger">*</span> Review Comments
+                                    </label>
+                                    <textarea name="reviewComments" id="reviewComments" class="form-control" rows="5"
+                                              placeholder="Provide detailed comments explaining your decision. Include:&#10;• Assessment of the business justification&#10;• Risk analysis considerations&#10;• Any conditions or recommendations&#10;• Rationale for approval/rejection"
+                                              required></textarea>
+                                    <div class="form-text">
+                                        Your comments will be visible to the requester and will be part of the permanent record.
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Note:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>If approved, the linked @(Model.LinkedFinding != null ? "finding" : "risk") will automatically be updated to "Risk Accepted" status</li>
+                                        <li>Consider performing a quantitative risk assessment if not already completed</li>
+                                        <li>Ensure business justification aligns with organizational risk appetite</li>
+                                        <li>Your decision and comments become part of the audit trail</li>
+                                    </ul>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a asp-action="AcceptanceDetails" asp-route-id="@Model.Id" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Submit Review Decision
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar with Guidelines -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-lightbulb me-2"></i>Review Guidelines
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="text-primary">Consider These Factors:</h6>
+                            <ul class="small">
+                                <li><strong>Business Impact:</strong> Does the justification adequately explain business necessity?</li>
+                                <li><strong>Risk Level:</strong> Is the risk level acceptable for the business value?</li>
+                                <li><strong>Compensating Controls:</strong> Are there adequate controls to mitigate residual risk?</li>
+                                <li><strong>Timeline:</strong> Is this a temporary or permanent acceptance?</li>
+                                <li><strong>Cost vs. Risk:</strong> Does remediation cost outweigh the risk?</li>
+                                <li><strong>Regulatory Impact:</strong> Any compliance implications?</li>
+                            </ul>
+
+                            <hr>
+
+                            <h6 class="text-primary">Approval Criteria:</h6>
+                            <ul class="small">
+                                <li>Clear business justification</li>
+                                <li>Appropriate risk level for business</li>
+                                <li>Adequate compensating controls</li>
+                                <li>Senior stakeholder buy-in</li>
+                                <li>No regulatory violations</li>
+                            </ul>
+
+                            <hr>
+
+                            <h6 class="text-primary">Rejection Reasons:</h6>
+                            <ul class="small">
+                                <li>Insufficient justification</li>
+                                <li>Risk too high for business</li>
+                                <li>Better mitigation options available</li>
+                                <li>Regulatory/compliance issues</li>
+                                <li>Inadequate compensating controls</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-line me-2"></i>Quick Actions
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <a asp-controller="RiskAssessments" asp-action="Create"
+                                   class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-calculator me-2"></i>Perform FAIR Assessment
+                                </a>
+                                @if (Model.LinkedFinding != null)
+                                {
+                                    <a asp-controller="Findings" asp-action="Details" asp-route-id="@Model.LinkedFinding.Id"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-search me-2"></i>View Finding Details
+                                    </a>
+                                }
+                                else if (Model.LinkedRisk != null)
+                                {
+                                    <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.LinkedRisk.Id"
+                                       class="btn btn-outline-warning btn-sm">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>View Risk Details
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Add some interactivity to the decision cards
+        document.querySelectorAll('input[name="decision"]').forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                // Remove previous styling
+                document.querySelectorAll('.card.border-success, .card.border-danger').forEach(function(card) {
+                    card.classList.remove('bg-light');
+                });
+
+                // Add styling to selected card
+                if (this.checked) {
+                    this.closest('.card').classList.add('bg-light');
+                }
+            });
+        });
+        
+        // Risk Assessment Linking Functions
+        async function loadRiskAssessments() {
+            try {
+                const response = await fetch('/api/riskassessments/available');
+                if (response.ok) {
+                    const assessments = await response.json();
+                    populateAssessmentSelect(assessments);
+                } else {
+                    console.error('Failed to load risk assessments');
+                    alert('Failed to load risk assessments. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error loading risk assessments:', error);
+                alert('Error loading risk assessments. Please try again.');
+            }
+        }
+        
+        function populateAssessmentSelect(assessments) {
+            const select = document.getElementById('linkedAssessmentSelect');
+            
+            // Clear existing options except the first one
+            while (select.children.length > 1) {
+                select.removeChild(select.lastChild);
+            }
+            
+            if (assessments.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '-- No assessments available --';
+                option.disabled = true;
+                select.appendChild(option);
+                return;
+            }
+            
+            assessments.forEach(assessment => {
+                const option = document.createElement('option');
+                option.value = assessment.id;
+                option.textContent = `${assessment.title} (${assessment.assessmentType}) - ${assessment.asset}`;
+                option.dataset.assessment = JSON.stringify(assessment);
+                select.appendChild(option);
+            });
+            
+            // Add change listener
+            select.addEventListener('change', function() {
+                showAssessmentPreview(this.selectedOptions[0]);
+            });
+        }
+        
+        function showAssessmentPreview(selectedOption) {
+            const preview = document.getElementById('assessmentPreview');
+            const details = document.getElementById('assessmentDetails');
+            
+            if (!selectedOption.value) {
+                preview.style.display = 'none';
+                return;
+            }
+            
+            const assessment = JSON.parse(selectedOption.dataset.assessment);
+            
+            const riskLevelBadge = getRiskLevelBadgeClass(assessment.riskLevel);
+            
+            details.innerHTML = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <strong>${assessment.title}</strong><br>
+                        <small class="text-muted">Asset: ${assessment.asset || 'N/A'}</small><br>
+                        <small class="text-muted">Type: ${assessment.assessmentType}</small><br>
+                        <small class="text-muted">Created: ${new Date(assessment.createdDate).toLocaleDateString()}</small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span class="badge ${riskLevelBadge} fs-6">${assessment.riskLevel}</span>
+                        ${assessment.ale ? `<br><small class="text-muted">ALE: $${assessment.ale.toLocaleString()}</small>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            preview.style.display = 'block';
+        }
+        
+        function getRiskLevelBadgeClass(riskLevel) {
+            switch (riskLevel?.toLowerCase()) {
+                case 'critical': return 'bg-danger';
+                case 'high': return 'bg-warning';
+                case 'medium': return 'bg-info';
+                case 'low': return 'bg-success';
+                default: return 'bg-secondary';
+            }
+        }
+    </script>
+}
+
+@functions {
+    private string GetRiskColor(CyberRiskApp.Models.RiskRating rating)
+    {
+        return rating switch
+        {
+            CyberRiskApp.Models.RiskRating.Low => "success",
+            CyberRiskApp.Models.RiskRating.Medium => "warning",
+            CyberRiskApp.Models.RiskRating.High => "danger",
+            CyberRiskApp.Models.RiskRating.Critical => "dark",
+            _ => "secondary"
+        };
+    }
+
+    private string GetRiskLevelColor(CyberRiskApp.Models.RiskLevel level)
+    {
+        return level switch
+        {
+            CyberRiskApp.Models.RiskLevel.Low => "success",
+            CyberRiskApp.Models.RiskLevel.Medium => "warning",
+            CyberRiskApp.Models.RiskLevel.High => "danger",
+            CyberRiskApp.Models.RiskLevel.Critical => "dark",
+            _ => "secondary"
+        };
+    }
+}
+

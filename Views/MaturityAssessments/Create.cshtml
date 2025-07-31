@@ -1,0 +1,179 @@
+﻿@model CyberRiskApp.ViewModels.MaturityAssessmentViewModel
+@{
+    ViewData["Title"] = "Create Maturity Assessment";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-plus me-2"></i>Create Maturity Assessment</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label asp-for="Assessment.Title" class="form-label">Assessment Title</label>
+                                <input asp-for="Assessment.Title" class="form-control" placeholder="e.g., Q4 2024 NIST CSF Maturity Assessment" />
+                                <span asp-validation-for="Assessment.Title" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Assessment.MaturityFrameworkId" class="form-label">Maturity Framework</label>
+                                <select asp-for="Assessment.MaturityFrameworkId" class="form-select">
+                                    <option value="">Select Framework</option>
+                                    @foreach (var framework in Model.AvailableFrameworks)
+                                    {
+                                        <option value="@framework.Id">
+                                            @framework.Name
+                                            @if (!string.IsNullOrEmpty(framework.Version))
+                                            {
+                                                <text>v@framework.Version</text>
+                                            }
+                                            @if (framework.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
+                                            {
+                                                <text>(NIST CSF 2.0)</text>
+                                            }
+                                            else if (framework.Type == CyberRiskApp.Models.FrameworkType.C2M2)
+                                            {
+                                                <text>(C2M2)</text>
+                                            }
+                                        </option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Assessment.MaturityFrameworkId" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Assessment.BusinessOrganizationId" class="form-label">Organization</label>
+                                <select asp-for="Assessment.BusinessOrganizationId" class="form-select">
+                                    <option value="">Select Organization</option>
+                                    @foreach (var organization in Model.AvailableOrganizations)
+                                    {
+                                        <option value="@organization.Id">
+                                            @organization.Name
+                                            @if (!string.IsNullOrEmpty(organization.Code))
+                                            {
+                                                <text>(@organization.Code)</text>
+                                            }
+                                        </option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Assessment.BusinessOrganizationId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label asp-for="Assessment.Description" class="form-label">Description</label>
+                                <textarea asp-for="Assessment.Description" class="form-control" rows="3"
+                                          placeholder="Brief description of the assessment purpose and scope..."></textarea>
+                                <span asp-validation-for="Assessment.Description" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Assessment.DueDate" class="form-label">Due Date (Optional)</label>
+                                <input asp-for="Assessment.DueDate" type="date" class="form-control" />
+                                <span asp-validation-for="Assessment.DueDate" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <input type="text" class="form-control" value="Draft" readonly />
+                                <div class="form-text">New assessments start in Draft status</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Information Alert -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-1"></i>What happens next?</h6>
+                        <ul class="mb-0">
+                            <li>The assessment will be created in <strong>Draft</strong> status</li>
+                            <li>Control assessments will be automatically generated for all controls in the selected framework</li>
+                            <li>You can then perform the assessment by evaluating each control's maturity level</li>
+                            <li>The system will calculate overall maturity scores and generate gap analysis reports</li>
+                        </ul>
+                    </div>
+
+                    <!-- Framework Type Information -->
+                    <div class="alert alert-light border" id="frameworkInfo" style="display: none;">
+                        <div id="nistcsfInfo" style="display: none;">
+                            <h6 class="text-primary"><i class="fas fa-chart-line me-1"></i>NIST CSF 2.0 Assessment</h6>
+                            <p class="mb-1"><strong>Maturity Levels:</strong> 0 (Not Implemented) to 4 (Managed)</p>
+                            <p class="mb-0"><strong>Structure:</strong> Functions → Categories → Subcategories</p>
+                        </div>
+                        <div id="c2m2Info" style="display: none;">
+                            <h6 class="text-warning"><i class="fas fa-chart-bar me-1"></i>C2M2 Assessment</h6>
+                            <p class="mb-1"><strong>Maturity Levels:</strong> 1 (Initial) to 3 (Defined)</p>
+                            <p class="mb-0"><strong>Structure:</strong> Domains → MIL → Practices</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Assessments
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Create Assessment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const frameworkSelect = document.querySelector('select[name="Assessment.MaturityFrameworkId"]');
+            const frameworkInfo = document.getElementById('frameworkInfo');
+            const nistcsfInfo = document.getElementById('nistcsfInfo');
+            const c2m2Info = document.getElementById('c2m2Info');
+
+            function updateFrameworkInfo() {
+                const selectedOption = frameworkSelect.options[frameworkSelect.selectedIndex];
+
+                if (selectedOption.value) {
+                    frameworkInfo.style.display = 'block';
+
+                    // Hide all info divs first
+                    nistcsfInfo.style.display = 'none';
+                    c2m2Info.style.display = 'none';
+
+                    // Show relevant info based on framework type
+                    if (selectedOption.text.includes('NIST CSF')) {
+                        nistcsfInfo.style.display = 'block';
+                    } else if (selectedOption.text.includes('C2M2')) {
+                        c2m2Info.style.display = 'block';
+                    }
+                } else {
+                    frameworkInfo.style.display = 'none';
+                }
+            }
+
+            frameworkSelect.addEventListener('change', updateFrameworkInfo);
+            updateFrameworkInfo(); // Initialize on page load
+        });
+    </script>
+}

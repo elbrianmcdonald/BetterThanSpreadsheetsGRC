@@ -1,0 +1,100 @@
+﻿@model CyberRiskApp.Models.BusinessOrganization
+@{
+    ViewData["Title"] = "Create Organization";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-plus me-2"></i>Create New Organization</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label asp-for="Name" class="form-label">Organization Name</label>
+                                <input asp-for="Name" class="form-control" placeholder="e.g., Information Technology Department" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="Code" class="form-label">Organization Code</label>
+                                <input asp-for="Code" class="form-control" placeholder="e.g., IT" />
+                                <span asp-validation-for="Code" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Type" class="form-label">Organization Type</label>
+                        <select asp-for="Type" class="form-select">
+                            <option value="">Select Organization Type</option>
+                            <option value="@CyberRiskApp.Models.OrganizationType.IT">Information Technology</option>
+                            <option value="@CyberRiskApp.Models.OrganizationType.OT">Operational Technology</option>
+                            <option value="@CyberRiskApp.Models.OrganizationType.Finance">Finance</option>
+                            <option value="@CyberRiskApp.Models.OrganizationType.HR">Human Resources</option>
+                            <option value="@CyberRiskApp.Models.OrganizationType.Legal">Legal</option>
+                            <option value="@CyberRiskApp.Models.OrganizationType.Operations">Operations</option>
+                            <option value="@CyberRiskApp.Models.OrganizationType.Other">Other</option>
+                        </select>
+                        <span asp-validation-for="Type" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-control" rows="3"
+                                  placeholder="Brief description of the organization's role and responsibilities"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ComplianceOwner" class="form-label">Compliance Owner</label>
+                        <input asp-for="ComplianceOwner" class="form-control" placeholder="e.g., John Doe, jane.doe@company.com" />
+                        <span asp-validation-for="ComplianceOwner" class="text-danger"></span>
+                        <div class="form-text">
+                            Person responsible for compliance activities in this organization.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Stakeholders" class="form-label">Key Stakeholders</label>
+                        <textarea asp-for="Stakeholders" class="form-control" rows="2"
+                                  placeholder="List key stakeholders, separated by commas"></textarea>
+                        <span asp-validation-for="Stakeholders" class="text-danger"></span>
+                        <div class="form-text">
+                            List important stakeholders who should be involved in compliance activities.
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input asp-for="IsActive" class="form-check-input" checked />
+                        <label asp-for="IsActive" class="form-check-label">
+                            Active Organization
+                        </label>
+                        <div class="form-text">
+                            Inactive organizations will not be available for new assessments.
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Organizations
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>Create Organization
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,136 @@
+@model IEnumerable<CyberRiskApp.Models.StrategyGoal>
+@{
+    ViewData["Title"] = "Strategy Goals";
+    var plan = ViewBag.Plan as CyberRiskApp.Models.StrategyPlan;
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-bullseye text-primary me-2"></i>
+            Strategy Goals: @plan?.PlanName
+        </h2>
+        <div>
+            <a href="/StrategyGoal/Create?planId=@plan?.Id" class="btn btn-primary me-2">
+                <i class="fas fa-plus me-1"></i>Add Goal
+            </a>
+            <a asp-action="Details" asp-route-id="@plan?.Id" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Plan
+            </a>
+        </div>
+    </div>
+
+    @if (Model.Any())
+    {
+        <div class="row">
+            @foreach (var goal in Model.OrderBy(g => g.Priority).ThenBy(g => g.FunctionDomain))
+            {
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-layer-group me-2"></i>@goal.FunctionDomain
+                            </h5>
+                            <span class="badge bg-@(goal.Priority.ToString().ToLower())">@goal.Priority Priority</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Framework</small>
+                                    <div class="fw-bold">@goal.MaturityFramework?.Name</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Target Date</small>
+                                    <div class="fw-bold @(goal.IsOverdue ? "text-danger" : "")">
+                                        @goal.TargetDate.ToString("MMM dd, yyyy")
+                                        @if (goal.IsOverdue)
+                                        {
+                                            <small class="d-block">Overdue</small>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <small class="text-muted">Maturity Progression</small>
+                                <div class="d-flex align-items-center mt-1">
+                                    <div class="text-center me-3">
+                                        <div class="badge bg-secondary" style="font-size: 1.2em;">@goal.CurrentMaturityLevel</div>
+                                        <small class="d-block">Current</small>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 style="width: @((goal.CurrentMaturityLevel / (decimal)goal.TargetMaturityLevel * 100))%">
+                                                @goal.MaturityGap level(s) to go
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-center ms-3">
+                                        <div class="badge bg-primary" style="font-size: 1.2em;">@goal.TargetMaturityLevel</div>
+                                        <small class="d-block">Target</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <small class="text-muted">Capability Progress</small>
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <div class="progress flex-grow-1" style="height: 20px;">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: @goal.ProgressPercentage%">
+                                        </div>
+                                    </div>
+                                    <span class="ms-2">@goal.ProgressPercentage.ToString("F0")%</span>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    @goal.Capabilities.Count(c => c.Status == CyberRiskApp.Models.CapabilityStatus.Completed) of 
+                                    @goal.Capabilities.Count capabilities completed
+                                </small>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(goal.Notes))
+                            {
+                                <div class="mb-3">
+                                    <small class="text-muted">Notes</small>
+                                    <p class="mb-0 small">@goal.Notes</p>
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-@(goal.Status.ToString().ToLower())">@goal.Status</span>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/StrategyGoal/Details/@goal.Id" class="btn btn-outline-info">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    <a href="/StrategyGoal/Edit/@goal.Id" class="btn btn-outline-primary">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-bullseye fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No Goals Defined</h4>
+                <p class="text-muted">Start by adding maturity goals to define what you want to achieve with this strategy plan.</p>
+                <a href="/StrategyGoal/Create?planId=@plan?.Id" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Add First Goal
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Optional: Add any goal-specific JavaScript functionality here
+    </script>
+}

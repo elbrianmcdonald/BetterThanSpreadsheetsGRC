@@ -1,0 +1,129 @@
+@model CyberRiskApp.ViewModels.CreateReferenceDataViewModel
+@{
+    ViewData["Title"] = $"Add New {Model.CategoryDisplayName}";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-plus me-2"></i>Add New @Model.CategoryDisplayName.TrimEnd('s')
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Category" />
+                        <input type="hidden" asp-for="CategoryDisplayName" />
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Value" class="form-label">
+                                        @Model.CategoryDisplayName.TrimEnd('s') Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Value" class="form-control form-control-lg" placeholder="Enter the name..." />
+                                    <span asp-validation-for="Value" class="text-danger"></span>
+                                    <div class="form-text">
+                                        @switch (Model.Category.ToString())
+                                        {
+                                            case "Asset":
+                                                <text>Examples: Web Server, Database Server, Email System</text>
+                                                break;
+                                            case "BusinessOwner":
+                                                <text>Examples: John Smith, Sarah Johnson, IT Director</text>
+                                                break;
+                                            case "BusinessUnit":
+                                                <text>Examples: Information Technology, Finance, Human Resources</text>
+                                                break;
+                                            case "TechnicalControl":
+                                                <text>Examples: Firewall Rules, Multi-Factor Authentication, Data Encryption</text>
+                                                break;
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-4">
+                                    <label asp-for="Description" class="form-label">Description</label>
+                                    <textarea asp-for="Description" class="form-control" rows="3" 
+                                              placeholder="Optional description or additional details..."></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                    <div class="form-text">
+                                        Provide additional context or details about this @Model.CategoryDisplayName.TrimEnd('s').ToLower().
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a asp-action="Category" asp-route-category="@((int)Model.Category)" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-left me-1"></i>Cancel
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-save me-1"></i>Create @Model.CategoryDisplayName.TrimEnd('s')
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tips Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Tips for Adding @Model.CategoryDisplayName
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        @switch (Model.Category.ToString())
+                        {
+                            case "Asset":
+                                <li>Use descriptive names that identify the asset's purpose</li>
+                                <li>Include system type or function (e.g., "Web Server", "Email System")</li>
+                                <li>Be specific enough to distinguish from similar assets</li>
+                                <li>Consider including location or environment if relevant</li>
+                                break;
+                            case "BusinessOwner":
+                                <li>Use full names when possible for clarity</li>
+                                <li>Include titles or roles in the description</li>
+                                <li>Keep names current and update when roles change</li>
+                                <li>Consider department or functional area in description</li>
+                                break;
+                            case "BusinessUnit":
+                                <li>Use official department or division names</li>
+                                <li>Be consistent with organizational structure</li>
+                                <li>Include both formal and commonly used names if different</li>
+                                <li>Consider hierarchical relationships in descriptions</li>
+                                break;
+                            case "TechnicalControl":
+                                <li>Use clear, descriptive control names</li>
+                                <li>Focus on the security function or purpose</li>
+                                <li>Include control type (preventive, detective, corrective)</li>
+                                <li>Be specific about the control's scope or application</li>
+                                break;
+                        }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

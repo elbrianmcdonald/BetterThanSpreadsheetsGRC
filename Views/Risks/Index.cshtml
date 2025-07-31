@@ -1,0 +1,703 @@
+@model CyberRiskApp.ViewModels.RiskFilterViewModel
+@using CyberRiskApp.Models
+@{
+    ViewData["Title"] = "Risk Register";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-shield-alt me-2"></i>Risk Register</h2>
+        <div>
+            <a asp-action="Create" class="btn btn-success me-2">
+                <i class="fas fa-plus me-2"></i>Add Risk
+            </a>
+            <a asp-action="ExportToExcel" class="btn btn-outline-success">
+                <i class="fas fa-file-excel me-2"></i>Export to Excel
+            </a>
+        </div>
+    </div>
+
+    <!-- Risk Heatmap -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-fire me-2"></i>Risk Heatmap
+                <small class="ms-2">(@Model.FilteredCount risks)</small>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="risk-heatmap-container">
+                <div class="heatmap-grid">
+                    <!-- Y-axis labels (Impact) -->
+                    <div class="y-axis-label">
+                        <div class="axis-title">Impact</div>
+                        <div class="impact-labels">
+                            <div class="impact-label">Critical</div>
+                            <div class="impact-label">High</div>
+                            <div class="impact-label">Medium</div>
+                            <div class="impact-label">Low</div>
+                        </div>
+                    </div>
+
+                    <!-- Heatmap cells -->
+                    <div class="heatmap-cells">
+                        @{
+                            var heatmapData = GetHeatmapData(Model.FilteredRisks);
+                        }
+                        
+                        @for (int impact = 4; impact >= 1; impact--) // Critical to Low
+                        {
+                            <div class="heatmap-row">
+                                @for (int likelihood = 1; likelihood <= 4; likelihood++) // Unlikely to Almost Certain
+                                {
+                                    var cellKey = $"{impact}-{likelihood}";
+                                    var riskCount = heatmapData.ContainsKey(cellKey) ? heatmapData[cellKey].Count : 0;
+                                    var riskLevel = GetHeatmapRiskLevel(impact, likelihood);
+                                    var cellClass = GetHeatmapCellClass(riskLevel);
+                                    
+                                    <div class="heatmap-cell @cellClass" 
+                                         title="@GetImpactText(impact) Impact × @GetLikelihoodText(likelihood) Likelihood: @riskCount risks"
+                                         data-impact="@impact" 
+                                         data-likelihood="@likelihood"
+                                         data-count="@riskCount">
+                                        <div class="cell-content">
+                                            <div class="risk-count">@riskCount</div>
+                                            <div class="risk-level-text">@riskLevel</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- X-axis labels (Likelihood) -->
+                <div class="x-axis-labels">
+                    <div class="likelihood-label">Unlikely</div>
+                    <div class="likelihood-label">Possible</div>
+                    <div class="likelihood-label">Likely</div>
+                    <div class="likelihood-label">Almost Certain</div>
+                </div>
+                <div class="x-axis-title">Likelihood</div>
+            </div>
+
+            <!-- Legend -->
+            <div class="heatmap-legend mt-3">
+                <strong>Risk Level Legend:</strong>
+                <span class="legend-item">
+                    <span class="legend-color bg-success"></span> Low
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color bg-info"></span> Medium
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color bg-warning"></span> High
+                </span>
+                <span class="legend-item">
+                    <span class="legend-color bg-danger"></span> Critical
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Panel -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel" aria-expanded="false">
+                    <i class="fas fa-filter me-2"></i>Filter Risks (@Model.FilteredCount of @Model.TotalCount)
+                </button>
+            </h5>
+        </div>
+        <div class="collapse" id="filterPanel">
+            <div class="card-body">
+                <form method="get" asp-action="Index">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Register ID</label>
+                            <input asp-for="RegisterId" class="form-control" placeholder="Search by ID..." />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Title</label>
+                            <input asp-for="Title" class="form-control" placeholder="Search by title..." />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Threat Scenario</label>
+                            <input asp-for="ThreatScenario" class="form-control" placeholder="Search threat scenario..." />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">CIA Triad</label>
+                            <select asp-for="CIATriad" asp-items="Model.CIATriadOptions" class="form-select">
+                                <option value="">All CIA Elements</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Organization</label>
+                            <select asp-for="Organization" asp-items="Model.OrganizationOptions" class="form-select">
+                                <option value="">All Organizations</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Asset</label>
+                            <select asp-for="Asset" asp-items="Model.AssetOptions" class="form-select">
+                                <option value="">All Assets</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Risk Owner</label>
+                            <select asp-for="RiskOwner" asp-items="Model.RiskOwnerOptions" class="form-select">
+                                <option value="">All Risk Owners</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Impact</label>
+                            <select asp-for="Impact" asp-items="Model.ImpactOptions" class="form-select">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Likelihood</label>
+                            <select asp-for="Likelihood" asp-items="Model.LikelihoodOptions" class="form-select">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Exposure</label>
+                            <select asp-for="Exposure" asp-items="Model.ExposureOptions" class="form-select">
+                                <option value="">All</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Inherent Risk Level</label>
+                            <select asp-for="InherentRiskLevel" asp-items="Model.InherentRiskLevelOptions" class="form-select">
+                                <option value="">All Levels</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Risk Treatment</label>
+                            <select asp-for="RiskTreatment" asp-items="Model.RiskTreatmentOptions" class="form-select">
+                                <option value="">All Treatments</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Residual Risk</label>
+                            <select asp-for="ResidualRisk" asp-items="Model.ResidualRiskOptions" class="form-select">
+                                <option value="">All Levels</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Status</label>
+                            <select asp-for="Status" asp-items="Model.StatusOptions" class="form-select">
+                                <option value="">All Status</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Date Opened From</label>
+                            <input asp-for="DateOpenedFrom" type="date" class="form-control" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Date Opened To</label>
+                            <input asp-for="DateOpenedTo" type="date" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Treatment Plan</label>
+                            <input asp-for="TreatmentPlan" class="form-control" placeholder="Search treatment plan..." />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Risk Assessment</label>
+                            <input asp-for="RiskAssessment" class="form-control" placeholder="Search risk assessment..." />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>Apply Filters
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Clear Filters
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if (Model.FilteredRisks.Any())
+    {
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">Risk Register (@Model.FilteredCount risks)</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Register ID</th>
+                                <th>Title</th>
+                                <th>Threat Scenario</th>
+                                <th>CIA Triad</th>
+                                <th>Organization</th>
+                                <th>Asset</th>
+                                <th>Risk Owner</th>
+                                <th>Impact</th>
+                                <th>Likelihood</th>
+                                <th>Exposure</th>
+                                <th>Inherent Risk</th>
+                                <th>Treatment</th>
+                                <th>Residual Risk</th>
+                                <th>Date Opened</th>
+                                <th>Last Reviewed</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var risk in Model.FilteredRisks)
+                            {
+                                <tr>
+                                    <td><code class="text-primary">@risk.RiskNumber</code></td>
+                                    <td>@risk.Title</td>
+                                    <td class="text-truncate" style="max-width: 150px;" title="@risk.ThreatScenario">
+                                        @(risk.ThreatScenario.Length > 50 ? risk.ThreatScenario.Substring(0, 50) + "..." : risk.ThreatScenario)
+                                    </td>
+                                    <td><span class="badge bg-secondary">@risk.CIATriad</span></td>
+                                    <td>@risk.BusinessUnit</td>
+                                    <td>@risk.Asset</td>
+                                    <td>@risk.Owner</td>
+                                    <td><span class="badge bg-@GetImpactColor(risk.Impact)">@risk.Impact</span></td>
+                                    <td><span class="badge bg-@GetLikelihoodColor(risk.Likelihood)">@risk.Likelihood</span></td>
+                                    <td><span class="badge bg-@GetExposureColor(risk.Exposure)">@risk.Exposure</span></td>
+                                    <td><span class="badge bg-@GetRiskLevelColor(risk.InherentRiskLevel)">@risk.InherentRiskLevel</span></td>
+                                    <td><span class="badge bg-primary">@risk.Treatment</span></td>
+                                    <td><span class="badge bg-@GetRiskLevelColor(risk.ResidualRiskLevel)">@risk.ResidualRiskLevel</span></td>
+                                    <td>@risk.OpenDate.ToString("MM/dd/yyyy")</td>
+                                    <td>@(risk.NextReviewDate?.ToString("MM/dd/yyyy") ?? "N/A")</td>
+                                    <td><span class="badge bg-@GetStatusColor(risk.Status)">@risk.Status</span></td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@risk.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                            {
+                                                <a asp-action="Edit" asp-route-id="@risk.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            }
+                                            @if (User.IsInRole("Admin"))
+                                            {
+                                                <form asp-action="Delete" asp-route-id="@risk.Id" method="post" style="display:inline;" 
+                                                      onsubmit="return confirm('Are you sure you want to delete risk @risk.RiskNumber - @risk.Title? This action cannot be undone.');">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Risk">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No risks found</h5>
+            <p class="text-muted">@(Model.TotalCount == 0 ? "No risks have been created yet." : "Try adjusting your filter criteria.")</p>
+            @if (Model.TotalCount == 0)
+            {
+                <a asp-action="Create" class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>Create First Risk
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@functions {
+    private string GetRiskLevelColor(RiskLevel level)
+    {
+        return level switch
+        {
+            RiskLevel.Critical => "danger",
+            RiskLevel.High => "warning",
+            RiskLevel.Medium => "info",
+            RiskLevel.Low => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetStatusColor(RiskStatus status)
+    {
+        return status switch
+        {
+            RiskStatus.Open => "danger",
+            RiskStatus.Closed => "success",
+            RiskStatus.Accepted => "warning",
+            RiskStatus.UnderReview => "info",
+            _ => "secondary"
+        };
+    }
+
+    private string GetImpactColor(ImpactLevel impact)
+    {
+        return impact switch
+        {
+            ImpactLevel.Critical => "danger",
+            ImpactLevel.High => "warning",
+            ImpactLevel.Medium => "info",
+            ImpactLevel.Low => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetLikelihoodColor(LikelihoodLevel likelihood)
+    {
+        return likelihood switch
+        {
+            LikelihoodLevel.AlmostCertain => "danger",
+            LikelihoodLevel.Likely => "warning",
+            LikelihoodLevel.Possible => "info",
+            LikelihoodLevel.Unlikely => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetExposureColor(ExposureLevel exposure)
+    {
+        return exposure switch
+        {
+            ExposureLevel.HighlyExposed => "danger",
+            ExposureLevel.ModeratelyExposed => "warning",
+            ExposureLevel.Exposed => "info",
+            ExposureLevel.SlightlyExposed => "success",
+            _ => "secondary"
+        };
+    }
+
+    // Heatmap helper functions
+    private Dictionary<string, List<Risk>> GetHeatmapData(IEnumerable<Risk> risks)
+    {
+        var heatmapData = new Dictionary<string, List<Risk>>();
+        
+        foreach (var risk in risks)
+        {
+            var impactValue = (int)risk.Impact + 1; // Convert enum to 1-4 scale
+            var likelihoodValue = (int)risk.Likelihood + 1; // Convert enum to 1-4 scale
+            var key = $"{impactValue}-{likelihoodValue}";
+            
+            if (!heatmapData.ContainsKey(key))
+                heatmapData[key] = new List<Risk>();
+            
+            heatmapData[key].Add(risk);
+        }
+        
+        return heatmapData;
+    }
+
+    private string GetHeatmapRiskLevel(int impact, int likelihood)
+    {
+        var riskScore = impact * likelihood;
+        
+        return riskScore switch
+        {
+            >= 12 => "Critical",
+            >= 8 => "High", 
+            >= 4 => "Medium",
+            _ => "Low"
+        };
+    }
+
+    private string GetHeatmapCellClass(string riskLevel)
+    {
+        return riskLevel switch
+        {
+            "Critical" => "cell-critical",
+            "High" => "cell-high",
+            "Medium" => "cell-medium",
+            "Low" => "cell-low",
+            _ => "cell-none"
+        };
+    }
+
+    private string GetImpactText(int impact)
+    {
+        return impact switch
+        {
+            4 => "Critical",
+            3 => "High",
+            2 => "Medium", 
+            1 => "Low",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetLikelihoodText(int likelihood)
+    {
+        return likelihood switch
+        {
+            4 => "Almost Certain",
+            3 => "Likely",
+            2 => "Possible",
+            1 => "Unlikely", 
+            _ => "Unknown"
+        };
+    }
+}
+
+<style>
+    /* Risk Heatmap Styles */
+    .risk-heatmap-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .heatmap-grid {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .y-axis-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-right: 10px;
+    }
+
+    .axis-title {
+        writing-mode: vertical-lr;
+        text-orientation: mixed;
+        font-weight: bold;
+        font-size: 0.9rem;
+        color: #495057;
+        margin-bottom: 20px;
+    }
+
+    .impact-labels {
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .impact-label {
+        height: 70px;
+        display: flex;
+        align-items: center;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #495057;
+        writing-mode: horizontal-tb;
+        min-width: 60px;
+        text-align: right;
+        padding-right: 5px;
+    }
+
+    .heatmap-cells {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .heatmap-row {
+        display: flex;
+        gap: 2px;
+    }
+
+    .heatmap-cell {
+        width: 100px;
+        height: 70px;
+        border: 2px solid #fff;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .heatmap-cell:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        z-index: 10;
+    }
+
+    .cell-content {
+        text-align: center;
+        color: white;
+        font-weight: bold;
+    }
+
+    .risk-count {
+        font-size: 1.5rem;
+        line-height: 1;
+        margin-bottom: 2px;
+    }
+
+    .risk-level-text {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.9;
+    }
+
+    /* Risk level color coding */
+    .cell-critical {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+    }
+
+    .cell-high {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+        color: #212529 !important;
+    }
+
+    .cell-high .cell-content {
+        color: #212529 !important;
+    }
+
+    .cell-medium {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+    }
+
+    .cell-low {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+    }
+
+    .cell-none {
+        background: linear-gradient(135deg, #6c757d, #545b62);
+    }
+
+    .x-axis-labels {
+        display: flex;
+        gap: 2px;
+        margin-top: 10px;
+        margin-left: 80px;
+    }
+
+    .likelihood-label {
+        width: 100px;
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #495057;
+        padding: 5px;
+    }
+
+    .x-axis-title {
+        text-align: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+        color: #495057;
+        margin-top: 10px;
+        margin-left: 80px;
+    }
+
+    /* Legend */
+    .heatmap-legend {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 15px;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.85rem;
+    }
+
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    /* Responsive design */
+    @@media (max-width: 768px) {
+        .risk-heatmap-container {
+            padding: 10px;
+        }
+        
+        .heatmap-cell {
+            width: 60px;
+            height: 45px;
+        }
+        
+        .risk-count {
+            font-size: 1.1rem;
+        }
+        
+        .risk-level-text {
+            font-size: 0.6rem;
+        }
+        
+        .impact-label, .likelihood-label {
+            font-size: 0.7rem;
+        }
+        
+        .x-axis-labels, .x-axis-title {
+            margin-left: 50px;
+        }
+        
+        .likelihood-label {
+            width: 60px;
+        }
+    }
+
+    /* Table styles */
+    .table th {
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    
+    .table td {
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+    }
+    
+    .text-truncate {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+</style>

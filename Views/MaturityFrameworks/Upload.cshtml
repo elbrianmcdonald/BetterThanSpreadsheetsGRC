@@ -1,0 +1,406 @@
+﻿@model CyberRiskApp.ViewModels.MaturityFrameworkUploadViewModel
+@{
+    ViewData["Title"] = "Upload Maturity Framework";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-upload me-2"></i>Upload Maturity Framework</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a asp-action="Index">Frameworks</a></li>
+                        <li class="breadcrumb-item active">Upload</li>
+                    </ol>
+                </nav>
+            </div>
+
+            <form asp-action="Upload" method="post" enctype="multipart/form-data" id="uploadForm">
+                <div class="row">
+                    <!-- Framework Information -->
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-info-circle me-1"></i>Framework Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="Framework.Name" class="form-label">Framework Name</label>
+                                    <input asp-for="Framework.Name" class="form-control" placeholder="e.g., C2M2 v2.1 for Electric Utility" />
+                                    <span asp-validation-for="Framework.Name" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Framework.Version" class="form-label">Version</label>
+                                    <input asp-for="Framework.Version" class="form-control" placeholder="e.g., 2.1" />
+                                    <span asp-validation-for="Framework.Version" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Framework.Type" class="form-label">Framework Type</label>
+                                    <select asp-for="Framework.Type" class="form-select" id="frameworkType" onchange="updateGuidance()">
+                                        <option value="">Select Framework Type</option>
+                                        <option value="@((int)CyberRiskApp.Models.FrameworkType.NISTCSF)">NIST Cybersecurity Framework 2.0</option>
+                                        <option value="@((int)CyberRiskApp.Models.FrameworkType.C2M2)">Cybersecurity Capability Maturity Model (C2M2)</option>
+                                        <option value="@((int)CyberRiskApp.Models.FrameworkType.Custom)">Custom Framework</option>
+                                    </select>
+                                    <span asp-validation-for="Framework.Type" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Framework.Description" class="form-label">Description</label>
+                                    <textarea asp-for="Framework.Description" class="form-control" rows="3"
+                                              placeholder="Brief description of this framework implementation"></textarea>
+                                    <span asp-validation-for="Framework.Description" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload and Guidance -->
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5><i class="fas fa-file-excel me-1"></i>Excel File Upload</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="ExcelFile" class="form-label">Select Excel File</label>
+                                    <input asp-for="ExcelFile" type="file" class="form-control" accept=".xlsx,.xls" id="excelFile" onchange="validateFile()" />
+                                    <span asp-validation-for="ExcelFile" class="text-danger"></span>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Supported formats: .xlsx, .xls (Maximum size: 10MB)
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info" id="fileInfo" style="display: none;">
+                                    <strong>File Selected:</strong>
+                                    <div id="fileName"></div>
+                                    <div id="fileSize"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Guidance Based on Framework Type -->
+                        <div class="card" id="guidanceCard" style="display: none;">
+                            <div class="card-header">
+                                <h5><i class="fas fa-question-circle me-1"></i>Upload Guidance</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- C2M2 Guidance -->
+                                <div id="c2m2Guidance" style="display: none;">
+                                    <h6 class="text-warning"><i class="fas fa-chart-bar me-1"></i>C2M2 v2.1 Format</h6>
+                                    <p class="mb-2">Your Excel file should have the following columns in order:</p>
+                                    <ol class="mb-3">
+                                        <li><strong>Domain</strong> - The C2M2 domain (e.g., ASSET, THREAT, RISK, ACCESS, etc.)</li>
+                                        <li><strong>MIL</strong> - Maturity Indicator Level (1, 2, or 3)</li>
+                                        <li><strong>Practice</strong> - Practice identifier (e.g., ASSET-1a, THREAT-2b)</li>
+                                        <li><strong>Practice Text</strong> - Description of the practice</li>
+                                        <li><strong>Help Text</strong> - Additional guidance and implementation details</li>
+                                    </ol>
+                                    <div class="alert alert-success">
+                                        <strong>Smart Features for C2M2:</strong>
+                                        <ul class="mb-0">
+                                            <li>Automatic priority assignment based on domain importance</li>
+                                            <li>Support for all 10 C2M2 domains with 356 practices</li>
+                                            <li>MIL-based priority enhancement</li>
+                                            <li>Full help text support for comprehensive guidance</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- NIST CSF Guidance -->
+                                <div id="nistGuidance" style="display: none;">
+                                    <h6 class="text-primary"><i class="fas fa-shield-alt me-1"></i>NIST CSF 2.0 Format</h6>
+                                    <p class="mb-2">Your Excel file should have the following columns in order:</p>
+                                    <ol class="mb-3">
+                                        <li><strong>Function</strong> - NIST CSF function (Identify, Protect, Detect, Respond, Recover)</li>
+                                        <li><strong>Category</strong> - Category identifier (e.g., ID.AM, PR.AC, DE.AE)</li>
+                                        <li><strong>Subcategory</strong> - Subcategory identifier (e.g., ID.AM-1, PR.AC-1)</li>
+                                        <li><strong>Title</strong> - Subcategory title/description</li>
+                                        <li><strong>Implementation Examples</strong> - Implementation guidance and examples</li>
+                                    </ol>
+                                    <div class="alert alert-info">
+                                        <strong>Smart Features for NIST CSF:</strong>
+                                        <ul class="mb-0">
+                                            <li>Function-based priority assignment (Protect = Critical, Identify/Detect = High)</li>
+                                            <li>Support for all 5 functions and 23 categories</li>
+                                            <li>Maturity levels from 0 (Not Implemented) to 4 (Managed)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- Custom Framework Guidance -->
+                                <div id="customGuidance" style="display: none;">
+                                    <h6 class="text-secondary"><i class="fas fa-cog me-1"></i>Custom Framework Format</h6>
+                                    <p class="mb-2">For custom frameworks, use a flexible format with these minimum columns:</p>
+                                    <ol class="mb-3">
+                                        <li><strong>Control ID</strong> - Unique identifier for the control</li>
+                                        <li><strong>Title</strong> - Control title or name</li>
+                                        <li><strong>Description</strong> - Control description</li>
+                                        <li><strong>Category/Domain</strong> - Grouping category</li>
+                                        <li><strong>Guidance</strong> - Implementation guidance (optional)</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Framework Type Examples -->
+                <div class="card mb-4" id="examplesCard" style="display: none;">
+                    <div class="card-header">
+                        <h5><i class="fas fa-file-download me-1"></i>Sample Files & Examples</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- C2M2 Examples -->
+                            <div id="c2m2Examples" class="col-md-4" style="display: none;">
+                                <h6 class="text-warning">C2M2 v2.1 Sample Data</h6>
+                                <div class="border rounded p-3 bg-light">
+                                    <small class="font-monospace">
+                                        <strong>Domain | MIL | Practice | Practice Text | Help Text</strong><br>
+                                        ASSET | 1 | ASSET-1a | IT and OT assets that are important... | Assets derive their value...<br>
+                                        THREAT | 2 | THREAT-1b | Information sources to support... | Cybersecurity vulnerability...<br>
+                                        RISK | 3 | RISK-2c | The organization has established... | Risk management strategy...
+                                    </small>
+                                </div>
+                                <p class="small mt-2 mb-0">
+                                    <strong>Current Upload:</strong> Your C2M2 v2.1 file contains 356 practices across 10 domains.
+                                </p>
+                            </div>
+
+                            <!-- NIST CSF Examples -->
+                            <div id="nistExamples" class="col-md-4" style="display: none;">
+                                <h6 class="text-primary">NIST CSF 2.0 Sample Data</h6>
+                                <div class="border rounded p-3 bg-light">
+                                    <small class="font-monospace">
+                                        <strong>Function | Category | Subcategory | Title | Examples</strong><br>
+                                        Identify | ID.AM | ID.AM-1 | Physical devices... | Maintain asset inventory...<br>
+                                        Protect | PR.AC | PR.AC-1 | Identities and credentials... | Use multi-factor authentication...<br>
+                                        Detect | DE.AE | DE.AE-1 | A baseline of network... | Monitor network traffic...
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Priority Management Preview -->
+                            <div class="col-md-4">
+                                <h6 class="text-info">Smart Priority Assignment</h6>
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-danger me-2">Critical</span>
+                                        <small>ASSET, ACCESS domains (C2M2) | PROTECT function (NIST)</small>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-warning me-2">High</span>
+                                        <small>THREAT, RISK domains (C2M2) | IDENTIFY, DETECT functions (NIST)</small>
+                                    </div>
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-info me-2">Medium</span>
+                                        <small>RESPONSE, ARCHITECTURE domains (C2M2) | RESPOND, RECOVER functions (NIST)</small>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-secondary me-2">Low</span>
+                                        <small>PROGRAM domain (C2M2) | Administrative functions</small>
+                                    </div>
+                                </div>
+                                <p class="small mt-2 mb-0">
+                                    Priorities can be modified after upload using the enhanced controls management interface.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload Actions -->
+                <div class="d-flex justify-content-between">
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Frameworks
+                    </a>
+                    <div>
+                        <a asp-action="Create" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-plus me-1"></i>Create Manual Framework Instead
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="uploadBtn" disabled>
+                            <i class="fas fa-upload me-1"></i>Upload Framework
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Update guidance based on framework type selection
+        function updateGuidance() {
+            const frameworkType = document.getElementById('frameworkType').value;
+            const guidanceCard = document.getElementById('guidanceCard');
+            const examplesCard = document.getElementById('examplesCard');
+
+            // Hide all guidance sections
+            document.getElementById('c2m2Guidance').style.display = 'none';
+            document.getElementById('nistGuidance').style.display = 'none';
+            document.getElementById('customGuidance').style.display = 'none';
+
+            // Hide all example sections
+            document.getElementById('c2m2Examples').style.display = 'none';
+            document.getElementById('nistExamples').style.display = 'none';
+
+            if (frameworkType) {
+                guidanceCard.style.display = 'block';
+                examplesCard.style.display = 'block';
+
+                // Show appropriate guidance
+                switch(frameworkType) {
+                    case '@((int)CyberRiskApp.Models.FrameworkType.C2M2)':
+                        document.getElementById('c2m2Guidance').style.display = 'block';
+                        document.getElementById('c2m2Examples').style.display = 'block';
+                        break;
+                    case '@((int)CyberRiskApp.Models.FrameworkType.NISTCSF)':
+                        document.getElementById('nistGuidance').style.display = 'block';
+                        document.getElementById('nistExamples').style.display = 'block';
+                        break;
+                    case '@((int)CyberRiskApp.Models.FrameworkType.Custom)':
+                        document.getElementById('customGuidance').style.display = 'block';
+                        break;
+                }
+
+                validateForm();
+            } else {
+                guidanceCard.style.display = 'none';
+                examplesCard.style.display = 'none';
+            }
+        }
+
+        // Validate file selection
+        function validateFile() {
+            const fileInput = document.getElementById('excelFile');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const maxSize = 10 * 1024 * 1024; // 10MB
+
+                // Validate file type
+                const validTypes = ['.xlsx', '.xls'];
+                const fileExtension = file.name.toLowerCase().substr(file.name.lastIndexOf('.'));
+
+                if (!validTypes.includes(fileExtension)) {
+                    alert('Please select a valid Excel file (.xlsx or .xls)');
+                    fileInput.value = '';
+                    fileInfo.style.display = 'none';
+                    validateForm();
+                    return;
+                }
+
+                // Validate file size
+                if (file.size > maxSize) {
+                    alert('File size must be less than 10MB');
+                    fileInput.value = '';
+                    fileInfo.style.display = 'none';
+                    validateForm();
+                    return;
+                }
+
+                // Show file info
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                fileInfo.style.display = 'block';
+                fileInfo.className = 'alert alert-success';
+
+                // Special message for C2M2 file
+                if (file.name.toLowerCase().includes('c2m2')) {
+                    document.getElementById('frameworkType').value = '@((int)CyberRiskApp.Models.FrameworkType.C2M2)';
+                    updateGuidance();
+                }
+            } else {
+                fileInfo.style.display = 'none';
+            }
+
+            validateForm();
+        }
+
+        // Format file size for display
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Validate form and enable/disable upload button
+        function validateForm() {
+            const frameworkName = document.querySelector('input[name="Framework.Name"]').value;
+            const frameworkType = document.getElementById('frameworkType').value;
+            const excelFile = document.getElementById('excelFile').files.length > 0;
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            const isValid = frameworkName.trim() && frameworkType && excelFile;
+            uploadBtn.disabled = !isValid;
+
+            if (isValid) {
+                uploadBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Upload Framework';
+            } else {
+                uploadBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Upload Framework (Complete form)';
+            }
+        }
+
+        // Form submission handling
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+        });
+
+        // Initialize validation on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners for form validation
+            document.querySelector('input[name="Framework.Name"]').addEventListener('input', validateForm);
+            document.getElementById('frameworkType').addEventListener('change', function() {
+                updateGuidance();
+                validateForm();
+            });
+
+            // Initial validation
+            validateForm();
+        });
+    </script>
+}
+
+<style>
+    .badge {
+        font-size: 0.75em;
+    }
+
+    .font-monospace {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85em;
+    }
+
+    .card-header h5 {
+        margin-bottom: 0;
+    }
+
+    .alert ul {
+        padding-left: 1.2rem;
+    }
+
+    .border.rounded.p-3 {
+        background-color: #f8f9fa !important;
+    }
+
+    .form-text {
+        margin-top: 0.25rem;
+    }
+</style>

@@ -1,0 +1,45 @@
+﻿@model List<CyberRiskApp.ViewModels.AssetRiskMetric>
+
+@if (Model.Any())
+{
+    <div class="table-responsive">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Asset</th>
+                    <th class="text-center">Accepted Risks</th>
+                    <th class="text-end">Total ALE</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var asset in Model)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@asset.Asset</div>
+                            @if (asset.RiskTitles.Any())
+                            {
+                                <small class="text-muted" title="@string.Join(", ", asset.RiskTitles)">
+                                    @asset.RiskTitles.Count risk(s)
+                                </small>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-warning">@asset.AcceptedRiskCount</span>
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-semibold">@asset.TotalALE.ToString("C0")</span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="text-center py-3">
+        <i class="fas fa-shield-alt fa-2x text-muted mb-2"></i>
+        <p class="text-muted mb-0">No assets with accepted risks</p>
+    </div>
+}

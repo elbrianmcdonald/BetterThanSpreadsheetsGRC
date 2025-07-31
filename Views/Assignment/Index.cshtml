@@ -1,0 +1,250 @@
+﻿@{
+    ViewData["Title"] = "Assignment Management";
+    var assessmentRequests = ViewBag.UnassignedAssessmentRequests as IEnumerable<CyberRiskApp.Models.AssessmentRequest>;
+    var acceptanceRequests = ViewBag.UnassignedAcceptanceRequests as IEnumerable<CyberRiskApp.Models.RiskAcceptanceRequest>;
+    var closureRequests = ViewBag.UnassignedClosureRequests as IEnumerable<CyberRiskApp.Models.FindingClosureRequest>;
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tasks me-2"></i>Assignment Management</h2>
+    </div>
+
+    <!-- Assessment Requests -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        Unassigned Risk Assessment Requests (@(assessmentRequests?.Count() ?? 0))
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (assessmentRequests != null && assessmentRequests.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Requester</th>
+                                        <th>Scope</th>
+                                        <th>Priority</th>
+                                        <th>Request Date</th>
+                                        <th>Timeline</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var request in assessmentRequests)
+                                    {
+                                        <tr class="@(request.IsOverdue ? "table-danger" : "")">
+                                            <td>@request.Id</td>
+                                            <td>@request.RequesterName</td>
+                                            <td>@request.Scope</td>
+                                            <td>
+                                                @switch (request.Priority)
+                                                {
+                                                    case Priority.Urgent:
+                                                        <span class="badge bg-danger">Urgent</span>
+                                                        break;
+                                                    case Priority.High:
+                                                        <span class="badge bg-warning">High</span>
+                                                        break;
+                                                    case Priority.Medium:
+                                                        <span class="badge bg-info">Medium</span>
+                                                        break;
+                                                    case Priority.Low:
+                                                        <span class="badge bg-success">Low</span>
+                                                        break;
+                                                }
+                                            </td>
+                                            <td>@request.RequestDate.ToString("MM/dd/yyyy")</td>
+                                            <td>
+                                                @if (request.RequestedTimeline.HasValue)
+                                                {
+                                                    @request.RequestedTimeline.Value.ToString("MM/dd/yyyy")
+                                                    @if (request.IsOverdue)
+                                                    {
+                                                        <i class="fas fa-exclamation-triangle text-danger ms-1" title="Overdue"></i>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Not specified</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <a asp-action="Assign" asp-route-id="@request.Id" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-user-plus me-1"></i>Assign
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <p class="mb-0">All assessment requests are assigned!</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Acceptance Requests -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-handshake me-2"></i>
+                        Unassigned Risk Acceptance Requests (@(acceptanceRequests?.Count() ?? 0))
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (acceptanceRequests != null && acceptanceRequests.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Description</th>
+                                        <th>Requester</th>
+                                        <th>Linked To</th>
+                                        <th>Request Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var request in acceptanceRequests)
+                                    {
+                                        <tr>
+                                            <td>@request.Id</td>
+                                            <td>@request.Description</td>
+                                            <td>@request.Requester</td>
+                                            <td>
+                                                @if (request.LinkedFinding != null)
+                                                {
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-search me-1"></i>@request.LinkedFinding.FindingNumber
+                                                    </span>
+                                                }
+                                                else if (request.LinkedRisk != null)
+                                                {
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>@request.LinkedRisk.RiskNumber
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">None</span>
+                                                }
+                                            </td>
+                                            <td>@request.RequestDate.ToString("MM/dd/yyyy")</td>
+                                            <td>
+                                                <span class="badge bg-secondary">@request.Status</span>
+                                            </td>
+                                            <td>
+                                                <a asp-action="AssignAcceptance" asp-route-id="@request.Id" class="btn btn-warning btn-sm">
+                                                    <i class="fas fa-user-plus me-1"></i>Assign
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <p class="mb-0">All acceptance requests are assigned!</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finding Closure Requests -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-times-circle me-2"></i>
+                        Unassigned Finding Closure Requests (@(closureRequests?.Count() ?? 0))
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (closureRequests != null && closureRequests.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Finding</th>
+                                        <th>Requester</th>
+                                        <th>Closure Justification</th>
+                                        <th>Request Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var request in closureRequests)
+                                    {
+                                        <tr>
+                                            <td>@request.Id</td>
+                                            <td>
+                                                @if (request.LinkedFinding != null)
+                                                {
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-search me-1"></i>@request.LinkedFinding.FindingNumber
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Unknown</span>
+                                                }
+                                            </td>
+                                            <td>@request.Requester</td>
+                                            <td>@(request.ClosureJustification.Length > 50 ? request.ClosureJustification.Substring(0, 50) + "..." : request.ClosureJustification)</td>
+                                            <td>@request.RequestDate.ToString("MM/dd/yyyy")</td>
+                                            <td>
+                                                <span class="badge bg-secondary">@request.Status</span>
+                                            </td>
+                                            <td>
+                                                <a asp-action="AssignClosure" asp-route-id="@request.Id" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-user-plus me-1"></i>Assign
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <p class="mb-0">All closure requests are assigned!</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

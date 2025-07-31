@@ -1,0 +1,213 @@
+@model CyberRiskApp.Models.StrategyPlan
+@{
+    ViewData["Title"] = "Create Strategy Plan";
+}
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-plus text-primary me-2"></i>
+                    Create Strategy Plan
+                </h2>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                </a>
+            </div>
+
+            <form asp-action="Create" method="post">
+                @if (!ViewData.ModelState.IsValid && ViewData.ModelState.ErrorCount > 0)
+                {
+                    <div class="alert alert-danger">
+                        <h6>Please correct the following errors:</h6>
+                        <div asp-validation-summary="All"></div>
+                    </div>
+                }
+                @Html.AntiForgeryToken()
+
+                <div class="card">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Plan Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="PlanName" class="form-label fw-bold">Plan Name <span class="text-danger">*</span></label>
+                                    <input asp-for="PlanName" class="form-control" placeholder="Enter strategy plan name" required />
+                                    <span asp-validation-for="PlanName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="BusinessOrganizationId" class="form-label fw-bold">Organization <span class="text-danger">*</span></label>
+                                    <select asp-for="BusinessOrganizationId" class="form-control" asp-items="ViewBag.Organizations">
+                                        <option value="">-- Select Organization --</option>
+                                    </select>
+                                    <span asp-validation-for="BusinessOrganizationId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="StartDate" class="form-label fw-bold">Start Date <span class="text-danger">*</span></label>
+                                    <input asp-for="StartDate" type="date" class="form-control" required />
+                                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="EndDate" class="form-label fw-bold">End Date <span class="text-danger">*</span></label>
+                                    <input asp-for="EndDate" type="date" class="form-control" required />
+                                    <span asp-validation-for="EndDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="TotalBudget" class="form-label fw-bold">Total Budget</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input asp-for="TotalBudget" type="number" class="form-control" placeholder="0.00" step="0.01" />
+                                    </div>
+                                    <span asp-validation-for="TotalBudget" class="text-danger"></span>
+                                    <small class="form-text text-muted">Optional - leave blank if budget not defined</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Status" class="form-label fw-bold">Initial Status</label>
+                                    <select asp-for="Status" class="form-control">
+                                        <option value="1">Draft</option>
+                                        <option value="2">Active</option>
+                                    </select>
+                                    <span asp-validation-for="Status" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label fw-bold">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="4" 
+                                     placeholder="Enter a description for this strategy plan (optional)"></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Import from Assessment -->
+                <div class="card mt-4">
+                    <div class="card-header bg-info bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-download me-2"></i>Import from Existing Assessment (Optional)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="importOption" id="startFromScratch" value="scratch" checked>
+                            <label class="form-check-label fw-bold" for="startFromScratch">
+                                Start from scratch
+                            </label>
+                            <div class="text-muted">Create a new strategy plan without importing existing data</div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="importOption" id="importFromAssessment" value="import">
+                            <label class="form-check-label fw-bold" for="importFromAssessment">
+                                Import from existing maturity assessment
+                            </label>
+                            <div class="text-muted">Auto-populate goals based on an existing maturity assessment</div>
+                        </div>
+
+                        <div id="assessmentSelector" class="mt-3" style="display: none;">
+                            <label for="importFromAssessmentId" class="form-label fw-bold">Select Maturity Assessment</label>
+                            <select name="importFromAssessmentId" id="importFromAssessmentId" class="form-control" asp-items="ViewBag.MaturityAssessments">
+                                <option value="">Select Assessment</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Current maturity levels will be imported and target levels will be set to current + 1
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-2"></i>Create Strategy Plan
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                        <small class="form-text text-muted mt-2">
+                            After creating the plan, you can add specific maturity goals and define capabilities.
+                        </small>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const importFromAssessmentRadio = document.getElementById('importFromAssessment');
+            const startFromScratchRadio = document.getElementById('startFromScratch');
+            const assessmentSelector = document.getElementById('assessmentSelector');
+
+            function toggleAssessmentSelector() {
+                if (importFromAssessmentRadio.checked) {
+                    assessmentSelector.style.display = 'block';
+                    document.getElementById('importFromAssessmentId').required = true;
+                } else {
+                    assessmentSelector.style.display = 'none';
+                    document.getElementById('importFromAssessmentId').required = false;
+                    document.getElementById('importFromAssessmentId').value = '';
+                }
+            }
+
+            importFromAssessmentRadio.addEventListener('change', toggleAssessmentSelector);
+            startFromScratchRadio.addEventListener('change', toggleAssessmentSelector);
+
+            // Set minimum date to today for start date
+            const startDateInput = document.querySelector('input[name="StartDate"]');
+            const endDateInput = document.querySelector('input[name="EndDate"]');
+            
+            startDateInput.addEventListener('change', function() {
+                endDateInput.min = this.value;
+            });
+
+            // Initial setup
+            toggleAssessmentSelector();
+            
+            // Ensure organization dropdown works properly
+            const orgDropdown = document.getElementById('BusinessOrganizationId');
+            if (orgDropdown) {
+                orgDropdown.addEventListener('change', function() {
+                    console.log('Selected organization ID:', this.value);
+                    if (this.value && this.value !== "") {
+                        this.setCustomValidity('');
+                    } else {
+                        this.setCustomValidity('Please select an organization');
+                    }
+                });
+            }
+            
+            // Form submission validation - removed to allow server-side validation to work
+        });
+    </script>
+}

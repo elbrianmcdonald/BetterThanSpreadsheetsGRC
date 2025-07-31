@@ -1,0 +1,159 @@
+@model CyberRiskApp.Models.CapabilityControlMapping
+
+@{
+    ViewData["Title"] = "Edit Capability Control Mapping";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-edit"></i> Edit Capability Control Mapping</h2>
+                </div>
+                <div>
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-info">
+                        <i class="fas fa-eye"></i> View Details
+                    </a>
+                    <a asp-action="Index" asp-route-capabilityRequirementId="@Model.CapabilityRequirementId" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form asp-action="Edit">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="CreatedAt" />
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="CapabilityRequirementId" class="control-label"></label>
+                                    <select asp-for="CapabilityRequirementId" class="form-control" asp-items="ViewBag.CapabilityRequirements" disabled>
+                                        <option value="">Select a capability...</option>
+                                    </select>
+                                    <input type="hidden" asp-for="CapabilityRequirementId" />
+                                    <span asp-validation-for="CapabilityRequirementId" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="ComplianceControlId" class="control-label"></label>
+                                    <select asp-for="ComplianceControlId" class="form-control" asp-items="ViewBag.ComplianceControls" disabled>
+                                        <option value="">Select a control...</option>
+                                    </select>
+                                    <input type="hidden" asp-for="ComplianceControlId" />
+                                    <span asp-validation-for="ComplianceControlId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Status" class="control-label"></label>
+                                    <select asp-for="Status" class="form-control" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.CapabilityControlStatus>()"></select>
+                                    <span asp-validation-for="Status" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Priority" class="control-label"></label>
+                                    <select asp-for="Priority" class="form-control" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.MappingPriority>()"></select>
+                                    <span asp-validation-for="Priority" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="EstimatedHours" class="control-label"></label>
+                                    <input asp-for="EstimatedHours" class="form-control" type="number" step="0.1" min="0" />
+                                    <span asp-validation-for="EstimatedHours" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="ActualHours" class="control-label"></label>
+                                    <input asp-for="ActualHours" class="form-control" type="number" step="0.1" min="0" />
+                                    <span asp-validation-for="ActualHours" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="AssignedTo" class="control-label"></label>
+                                    <input asp-for="AssignedTo" class="form-control" />
+                                    <span asp-validation-for="AssignedTo" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="StartDate" class="control-label"></label>
+                                    <input asp-for="StartDate" class="form-control" type="date" />
+                                    <span asp-validation-for="StartDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="TargetDate" class="control-label"></label>
+                                    <input asp-for="TargetDate" class="form-control" type="date" />
+                                    <span asp-validation-for="TargetDate" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label asp-for="CompletionDate" class="control-label"></label>
+                                    <input asp-for="CompletionDate" class="form-control" type="date" />
+                                    <span asp-validation-for="CompletionDate" class="text-danger"></span>
+                                    <small class="form-text text-muted">Leave blank if not completed</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="ImplementationNotes" class="control-label"></label>
+                            <textarea asp-for="ImplementationNotes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="ImplementationNotes" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Notes" class="control-label"></label>
+                            <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <input type="submit" value="Save Changes" class="btn btn-primary" />
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-info">View Details</a>
+                            <a asp-action="Index" asp-route-capabilityRequirementId="@Model.CapabilityRequirementId" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        // Auto-set completion date when status is changed to completed
+        document.getElementById('Status').addEventListener('change', function() {
+            var completionDateField = document.querySelector('input[name="CompletionDate"]');
+            if (this.value == '@((int)CyberRiskApp.Models.CapabilityControlStatus.Completed)') {
+                if (!completionDateField.value) {
+                    var today = new Date().toISOString().split('T')[0];
+                    completionDateField.value = today;
+                }
+            }
+        });
+    </script>
+}

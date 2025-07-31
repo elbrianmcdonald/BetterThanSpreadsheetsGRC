@@ -1,0 +1,621 @@
+﻿@model CyberRiskApp.Models.RiskLevelSettings
+@{
+    ViewData["Title"] = Model.Id == 0 ? "Create Risk Level Settings" : "Edit Risk Level Settings";
+}
+
+<style>
+    .settings-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        padding: 20px;
+    }
+
+    .threshold-input {
+        background-color: #f8f9fa;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+        border-radius: 8px;
+    }
+
+        .threshold-input:focus {
+            background-color: white;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+    .preview-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        border: 2px dashed #dee2e6;
+    }
+
+    .preview-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 15px;
+        margin: 5px 0;
+        background: white;
+        border-radius: 6px;
+        border-left: 3px solid;
+    }
+
+    .preview-critical {
+        border-left-color: #dc3545;
+    }
+
+    .preview-high {
+        border-left-color: #ffc107;
+    }
+
+    .preview-medium {
+        border-left-color: #17a2b8;
+    }
+
+    .preview-low {
+        border-left-color: #28a745;
+    }
+
+    .threshold-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+
+    .form-group-enhanced {
+        margin-bottom: 20px;
+    }
+
+    .input-group-text {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: white;
+        border: none;
+        font-weight: bold;
+    }
+
+    .btn-preview {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 500;
+    }
+
+        .btn-preview:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+</style>
+
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="settings-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h2 class="mb-1">
+                    <i class="fas fa-cogs me-2"></i>
+                    @(Model.Id == 0 ? "Create New Risk Level Settings" : "Edit Risk Level Settings")
+                </h2>
+                <p class="mb-0 opacity-75">Configure risk level thresholds for FAIR and Qualitative assessments</p>
+            </div>
+            <div class="col-auto">
+                <a asp-action="Index" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Settings List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Messages -->
+    @if (ViewData.ModelState.ErrorCount > 0)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <h6><i class="fas fa-exclamation-triangle me-2"></i>Please correct the following errors:</h6>
+            <div asp-validation-summary="All" class="mb-0"></div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <form asp-action="Edit" method="post" id="settingsForm">
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="CreatedBy" type="hidden" />
+        <input asp-for="CreatedDate" type="hidden" />
+        <input asp-for="IsActive" type="hidden" />
+
+        <!-- Basic Information Section -->
+        <div class="threshold-section">
+            <h4 class="text-primary mb-4">
+                <i class="fas fa-info-circle me-2"></i>Basic Information
+            </h4>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group-enhanced">
+                        <label asp-for="Name" class="form-label fw-bold">Settings Name <span class="text-danger">*</span></label>
+                        <input asp-for="Name" class="form-control threshold-input" placeholder="Enter settings name" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group-enhanced">
+                        <label asp-for="Description" class="form-label fw-bold">Description</label>
+                        <input asp-for="Description" class="form-control threshold-input" placeholder="Enter description" />
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAIR Assessment Thresholds -->
+        <div class="threshold-section">
+            <h4 class="text-primary mb-4">
+                <i class="fas fa-dollar-sign me-2"></i>FAIR Assessment Thresholds
+            </h4>
+            <p class="text-muted mb-4">Set monetary thresholds for Annualized Loss Expectancy (ALE) values</p>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group-enhanced">
+                        <label asp-for="FairCriticalThreshold" class="form-label fw-bold text-danger">Critical Threshold</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="FairCriticalThreshold" class="form-control threshold-input"
+                                   type="number" step="1000" min="0" placeholder="1000000"
+                                   onchange="updatePreview()" />
+                        </div>
+                        <small class="text-muted">ALE values at or above this amount</small>
+                        <span asp-validation-for="FairCriticalThreshold" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group-enhanced">
+                        <label asp-for="FairHighThreshold" class="form-label fw-bold text-warning">High Threshold</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="FairHighThreshold" class="form-control threshold-input"
+                                   type="number" step="1000" min="0" placeholder="100000"
+                                   onchange="updatePreview()" />
+                        </div>
+                        <small class="text-muted">ALE values at or above this amount</small>
+                        <span asp-validation-for="FairHighThreshold" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group-enhanced">
+                        <label asp-for="FairMediumThreshold" class="form-label fw-bold text-info">Medium Threshold</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="FairMediumThreshold" class="form-control threshold-input"
+                                   type="number" step="1000" min="0" placeholder="10000"
+                                   onchange="updatePreview()" />
+                        </div>
+                        <small class="text-muted">ALE values at or above this amount</small>
+                        <span asp-validation-for="FairMediumThreshold" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group-enhanced">
+                        <label class="form-label fw-bold text-success">Low Threshold</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input class="form-control" value="0" readonly style="background-color: #e9ecef;" />
+                        </div>
+                        <small class="text-muted">Below Medium threshold</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Qualitative Assessment Thresholds -->
+        <div class="threshold-section">
+            <h4 class="text-primary mb-4">
+                <i class="fas fa-chart-bar me-2"></i>Qualitative Assessment Thresholds
+            </h4>
+            <p class="text-muted mb-4">Set score thresholds for qualitative risk assessments (Likelihood × Impact × Exposure)</p>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group-enhanced">
+                        <label asp-for="QualitativeCriticalThreshold" class="form-label fw-bold text-danger">Critical Threshold</label>
+                        <input asp-for="QualitativeCriticalThreshold" class="form-control threshold-input"
+                               type="number" step="0.1" min="0" max="16" placeholder="16.0"
+                               onchange="updatePreview()" />
+                        <small class="text-muted">Risk scores at or above this value</small>
+                        <span asp-validation-for="QualitativeCriticalThreshold" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group-enhanced">
+                        <label asp-for="QualitativeHighThreshold" class="form-label fw-bold text-warning">High Threshold</label>
+                        <input asp-for="QualitativeHighThreshold" class="form-control threshold-input"
+                               type="number" step="0.1" min="0" max="16" placeholder="10.0"
+                               onchange="updatePreview()" />
+                        <small class="text-muted">Risk scores at or above this value</small>
+                        <span asp-validation-for="QualitativeHighThreshold" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group-enhanced">
+                        <label asp-for="QualitativeMediumThreshold" class="form-label fw-bold text-info">Medium Threshold</label>
+                        <input asp-for="QualitativeMediumThreshold" class="form-control threshold-input"
+                               type="number" step="0.1" min="0" max="16" placeholder="4.0"
+                               onchange="updatePreview()" />
+                        <small class="text-muted">Risk scores at or above this value</small>
+                        <span asp-validation-for="QualitativeMediumThreshold" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="form-group-enhanced">
+                        <label class="form-label fw-bold text-success">Low Threshold</label>
+                        <input class="form-control" value="0.0" readonly style="background-color: #e9ecef;" />
+                        <small class="text-muted">Below Medium threshold</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Appetite Configuration -->
+        <div class="threshold-section">
+            <h4 class="text-warning mb-4">
+                <i class="fas fa-exclamation-circle me-2"></i>Risk Appetite Configuration
+            </h4>
+            <div class="alert alert-info">
+                <div class="d-flex">
+                    <i class="fas fa-info-circle me-2 mt-1"></i>
+                    <div>
+                        <strong>Risk Appetite Threshold:</strong> Defines the maximum acceptable risk level for your organization. 
+                        Risks above this threshold are considered "above appetite" and will be tracked in the CISO Dashboard.
+                        <br><small class="text-muted">For qualitative assessments, this compares directly to risk scores. For FAIR assessments, ALE values are converted to risk levels first.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group-enhanced">
+                        <label asp-for="RiskAppetiteThreshold" class="form-label fw-bold text-warning">
+                            <i class="fas fa-crosshairs me-1"></i>Risk Appetite Threshold
+                        </label>
+                        <input asp-for="RiskAppetiteThreshold" class="form-control threshold-input"
+                               type="number" step="0.1" min="0" max="16" placeholder="6.0"
+                               onchange="updatePreview()" />
+                        <small class="text-muted">Maximum acceptable risk level (0-16 scale)</small>
+                        <span asp-validation-for="RiskAppetiteThreshold" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="form-group-enhanced">
+                        <label class="form-label fw-bold">Appetite Level Guidance</label>
+                        <div class="border rounded p-3" style="background-color: #f8f9fa;">
+                            <div class="row text-center">
+                                <div class="col-3">
+                                    <div class="badge bg-success mb-2">Conservative</div>
+                                    <div><small>1-4: Low risk tolerance</small></div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="badge bg-info mb-2">Moderate</div>
+                                    <div><small>5-8: Balanced approach</small></div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="badge bg-warning mb-2">Aggressive</div>
+                                    <div><small>9-12: Higher risk tolerance</small></div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="badge bg-danger mb-2">Very High</div>
+                                    <div><small>13-16: Maximum tolerance</small></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cybersecurity Insurance Configuration -->
+        <div class="threshold-section">
+            <h4 class="text-success mb-4">
+                <i class="fas fa-shield-check me-2"></i>Cybersecurity Insurance Configuration
+            </h4>
+            <div class="alert alert-success">
+                <div class="d-flex">
+                    <i class="fas fa-info-circle me-2 mt-1"></i>
+                    <div>
+                        <strong>Cybersecurity Insurance Amount:</strong> The coverage amount that can be deducted from FAIR assessment ALE calculations when the "Deduct Cybersecurity Insurance" option is selected.
+                        <br><small class="text-muted">This represents the maximum payout your cybersecurity insurance policy will cover per incident.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group-enhanced">
+                        <label asp-for="CybersecurityInsuranceAmount" class="form-label fw-bold text-success">
+                            <i class="fas fa-dollar-sign me-1"></i>Insurance Coverage Amount
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="CybersecurityInsuranceAmount" class="form-control threshold-input"
+                                   type="number" step="1000" min="0" placeholder="0"
+                                   onchange="updatePreview()" />
+                        </div>
+                        <small class="text-muted">Maximum insurance payout per incident</small>
+                        <span asp-validation-for="CybersecurityInsuranceAmount" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="form-group-enhanced">
+                        <label class="form-label fw-bold">Common Insurance Coverage Levels</label>
+                        <div class="border rounded p-3" style="background-color: #f8f9fa;">
+                            <div class="row text-center">
+                                <div class="col-3">
+                                    <div class="badge bg-secondary mb-2">Basic</div>
+                                    <div><small>$100K - $500K</small></div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="badge bg-info mb-2">Standard</div>
+                                    <div><small>$1M - $5M</small></div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="badge bg-warning mb-2">Enhanced</div>
+                                    <div><small>$10M - $25M</small></div>
+                                </div>
+                                <div class="col-3">
+                                    <div class="badge bg-success mb-2">Enterprise</div>
+                                    <div><small>$50M+</small></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Preview Section -->
+        <div class="preview-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Live Preview
+                </h5>
+                <button type="button" class="btn btn-preview" onclick="updatePreview()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh Preview
+                </button>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <h6 class="text-primary mb-3">FAIR Risk Levels</h6>
+                    <div id="fairPreview">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-success mb-3">Qualitative Risk Levels</h6>
+                    <div id="qualitativePreview">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-warning mb-3">Risk Appetite Impact</h6>
+                    <div id="appetitePreview">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between mt-4 mb-4">
+            <div>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                </a>
+                @if (Model.Id != 0)
+                {
+                    <a asp-action="Current" class="btn btn-outline-info btn-lg ms-2">
+                        <i class="fas fa-eye me-2"></i>View Current Settings
+                    </a>
+                }
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save me-2"></i>
+                    @(Model.Id == 0 ? "Create Settings" : "Update Settings")
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Initialize preview on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePreview();
+        });
+
+        function updatePreview() {
+            const fairCritical = parseFloat(document.getElementById('FairCriticalThreshold').value) || 1000000;
+            const fairHigh = parseFloat(document.getElementById('FairHighThreshold').value) || 100000;
+            const fairMedium = parseFloat(document.getElementById('FairMediumThreshold').value) || 10000;
+
+            const qualCritical = parseFloat(document.getElementById('QualitativeCriticalThreshold').value) || 16;
+            const qualHigh = parseFloat(document.getElementById('QualitativeHighThreshold').value) || 10;
+            const qualMedium = parseFloat(document.getElementById('QualitativeMediumThreshold').value) || 4;
+
+            const appetiteThreshold = parseFloat(document.getElementById('RiskAppetiteThreshold').value) || 6;
+            const insuranceAmount = parseFloat(document.getElementById('CybersecurityInsuranceAmount').value) || 0;
+
+            // Update FAIR preview
+            const fairExamples = [
+                { value: 2000000, label: '$2,000,000' },
+                { value: 500000, label: '$500,000' },
+                { value: 50000, label: '$50,000' },
+                { value: 5000, label: '$5,000' }
+            ];
+
+            let fairHtml = '';
+            fairExamples.forEach(example => {
+                const level = getFairRiskLevel(example.value, fairCritical, fairHigh, fairMedium);
+                const badgeClass = getRiskBadgeClass(level);
+                fairHtml += `
+                    <div class="preview-item preview-${level.toLowerCase()}">
+                        <div>
+                            <span class="badge ${badgeClass} me-2">${level}</span>
+                            <strong>${example.label}</strong>
+                        </div>
+                        <small class="text-muted">ALE Example</small>
+                    </div>
+                `;
+            });
+            document.getElementById('fairPreview').innerHTML = fairHtml;
+
+            // Update Qualitative preview
+            const qualExamples = [
+                { value: 16, label: '16.0' },
+                { value: 12, label: '12.0' },
+                { value: 8, label: '8.0' },
+                { value: 3, label: '3.0' }
+            ];
+
+            let qualHtml = '';
+            qualExamples.forEach(example => {
+                const level = getQualitativeRiskLevel(example.value, qualCritical, qualHigh, qualMedium);
+                const badgeClass = getRiskBadgeClass(level);
+                qualHtml += `
+                    <div class="preview-item preview-${level.toLowerCase()}">
+                        <div>
+                            <span class="badge ${badgeClass} me-2">${level}</span>
+                            <strong>${example.label}</strong>
+                        </div>
+                        <small class="text-muted">Risk Score Example</small>
+                    </div>
+                `;
+            });
+            document.getElementById('qualitativePreview').innerHTML = qualHtml;
+
+            // Update Risk Appetite preview
+            const appetiteExamples = [
+                { value: 16, label: '16.0' },
+                { value: 12, label: '12.0' },
+                { value: 8, label: '8.0' },
+                { value: 4, label: '4.0' },
+                { value: 2, label: '2.0' }
+            ];
+
+            let appetiteHtml = '';
+            appetiteExamples.forEach(example => {
+                const isAboveAppetite = example.value > appetiteThreshold;
+                const statusClass = isAboveAppetite ? 'bg-danger' : 'bg-success';
+                const statusText = isAboveAppetite ? 'Above Appetite' : 'Within Appetite';
+                const level = getQualitativeRiskLevel(example.value, qualCritical, qualHigh, qualMedium);
+                
+                appetiteHtml += `
+                    <div class="preview-item">
+                        <div>
+                            <span class="badge ${getRiskBadgeClass(level)} me-1">${level}</span>
+                            <strong>${example.label}</strong>
+                        </div>
+                        <span class="badge ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+            });
+
+            // Add appetite threshold indicator
+            appetiteHtml += `
+                <div class="mt-3 p-2 rounded" style="background-color: #fff3cd; border: 1px solid #ffeaa7;">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i class="fas fa-crosshairs text-warning me-2"></i>
+                        <strong>Appetite Threshold: ${appetiteThreshold.toFixed(1)}</strong>
+                    </div>
+                    <div class="text-center mt-1">
+                        <small class="text-muted">Risks above this level are tracked as "above appetite"</small>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('appetitePreview').innerHTML = appetiteHtml;
+        }
+
+        function getFairRiskLevel(ale, critical, high, medium) {
+            if (ale >= critical) return 'Critical';
+            if (ale >= high) return 'High';
+            if (ale >= medium) return 'Medium';
+            return 'Low';
+        }
+
+        function getQualitativeRiskLevel(score, critical, high, medium) {
+            if (score >= critical) return 'Critical';
+            if (score >= high) return 'High';
+            if (score >= medium) return 'Medium';
+            return 'Low';
+        }
+
+        function getRiskBadgeClass(level) {
+            switch(level) {
+                case 'Critical': return 'bg-danger';
+                case 'High': return 'bg-warning text-dark';
+                case 'Medium': return 'bg-info';
+                case 'Low': return 'bg-success';
+                default: return 'bg-secondary';
+            }
+        }
+
+        // Form validation
+        document.getElementById('settingsForm').addEventListener('submit', function(e) {
+            const fairCritical = parseFloat(document.getElementById('FairCriticalThreshold').value);
+            const fairHigh = parseFloat(document.getElementById('FairHighThreshold').value);
+            const fairMedium = parseFloat(document.getElementById('FairMediumThreshold').value);
+
+            const qualCritical = parseFloat(document.getElementById('QualitativeCriticalThreshold').value);
+            const qualHigh = parseFloat(document.getElementById('QualitativeHighThreshold').value);
+            const qualMedium = parseFloat(document.getElementById('QualitativeMediumThreshold').value);
+
+            const appetiteThreshold = parseFloat(document.getElementById('RiskAppetiteThreshold').value);
+
+            // Validate FAIR thresholds
+            if (fairCritical < fairHigh || fairHigh < fairMedium) {
+                e.preventDefault();
+                alert('FAIR thresholds must be in descending order: Critical ≥ High ≥ Medium');
+                return false;
+            }
+
+            // Validate Qualitative thresholds
+            if (qualCritical < qualHigh || qualHigh < qualMedium) {
+                e.preventDefault();
+                alert('Qualitative thresholds must be in descending order: Critical ≥ High ≥ Medium');
+                return false;
+            }
+
+            // Validate Risk Appetite threshold
+            if (appetiteThreshold < 0 || appetiteThreshold > 16) {
+                e.preventDefault();
+                alert('Risk Appetite Threshold must be between 0 and 16');
+                return false;
+            }
+
+            // Validate Cybersecurity Insurance amount
+            if (insuranceAmount < 0) {
+                e.preventDefault();
+                alert('Cybersecurity Insurance Amount must be a positive number');
+                return false;
+            }
+
+            return true;
+        });
+    </script>
+}

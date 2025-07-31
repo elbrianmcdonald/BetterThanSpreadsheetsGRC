@@ -1,0 +1,268 @@
+﻿@using CyberRiskApp.Extensions
+@model IEnumerable<CyberRiskApp.Models.Finding>
+@{
+    ViewData["Title"] = "Findings Register";
+    var currentFilter = ViewBag.CurrentFilter as string ?? "open";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+            Findings Register
+        </h2>
+        <div>
+            @if (Model.Any())
+            {
+                <a asp-action="ExportToExcel" asp-route-status="@currentFilter" class="btn btn-success me-2">
+                    <i class="fas fa-file-excel me-1"></i>Export to Excel
+                </a>
+            }
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Finding
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="card shadow mb-4">
+        <div class="card-header p-0">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                <li class="nav-item">
+                    <a asp-action="Index" asp-route-status="open"
+                       class="nav-link @(currentFilter == "open" ? "active" : "")">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        Open Findings
+                        <span class="badge bg-danger ms-2">@ViewBag.OpenCount</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a asp-action="Index" asp-route-status="closed"
+                       class="nav-link @(currentFilter == "closed" ? "active" : "")">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Closed Findings
+                        <span class="badge bg-success ms-2">@ViewBag.ClosedCount</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a asp-action="Index" asp-route-status="accepted"
+                       class="nav-link @(currentFilter == "accepted" ? "active" : "")">
+                        <i class="fas fa-handshake me-1"></i>
+                        Risk Accepted
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a asp-action="Index" asp-route-status="all"
+                       class="nav-link @(currentFilter == "all" ? "active" : "")">
+                        <i class="fas fa-list me-1"></i>
+                        All Findings
+                        <span class="badge bg-secondary ms-2">@ViewBag.AllCount</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-0">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Finding #</th>
+                                <th>Title</th>
+                                <th>Risk Rating</th>
+                                <th>Status</th>
+                                <th>Owner</th>
+                                <th>Business Unit</th>
+                                <th>Open Date</th>
+                                <th>SLA Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr class="@(item.SlaDate.HasValue && item.SlaDate < DateTime.Today ? "table-warning" : "")">
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none">
+                                            @item.FindingNumber
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">@item.Title</div>
+                                        <small class="text-muted">@item.Domain</small>
+                                    </td>
+                                    <td>
+                                        @{
+                                            var badgeClass = item.RiskRating switch
+                                            {
+                                                CyberRiskApp.Models.RiskRating.Critical => "bg-danger",
+                                                CyberRiskApp.Models.RiskRating.High => "bg-warning",
+                                                CyberRiskApp.Models.RiskRating.Medium => "bg-info",
+                                                CyberRiskApp.Models.RiskRating.Low => "bg-success",
+                                                _ => "bg-secondary"
+                                            };
+                                        }
+                                        <span class="badge @badgeClass">@item.RiskRating</span>
+                                        @if (item.SlaDate.HasValue && item.SlaDate < DateTime.Today)
+                                        {
+                                            <br>
+
+                                            <small class="text-danger"><i class="fas fa-clock me-1"></i>Overdue</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @{
+                                            var statusClass = item.Status switch
+                                            {
+                                                CyberRiskApp.Models.FindingStatus.Open => "bg-danger",
+                                                CyberRiskApp.Models.FindingStatus.Closed => "bg-success",
+                                                CyberRiskApp.Models.FindingStatus.RiskAccepted => "bg-warning text-dark",
+                                                _ => "bg-secondary"
+                                            };
+                                            var statusIcon = item.Status switch
+                                            {
+                                                CyberRiskApp.Models.FindingStatus.Open => "fas fa-exclamation-circle",
+                                                CyberRiskApp.Models.FindingStatus.Closed => "fas fa-check-circle",
+                                                CyberRiskApp.Models.FindingStatus.RiskAccepted => "fas fa-handshake",
+                                                _ => "fas fa-question-circle"
+                                            };
+                                        }
+                                        <span class="badge @statusClass">
+                                            <i class="@statusIcon me-1"></i>@item.Status
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div>@item.Owner</div>
+                                        @if (!string.IsNullOrEmpty(item.BusinessOwner))
+                                        {
+                                            <small class="text-muted">Business: @item.BusinessOwner</small>
+                                        }
+                                    </td>
+                                    <td>@item.BusinessUnit</td>
+                                    <td>@item.OpenDate.ToString("yyyy-MM-dd")</td>
+                                    <td>
+                                        @if (item.SlaDate.HasValue)
+                                        {
+                                            @item.SlaDate.Value.ToString("yyyy-MM-dd")
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not set</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            @if (item.Status == CyberRiskApp.Models.FindingStatus.Open)
+                                            {
+                                                <a asp-action="RequestRiskAcceptance" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning" title="Request Risk Acceptance">
+                                                    <i class="fas fa-handshake"></i>
+                                                </a>
+                                            }
+                                            @if (User.IsUserAdmin())
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger" title="Delete Finding" 
+                                                        onclick="confirmDelete(@item.Id, '@item.FindingNumber', '@Html.Raw(Html.Encode(item.Title).Replace("'", "\\'"))')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No findings found for the selected filter</h5>
+                    <p class="text-muted">Try changing the filter or create a new finding.</p>
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add First Finding
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetRiskRatingClass(CyberRiskApp.Models.RiskRating rating)
+    {
+        return rating switch
+        {
+            CyberRiskApp.Models.RiskRating.Critical => "danger",
+            CyberRiskApp.Models.RiskRating.High => "warning",
+            CyberRiskApp.Models.RiskRating.Medium => "info",
+            CyberRiskApp.Models.RiskRating.Low => "success",
+            _ => "secondary"
+        };
+    }
+}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone!
+                </div>
+                <p>Are you sure you want to delete the following finding?</p>
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title" id="deleteFindingTitle"></h6>
+                        <p class="card-text">
+                            <strong>Finding Number:</strong> <span id="deleteFindingNumber"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Finding
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, findingNumber, title) {
+            // Set the form action
+            document.getElementById('deleteForm').action = '@Url.Action("Delete", "Findings")/' + id;
+            
+            // Set the finding details in the modal
+            document.getElementById('deleteFindingNumber').textContent = findingNumber;
+            document.getElementById('deleteFindingTitle').textContent = title;
+            
+            // Show the modal
+            var modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            modal.show();
+        }
+    </script>
+}

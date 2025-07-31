@@ -1,0 +1,240 @@
+﻿@model CyberRiskApp.ViewModels.RiskUploadViewModel
+@{
+    ViewData["Title"] = "Upload Risks from Excel";
+}
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-upload text-primary me-2"></i>
+                    Upload Risks from Excel
+                </h2>
+                <a asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Risk Register
+                </a>
+            </div>
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (TempData["Warning"] != null)
+            {
+                <div class="alert alert-warning alert-dismissible fade show">
+                    <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Warning"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <form asp-action="Upload" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+                <!-- Upload Section -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-file-excel me-2"></i>Upload Excel File
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="ExcelFile" class="form-label">Excel File</label>
+                            <input asp-for="ExcelFile" type="file" class="form-control" accept=".xlsx,.xls" required />
+                            <span asp-validation-for="ExcelFile" class="text-danger"></span>
+                            <div class="form-text">
+                                Upload an Excel file containing your risk register data.
+                                <strong>Supported formats: .xlsx, .xls</strong>
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="OverwriteExisting" class="form-check-input" type="checkbox" />
+                            <label asp-for="OverwriteExisting" class="form-check-label">
+                                Overwrite existing risks with duplicate titles
+                            </label>
+                            <div class="form-text">
+                                If checked, risks with duplicate titles will be updated. Otherwise, duplicates will be skipped.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Format Instructions -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Excel File Format Requirements
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-3">Your Excel file must follow this exact column structure:</p>
+
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="10%">Column</th>
+                                        <th width="20%">Header Name</th>
+                                        <th width="15%">Required</th>
+                                        <th width="55%">Description & Examples</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>A</strong></td>
+                                        <td>Title</td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                        <td>Risk title (e.g., "SQL Injection Vulnerability", "Data Center Power Failure")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>B</strong></td>
+                                        <td>Description</td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                        <td>Detailed description of the risk and potential impact</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>C</strong></td>
+                                        <td>Asset</td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                        <td>Primary asset affected (e.g., "Customer Database", "Web Application")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>D</strong></td>
+                                        <td>Business Unit</td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                        <td>Business unit responsible (e.g., "IT", "Finance", "HR")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>E</strong></td>
+                                        <td>Threat Scenario</td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                        <td>How the threat could be realized</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>F</strong></td>
+                                        <td>ALE</td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                        <td>Annual Loss Expectancy in USD (e.g., "25000", "$25,000")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>G</strong></td>
+                                        <td>Risk Level</td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                        <td>Critical, High, Medium, Low (defaults to Low if empty)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>H</strong></td>
+                                        <td>Treatment Strategy</td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                        <td>Mitigate, Transfer, Accept, Avoid (defaults to Mitigate if empty)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>I</strong></td>
+                                        <td>Owner</td>
+                                        <td><span class="badge bg-secondary">Optional</span></td>
+                                        <td>Risk owner name (e.g., "John Smith", "IT Security Team")</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="alert alert-warning mt-3">
+                            <h6><i class="fas fa-exclamation-triangle me-1"></i>Important Notes:</h6>
+                            <ul class="mb-0">
+                                <li>The first row should contain column headers exactly as shown above</li>
+                                <li>Data should start from row 2</li>
+                                <li>Risk numbers will be automatically generated</li>
+                                <li>Open dates will be set to today's date</li>
+                                <li>Next review dates will be set to 3 months from today</li>
+                                <li>All risks will be created with "Open" status</li>
+                                <li>Empty rows will be skipped</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sample Data -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table me-2"></i>Sample Data
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Here's an example of what your Excel data should look like:</p>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Description</th>
+                                        <th>Asset</th>
+                                        <th>Business Unit</th>
+                                        <th>Threat Scenario</th>
+                                        <th>ALE</th>
+                                        <th>Risk Level</th>
+                                        <th>Treatment Strategy</th>
+                                        <th>Owner</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>SQL Injection Vulnerability</td>
+                                        <td>Web application vulnerable to SQL injection attacks</td>
+                                        <td>Customer Database</td>
+                                        <td>IT</td>
+                                        <td>Attacker exploits input validation weakness</td>
+                                        <td>75000</td>
+                                        <td>High</td>
+                                        <td>Mitigate</td>
+                                        <td>IT Security Team</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Data Center Power Failure</td>
+                                        <td>Primary data center loses power for extended period</td>
+                                        <td>Data Center Infrastructure</td>
+                                        <td>Operations</td>
+                                        <td>Utility power outage exceeds UPS capacity</td>
+                                        <td>150000</td>
+                                        <td>Critical</td>
+                                        <td>Transfer</td>
+                                        <td>Operations Manager</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload me-1"></i>Upload Risks
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,213 @@
+@model CyberRiskApp.ViewModels.CategoryManagementViewModel
+@{
+    ViewData["Title"] = $"{Model.CategoryDisplayName} Management";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-list me-2"></i>@Model.CategoryDisplayName Management
+                    </h4>
+                    <div>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm me-2">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Overview
+                        </a>
+                        <a asp-action="Create" asp-route-category="@((int)Model.Category)" class="btn btn-success btn-sm">
+                            <i class="fas fa-plus me-1"></i>Add New
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Search and Pagination Info -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <form asp-action="Category" method="get" class="d-flex">
+                                <input type="hidden" name="category" value="@((int)Model.Category)" />
+                                <input type="text" name="search" value="@Model.SearchTerm" class="form-control me-2" placeholder="Search entries..." />
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                @if (!string.IsNullOrEmpty(Model.SearchTerm))
+                                {
+                                    <a asp-action="Category" asp-route-category="@((int)Model.Category)" class="btn btn-outline-secondary ms-2">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                }
+                            </form>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">
+                                Showing @Model.StartItem - @Model.EndItem of @Model.TotalItems entries
+                            </small>
+                        </div>
+                    </div>
+
+                    @if (Model.Entries.Any())
+                    {
+                        <!-- Entries Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Value</th>
+                                        <th>Description</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Usage</th>
+                                        <th class="text-center">Created</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entry in Model.Entries)
+                                    {
+                                        <tr class="@(entry.IsActive ? "" : "table-secondary")">
+                                            <td>
+                                                <strong>@entry.Value</strong>
+                                                @if (!entry.IsActive)
+                                                {
+                                                    <span class="badge bg-secondary ms-2">Inactive</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(entry.Description))
+                                                {
+                                                    <span>@entry.Description</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted fst-italic">No description</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (entry.IsActive)
+                                                {
+                                                    <span class="badge bg-success">Active</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Inactive</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info">@entry.UsageCount</span>
+                                                @if (entry.LastUsedAt.HasValue)
+                                                {
+                                                    <br><small class="text-muted">Last: @entry.LastUsedAt.Value.ToString("MM/dd/yyyy")</small>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                <small class="text-muted">
+                                                    @entry.CreatedAt.ToString("MM/dd/yyyy")<br>
+                                                    by @entry.CreatedBy
+                                                </small>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a asp-action="Edit" asp-route-id="@entry.Id" class="btn btn-outline-primary" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form asp-action="ToggleActive" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@entry.Id" />
+                                                        <input type="hidden" name="category" value="@((int)Model.Category)" />
+                                                        <button type="submit" class="btn @(entry.IsActive ? "btn-outline-warning" : "btn-outline-success")" 
+                                                                title="@(entry.IsActive ? "Deactivate" : "Activate")"
+                                                                onclick="return confirm('@(entry.IsActive ? "Deactivate" : "Activate") this entry?')">
+                                                            <i class="fas @(entry.IsActive ? "fa-pause" : "fa-play")"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form asp-action="Delete" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@entry.Id" />
+                                                        <input type="hidden" name="category" value="@((int)Model.Category)" />
+                                                        <button type="submit" class="btn btn-outline-danger" title="Delete"
+                                                                onclick="return confirm('Are you sure you want to delete this entry? This action cannot be undone.')">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        @if (Model.TotalPages > 1)
+                        {
+                            <nav aria-label="Reference data pagination">
+                                <ul class="pagination justify-content-center">
+                                    <!-- Previous -->
+                                    <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                                        <a class="page-link" 
+                                           asp-action="Category" 
+                                           asp-route-category="@((int)Model.Category)"
+                                           asp-route-page="@(Model.CurrentPage - 1)"
+                                           asp-route-search="@Model.SearchTerm">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page numbers -->
+                                    @{
+                                        var startPage = Math.Max(1, Model.CurrentPage - 2);
+                                        var endPage = Math.Min(Model.TotalPages, Model.CurrentPage + 2);
+                                    }
+
+                                    @for (var i = startPage; i <= endPage; i++)
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" 
+                                               asp-action="Category" 
+                                               asp-route-category="@((int)Model.Category)"
+                                               asp-route-page="@i"
+                                               asp-route-search="@Model.SearchTerm">
+                                                @i
+                                            </a>
+                                        </li>
+                                    }
+
+                                    <!-- Next -->
+                                    <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                                        <a class="page-link" 
+                                           asp-action="Category" 
+                                           asp-route-category="@((int)Model.Category)"
+                                           asp-route-page="@(Model.CurrentPage + 1)"
+                                           asp-route-search="@Model.SearchTerm">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No entries found</h5>
+                            @if (!string.IsNullOrEmpty(Model.SearchTerm))
+                            {
+                                <p class="text-muted">No entries match your search criteria.</p>
+                                <a asp-action="Category" asp-route-category="@((int)Model.Category)" class="btn btn-outline-primary">
+                                    <i class="fas fa-times me-1"></i>Clear Search
+                                </a>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Get started by adding your first @Model.CategoryDisplayName.ToLower() entry.</p>
+                                <a asp-action="Create" asp-route-category="@((int)Model.Category)" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Add First Entry
+                                </a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

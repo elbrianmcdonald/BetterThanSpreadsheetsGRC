@@ -1,0 +1,299 @@
+﻿@using CyberRiskApp.Models
+@using CyberRiskApp.Extensions
+@using Microsoft.AspNetCore.Identity
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Better Than Spreadsheets GRC</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.min.css" />
+    <!-- Bootstrap 5 theme for Select2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/CyberRiskApp.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                    <i class="fas fa-chart-line me-2"></i>Better Than Spreadsheets GRC
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <ul class="navbar-nav flex-grow-1">
+                            <!-- Dashboard - All Users -->
+                            <li class="nav-item">
+                                <a class="nav-link text-light" asp-controller="Dashboard" asp-action="Index">
+                                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                                </a>
+                            </li>
+
+                            <!-- UPDATED: CISO Executive Dashboard - Now accessible to all users -->
+                            <li class="nav-item">
+                                <a class="nav-link text-light" asp-controller="CISOExecutive" asp-action="Index">
+                                    <i class="fas fa-chart-line me-1"></i>CISO Dashboard
+                                </a>
+                            </li>
+                            <!-- Findings - All Users -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-light" href="#" id="findingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Findings
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="findingsDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Findings" asp-action="Index">
+                                            <i class="fas fa-list me-1"></i>Findings Register
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="FindingClosure" asp-action="Index">
+                                            <i class="fas fa-check-circle me-1"></i>Closure Requests
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="FindingClosure" asp-action="Create">
+                                            <i class="fas fa-plus me-1"></i>Request Closure
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Risk Management - All Users -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-light" href="#" id="riskDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-shield-alt me-1"></i>Risk
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="riskDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Risks" asp-action="Index">
+                                            <i class="fas fa-list me-1"></i>Risk Register
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="RiskAssessments" asp-action="Index">
+                                            <i class="fas fa-chart-bar me-1"></i>Risk Assessments
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Requests" asp-action="CreateAcceptance">
+                                            <i class="fas fa-handshake me-1"></i>Request Risk Acceptance
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Requests" asp-action="Index">
+                                            <i class="fas fa-tasks me-1"></i>All Requests
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- GRC Functions - Accessible to all users for viewing, GRC/Admin for management -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-light" href="#" id="grcDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-cogs me-1"></i>GRC
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="grcDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Governance" asp-action="Index">
+                                            <i class="fas fa-building me-1"></i>Governance Dashboard
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Governance" asp-action="AssessmentDashboard">
+                                            <i class="fas fa-th-large me-1"></i>Assessment Dashboard
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="ComplianceAssessments" asp-action="Index">
+                                            <i class="fas fa-balance-scale me-1"></i>Compliance Assessments
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="MaturityAssessments" asp-action="Index">
+                                            <i class="fas fa-chart-line me-1"></i>Maturity Assessments
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="ThirdParties" asp-action="Index">
+                                            <i class="fas fa-handshake me-1"></i>Third Party Risk Management
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Strategy" asp-action="Index">
+                                            <i class="fas fa-chart-line me-1"></i>Strategy Planning
+                                        </a>
+                                    </li>
+                                    @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                    {
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Frameworks" asp-action="Index">
+                                                <i class="fas fa-book me-1"></i>Compliance Frameworks
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="MaturityFrameworks" asp-action="Index">
+                                                <i class="fas fa-chart-area me-1"></i>Maturity Frameworks
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Organizations" asp-action="Index">
+                                                <i class="fas fa-sitemap me-1"></i>Organizations
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+
+                            <!-- My Work - For GRC Users and Admins -->
+                            @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-light" asp-controller="MyWork" asp-action="Index">
+                                        <i class="fas fa-briefcase me-1"></i>My Work
+                                    </a>
+                                </li>
+                            }
+
+                            <!-- Admin Functions - Only for Admin -->
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle text-light" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-tools me-1"></i>Admin
+                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="UserManagement" asp-action="Index">
+                                                <i class="fas fa-users me-1"></i>User Management
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="RiskLevelSettings" asp-action="Index">
+                                                <i class="fas fa-sliders-h me-1"></i>Risk Level Settings
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="RiskMatrix" asp-action="Index">
+                                                <i class="fas fa-th me-1"></i>Risk Matrix Management
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="ReferenceDataManagement" asp-action="Index">
+                                                <i class="fas fa-database me-1"></i>Reference Data Management
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="SSLManagement" asp-action="Index">
+                                                <i class="fas fa-lock me-1"></i>SSL Management
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            }
+                        </ul>
+
+                        <!-- User Info and Logout -->
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-light" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user me-1"></i>
+                                    @User.Identity?.Name
+                                    <small class="text-muted">(@User.GetUserRoleDisplayName())</small>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Account" asp-action="Profile">
+                                            <i class="fas fa-user-edit me-1"></i>Profile
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-sign-out-alt me-1"></i>Logout
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    }
+                    else
+                    {
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link text-light" asp-controller="Account" asp-action="Login">
+                                    <i class="fas fa-sign-in-alt me-1"></i>Login
+                                </a>
+                            </li>
+                        </ul>
+                    }
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container-fluid">
+        <!-- Alert Messages -->
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["Warning"] != null)
+        {
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Warning"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+        @if (TempData["Info"] != null)
+        {
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="fas fa-info-circle me-2"></i>@TempData["Info"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        }
+
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container text-center">
+            &copy; @DateTime.Now.Year - Better Than Spreadsheets GRC- <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Load Select2 from local files -->
+    <script src="~/lib/select2/js/select2.min.js"></script>
+    <script src="~/js/smart-combobox.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

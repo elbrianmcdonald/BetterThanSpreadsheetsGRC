@@ -1,0 +1,40 @@
+﻿@model CyberRiskApp.ViewModels.DashboardSummary
+
+<div class="row">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <h4 class="mb-1">@Model.OpenFindings</h4>
+                <small>Open Findings</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-danger text-white h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-times fa-2x mb-2"></i>
+                <h4 class="mb-1">@Model.OverdueFindings</h4>
+                <small>Overdue Findings</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                <h4 class="mb-1">@Model.AcceptedRisks</h4>
+                <small>Accepted Risks</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                <h4 class="mb-1">@Model.TotalALE.ToString("C0")</h4>
+                <small>Total ALE</small>
+            </div>
+        </div>
+    </div>
+</div>

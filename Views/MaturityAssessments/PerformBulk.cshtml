@@ -1,0 +1,259 @@
+﻿@model CyberRiskApp.ViewModels.PerformMaturityAssessmentViewModel
+@{
+    ViewData["Title"] = $"Perform Assessment - {Model.Assessment.Title}";
+    var isNISTCSF = Model.IsNISTCSF;
+    var isC2M2 = Model.IsC2M2;
+}
+
+<div class="row">
+    <div class="col-12">
+        <!-- Assessment Header -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4><i class="fas fa-tasks me-2"></i>@Model.Assessment.Title</h4>
+                        <small class="text-muted">
+                            @Model.Assessment.Framework?.Name
+                            (@Model.Assessment.Organization?.Name)
+                        </small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div class="progress-bar" role="progressbar" style="width: @Model.ProgressPercentage%;"
+                                 aria-valuenow="@Model.ProgressPercentage" aria-valuemin="0" aria-valuemax="100">
+                                @Model.ProgressPercentage.ToString("F0")%
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            @Model.CompletedControls of @Model.TotalControls controls completed
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assessment Form -->
+        <form method="post" asp-action="PerformBulk" asp-route-id="@Model.Assessment.Id">
+            @if (Model.ControlAssessments.Any())
+            {
+                var groupedControls = isNISTCSF
+                ? Model.ControlAssessments.GroupBy(ca => ca.Control.Function).OrderBy(g => g.Key)
+                : isC2M2
+                ? Model.ControlAssessments.GroupBy(ca => ca.Control.Function).OrderBy(g => g.Key) // Function stores Domain for C2M2
+                : Model.ControlAssessments.GroupBy(ca => ca.Control.Category).OrderBy(g => g.Key);
+
+                foreach (var group in groupedControls)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>
+                                @if (isNISTCSF)
+                                {
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    @group.Key
+                                    <text> Function</text>
+                                }
+                                else if (isC2M2)
+                                {
+                                    <i class="fas fa-cube me-2"></i>
+                                    @group.Key
+                                    <text> Domain</text>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-folder me-2"></i>
+                                    @group.Key
+                                }
+                                <span class="badge bg-secondary ms-2">@group.Count() controls</span>
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @foreach (var controlAssessment in group.OrderBy(ca => ca.Control.ControlId))
+                            {
+                                <div class="border rounded p-3 mb-3 bg-light">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <!-- Control Header -->
+                                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                                <div>
+                                                    <h6>
+                                                        <code>@controlAssessment.Control.ControlId</code>
+                                                        @controlAssessment.Control.Title
+                                                    </h6>
+                                                    @if (!string.IsNullOrEmpty(controlAssessment.Control.ImplementationGuidance))
+                                                    {
+                                                        <small class="text-muted">@controlAssessment.Control.ImplementationGuidance</small>
+                                                    }
+                                                </div>
+                                                <div>
+                                                    <span class="badge bg-info">Priority: @controlAssessment.Control.Priority</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Current Status -->
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold">Current Maturity Level</label>
+                                                    <select name="control_@(controlAssessment.Id)_current" class="form-select form-select-sm">
+                                                        @foreach (var level in Model.AvailableMaturityLevels)
+                                                        {
+                                                            <option value="@level" selected="@(controlAssessment.CurrentMaturityLevel == level ? "selected" : null)">
+                                                                Level @((int)level) - @level
+                                                            </option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold">Target Maturity Level</label>
+                                                    <select name="control_@(controlAssessment.Id)_target" class="form-select form-select-sm">
+                                                        @foreach (var level in Model.AvailableMaturityLevels)
+                                                        {
+                                                            <option value="@level" selected="@(controlAssessment.TargetMaturityLevel == level ? "selected" : null)">
+                                                                Level @((int)level) - @level
+                                                            </option>
+                                                        }
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <!-- Evidence -->
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label class="form-label fw-bold">Evidence</label>
+                                                    <textarea name="control_@(controlAssessment.Id)_evidence" class="form-control form-control-sm" rows="2"
+                                                              placeholder="Evidence supporting the current maturity level...">@controlAssessment.Evidence</textarea>
+                                                </div>
+                                            </div>
+
+                                            <!-- Ownership -->
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold">Owner</label>
+                                                    <input name="control_@(controlAssessment.Id)_ownership" type="text" class="form-control form-control-sm"
+                                                           placeholder="Control owner" value="@controlAssessment.Ownership" />
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label fw-bold">Project Required</label>
+                                                    <div class="form-check mt-2">
+                                                        <input name="control_@(controlAssessment.Id)_project" type="checkbox" class="form-check-input project-toggle"
+                                                               data-control="@controlAssessment.Id" @(controlAssessment.ProjectNeeded ? "checked" : "") />
+                                                        <label class="form-check-label">Requires improvement project</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Gap Notes -->
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label class="form-label fw-bold">Gap Notes</label>
+                                                    <textarea name="control_@(controlAssessment.Id)_gaps" class="form-control form-control-sm" rows="2"
+                                                              placeholder="Gaps and issues identified...">@controlAssessment.GapNotes</textarea>
+                                                </div>
+                                            </div>
+
+                                            <!-- Recommended Actions -->
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <label class="form-label fw-bold">Recommended Actions</label>
+                                                    <textarea name="control_@(controlAssessment.Id)_actions" class="form-control form-control-sm" rows="2"
+                                                              placeholder="Actions needed to reach target maturity...">@controlAssessment.RecommendedActions</textarea>
+                                                </div>
+                                            </div>
+
+                                            <!-- Project Details (conditionally shown) -->
+                                            <div class="project-details" data-control="@controlAssessment.Id" style="@(controlAssessment.ProjectNeeded ? "" : "display: none;")">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-bold">Project Size</label>
+                                                        <select name="control_@(controlAssessment.Id)_size" class="form-select form-select-sm">
+                                                            <option value="">Select Size</option>
+                                                            @foreach (TShirtSize size in Enum.GetValues<TShirtSize>())
+                                                            {
+                                                                <option value="@size" selected="@(controlAssessment.TShirtSize == size ? "selected" : null)">@size</option>
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-bold">Project Number</label>
+                                                        <input name="control_@(controlAssessment.Id)_number" type="text" class="form-control form-control-sm"
+                                                               placeholder="Project reference" value="@controlAssessment.ProjectNumber" />
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label fw-bold">Target Completion</label>
+                                                        <input name="control_@(controlAssessment.Id)_completion" type="date" class="form-control form-control-sm"
+                                                               value="@(controlAssessment.TargetCompletionDate?.ToString("yyyy-MM-dd"))" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No controls found for this assessment. Please ensure the framework has been properly uploaded.
+                </div>
+            }
+
+            <!-- Action Buttons -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a asp-action="Details" asp-route-id="@Model.Assessment.Id" class="btn btn-secondary me-2">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Details
+                            </a>
+                            <a asp-action="BulkView" asp-route-id="@Model.Assessment.Id" class="btn btn-outline-info">
+                                <i class="fas fa-th-list me-1"></i>Bulk View
+                            </a>
+                        </div>
+                        <div>
+                            <button type="submit" name="action" value="save" class="btn btn-primary me-2">
+                                <i class="fas fa-save me-1"></i>Save Progress
+                            </button>
+                            <button type="submit" name="action" value="complete" class="btn btn-success">
+                                <i class="fas fa-check-circle me-1"></i>Complete Assessment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle project details when checkbox is clicked
+        document.querySelectorAll('.project-toggle').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                var controlId = this.getAttribute('data-control');
+                var projectDetails = document.querySelector('.project-details[data-control="' + controlId + '"]');
+                if (this.checked) {
+                    projectDetails.style.display = 'block';
+                } else {
+                    projectDetails.style.display = 'none';
+                }
+            });
+        });
+
+        // Auto-save functionality (optional)
+        let saveTimeout;
+        document.querySelectorAll('input, select, textarea').forEach(function(element) {
+            element.addEventListener('change', function() {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(function() {
+                    // Could implement auto-save here
+                    console.log('Auto-save triggered');
+                }, 2000);
+            });
+        });
+    </script>
+}

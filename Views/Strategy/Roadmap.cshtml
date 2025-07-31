@@ -1,0 +1,352 @@
+@model IEnumerable<CyberRiskApp.Models.ImplementationMilestone>
+@{
+    ViewData["Title"] = "Implementation Roadmap";
+    var plan = ViewBag.Plan as CyberRiskApp.Models.StrategyPlan;
+    var capabilities = ViewBag.Capabilities as IEnumerable<CyberRiskApp.Models.CapabilityRequirement> ?? new List<CyberRiskApp.Models.CapabilityRequirement>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-road text-primary me-2"></i>
+            Implementation Roadmap: @plan?.PlanName
+        </h2>
+        <div>
+            <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#addMilestoneModal">
+                <i class="fas fa-plus me-1"></i>Add Milestone
+            </button>
+            <a asp-action="Details" asp-route-id="@plan?.Id" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Plan
+            </a>
+        </div>
+    </div>
+
+    <!-- Timeline View -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Timeline View</h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="toggleView('timeline')">
+                        <i class="fas fa-stream"></i> Timeline
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="toggleView('gantt')">
+                        <i class="fas fa-chart-gantt"></i> Gantt
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="toggleView('list')">
+                        <i class="fas fa-list"></i> List
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Timeline View -->
+            <div id="timelineView" class="roadmap-view">
+                <div class="timeline-container">
+                    @foreach (var milestone in Model.OrderBy(m => m.TargetDate))
+                    {
+                        <div class="timeline-item @(milestone.Status == CyberRiskApp.Models.MilestoneStatus.Completed ? "completed" : "")">
+                            <div class="timeline-marker bg-@milestone.StatusColor"></div>
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">@milestone.MilestoneName</h6>
+                                        <p class="text-muted mb-2">@milestone.Description</p>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <span class="badge bg-@milestone.StatusColor">@milestone.Status</span>
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-calendar me-1"></i>@milestone.TargetDate.ToString("MMM dd, yyyy")
+                                            </span>
+                                            @if (milestone.IsOverdue)
+                                            {
+                                                <span class="badge bg-danger">Overdue</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="editMilestone(@milestone.Id)">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" onclick="viewMilestoneDetails(@milestone.Id)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(milestone.SuccessCriteria))
+                                {
+                                    <div class="mt-2">
+                                        <small class="text-muted">Success Criteria:</small>
+                                        <small class="d-block">@milestone.SuccessCriteria</small>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Gantt View (simplified) -->
+            <div id="ganttView" class="roadmap-view" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 300px;">Milestone</th>
+                                <th>Status</th>
+                                @for (var month = plan?.StartDate ?? DateTime.UtcNow; month <= (plan?.EndDate ?? DateTime.UtcNow.AddYears(1)); month = month.AddMonths(1))
+                                {
+                                    <th class="text-center" style="min-width: 80px;">@month.ToString("MMM yy")</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var milestone in Model.OrderBy(m => m.TargetDate))
+                            {
+                                <tr>
+                                    <td>@milestone.MilestoneName</td>
+                                    <td><span class="badge bg-@milestone.StatusColor">@milestone.Status</span></td>
+                                    @for (var month = plan?.StartDate ?? DateTime.UtcNow; month <= (plan?.EndDate ?? DateTime.UtcNow.AddYears(1)); month = month.AddMonths(1))
+                                    {
+                                        var isActive = month.Year == milestone.TargetDate.Year && month.Month == milestone.TargetDate.Month;
+                                        <td class="text-center">
+                                            @if (isActive)
+                                            {
+                                                <div class="gantt-bar bg-@milestone.StatusColor"></div>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- List View -->
+            <div id="listView" class="roadmap-view" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Milestone</th>
+                                <th>Description</th>
+                                <th>Target Date</th>
+                                <th>Status</th>
+                                <th>Success Criteria</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var milestone in Model.OrderBy(m => m.TargetDate))
+                            {
+                                <tr>
+                                    <td><strong>@milestone.MilestoneName</strong></td>
+                                    <td>@milestone.Description</td>
+                                    <td>
+                                        <span class="@(milestone.IsOverdue ? "text-danger" : "")">
+                                            @milestone.TargetDate.ToString("MMM dd, yyyy")
+                                        </span>
+                                    </td>
+                                    <td><span class="badge bg-@milestone.StatusColor">@milestone.Status</span></td>
+                                    <td>@milestone.SuccessCriteria</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" onclick="editMilestone(@milestone.Id)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="deleteMilestone(@milestone.Id)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Milestone Statistics -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Milestone Status</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Upcoming Milestones</h5>
+                </div>
+                <div class="card-body">
+                    @{
+                        var upcomingMilestones = Model.Where(m => m.Status != CyberRiskApp.Models.MilestoneStatus.Completed)
+                                                     .OrderBy(m => m.TargetDate)
+                                                     .Take(5);
+                    }
+                    @if (upcomingMilestones.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var milestone in upcomingMilestones)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">@milestone.MilestoneName</h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>@milestone.TargetDate.ToString("MMM dd, yyyy")
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-@milestone.StatusColor">@milestone.Status</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">No upcoming milestones</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Milestone Modal -->
+<div class="modal fade" id="addMilestoneModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Milestone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Placeholder for milestone form -->
+                <p>Milestone creation form will be implemented here</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .timeline-container {
+            position: relative;
+            padding-left: 40px;
+        }
+        
+        .timeline-container:before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .timeline-marker {
+            position: absolute;
+            left: -26px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #dee2e6;
+        }
+        
+        .timeline-item.completed .timeline-marker {
+            box-shadow: 0 0 0 2px #28a745;
+        }
+        
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #dee2e6;
+        }
+        
+        .timeline-item.completed .timeline-content {
+            border-left-color: #28a745;
+        }
+        
+        .gantt-bar {
+            height: 20px;
+            border-radius: 4px;
+            margin: 0 auto;
+            width: 90%;
+        }
+        
+        .roadmap-view {
+            min-height: 400px;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // View toggle functionality
+        function toggleView(view) {
+            document.querySelectorAll('.roadmap-view').forEach(v => v.style.display = 'none');
+            document.getElementById(view + 'View').style.display = 'block';
+        }
+        
+        // Status chart
+        const statusData = {
+            labels: ['Planned', 'In Progress', 'Completed', 'At Risk'],
+            datasets: [{
+                data: [
+                    @Model.Count(m => m.Status == CyberRiskApp.Models.MilestoneStatus.Planned),
+                    @Model.Count(m => m.Status == CyberRiskApp.Models.MilestoneStatus.InProgress),
+                    @Model.Count(m => m.Status == CyberRiskApp.Models.MilestoneStatus.Completed),
+                    @Model.Count(m => m.Status == CyberRiskApp.Models.MilestoneStatus.AtRisk)
+                ],
+                backgroundColor: ['#6c757d', '#0dcaf0', '#198754', '#ffc107']
+            }]
+        };
+        
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: statusData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+        
+        function editMilestone(id) {
+            window.location.href = '/ImplementationMilestone/Edit/' + id;
+        }
+        
+        function viewMilestoneDetails(id) {
+            window.location.href = '/ImplementationMilestone/Details/' + id;
+        }
+        
+        function deleteMilestone(id) {
+            if (confirm('Are you sure you want to delete this milestone?')) {
+                // Implement delete functionality
+            }
+        }
+    </script>
+}

@@ -1,0 +1,160 @@
+﻿@model CyberRiskApp.Models.UserRegistrationViewModel
+@{
+    ViewData["Title"] = "Create New User";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-plus me-2"></i>Create New User
+                </h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="FirstName" class="form-label fw-bold">
+                                First Name <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="FirstName" class="form-control" placeholder="Enter first name" />
+                            <span asp-validation-for="FirstName" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="LastName" class="form-label fw-bold">
+                                Last Name <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="LastName" class="form-control" placeholder="Enter last name" />
+                            <span asp-validation-for="LastName" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label asp-for="Email" class="form-label fw-bold">
+                                Email Address <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Email" type="email" class="form-control" placeholder="Enter email address" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Department" class="form-label fw-bold">Department</label>
+                            <input asp-for="Department" class="form-control" placeholder="e.g., IT, Finance, HR" />
+                            <span asp-validation-for="Department" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="JobTitle" class="form-label fw-bold">Job Title</label>
+                            <input asp-for="JobTitle" class="form-control" placeholder="e.g., Security Analyst, Manager" />
+                            <span asp-validation-for="JobTitle" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Role" class="form-label fw-bold">
+                                User Role <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="Role" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.UserRole>()" class="form-select">
+                                <option value="">Select a role</option>
+                            </select>
+                            <span asp-validation-for="Role" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Password" class="form-label fw-bold">
+                                Temporary Password <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Password" type="password" class="form-control" placeholder="Enter temporary password" />
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePassword()">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">User will be prompted to change on first login</small>
+                            <span asp-validation-for="Password" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="ConfirmPassword" class="form-label fw-bold">
+                                Confirm Password <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Confirm password" />
+                            <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <a asp-action="Index" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i>Back to Users
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-user-plus me-1"></i>Create User
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Role Permissions</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-danger"><i class="fas fa-crown me-1"></i> Admin</h6>
+                    <ul class="small">
+                        <li>Full system access</li>
+                        <li>User management</li>
+                        <li>All GRC and IT permissions</li>
+                        <li>System configuration</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-warning"><i class="fas fa-shield-alt me-1"></i> GRC User</h6>
+                    <ul class="small">
+                        <li>Approve closure requests</li>
+                        <li>Perform risk assessments</li>
+                        <li>Create/edit compliance assessments</li>
+                        <li>View all data</li>
+                        <li>Governance dashboard access</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <h6 class="text-info"><i class="fas fa-desktop me-1"></i> IT User</h6>
+                    <ul class="small">
+                        <li><strong>View findings register</strong></li>
+                        <li><strong>View risk register</strong></li>
+                        <li><strong>View maturity assessments</strong></li>
+                        <li><strong>View CISO Dashboard</strong></li>
+                        <li><strong>View compliance assessments</strong></li>
+                        <li><strong>Submit finding closure requests</strong></li>
+                        <li><strong>Submit risk acceptance requests</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePassword() {
+        const passwordField = document.getElementById('Password');
+        const toggleIcon = document.getElementById('toggleIcon');
+
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            toggleIcon.classList.remove('fa-eye');
+            toggleIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordField.type = 'password';
+            toggleIcon.classList.remove('fa-eye-slash');
+            toggleIcon.classList.add('fa-eye');
+        }
+    }
+</script>

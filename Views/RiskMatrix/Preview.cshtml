@@ -1,0 +1,348 @@
+@model CyberRiskApp.Models.RiskMatrix
+@{
+    ViewData["Title"] = "Risk Matrix Preview";
+    var levels = ViewBag.Levels as IEnumerable<CyberRiskApp.Models.RiskMatrixLevel>;
+    var cells = ViewBag.Cells as IEnumerable<CyberRiskApp.Models.RiskMatrixCell>;
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-eye text-primary me-2"></i>
+            Preview: @Model.Name
+        </h2>
+        <div>
+            <a asp-action="Configure" asp-route-id="@Model.Id" class="btn btn-primary">
+                <i class="fas fa-cog me-1"></i>Configure Matrix
+            </a>
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Matrix Info Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-info bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>Matrix Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-2">
+                    <strong>Size:</strong> @(Model.MatrixSize)×@(Model.MatrixSize)
+                </div>
+                <div class="col-md-2">
+                    <strong>Type:</strong> 
+                    @if (Model.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihood)
+                    {
+                        <span class="text-primary">2D Matrix</span>
+                    }
+                    else
+                    {
+                        <span class="text-info">3D Matrix</span>
+                    }
+                </div>
+                <div class="col-md-2">
+                    <strong>Status:</strong> 
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Inactive</span>
+                    }
+                </div>
+                <div class="col-md-2">
+                    @if (Model.IsDefault)
+                    {
+                        <span class="badge bg-warning">Default Matrix</span>
+                    }
+                </div>
+                <div class="col-md-4">
+                    <strong>Created:</strong> @Model.CreatedAt.ToString("MMM dd, yyyy") by @Model.CreatedBy
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="mt-3">
+                    <strong>Description:</strong> @Model.Description
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (levels?.Any() == true)
+    {
+        <!-- Risk Levels Legend -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary bg-opacity-10">
+                <h5 class="mb-0">
+                    <i class="fas fa-layer-group me-2"></i>Risk Level Definitions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Impact Levels -->
+                    <div class="col-md-4">
+                        <h6 class="text-primary"><i class="fas fa-exclamation-triangle me-2"></i>Impact Levels</h6>
+                        @foreach (var level in levels.Where(l => l.LevelType == RiskMatrixLevelType.Impact).OrderBy(l => l.LevelValue))
+                        {
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="legend-color me-2" style="background-color: @level.ColorCode; width: 20px; height: 20px; border-radius: 3px;"></div>
+                                <strong>@level.LevelValue:</strong>
+                                <span class="ms-2">@level.LevelName</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Likelihood Levels -->
+                    <div class="col-md-4">
+                        <h6 class="text-success"><i class="fas fa-percentage me-2"></i>Likelihood Levels</h6>
+                        @foreach (var level in levels.Where(l => l.LevelType == RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue))
+                        {
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="legend-color me-2" style="background-color: @level.ColorCode; width: 20px; height: 20px; border-radius: 3px;"></div>
+                                <strong>@level.LevelValue:</strong>
+                                <span class="ms-2">@level.LevelName</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Exposure Levels (3D Only) -->
+                    @if (Model.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihoodExposure)
+                    {
+                        <div class="col-md-4">
+                            <h6 class="text-warning"><i class="fas fa-shield-alt me-2"></i>Exposure Levels</h6>
+                            @foreach (var level in levels.Where(l => l.LevelType == RiskMatrixLevelType.Exposure).OrderBy(l => l.LevelValue))
+                            {
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="legend-color me-2" style="background-color: @level.ColorCode; width: 20px; height: 20px; border-radius: 3px;"></div>
+                                    <strong>@level.LevelValue:</strong>
+                                    <span class="ms-2">@level.LevelName</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (cells?.Any() == true)
+    {
+        <!-- Risk Matrix -->
+        <div class="card mb-4">
+            <div class="card-header bg-success bg-opacity-10">
+                <h5 class="mb-0">
+                    <i class="fas fa-th me-2"></i>Risk Matrix
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm matrix-preview">
+                        <thead>
+                            <tr>
+                                <th class="matrix-corner">
+                                    <div class="corner-text">
+                                        <div class="impact-label">Impact →</div>
+                                        <div class="likelihood-label">↓ Likelihood</div>
+                                    </div>
+                                </th>
+                                @{
+                                    var likelihoodLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue) ?? Enumerable.Empty<CyberRiskApp.Models.RiskMatrixLevel>();
+                                }
+                                @foreach (var level in likelihoodLevels)
+                                {
+                                    <th class="text-center likelihood-header" style="background-color: @(level.ColorCode)20; border: 2px solid @level.ColorCode;">
+                                        <div class="fw-bold">@level.LevelName</div>
+                                        <small class="text-muted">Level @level.LevelValue</small>
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var impactLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Impact).OrderByDescending(l => l.LevelValue) ?? Enumerable.Empty<CyberRiskApp.Models.RiskMatrixLevel>();
+                            }
+                            @foreach (var impactLevel in impactLevels)
+                            {
+                                <tr>
+                                    <th class="impact-header" style="background-color: @(impactLevel.ColorCode)20; border: 2px solid @impactLevel.ColorCode;">
+                                        <div class="fw-bold">@impactLevel.LevelName</div>
+                                        <small class="text-muted">Level @impactLevel.LevelValue</small>
+                                    </th>
+                                    
+                                    @foreach (var likelihoodLevel in likelihoodLevels)
+                                    {
+                                        var cell = cells.FirstOrDefault(c => 
+                                            c.ImpactLevel == impactLevel.LevelValue && 
+                                            c.LikelihoodLevel == likelihoodLevel.LevelValue && 
+                                            (Model.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihood || c.ExposureLevel == 1)
+                                        );
+                                        
+                                        @if (cell != null)
+                                        {
+                                            <td class="text-center matrix-cell" style="background-color: @GetRiskLevelColor(cell.ResultingRiskLevel.ToString()); color: white; font-weight: bold;">
+                                                <div class="risk-score">@cell.RiskScore</div>
+                                                <small class="risk-level">@cell.ResultingRiskLevel.ToString()</small>
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            <td class="text-center matrix-cell bg-light">
+                                                <div class="text-muted">-</div>
+                                            </td>
+                                        }
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                @if (Model.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihoodExposure)
+                {
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>3D Matrix Note:</strong> This preview shows the base matrix with exposure level 1. 
+                        In actual assessments, the exposure level will act as a multiplier to the base risk score.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Risk Level Summary -->
+        <div class="card">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Risk Level Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    @{
+                        var riskCounts = cells.GroupBy(c => c.ResultingRiskLevel.ToString())
+                            .ToDictionary(g => g.Key, g => g.Count());
+                        var totalCells = cells.Count();
+                    }
+                    
+                    @foreach (var riskLevel in new[] { "Low", "Medium", "High", "Critical" })
+                    {
+                        var count = riskCounts.ContainsKey(riskLevel) ? riskCounts[riskLevel] : 0;
+                        var percentage = totalCells > 0 ? (count * 100.0 / totalCells) : 0;
+                        
+                        <div class="col-md-3">
+                            <div class="card text-center" style="border-color: @GetRiskLevelColor(riskLevel);">
+                                <div class="card-body py-2">
+                                    <div class="risk-level-badge" style="background-color: @GetRiskLevelColor(riskLevel); color: white; padding: 0.25rem 0.5rem; border-radius: 0.375rem; font-weight: bold;">
+                                        @riskLevel Risk
+                                    </div>
+                                    <div class="mt-2">
+                                        <h4 class="mb-0">@count</h4>
+                                        <small class="text-muted">@percentage.ToString("F1")% of cells</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- No Matrix Data -->
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h4 class="text-muted">Matrix Not Generated</h4>
+                <p class="text-muted">This risk matrix hasn't been configured with levels and cells yet.</p>
+                <a asp-action="Configure" asp-route-id="@Model.Id" class="btn btn-primary">
+                    <i class="fas fa-cog me-1"></i>Configure Matrix
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@functions {
+    private string GetRiskLevelColor(string riskLevel)
+    {
+        return riskLevel?.ToLower() switch
+        {
+            "low" => "#28a745",
+            "medium" => "#ffc107",
+            "high" => "#fd7e14",
+            "critical" => "#dc3545",
+            _ => "#6c757d"
+        };
+    }
+}
+
+@section Styles {
+    <style>
+        .matrix-preview {
+            font-size: 0.9rem;
+            min-width: 600px;
+        }
+        
+        .matrix-corner {
+            background-color: #f8f9fa !important;
+            width: 120px;
+            height: 80px;
+            position: relative;
+            padding: 0;
+        }
+        
+        .corner-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .impact-label {
+            margin-bottom: 0.25rem;
+        }
+        
+        .likelihood-header, .impact-header {
+            background-color: #f8f9fa !important;
+            font-weight: bold;
+            min-width: 100px;
+            padding: 0.75rem;
+        }
+        
+        .matrix-cell {
+            min-width: 100px;
+            height: 80px;
+            vertical-align: middle !important;
+            position: relative;
+        }
+        
+        .risk-score {
+            font-size: 1.25rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        .risk-level {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+        
+        .legend-color {
+            border: 1px solid #dee2e6;
+        }
+        
+        .risk-level-badge {
+            display: inline-block;
+        }
+    </style>
+}

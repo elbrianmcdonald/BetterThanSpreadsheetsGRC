@@ -1,0 +1,1282 @@
+﻿@{
+    ViewData["Title"] = "CISO Executive Dashboard";
+}
+
+<!-- Include Chart.js for graphs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+<style>
+    /* Professional Executive Dashboard Styling - Business Conservative */
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #34495e;
+        --accent-color: #3498db;
+        --success-color: #27ae60;
+        --warning-color: #f39c12;
+        --danger-color: #e74c3c;
+        --info-color: #8e9aac;
+        --light-gray: #ecf0f1;
+        --medium-gray: #bdc3c7;
+        --dark-gray: #7f8c8d;
+        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        --card-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
+        --border-radius-card: 12px;
+        --border-radius-small: 6px;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .executive-dashboard {
+        background: transparent;
+        min-height: 100vh;
+    }
+
+    .executive-card {
+        border: none;
+        box-shadow: var(--card-shadow);
+        border-radius: var(--border-radius-card);
+        transition: all 0.3s ease;
+        background: var(--primary-color);
+        color: white;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .executive-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.05);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .executive-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--card-shadow-hover);
+    }
+
+    .executive-card:hover::before {
+        opacity: 1;
+    }
+
+    .metric-critical {
+        background: var(--danger-color);
+        background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+    }
+
+    .metric-high {
+        background: var(--warning-color);
+        background: linear-gradient(135deg, #d68910 0%, #f39c12 100%);
+    }
+
+    .metric-medium {
+        background: var(--info-color);
+        background: linear-gradient(135deg, #7d8ca3 0%, #8e9aac 100%);
+    }
+
+    .metric-warning {
+        background: var(--warning-color);
+        background: linear-gradient(135deg, #d68910 0%, #f39c12 100%);
+    }
+
+    .metric-good {
+        background: var(--accent-color);
+        background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+    }
+
+    .metric-success {
+        background: var(--success-color);
+        background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
+    }
+
+    .chart-executive {
+        background: #ffffff;
+        border-radius: var(--border-radius-card);
+        padding: 2rem;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--light-gray);
+        transition: all 0.3s ease;
+    }
+
+    .chart-executive:hover {
+        box-shadow: var(--card-shadow-hover);
+        transform: translateY(-2px);
+    }
+
+    .chart-executive h5 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        font-size: 1.125rem;
+        display: flex;
+        align-items: center;
+        border-bottom: 2px solid var(--light-gray);
+        padding-bottom: 0.75rem;
+    }
+
+    .chart-executive h5 i {
+        margin-right: 0.75rem;
+        font-size: 1.25rem;
+        color: var(--accent-color);
+    }
+
+    .chart-container {
+        position: relative;
+        height: 350px !important;
+        width: 100%;
+        overflow: hidden;
+        border-radius: var(--border-radius-small);
+    }
+
+    .chart-container canvas {
+        position: absolute !important;
+        top: 0;
+        left: 0;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 350px !important;
+    }
+
+    .kpi-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        padding: 1.5rem;
+    }
+
+    .kpi-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.9;
+    }
+
+    .kpi-number {
+        font-size: 2.75rem;
+        font-weight: 700;
+        line-height: 1;
+        margin: 0.5rem 0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-label {
+        font-size: 0.95rem;
+        margin: 0;
+        opacity: 0.9;
+        font-weight: 500;
+        line-height: 1.3;
+    }
+
+    .dashboard-header {
+        background: #ffffff;
+        border-radius: var(--border-radius-card);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--light-gray);
+    }
+
+    .dashboard-title {
+        color: var(--primary-color);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-size: 2.5rem;
+    }
+
+    .dashboard-subtitle {
+        color: var(--dark-gray);
+        font-weight: 400;
+        margin-bottom: 0;
+        font-size: 1.125rem;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        background: var(--light-gray);
+        color: var(--primary-color);
+        border: 1px solid var(--medium-gray);
+    }
+
+    .status-badge i {
+        margin-right: 0.5rem;
+        color: var(--accent-color);
+    }
+
+    .refresh-button {
+        background: var(--accent-color);
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(52, 152, 219, 0.3);
+    }
+
+    .refresh-button:hover {
+        background: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
+        color: white;
+    }
+
+    .table-modern {
+        background: white;
+        border-radius: var(--border-radius-small);
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--light-gray);
+    }
+
+    .table-modern thead th {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        font-weight: 600;
+        padding: 1rem;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .table-modern tbody td {
+        padding: 1rem;
+        border: none;
+        border-bottom: 1px solid var(--light-gray);
+        vertical-align: middle;
+    }
+
+    .table-modern tbody tr:hover {
+        background: rgba(236, 240, 241, 0.5);
+    }
+
+    .badge-modern {
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .no-data-message {
+        text-align: center;
+        color: #95a5a6;
+        font-style: italic;
+        padding: 3rem 2rem;
+    }
+
+    .no-data-message i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .assessment-selector {
+        background: #ffffff;
+        border-radius: var(--border-radius-card);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--light-gray);
+    }
+
+    .form-select-modern {
+        border: 2px solid var(--medium-gray);
+        border-radius: var(--border-radius-small);
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        background: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .form-select-modern:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+    }
+
+    .risk-appetite-controls {
+        background: var(--light-gray);
+        border-radius: var(--border-radius-small);
+        padding: 1rem;
+        margin-top: 1rem;
+        border: 1px solid var(--medium-gray);
+    }
+
+    .config-button {
+        background: var(--light-gray);
+        border: 1px solid var(--medium-gray);
+        border-radius: 25px;
+        padding: 0.5rem 1rem;
+        color: var(--primary-color);
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        font-weight: 500;
+    }
+
+    .config-button:hover {
+        background: var(--accent-color);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+        border-color: var(--accent-color);
+    }
+
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .dashboard-title {
+            font-size: 1.75rem;
+        }
+        
+        .kpi-number {
+            font-size: 2rem;
+        }
+        
+        .chart-container {
+            height: 250px !important;
+        }
+        
+        .chart-executive {
+            padding: 1.5rem;
+        }
+        
+        .dashboard-header {
+            padding: 1.5rem;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .kpi-container {
+            padding: 1rem;
+        }
+        
+        .kpi-number {
+            font-size: 1.75rem;
+        }
+        
+        .kpi-label {
+            font-size: 0.875rem;
+        }
+    }
+</style>
+
+<div class="executive-dashboard">
+<div class="container-fluid py-4">
+    <!-- Executive Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="dashboard-header">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div class="mb-3 mb-lg-0">
+                        <h1 class="dashboard-title">
+                            <i class="fas fa-shield-alt me-3" style="color: #3498db;"></i>CISO Executive Dashboard
+                        </h1>
+                        <p class="dashboard-subtitle">Enterprise Security Risk Posture & Key Performance Indicators</p>
+                    </div>
+                    <div class="text-end">
+                        <div class="status-badge mb-3">
+                            <i class="fas fa-clock"></i>Last Updated: <span id="lastUpdated">Loading...</span>
+                        </div>
+                        <div>
+                            <button class="refresh-button" id="refreshButton">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessment Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="assessment-selector">
+                <h5 class="mb-3" style="color: #2c3e50; font-weight: 600;">
+                    <i class="fas fa-clipboard-check me-2" style="color: #3498db;"></i>Assessment Selection
+                </h5>
+                <div class="row align-items-center">
+                    <div class="col-lg-6">
+                        <label for="assessmentDropdown" class="form-label fw-semibold">Select Assessment (In Progress or Completed):</label>
+                        <select class="form-select form-select-modern" id="assessmentDropdown">
+                            <option value="">-- Select Assessment --</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-6 mt-3 mt-lg-0">
+                        <div id="assessmentInfo" class="text-muted">
+                            <small>Select an assessment that is in progress or completed to view detailed compliance metrics</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Executive KPIs -->
+    <div class="row mb-5">
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
+            <div class="executive-card metric-critical h-100">
+                <div class="kpi-container">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-exclamation-triangle kpi-icon"></i>
+                            <div class="kpi-number" id="totalCriticalHighFindings">--</div>
+                            <div class="kpi-label">Critical & High Risk Findings</div>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-arrow-trend-up fa-lg opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
+            <div class="executive-card metric-high h-100">
+                <div class="kpi-container">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-clock kpi-icon"></i>
+                            <div class="kpi-number" id="overdueFindings">--</div>
+                            <div class="kpi-label">Overdue Findings</div>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-hourglass-end fa-lg opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
+            <div class="executive-card metric-warning h-100">
+                <div class="kpi-container">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-exclamation-circle kpi-icon"></i>
+                            <div class="d-flex align-items-center">
+                                <span class="kpi-number me-2" id="risksAboveAppetite">--</span>
+                                <i class="fas fa-arrow-up" id="appetiteTrendIcon" style="display: none; font-size: 1.5rem;"></i>
+                            </div>
+                            <div class="kpi-label mb-3">Risks Above Appetite</div>
+                            <div class="risk-appetite-controls">
+                                <select class="form-select form-select-sm mb-2" id="appetiteTimeFrame" style="font-size: 0.8rem;">
+                                    <option value="2weeks">2 Weeks</option>
+                                    <option value="month" selected>Month</option>
+                                    <option value="quarter">Quarter</option>
+                                    <option value="year">Year</option>
+                                </select>
+                                <a href="/RiskLevelSettings" class="config-button" title="Configure Risk Appetite">
+                                    <i class="fas fa-cogs me-1"></i>Configure
+                                </a>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-chart-line fa-lg opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
+            <div class="executive-card metric-medium h-100">
+                <div class="kpi-container">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-dollar-sign kpi-icon"></i>
+                            <div class="kpi-number" id="totalALE">--</div>
+                            <div class="kpi-label">Total Annual Loss Exposure</div>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-coins fa-lg opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary KPIs -->
+    <div class="row mb-5">
+        <div class="col-lg-12">
+            <div class="executive-card metric-success h-100">
+                <div class="kpi-container">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-shield-check kpi-icon me-4"></i>
+                            <div>
+                                <div class="kpi-number" id="compliancePercentage">--</div>
+                                <div class="kpi-label">Overall Compliance Percentage</div>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <i class="fas fa-certificate fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Distribution Charts and Business Unit Heatmap -->
+    <div class="row mb-5">
+        <!-- Risk Distribution Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-executive">
+                <h5>
+                    <i class="fas fa-chart-pie"></i>Risk Distribution
+                </h5>
+                <div class="chart-container">
+                    <canvas id="riskDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Business Unit Risk Heatmap -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-executive">
+                <h5>
+                    <i class="fas fa-building"></i>Business Unit Risk Heatmap
+                </h5>
+                <div class="table-responsive">
+                    <table class="table table-modern">
+                        <thead>
+                            <tr>
+                                <th>Business Unit</th>
+                                <th class="text-center">Critical</th>
+                                <th class="text-center">High</th>
+                                <th class="text-center">Overdue</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="businessUnitHeatmap">
+                            <tr>
+                                <td colspan="5" class="no-data-message">
+                                    <i class="fas fa-building"></i>
+                                    Loading business unit data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Critical Issues and Financial Risk Tables -->
+    <div class="row mb-5">
+        <!-- Top Critical Issues -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-executive">
+                <h5>
+                    <i class="fas fa-fire"></i>Top Critical Issues
+                </h5>
+                <div class="table-responsive">
+                    <table class="table table-modern">
+                        <thead>
+                            <tr>
+                                <th>Finding</th>
+                                <th class="text-center">Risk Level</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Days Open</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topCriticalIssues">
+                            <tr>
+                                <td colspan="4" class="no-data-message">
+                                    <i class="fas fa-fire"></i>
+                                    Loading critical issues...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Financial Risks -->
+        <div class="col-lg-6 mb-4">
+            <div class="chart-executive">
+                <h5>
+                    <i class="fas fa-money-bill-wave"></i>Top Financial Risks
+                </h5>
+                <div class="table-responsive">
+                    <table class="table table-modern">
+                        <thead>
+                            <tr>
+                                <th>Risk Description</th>
+                                <th class="text-end">Annual Loss Exposure</th>
+                                <th class="text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topFinancialRisks">
+                            <tr>
+                                <td colspan="3" class="no-data-message">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    Loading financial risk data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Trend Analysis -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="chart-executive">
+                <h5>
+                    <i class="fas fa-chart-line"></i>Risk Trend Analysis
+                </h5>
+                <div class="chart-container">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+@section Scripts {
+    <script>
+        // CISO Executive Dashboard JavaScript
+        // FIXED: Added comprehensive null checks to prevent null reference exceptions
+
+        let currentAssessmentId = 0;
+        let riskDistributionChart = null;
+        let trendChart = null;
+
+        // Dashboard initialization
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🚀 CISO Dashboard initializing...');
+            loadDashboardData();
+
+            // Set up refresh button - with null check
+            const refreshButton = document.getElementById('refreshButton');
+            if (refreshButton) {
+                refreshButton.addEventListener('click', function () {
+                    console.log('🔄 Manual refresh triggered');
+                    loadDashboardData();
+                });
+            }
+
+            // Load available assessments
+            loadAvailableAssessments();
+        });
+
+        // Load available assessments for the dropdown - WITH DEBUGGING AND NULL CHECKS
+        function loadAvailableAssessments() {
+            console.log('🔄 Loading available assessments...');
+
+            fetch('/CISOExecutive/GetAvailableAssessments')
+                .then(response => {
+                    console.log('📡 Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('✅ Raw API response:', data);
+                    console.log('📊 Type of response:', typeof data);
+                    console.log('📊 Is array?', Array.isArray(data));
+
+                    const dropdown = document.getElementById('assessmentDropdown');
+                    if (!dropdown) {
+                        console.error('❌ Assessment dropdown not found');
+                        return;
+                    }
+
+                    // Clear existing options except the first one
+                    while (dropdown.children.length > 1) {
+                        dropdown.removeChild(dropdown.lastChild);
+                    }
+
+                    // Handle the response - check if it's an array or has an error
+                    if (data && data.error) {
+                        console.error('❌ API returned error:', data.error);
+                        const infoDiv = document.getElementById('assessmentInfo');
+                        if (infoDiv) {
+                            infoDiv.innerHTML = '<small class="text-danger">Error loading assessments</small>';
+                        }
+                        return;
+                    }
+
+                    const assessments = Array.isArray(data) ? data : [];
+                    console.log(`📊 Found ${assessments.length} assessments`);
+
+                    if (assessments.length === 0) {
+                        const infoDiv = document.getElementById('assessmentInfo');
+                        if (infoDiv) {
+                            infoDiv.innerHTML = '<small class="text-warning">No assessments available</small>';
+                        }
+                        return;
+                    }
+
+                    // Add assessment options
+                    assessments.forEach(assessment => {
+                        if (assessment && assessment.Value && assessment.Text) {
+                            const option = document.createElement('option');
+                            option.value = assessment.Value;
+                            option.textContent = assessment.Text;
+                            dropdown.appendChild(option);
+                        }
+                    });
+
+                    // Add change event listener - with null check
+                    if (!dropdown.hasChangeListener) {
+                        dropdown.addEventListener('change', function () {
+                            const selectedId = this.value;
+                            console.log('🎯 Assessment selected:', selectedId);
+
+                            if (selectedId) {
+                                currentAssessmentId = parseInt(selectedId);
+                                loadDashboardData();
+                                const infoDiv = document.getElementById('assessmentInfo');
+                                if (infoDiv) {
+                                    const selectedText = this.options[this.selectedIndex].text;
+                                    infoDiv.innerHTML = `<small class="text-success">Selected: ${selectedText}</small>`;
+                                }
+                            } else {
+                                currentAssessmentId = 0;
+                                loadDashboardData();
+                                const infoDiv = document.getElementById('assessmentInfo');
+                                if (infoDiv) {
+                                    infoDiv.innerHTML = '<small class="text-muted">Select an assessment</small>';
+                                }
+                            }
+                        });
+                        dropdown.hasChangeListener = true;
+                    }
+
+                    console.log('✅ Assessment dropdown populated successfully');
+                })
+                .catch(error => {
+                    console.error('❌ Error loading assessments:', error);
+                    const infoDiv = document.getElementById('assessmentInfo');
+                    if (infoDiv) {
+                        infoDiv.innerHTML = '<small class="text-danger">Failed to load assessments</small>';
+                    }
+                });
+        }
+
+        // Load dashboard data with comprehensive error handling
+        function loadDashboardData() {
+            console.log('🔄 Loading dashboard data for assessment ID:', currentAssessmentId);
+
+            const url = currentAssessmentId > 0
+                ? `/CISOExecutive/GetExecutiveDashboardData?assessmentId=${currentAssessmentId}`
+                : '/CISOExecutive/GetExecutiveDashboardData';
+
+            fetch(url)
+                .then(response => {
+                    console.log('📡 Dashboard API response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('✅ Dashboard data received:', data);
+
+                    if (data && data.error) {
+                        console.error('❌ Dashboard API returned error:', data.error);
+                        showErrorMessage('Error loading dashboard data: ' + data.error);
+                        return;
+                    }
+
+                    // Update all sections with null checks
+                    updateLastUpdated();
+                    updateKPIs(data);
+                    updateBusinessUnitsTable(data);
+                    updateTopCriticalIssues(data);
+                    updateFinancialRisksTable(data);
+                    updateRiskDistributionChart(data);
+                    updateTrendChart(data);
+
+                    console.log('✅ Dashboard update completed');
+                })
+                .catch(error => {
+                    console.error('❌ Error loading dashboard data:', error);
+                    showErrorMessage('Failed to load dashboard data. Please try again.');
+                });
+        }
+
+        // Show error message to user
+        function showErrorMessage(message) {
+            // Update last updated time to show error
+            const lastUpdatedElement = document.getElementById('lastUpdated');
+            if (lastUpdatedElement) {
+                lastUpdatedElement.textContent = 'Error loading data';
+                lastUpdatedElement.className = 'text-danger';
+            }
+
+            // You could also show a toast notification here if you have that implemented
+            console.error('Showing error to user:', message);
+        }
+
+        // Update last updated timestamp
+        function updateLastUpdated() {
+            const lastUpdatedElement = document.getElementById('lastUpdated');
+            if (lastUpdatedElement) {
+                lastUpdatedElement.textContent = new Date().toLocaleString();
+                lastUpdatedElement.className = ''; // Remove any error styling
+            }
+        }
+
+        // FIXED: Update KPIs with null checks
+        function updateKPIs(data) {
+            console.log('🔄 Updating KPIs with data:', data);
+
+            // Set default values
+            const defaults = {
+                totalCriticalHighFindings: 0,
+                overdueFindings: 0,
+                totalALE: 0,
+                compliancePercentage: 0
+            };
+
+            // Safely get values with null checks
+            if (data && data.summary) {
+                const summary = data.summary;
+
+                const totalCriticalHigh = (summary.totalCriticalHighFindings !== undefined && summary.totalCriticalHighFindings !== null)
+                    ? summary.totalCriticalHighFindings : defaults.totalCriticalHighFindings;
+                const overdue = (summary.overdueFindings !== undefined && summary.overdueFindings !== null)
+                    ? summary.overdueFindings : defaults.overdueFindings;
+                const ale = (summary.totalALE !== undefined && summary.totalALE !== null)
+                    ? summary.totalALE : defaults.totalALE;
+                const compliance = (summary.compliancePercentage !== undefined && summary.compliancePercentage !== null)
+                    ? summary.compliancePercentage : defaults.compliancePercentage;
+
+                // Update elements with null checks
+                const totalCriticalHighElement = document.getElementById('totalCriticalHighFindings');
+                if (totalCriticalHighElement) {
+                    totalCriticalHighElement.textContent = totalCriticalHigh.toString();
+                }
+
+                const overdueElement = document.getElementById('overdueFindings');
+                if (overdueElement) {
+                    overdueElement.textContent = overdue.toString();
+                }
+
+                const aleElement = document.getElementById('totalALE');
+                if (aleElement) {
+                    aleElement.textContent = ale > 0 ? formatCurrency(ale) : '$0';
+                }
+
+                const complianceElement = document.getElementById('compliancePercentage');
+                if (complianceElement) {
+                    complianceElement.textContent = compliance + '%';
+                }
+
+                // Update risks above appetite
+                const risksAboveAppetite = (summary.risksAboveAppetite !== undefined && summary.risksAboveAppetite !== null)
+                    ? summary.risksAboveAppetite : 0;
+                const appetiteTrend = summary.riskAppetiteTrend || 'stable';
+
+                const risksAboveAppetiteElement = document.getElementById('risksAboveAppetite');
+                if (risksAboveAppetiteElement) {
+                    risksAboveAppetiteElement.textContent = risksAboveAppetite.toString();
+                }
+
+                const trendIcon = document.getElementById('appetiteTrendIcon');
+                if (trendIcon) {
+                    trendIcon.style.display = appetiteTrend === 'up' ? 'inline-block' : 'none';
+                    trendIcon.className = appetiteTrend === 'up' ? 'fas fa-arrow-up text-danger' : 'fas fa-arrow-down text-success';
+                }
+
+                console.log('✅ Updated KPIs');
+            } else {
+                console.log('⚠️ No summary data available, using defaults');
+
+                // Set default values when no data
+                const elements = [
+                    { id: 'totalCriticalHighFindings', value: defaults.totalCriticalHighFindings },
+                    { id: 'overdueFindings', value: defaults.overdueFindings },
+                    { id: 'totalALE', value: '$0' },
+                    { id: 'compliancePercentage', value: defaults.compliancePercentage + '%' },
+                    { id: 'risksAboveAppetite', value: 0 }
+                ];
+
+                elements.forEach(element => {
+                    const el = document.getElementById(element.id);
+                    if (el) {
+                        el.textContent = element.value;
+                    }
+                });
+                
+                // Hide trend icon when no data
+                const trendIcon = document.getElementById('appetiteTrendIcon');
+                if (trendIcon) {
+                    trendIcon.style.display = 'none';
+                }
+            }
+        }
+
+        // FIXED: Update business units table with null checks
+        function updateBusinessUnitsTable(data) {
+            const tableBody = document.getElementById('businessUnitHeatmap');
+            if (!tableBody) {
+                console.error('❌ Business unit heatmap table not found');
+                return;
+            }
+
+            if (data && data.businessUnitMetrics && Array.isArray(data.businessUnitMetrics) && data.businessUnitMetrics.length > 0) {
+                let html = '';
+                data.businessUnitMetrics.forEach(unit => {
+                    if (unit) {
+                        const businessUnit = unit.businessUnit || 'Unknown';
+                        const totalFindings = unit.totalFindings || 0;
+                        const criticalCount = unit.criticalCount || 0;
+                        const highCount = unit.highCount || 0;
+                        const overdueCount = unit.overdueCount || 0;
+                        const status = unit.status || 'unknown';
+                        const statusClass = getStatusClass(status);
+
+                        html += `
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-dark">${escapeHtml(businessUnit)}</div>
+                                    <small class="text-muted">${totalFindings} total findings</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-modern bg-danger">${criticalCount}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-modern bg-warning text-dark">${highCount}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-modern bg-info">${overdueCount}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-modern bg-${statusClass}">${status.toUpperCase()}</span>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+                tableBody.innerHTML = html;
+                console.log(`✅ Updated business units table with ${data.businessUnitMetrics.length} units`);
+            } else {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="no-data-message">
+                            <i class="fas fa-building fa-2x mb-2 text-muted d-block"></i>
+                            No business unit data available
+                        </td>
+                    </tr>`;
+                console.log('⚠️ No business unit data available');
+            }
+        }
+
+        // FIXED: Update top critical issues with null checks
+        function updateTopCriticalIssues(data) {
+            const tableBody = document.getElementById('topCriticalIssues');
+            if (!tableBody) {
+                console.error('❌ Top critical issues table not found');
+                return;
+            }
+
+            if (data && data.topCriticalIssues && Array.isArray(data.topCriticalIssues) && data.topCriticalIssues.length > 0) {
+                let html = '';
+                data.topCriticalIssues.forEach(issue => {
+                    if (issue) {
+                        const title = issue.title || 'Unknown Issue';
+                        const businessUnit = issue.businessUnit || 'Unknown';
+                        const riskRating = issue.riskRating || 'Unknown';
+                        const status = issue.status || 'Unknown';
+                        const daysOpen = issue.daysOpen || 0;
+
+                        html += `
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-dark">${escapeHtml(title)}</div>
+                                    <small class="text-muted">${escapeHtml(businessUnit)}</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-modern bg-${getRiskBadgeClass(riskRating)}">${riskRating.toUpperCase()}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-modern bg-secondary">${status.toUpperCase()}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="fw-bold text-primary">${daysOpen} days</span>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+                tableBody.innerHTML = html;
+                console.log(`✅ Updated critical issues table with ${data.topCriticalIssues.length} issues`);
+            } else {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="no-data-message">
+                            <i class="fas fa-fire fa-2x mb-2 text-muted d-block"></i>
+                            No critical issues found
+                        </td>
+                    </tr>`;
+                console.log('⚠️ No critical issues data available');
+            }
+        }
+
+        // FIXED: Update financial risks table with null checks
+        function updateFinancialRisksTable(data) {
+            const tableBody = document.getElementById('topFinancialRisks');
+            if (!tableBody) {
+                console.error('❌ Financial risks table not found');
+                return;
+            }
+
+            if (data && data.topFinancialRisks && Array.isArray(data.topFinancialRisks) && data.topFinancialRisks.length > 0) {
+                let html = '';
+                data.topFinancialRisks.forEach(risk => {
+                    if (risk) {
+                        const riskDescription = risk.riskDescription || 'Unknown Risk';
+                        const asset = risk.asset || 'Unknown Asset';
+                        const ale = risk.ale || 0;
+                        const status = risk.status || 'Unknown';
+
+                        html += `
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-dark">${escapeHtml(riskDescription)}</div>
+                                    <small class="text-muted">${escapeHtml(asset)}</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="fw-bold" style="color: #27ae60; font-size: 1.1rem;">${formatCurrency(ale)}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge badge-modern bg-${getStatusClass(status.toLowerCase())}">${status.toUpperCase()}</span>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                });
+                tableBody.innerHTML = html;
+                console.log(`✅ Updated financial risks table with ${data.topFinancialRisks.length} risks`);
+            } else {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="no-data-message">
+                            <i class="fas fa-money-bill-wave fa-2x mb-2 text-muted d-block"></i>
+                            No financial risk data available
+                        </td>
+                    </tr>`;
+                console.log('⚠️ No financial risks data available');
+            }
+        }
+
+        // FIXED: Update risk distribution chart with null checks
+        function updateRiskDistributionChart(data) {
+            const ctx = document.getElementById('riskDistributionChart');
+            if (!ctx) {
+                console.error('❌ Risk distribution chart canvas not found');
+                return;
+            }
+
+            // Destroy existing chart if it exists
+            if (riskDistributionChart) {
+                riskDistributionChart.destroy();
+                riskDistributionChart = null;
+            }
+
+            // Set default data
+            let chartData = {
+                labels: ['Critical', 'High', 'Medium', 'Low'],
+                datasets: [{
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#6c757d']
+                }]
+            };
+
+            // Use real data if available
+            if (data && data.riskDistribution) {
+                const dist = data.riskDistribution;
+                chartData.datasets[0].data = [
+                    dist.critical || 0,
+                    dist.high || 0,
+                    dist.medium || 0,
+                    dist.low || 0
+                ];
+            }
+
+            try {
+                riskDistributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+                console.log('✅ Updated risk distribution chart');
+            } catch (error) {
+                console.error('❌ Error creating risk distribution chart:', error);
+            }
+        }
+
+        // FIXED: Update trend chart with null checks
+        function updateTrendChart(data) {
+            const ctx = document.getElementById('trendChart');
+            if (!ctx) {
+                console.error('❌ Trend chart canvas not found');
+                return;
+            }
+
+            // Destroy existing chart if it exists
+            if (trendChart) {
+                trendChart.destroy();
+                trendChart = null;
+            }
+
+            // Set default data
+            let trendData = {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                critical: [0, 0, 0, 0],
+                high: [0, 0, 0, 0],
+                medium: [0, 0, 0, 0]
+            };
+
+            // Use real data if available
+            if (data && data.trendData) {
+                const trend = data.trendData;
+                if (trend.labels && Array.isArray(trend.labels)) {
+                    trendData.labels = trend.labels;
+                }
+                if (trend.critical && Array.isArray(trend.critical)) {
+                    trendData.critical = trend.critical;
+                }
+                if (trend.high && Array.isArray(trend.high)) {
+                    trendData.high = trend.high;
+                }
+                if (trend.medium && Array.isArray(trend.medium)) {
+                    trendData.medium = trend.medium;
+                }
+            }
+
+            try {
+                trendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: trendData.labels,
+                        datasets: [
+                            {
+                                label: 'Critical',
+                                data: trendData.critical,
+                                borderColor: '#dc3545',
+                                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'High',
+                                data: trendData.high,
+                                borderColor: '#fd7e14',
+                                backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Medium',
+                                data: trendData.medium,
+                                borderColor: '#ffc107',
+                                backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+                console.log('✅ Updated trend chart');
+            } catch (error) {
+                console.error('❌ Error creating trend chart:', error);
+            }
+        }
+
+        // Utility functions with null checks
+        function formatCurrency(amount) {
+            if (amount === null || amount === undefined || isNaN(amount)) {
+                return '$0';
+            }
+            try {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(amount);
+            } catch (error) {
+                console.error('Error formatting currency:', error);
+                return '$0';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function getStatusClass(status) {
+            if (!status) return 'secondary';
+            const statusLower = status.toLowerCase();
+            switch (statusLower) {
+                case 'critical': return 'danger';
+                case 'warning': return 'warning';
+                case 'good': return 'success';
+                case 'excellent': return 'primary';
+                case 'open': return 'danger';
+                case 'closed': return 'success';
+                case 'in progress': return 'warning';
+                default: return 'secondary';
+            }
+        }
+
+        function getRiskBadgeClass(riskRating) {
+            if (!riskRating) return 'secondary';
+            const riskLower = riskRating.toLowerCase();
+            switch (riskLower) {
+                case 'critical': return 'danger';
+                case 'high': return 'warning';
+                case 'medium': return 'info';
+                case 'low': return 'success';
+                default: return 'secondary';
+            }
+        }
+    </script>
+}

@@ -1,0 +1,294 @@
+﻿@model CyberRiskApp.Models.Risk
+@{
+    ViewData["Title"] = $"Risk Details - {Model.RiskNumber}";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-danger text-white">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="card-title mb-0">
+                                <i class="fas fa-bullseye me-2"></i>Risk Details
+                            </h3>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge bg-light text-dark fs-6">@Model.RiskNumber</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h4 class="fw-bold text-primary">@Model.Title</h4>
+                            <p class="text-muted mb-3">@Model.Description</p>
+                            <div class="mb-3">
+                                <strong>Threat Scenario:</strong>
+                                <div class="border rounded p-2 bg-light small">
+                                    @Model.ThreatScenario
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <span class="badge bg-@GetRiskColor(Model.RiskLevel) fs-5">
+                                    @Model.RiskLevel Risk
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <span class="badge bg-secondary fs-6">
+                                    @Model.Treatment
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <strong>Annual Loss Expectancy:</strong><br>
+                                <span class="h4 text-danger fw-bold">@Model.ALE.ToString("C0")</span>
+                            </div>
+                            <div class="mb-2">
+                                <strong>Risk Owner:</strong><br>
+                                <i class="fas fa-user me-1"></i>@Model.Owner
+                            </div>
+                            <div class="mb-2">
+                                <strong>Open Date:</strong><br>
+                                <i class="fas fa-calendar me-1"></i>@Model.OpenDate.ToString("MMMM dd, yyyy")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Risk Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Asset</label>
+                                <p class="mb-0">@Model.Asset</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Treatment Strategy</label>
+                                <p class="mb-0">
+                                    <span class="badge bg-secondary me-2">@Model.Treatment</span>
+                                </p>
+                                <small class="text-muted">
+                                    @switch (Model.Treatment)
+                                    {
+                                        case CyberRiskApp.Models.TreatmentStrategy.Mitigate:
+                                            @:Reduce the risk through controls and safeguards
+                                            break;
+                                        case CyberRiskApp.Models.TreatmentStrategy.Transfer:
+                                            @:Transfer the risk to a third party (insurance, outsourcing)
+                                            break;
+                                        case CyberRiskApp.Models.TreatmentStrategy.Accept:
+                                            @:Accept the risk as-is with no further action
+                                            break;
+                                        case CyberRiskApp.Models.TreatmentStrategy.Avoid:
+                                            @:Eliminate the risk by avoiding the activity
+                                            break;
+                                    }
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Status</label>
+                                <p class="mb-0">
+                                    <i class="fas fa-@GetStatusIcon(Model.Status) text-@GetStatusColor(Model.Status) me-2"></i>
+                                    @Model.Status
+                                </p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Risk Owner</label>
+                                <p class="mb-0">@Model.Owner</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Next Review Date</label>
+                                <p class="mb-0">
+                                    @if (Model.NextReviewDate.HasValue)
+                                    {
+                                        <span class="@(Model.NextReviewDate < DateTime.Today ? "text-danger fw-bold" : "")">
+                                            @Model.NextReviewDate.Value.ToString("MMM dd, yyyy")
+                                            @if (Model.NextReviewDate < DateTime.Today)
+                                            {
+                                                <br>
+                                                <small class="text-danger"><i class="fas fa-clock me-1"></i>Overdue</small>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not set</span>
+                                    }
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Source Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-link me-2"></i>Source Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            @if (Model.LinkedAssessment != null)
+                            {
+                                <div class="alert alert-info">
+                                    <h6 class="fw-bold mb-2">
+                                        <i class="fas fa-chart-bar me-2"></i>Created from FAIR Assessment
+                                    </h6>
+                                    <p class="mb-2">
+                                        <strong>Assessment:</strong> @Model.LinkedAssessment.Title
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>Date:</strong> @(Model.LinkedAssessment.DateCompleted?.ToString("MMM dd, yyyy") ?? "Not completed")
+                                    </p>
+                                </div>
+                            }
+                            @if (Model.LinkedFinding != null)
+                            {
+                                <div class="alert alert-warning">
+                                    <h6 class="fw-bold mb-2">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Created from Finding
+                                    </h6>
+                                    <p class="mb-2">
+                                        <strong>Finding:</strong> @Model.LinkedFinding.FindingNumber
+                                    </p>
+                                    <p class="mb-2">
+                                        <strong>Title:</strong> @Model.LinkedFinding.Title
+                                    </p>
+                                    <p class="mb-0">
+                                        <strong>Risk Rating:</strong>
+                                        <span class="badge bg-@GetFindingRiskColor(Model.LinkedFinding.RiskRating)">
+                                            @Model.LinkedFinding.RiskRating
+                                        </span>
+                                    </p>
+                                </div>
+                            }
+                            @if (Model.LinkedAssessment == null && Model.LinkedFinding == null)
+                            {
+                                <div class="alert alert-secondary">
+                                    <h6 class="fw-bold mb-2">
+                                        <i class="fas fa-question-circle me-2"></i>Manually Created
+                                    </h6>
+                                    <p class="mb-0">This risk was created manually and is not linked to a specific assessment or finding.</p>
+                                </div>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Risk Number</label>
+                                <p class="mb-0">
+                                    <code class="text-primary fs-5">@Model.RiskNumber</code>
+                                </p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Created</label>
+                                <p class="mb-0">@Model.CreatedAt.ToString("MMMM dd, yyyy HH:mm")</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted">Last Updated</label>
+                                <p class="mb-0">@Model.UpdatedAt.ToString("MMMM dd, yyyy HH:mm")</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="d-flex gap-3 flex-wrap">
+                        @if (Model.LinkedAssessment != null)
+                        {
+                            <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.RiskAssessmentId" class="btn btn-info">
+                                <i class="fas fa-chart-bar me-2"></i>View FAIR Assessment
+                            </a>
+                        }
+
+                        @if (Model.LinkedFinding != null)
+                        {
+                            <a asp-controller="Findings" asp-action="Details" asp-route-id="@Model.FindingId" class="btn btn-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>View Finding
+                            </a>
+                        }
+
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-list me-2"></i>Back to Risk Register
+                        </a>
+
+                        <button class="btn btn-outline-primary" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>Print Risk Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    public string GetRiskColor(CyberRiskApp.Models.RiskLevel riskLevel)
+    {
+        return riskLevel switch
+        {
+            CyberRiskApp.Models.RiskLevel.Critical => "danger",
+            CyberRiskApp.Models.RiskLevel.High => "warning",
+            CyberRiskApp.Models.RiskLevel.Medium => "info",
+            CyberRiskApp.Models.RiskLevel.Low => "success",
+            _ => "secondary"
+        };
+    }
+
+    public string GetStatusColor(CyberRiskApp.Models.RiskStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.RiskStatus.Open => "danger",
+            CyberRiskApp.Models.RiskStatus.UnderReview => "warning",
+            CyberRiskApp.Models.RiskStatus.Closed => "success",
+            CyberRiskApp.Models.RiskStatus.Accepted => "info",
+            _ => "secondary"
+        };
+    }
+
+    public string GetStatusIcon(CyberRiskApp.Models.RiskStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.RiskStatus.Open => "exclamation-circle",
+            CyberRiskApp.Models.RiskStatus.UnderReview => "hourglass-half",
+            CyberRiskApp.Models.RiskStatus.Closed => "check-circle",
+            CyberRiskApp.Models.RiskStatus.Accepted => "handshake",
+            _ => "question-circle"
+        };
+    }
+
+    public string GetFindingRiskColor(CyberRiskApp.Models.RiskRating riskRating)
+    {
+        return riskRating switch
+        {
+            CyberRiskApp.Models.RiskRating.Critical => "danger",
+            CyberRiskApp.Models.RiskRating.High => "warning",
+            CyberRiskApp.Models.RiskRating.Medium => "info",
+            CyberRiskApp.Models.RiskRating.Low => "success",
+            _ => "secondary"
+        };
+    }
+}

@@ -1,0 +1,213 @@
+﻿@model AssessmentRequest
+@{
+    ViewData["Title"] = "Assessment Request Details";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Assessment Request #@Model.Id
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Request Information</h6>
+                        <p><strong>Requester:</strong> @Model.RequesterName</p>
+                        <p><strong>Department:</strong> @Model.Department</p>
+                        <p><strong>Contact Email:</strong> @Model.ContactEmail</p>
+                        <p><strong>Request Date:</strong> @Model.RequestDate.ToString("MMMM dd, yyyy")</p>
+                        <p>
+                            <strong>Requested Timeline:</strong>
+                            @if (Model.RequestedTimeline.HasValue)
+                            {
+                                @Model.RequestedTimeline.Value.ToString("MMMM dd, yyyy")
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not specified</span>
+                            }
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Status Information</h6>
+                        <p>
+                            <strong>Priority:</strong>
+                            @switch (Model.Priority)
+                            {
+                                case Priority.Urgent:
+                                    <span class="badge bg-danger">Urgent</span>
+                                    break;
+                                case Priority.High:
+                                    <span class="badge bg-warning">High</span>
+                                    break;
+                                case Priority.Medium:
+                                    <span class="badge bg-info">Medium</span>
+                                    break;
+                                case Priority.Low:
+                                    <span class="badge bg-success">Low</span>
+                                    break;
+                            }
+                        </p>
+                        <p>
+                            <strong>Status:</strong>
+                            @switch (Model.Status)
+                            {
+                                case RequestStatus.Pending:
+                                    <span class="badge bg-warning">Pending</span>
+                                    break;
+                                case RequestStatus.InProgress:
+                                    <span class="badge bg-info">In Progress</span>
+                                    break;
+                                case RequestStatus.Completed:
+                                    <span class="badge bg-success">Completed</span>
+                                    break;
+                                case RequestStatus.Rejected:
+                                    <span class="badge bg-danger">Rejected</span>
+                                    break;
+                            }
+                        </p>
+                        <p><strong>Assigned To:</strong> @(string.IsNullOrEmpty(Model.AssignedTo) ? "Unassigned" : Model.AssignedTo)</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <h6>Assessment Scope</h6>
+                    <div class="border rounded p-3 bg-light">
+                        @Html.Raw(Model.Scope.Replace("\n", "<br>"))
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <h6>Business Justification</h6>
+                    <div class="border rounded p-3 bg-light">
+                        @Html.Raw(Model.Justification.Replace("\n", "<br>"))
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <div class="mb-3">
+                        <h6>Additional Notes</h6>
+                        <div class="border rounded p-3 bg-light">
+                            @Html.Raw(Model.Notes.Replace("\n", "<br>"))
+                        </div>
+                    </div>
+                }
+
+                <div class="mt-4">
+                    @if (Model.Status == RequestStatus.Pending)
+                    {
+                        <button type="button" class="btn btn-success" onclick="updateStatus('@RequestStatus.InProgress')">
+                            <i class="fas fa-play me-2"></i>Start Assessment
+                        </button>
+                    }
+                    @if (Model.Status == RequestStatus.InProgress)
+                    {
+                        <button type="button" class="btn btn-success" onclick="updateStatus('@RequestStatus.Completed')">
+                            <i class="fas fa-check me-2"></i>Mark Complete
+                        </button>
+                    }
+                    @if (Model.Status == RequestStatus.Pending || Model.Status == RequestStatus.InProgress)
+                    {
+                        <button type="button" class="btn btn-danger" onclick="updateStatus('@RequestStatus.Rejected')">
+                            <i class="fas fa-times me-2"></i>Reject Request
+                        </button>
+                    }
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Requests
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item @(Model.Status >= RequestStatus.Pending ? "completed" : "")">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6>Request Submitted</h6>
+                            <small>@Model.RequestDate.ToString("MM/dd/yyyy")</small>
+                        </div>
+                    </div>
+                    <div class="timeline-item @(Model.Status >= RequestStatus.InProgress ? "completed" : "")">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6>Assessment Started</h6>
+                            <small>@(Model.Status >= RequestStatus.InProgress ? "In Progress" : "Pending")</small>
+                        </div>
+                    </div>
+                    <div class="timeline-item @(Model.Status == RequestStatus.Completed ? "completed" : "")">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6>Assessment Complete</h6>
+                            <small>@(Model.Status == RequestStatus.Completed ? "Completed" : "Pending")</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Update Form -->
+<form id="statusForm" asp-action="UpdateAssessmentStatus" method="post" style="display: none;">
+    <input type="hidden" name="id" value="@Model.Id" />
+    <input type="hidden" id="statusInput" name="status" />
+</form>
+
+@section Scripts {
+    <script>
+        function updateStatus(status) {
+            if (confirm(`Are you sure you want to update the status to ${status}?`)) {
+                document.getElementById('statusInput').value = status;
+                document.getElementById('statusForm').submit();
+            }
+        }
+    </script>
+}
+
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 20px;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -25px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        opacity: 0.5;
+    }
+
+    .timeline-item.completed .timeline-marker {
+        opacity: 1;
+    }
+
+    .timeline-content h6 {
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+
+    .timeline-content small {
+        color: #6c757d;
+    }
+</style>

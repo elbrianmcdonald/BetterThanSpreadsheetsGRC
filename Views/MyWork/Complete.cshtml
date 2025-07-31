@@ -1,0 +1,83 @@
+﻿@model CyberRiskApp.Models.AssessmentRequest
+@{
+    ViewData["Title"] = "Complete Work";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Complete Assessment Request #@Model.Id</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Request Summary -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Request Summary</h6>
+                        <p class="mb-1"><strong>Scope:</strong> @Model.Scope</p>
+                        <p class="mb-1"><strong>Requester:</strong> @Model.RequesterName</p>
+                        <p class="mb-1"><strong>Department:</strong> @Model.Department</p>
+                        @if (Model.StartedDate.HasValue)
+                        {
+                            var timeElapsed = DateTime.UtcNow - Model.StartedDate.Value;
+                            var elapsedHours = Math.Round(timeElapsed.TotalHours, 1);
+                            <p class="mb-0"><strong>Time Elapsed:</strong> @elapsedHours hours (@timeElapsed.Days days)</p>
+                        }
+                    </div>
+
+                    <form asp-action="Complete" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-clock me-1"></i>Actual Hours Worked <span class="text-danger">*</span>
+                                    </label>
+                                    <input name="actualHours" class="form-control" type="number" step="0.1" min="0.1" max="1000" required />
+
+                                    @if (Model.StartedDate.HasValue)
+                                    {
+                                        var suggestedTime = (decimal)(DateTime.UtcNow - Model.StartedDate.Value).TotalHours;
+                                        var suggestedTimeRounded = Math.Round(suggestedTime, 1);
+                                        <div class="form-text">
+                                            Suggested based on elapsed time: @suggestedTimeRounded hours
+                                            <button type="button" class="btn btn-sm btn-link p-0 ms-2"
+                                                    onclick="document.querySelector('input[name=actualHours]').value = '@suggestedTimeRounded'">
+                                                Use Suggested
+                                            </button>
+                                        </div>
+                                    }
+
+                                    @if (Model.EstimatedHours.HasValue)
+                                    {
+                                        var estimatedRounded = Math.Round(Model.EstimatedHours.Value, 1);
+                                        <div class="form-text">Original estimate: @estimatedRounded hours</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-sticky-note me-1"></i>Completion Notes
+                            </label>
+                            <textarea name="notes" class="form-control" rows="4"
+                                      placeholder="Summary of work completed, challenges encountered, recommendations, etc..."></textarea>
+                            <div class="form-text">Document what was accomplished and any important findings or recommendations</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Back to My Work
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-check-circle me-1"></i>Mark Complete
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

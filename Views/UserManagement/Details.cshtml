@@ -1,0 +1,149 @@
+﻿@model User
+@{
+    ViewData["Title"] = "User Details";
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-user me-2"></i>@Model.FullName
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Email:</strong> @Model.Email</p>
+                        <p><strong>Department:</strong> @(string.IsNullOrEmpty(Model.Department) ? "Not specified" : Model.Department)</p>
+                        <p><strong>Job Title:</strong> @(string.IsNullOrEmpty(Model.JobTitle) ? "Not specified" : Model.JobTitle)</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            <strong>Role:</strong>
+                            @switch (Model.Role)
+                            {
+                                case UserRole.Admin:
+                                    <span class="badge bg-danger">Admin</span>
+                                    break;
+                                case UserRole.GRCUser:
+                                    <span class="badge bg-warning">GRC User</span>
+                                    break;
+                                case UserRole.ITUser:
+                                    <span class="badge bg-info">IT User</span>
+                                    break;
+                            }
+                        </p>
+                        <p>
+                            <strong>Status:</strong>
+                            @if (Model.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </p>
+                        <p><strong>Phone:</strong> @(string.IsNullOrEmpty(Model.PhoneNumber) ? "Not specified" : Model.PhoneNumber)</p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Created:</strong> @Model.CreatedAt.ToString("MMMM dd, yyyy HH:mm")</p>
+                        <p><strong>Last Updated:</strong> @Model.UpdatedAt.ToString("MMMM dd, yyyy HH:mm")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p>
+                            <strong>Last Login:</strong>
+                            @if (Model.LastLoginDate.HasValue)
+                            {
+                                @Model.LastLoginDate.Value.ToString("MMMM dd, yyyy HH:mm")
+                            }
+                            else
+                            {
+                                <span class="text-muted">Never logged in</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>Edit User
+                    </a>
+                    <button type="button" class="btn btn-warning" onclick="resetPassword('@Model.Id', '@Model.FullName')">
+                        <i class="fas fa-key me-2"></i>Reset Password
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Role Permissions</h5>
+            </div>
+            <div class="card-body">
+                @switch (Model.Role)
+                {
+                    case UserRole.Admin:
+                        <div class="alert alert-danger">
+                            <h6><i class="fas fa-crown me-1"></i> Administrator</h6>
+                            <ul class="mb-0">
+                                <li>Full system access</li>
+                                <li>User management</li>
+                                <li>All administrative functions</li>
+                            </ul>
+                        </div>
+                        break;
+                    case UserRole.GRCUser:
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-shield-alt me-1"></i> GRC User</h6>
+                            <ul class="mb-0">
+                                <li>Approve/reject closure requests</li>
+                                <li>Perform risk assessments</li>
+                                <li>Manage assessment requests</li>
+                                <li>View all data</li>
+                            </ul>
+                        </div>
+                        break;
+                    case UserRole.ITUser:
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-desktop me-1"></i> IT User</h6>
+                            <ul class="mb-0">
+                                <li>Request finding closures</li>
+                                <li>View findings and risks</li>
+                                <li>View dashboard</li>
+                                <li>Read-only access to assessments</li>
+                            </ul>
+                        </div>
+                        break;
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Form -->
+<form id="resetPasswordForm" asp-action="ResetPassword" method="post" style="display: none;">
+    <input type="hidden" id="resetUserId" name="id" />
+</form>
+
+@section Scripts {
+    <script>
+        function resetPassword(userId, userName) {
+            if (confirm(`Are you sure you want to reset the password for ${userName}? They will receive a temporary password and be forced to change it on next login.`)) {
+                document.getElementById('resetUserId').value = userId;
+                document.getElementById('resetPasswordForm').submit();
+            }
+        }
+    </script>
+}

@@ -1,0 +1,105 @@
+﻿@model CyberRiskApp.Models.AssessmentRequest
+@{
+    ViewData["Title"] = "Assign Request";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Assign Assessment Request #@Model.Id</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Request Details -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Request Information</h6>
+                            <p><strong>Requester:</strong> @Model.RequesterName</p>
+                            <p><strong>Department:</strong> @Model.Department</p>
+                            <p><strong>Scope:</strong> @Model.Scope</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Request Details</h6>
+                            <p>
+                                <strong>Priority:</strong>
+                                @switch (Model.Priority)
+                                {
+                                    case Priority.Urgent:
+                                        <span class="badge bg-danger">Urgent</span>
+                                        break;
+                                    case Priority.High:
+                                        <span class="badge bg-warning">High</span>
+                                        break;
+                                    case Priority.Medium:
+                                        <span class="badge bg-info">Medium</span>
+                                        break;
+                                    case Priority.Low:
+                                        <span class="badge bg-success">Low</span>
+                                        break;
+                                }
+                            </p>
+                            <p>
+                                <strong>Timeline:</strong>
+                                @if (Model.RequestedTimeline.HasValue)
+                                {
+                                    @Model.RequestedTimeline.Value.ToString("MMMM dd, yyyy")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Not specified</span>
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Assignment Form -->
+                    <form asp-action="Assign" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-user me-1"></i>Assign To <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="assignedToUserId" class="form-select" asp-items="ViewBag.Users" required>
+                                        <option value="">-- Select User --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-clock me-1"></i>Estimated Hours
+                                    </label>
+                                    <input name="estimatedHours" class="form-control" type="number" step="0.1" min="0.1" max="1000" />
+                                    <div class="form-text">Optional: Estimated time to complete this assessment</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-sticky-note me-1"></i>Assignment Notes
+                            </label>
+                            <textarea name="notes" class="form-control" rows="3"
+                                      placeholder="Any specific instructions or notes for the assigned user..."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Back
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-1"></i>Assign Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,221 @@
+﻿@model IEnumerable<CyberRiskApp.Models.MaturityAssessment>
+@{
+    ViewData["Title"] = "Maturity Assessments";
+    bool canPerformAssessments = ViewBag.CanPerformAssessments ?? false;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-bar me-2"></i>Maturity Assessments</h2>
+    @if (canPerformAssessments)
+    {
+        <a asp-action="Create" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i>Create Assessment
+        </a>
+    }
+</div>
+
+@if (!canPerformAssessments)
+{
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i>
+        You can view maturity assessments but cannot create or modify them. Contact a GRC administrator for assessment management capabilities.
+    </div>
+}
+
+@if (Model.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Assessment Title</th>
+                            <th>Framework</th>
+                            <th>Organization</th>
+                            <th>Status</th>
+                            <th>Maturity Score</th>
+                            <th>Assessor</th>
+                            <th>Start Date</th>
+                            <th>Due Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var assessment in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@assessment.Title</strong>
+                                    @if (!string.IsNullOrEmpty(assessment.Description))
+                                    {
+                                        <br>
+                                        <small class="text-muted">@assessment.Description</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>@assessment.Framework?.Name</strong>
+                                        @if (assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
+                                        {
+                                            <span class="badge bg-info ms-1">NIST CSF</span>
+                                        }
+                                        else if (assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.C2M2)
+                                        {
+                                            <span class="badge bg-warning ms-1">C2M2</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(assessment.Framework?.Version))
+                                    {
+                                        <small class="text-muted">v@assessment.Framework.Version</small>
+                                    }
+                                </td>
+                                <td>@assessment.Organization?.Name</td>
+                                <td>
+                                    @switch (assessment.Status)
+                                    {
+                                        case CyberRiskApp.Models.AssessmentStatus.Draft:
+                                            <span class="badge bg-secondary">Draft</span>
+                                            break;
+                                        case CyberRiskApp.Models.AssessmentStatus.InProgress:
+                                            <span class="badge bg-warning">In Progress</span>
+                                            break;
+                                        case CyberRiskApp.Models.AssessmentStatus.Completed:
+                                            <span class="badge bg-success">Completed</span>
+                                            break;
+                                        case CyberRiskApp.Models.AssessmentStatus.Approved:
+                                            <span class="badge bg-primary">Approved</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (assessment.Status == CyberRiskApp.Models.AssessmentStatus.Completed || assessment.Status == CyberRiskApp.Models.AssessmentStatus.Approved)
+                                    {
+                                        var scoreClass = assessment.OverallMaturityScore >= 3.0m ? "text-success" :
+                                        assessment.OverallMaturityScore >= 2.0m ? "text-warning" : "text-danger";
+                                        <span class="@scoreClass fw-bold">@assessment.OverallMaturityScore.ToString("F1")</span>
+                                        @if (assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
+                                        {
+                                            <small class="text-muted">/4.0</small>
+                                        }
+                                        else if (assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.C2M2)
+                                        {
+                                            <small class="text-muted">/3.0</small>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not completed</span>
+                                    }
+                                </td>
+                                <td>@assessment.Assessor</td>
+                                <td>@assessment.StartDate.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    @if (assessment.DueDate.HasValue)
+                                    {
+                                        var isOverdue = assessment.DueDate.Value < DateTime.UtcNow && assessment.Status != CyberRiskApp.Models.AssessmentStatus.Completed;
+                                        <span class="@(isOverdue ? "text-danger fw-bold" : "")">
+                                            @assessment.DueDate.Value.ToString("MMM dd, yyyy")
+                                            @if (isOverdue)
+                                            {
+                                                <i class="fas fa-exclamation-triangle ms-1" title="Overdue"></i>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No due date</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@assessment.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+
+                                        @if (assessment.Status == CyberRiskApp.Models.AssessmentStatus.Completed || assessment.Status == CyberRiskApp.Models.AssessmentStatus.Approved)
+                                        {
+                                            <a asp-action="Report" asp-route-id="@assessment.Id" class="btn btn-sm btn-outline-info" title="View Report">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </a>
+                                        }
+
+                                        @if (canPerformAssessments)
+                                        {
+                                            @if (assessment.Status == CyberRiskApp.Models.AssessmentStatus.Draft || assessment.Status == CyberRiskApp.Models.AssessmentStatus.InProgress)
+                                            {
+                                                <a asp-action="Perform" asp-route-id="@assessment.Id" class="btn btn-sm btn-outline-success" title="Perform Assessment">
+                                                    <i class="fas fa-tasks"></i>
+                                                </a>
+                                            }
+
+                                            <a asp-action="Edit" asp-route-id="@assessment.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+
+                                            <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" data-bs-toggle="modal" data-bs-target="#deleteModal-@assessment.Id">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+
+                                    @if (canPerformAssessments)
+                                    {
+                                        <!-- Delete Confirmation Modal -->
+                                        <div class="modal fade" id="deleteModal-@assessment.Id" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        Are you sure you want to delete the assessment "<strong>@assessment.Title</strong>"?
+                                                        This will also delete all associated control assessments.
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                        <form asp-action="Delete" asp-route-id="@assessment.Id" method="post" class="d-inline">
+                                                            <button type="submit" class="btn btn-danger">
+                                                                <i class="fas fa-trash me-1"></i>Delete
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center">
+            <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+            <h4>No Maturity Assessments Found</h4>
+            <p class="text-muted">
+                @if (canPerformAssessments)
+                {
+                    <text>Get started by creating your first maturity assessment.</text>
+                }
+                else
+                {
+                    <text>No maturity assessments have been created yet. Contact a GRC administrator to create assessments.</text>
+                }
+            </p>
+            @if (canPerformAssessments)
+            {
+                <a asp-action="Create" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Create Assessment
+                </a>
+            }
+        </div>
+    </div>
+}

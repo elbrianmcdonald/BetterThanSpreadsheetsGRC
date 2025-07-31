@@ -1,0 +1,700 @@
+﻿@model CyberRiskApp.Models.ComplianceFramework
+@{
+    ViewData["Title"] = $"{Model.Name} - Framework Details";
+
+    // Group controls by family for better organization
+    var controlsByFamily = Model.Controls.GroupBy(c => c.Category).OrderBy(g => g.Key);
+    var baseControls = Model.Controls.Where(c => !c.ControlId.Contains("(")).ToList();
+    var enhancements = Model.Controls.Where(c => c.ControlId.Contains("(")).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-book me-2"></i>@Model.Name</h2>
+        <div class="text-muted">
+            <span class="badge bg-primary me-2">@Model.Type</span>
+            <span class="badge bg-info me-2">Version @Model.Version</span>
+            <span class="badge bg-@(Model.Status == FrameworkStatus.Active ? "success" : "secondary")">@Model.Status</span>
+        </div>
+    </div>
+    <div>
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+            <i class="fas fa-edit me-1"></i>Edit Framework
+        </a>
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Frameworks
+        </a>
+    </div>
+</div>
+
+<!-- Framework Overview -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-1"></i>Framework Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Description:</strong></p>
+                <p>@Model.Description</p>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Uploaded By:</strong> @Model.UploadedBy</p>
+                        <p><strong>Upload Date:</strong> @Model.UploadedDate.ToString("MMM dd, yyyy")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Type:</strong> @Model.Type</p>
+                        <p><strong>Status:</strong> @Model.Status</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Statistics -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar me-1"></i>Control Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h3 class="text-primary">@Model.Controls.Count()</h3>
+                        <small class="text-muted">Total Controls</small>
+                    </div>
+                    <div class="col-6">
+                        <h3 class="text-success">@controlsByFamily.Count()</h3>
+                        <small class="text-muted">Control Families</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-info">@baseControls.Count</h4>
+                        <small class="text-muted">Base Controls</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">@enhancements.Count</h4>
+                        <small class="text-muted">Enhancements</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Control Family Overview (for NIST frameworks) -->
+@if (Model.Type == CyberRiskApp.Models.FrameworkType.NIST && controlsByFamily.Any())
+{
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-layer-group me-1"></i>Control Family Overview</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                @foreach (var familyGroup in controlsByFamily)
+                {
+                    var familyBaseControls = familyGroup.Where(c => !c.ControlId.Contains("(")).Count();
+                    var familyEnhancements = familyGroup.Where(c => c.ControlId.Contains("(")).Count();
+
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card border-left-primary h-100">
+                            <div class="card-body">
+                                <h6 class="card-title">@familyGroup.Key</h6>
+                                <p class="card-text">
+                                    <strong>@familyGroup.Count()</strong> total controls<br>
+                                    <small class="text-muted">
+                                        @familyBaseControls base + @familyEnhancements enhancements
+                                    </small>
+                                </p>
+                                <button class="btn btn-sm btn-outline-primary" onclick="scrollToFamily('@familyGroup.Key.Replace(" ", "").Replace("&", "")')">
+                                    <i class="fas fa-eye me-1"></i>View Controls
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Controls Section -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-tasks me-1"></i>Framework Controls</h5>
+        <div>
+            <!-- Bulk Actions -->
+            <div class="dropdown me-2">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-layer-group me-1"></i>Bulk Actions
+                </button>
+                <ul class="dropdown-menu">
+                    <li><h6 class="dropdown-header">Set Priority for Family</h6></li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="showBulkPriorityModal()">
+                            <i class="fas fa-edit me-1"></i>Update Priorities by Family
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="resetAllPriorities()">
+                            <i class="fas fa-undo me-1"></i>Reset All to Medium
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- View Toggle Buttons -->
+            <div class="btn-group me-2" role="group">
+                <button type="button" class="btn btn-sm btn-outline-primary active" id="familyViewBtn" onclick="toggleView('family')">
+                    <i class="fas fa-layer-group me-1"></i>By Family
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="listViewBtn" onclick="toggleView('list')">
+                    <i class="fas fa-list me-1"></i>All Controls
+                </button>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="ms-2 d-inline-block">
+                <input type="text" id="controlSearch" class="form-control form-control-sm d-inline-block" style="width: 200px;" placeholder="Search controls...">
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (Model.Controls.Any())
+        {
+            <!-- Family View (Default) -->
+            <div id="familyView">
+                @foreach (var familyGroup in controlsByFamily)
+                {
+                    <div class="control-family mb-4" id="family-@familyGroup.Key.Replace(" ", "").Replace("&", "")">
+                        <h4 class="border-bottom pb-2 mb-3">
+                            <i class="fas fa-folder me-2"></i>@familyGroup.Key
+                            <span class="badge bg-secondary ms-2">@familyGroup.Count() controls</span>
+                        </h4>
+
+                        <div class="row">
+                            @foreach (var control in familyGroup.OrderBy(c => c.ControlId))
+                            {
+                                var isEnhancement = control.ControlId.Contains("(");
+                                var priorityClass = control.Priority switch
+                                {
+                                    ControlPriority.High => "border-danger",
+                                    ControlPriority.Medium => "border-warning",
+                                    ControlPriority.Low => "border-info",
+                                    _ => "border-secondary"
+                                };
+
+                                <div class="col-lg-6 mb-3 control-item" data-control-id="@control.ControlId.ToLower()" data-control-title="@control.Title.ToLower()">
+                                    <div class="card @priorityClass h-100">
+                                        <div class="card-header py-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong>@control.ControlId</strong>
+                                                    @if (isEnhancement)
+                                                    {
+                                                        <span class="badge bg-info ms-1">Enhancement</span>
+                                                    }
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <!-- Priority Selector -->
+                                                    <select class="form-select form-select-sm me-2 priority-selector"
+                                                            data-control-id="@control.Id"
+                                                            data-current-priority="@((int)control.Priority)"
+                                                            style="width: auto;">
+                                                        <option value="4" selected="@(control.Priority == ControlPriority.Critical)">Critical</option>
+                                                        <option value="3" selected="@(control.Priority == ControlPriority.High)">High</option>
+                                                        <option value="2" selected="@(control.Priority == ControlPriority.Medium)">Medium</option>
+                                                        <option value="1" selected="@(control.Priority == ControlPriority.Low)">Low</option>
+                                                    </select>
+                                                    <span class="badge bg-@(control.Priority.ToString().ToLower()) priority-badge-@control.Id">
+                                                        @control.Priority Priority
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="card-title">@control.Title</h6>
+
+                                            @if (!string.IsNullOrEmpty(control.Description))
+                                            {
+                                                <div class="control-description">
+                                                    @{
+                                                        var shortDescription = control.Description.Length > 200
+                                                        ? control.Description.Substring(0, 200) + "..."
+                                                        : control.Description;
+                                                    }
+
+                                                    <div class="description-short">
+                                                        @Html.Raw(shortDescription.Replace("\n", "<br>"))
+                                                    </div>
+
+                                                    @if (control.Description.Length > 200)
+                                                    {
+                                                        <div class="description-full" style="display: none;">
+                                                            @Html.Raw(control.Description.Replace("\n", "<br>"))
+                                                        </div>
+                                                        <button class="btn btn-sm btn-link p-0 mt-2 toggle-description" onclick="toggleDescription(this)">
+                                                            <i class="fas fa-chevron-down me-1"></i>Show More
+                                                        </button>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <em class="text-muted">No description available.</em>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- List View (Hidden by default) -->
+            <div id="listView" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Control ID</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Priority</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var control in Model.Controls.OrderBy(c => c.ControlId))
+                            {
+                                var isEnhancement = control.ControlId.Contains("(");
+
+                                <tr class="control-item" data-control-id="@control.ControlId.ToLower()" data-control-title="@control.Title.ToLower()">
+                                    <td><strong>@control.ControlId</strong></td>
+                                    <td>@control.Title</td>
+                                    <td>@control.Category</td>
+                                    <td>
+                                        <!-- Priority Selector for List View -->
+                                        <select class="form-select form-select-sm priority-selector"
+                                                data-control-id="@control.Id"
+                                                data-current-priority="@((int)control.Priority)"
+                                                style="width: 120px;">
+                                            <option value="4" selected="@(control.Priority == ControlPriority.Critical)">Critical</option>
+                                            <option value="3" selected="@(control.Priority == ControlPriority.High)">High</option>
+                                            <option value="2" selected="@(control.Priority == ControlPriority.Medium)">Medium</option>
+                                            <option value="1" selected="@(control.Priority == ControlPriority.Low)">Low</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        @if (isEnhancement)
+                                        {
+                                            <span class="badge bg-info">Enhancement</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-primary">Base Control</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4">
+                <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                <h5>No Controls Found</h5>
+                <p class="text-muted">This framework doesn't have any controls yet.</p>
+                <a asp-action="Upload" class="btn btn-primary">
+                    <i class="fas fa-upload me-1"></i>Upload Controls
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Bulk Priority Update Modal -->
+<div class="modal fade" id="bulkPriorityModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Priorities by Control Family</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Select a control family and set its priority level:</p>
+
+                <div class="mb-3">
+                    <label class="form-label">Control Family</label>
+                    <select id="bulkFamilySelect" class="form-select">
+                        <option value="">Select a control family</option>
+                        @foreach (var family in controlsByFamily)
+                        {
+                            <option value="@family.Key">@family.Key (@family.Count() controls)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">New Priority</label>
+                    <select id="bulkPrioritySelect" class="form-select">
+                        <option value="4">Critical</option>
+                        <option value="3">High</option>
+                        <option value="2" selected>Medium</option>
+                        <option value="1">Low</option>
+                    </select>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-1"></i>
+                    This will update the priority for all controls in the selected family.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="applyBulkPriority()">
+                    <i class="fas fa-save me-1"></i>Update Priorities
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle between family and list view
+        function toggleView(viewType) {
+            const familyView = document.getElementById('familyView');
+            const listView = document.getElementById('listView');
+            const familyBtn = document.getElementById('familyViewBtn');
+            const listBtn = document.getElementById('listViewBtn');
+
+            if (viewType === 'family') {
+                familyView.style.display = 'block';
+                listView.style.display = 'none';
+                familyBtn.classList.add('active');
+                listBtn.classList.remove('active');
+            } else {
+                familyView.style.display = 'none';
+                listView.style.display = 'block';
+                familyBtn.classList.remove('active');
+                listBtn.classList.add('active');
+            }
+        }
+
+        // Scroll to specific control family
+        function scrollToFamily(familyId) {
+            const element = document.getElementById('family-' + familyId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Toggle control description expansion
+        function toggleDescription(button) {
+            const card = button.closest('.card-body');
+            const shortDesc = card.querySelector('.description-short');
+            const fullDesc = card.querySelector('.description-full');
+            const icon = button.querySelector('i');
+
+            if (fullDesc.style.display === 'none') {
+                shortDesc.style.display = 'none';
+                fullDesc.style.display = 'block';
+                button.innerHTML = '<i class="fas fa-chevron-up me-1"></i>Show Less';
+            } else {
+                shortDesc.style.display = 'block';
+                fullDesc.style.display = 'none';
+                button.innerHTML = '<i class="fas fa-chevron-down me-1"></i>Show More';
+            }
+        }
+
+        // Search functionality
+        document.getElementById('controlSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const controls = document.querySelectorAll('.control-item');
+
+            controls.forEach(control => {
+                const controlId = control.getAttribute('data-control-id');
+                const controlTitle = control.getAttribute('data-control-title');
+
+                if (controlId.includes(searchTerm) || controlTitle.includes(searchTerm)) {
+                    control.style.display = '';
+                } else {
+                    control.style.display = 'none';
+                }
+            });
+        });
+
+        // Priority change functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listeners to all priority selectors
+            const prioritySelectors = document.querySelectorAll('.priority-selector');
+
+            prioritySelectors.forEach(selector => {
+                selector.addEventListener('change', function() {
+                    const controlId = this.getAttribute('data-control-id');
+                    const newPriority = this.value;
+                    const currentPriority = this.getAttribute('data-current-priority');
+
+                    // Show loading state
+                    this.disabled = true;
+                    this.style.opacity = '0.6';
+
+                    // Make AJAX call to update priority
+                    updateControlPriority(controlId, newPriority, this);
+                });
+            });
+        });
+
+        // Update control priority via AJAX
+        function updateControlPriority(controlId, priority, selectElement, callback) {
+            fetch('@Url.Action("UpdateControlPriority", "Frameworks")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                    controlId: parseInt(controlId),
+                    priority: parseInt(priority)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Re-enable the selector
+                selectElement.disabled = false;
+                selectElement.style.opacity = '1';
+
+                if (data.success) {
+                    // Update the current priority attribute
+                    selectElement.setAttribute('data-current-priority', priority);
+
+                    // Update badge in family view if it exists
+                    const badge = document.querySelector('.priority-badge-' + controlId);
+                    if (badge) {
+                        const priorityText = selectElement.options[selectElement.selectedIndex].text;
+                        const priorityClass = getPriorityClass(parseInt(priority));
+
+                        badge.className = `badge bg-${priorityClass} priority-badge-${controlId}`;
+                        badge.textContent = `${priorityText} Priority`;
+                    }
+
+                    // Update card border color
+                    const card = selectElement.closest('.card');
+                    if (card) {
+                        // Remove existing border classes
+                        card.classList.remove('border-danger', 'border-warning', 'border-info', 'border-secondary');
+                        // Add new border class
+                        card.classList.add(getBorderClass(parseInt(priority)));
+                    }
+
+                    // Call callback if provided (for bulk updates)
+                    if (callback) callback();
+
+                    // Show success message only for individual updates
+                    if (!callback) {
+                        showNotification('Priority updated successfully!', 'success');
+                    }
+                } else {
+                    // Revert the selector to original value
+                    const originalPriority = selectElement.getAttribute('data-current-priority');
+                    selectElement.value = originalPriority;
+
+                    // Show error message
+                    showNotification('Failed to update priority: ' + (data.message || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating priority:', error);
+
+                // Re-enable the selector and revert value
+                selectElement.disabled = false;
+                selectElement.style.opacity = '1';
+                const originalPriority = selectElement.getAttribute('data-current-priority');
+                selectElement.value = originalPriority;
+
+                // Show error message
+                showNotification('Network error occurred while updating priority', 'error');
+            });
+        }
+
+        // Helper function to get priority CSS class
+        function getPriorityClass(priority) {
+            switch(priority) {
+                case 4: return 'critical';
+                case 3: return 'high';
+                case 2: return 'medium';
+                case 1: return 'low';
+                default: return 'secondary';
+            }
+        }
+
+        // Helper function to get border CSS class
+        function getBorderClass(priority) {
+            switch(priority) {
+                case 4: return 'border-danger';
+                case 3: return 'border-danger';
+                case 2: return 'border-warning';
+                case 1: return 'border-info';
+                default: return 'border-secondary';
+            }
+        }
+
+        // Show notification to user
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // Add to page
+            document.body.appendChild(notification);
+
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+
+        // Bulk priority update functions
+        function showBulkPriorityModal() {
+            const modal = new bootstrap.Modal(document.getElementById('bulkPriorityModal'));
+            modal.show();
+        }
+
+        function applyBulkPriority() {
+            const family = document.getElementById('bulkFamilySelect').value;
+            const priority = document.getElementById('bulkPrioritySelect').value;
+
+            if (!family) {
+                showNotification('Please select a control family', 'error');
+                return;
+            }
+
+            // Get all controls in the selected family
+            const familyControls = document.querySelectorAll(`.priority-selector`);
+            const controlsToUpdate = [];
+
+            familyControls.forEach(selector => {
+                const card = selector.closest('.card');
+                const familyElement = card.closest('[id^="family-"]');
+
+                // Check if this control belongs to the selected family
+                if (familyElement && familyElement.id.includes(family.replace(/[^a-zA-Z0-9]/g, ''))) {
+                    controlsToUpdate.push({
+                        selector: selector,
+                        controlId: selector.getAttribute('data-control-id')
+                    });
+                }
+            });
+
+            if (controlsToUpdate.length === 0) {
+                showNotification('No controls found for the selected family', 'error');
+                return;
+            }
+
+            // Update each control
+            let updatedCount = 0;
+            const totalCount = controlsToUpdate.length;
+
+            controlsToUpdate.forEach((item, index) => {
+                // Set the selector value
+                item.selector.value = priority;
+
+                // Trigger the update
+                updateControlPriority(item.controlId, priority, item.selector, () => {
+                    updatedCount++;
+                    if (updatedCount === totalCount) {
+                        // Close modal and show success message
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('bulkPriorityModal'));
+                        modal.hide();
+                        showNotification(`Successfully updated ${updatedCount} controls in ${family} family`, 'success');
+                    }
+                });
+            });
+        }
+
+        function resetAllPriorities() {
+            if (!confirm('Are you sure you want to reset all control priorities to Medium? This action cannot be undone.')) {
+                return;
+            }
+
+            const allSelectors = document.querySelectorAll('.priority-selector');
+            let updatedCount = 0;
+            const totalCount = allSelectors.length;
+
+            allSelectors.forEach(selector => {
+                const controlId = selector.getAttribute('data-control-id');
+                selector.value = '2'; // Medium priority
+
+                updateControlPriority(controlId, '2', selector, () => {
+                    updatedCount++;
+                    if (updatedCount === totalCount) {
+                        showNotification(`Successfully reset ${updatedCount} controls to Medium priority`, 'success');
+                    }
+                });
+            });
+        }
+    </script>
+}
+
+<style>
+    .border-left-primary {
+        border-left: 4px solid #007bff !important;
+    }
+
+    .card.border-danger {
+        border-left: 4px solid #dc3545 !important;
+    }
+
+    .card.border-warning {
+        border-left: 4px solid #ffc107 !important;
+    }
+
+    .card.border-info {
+        border-left: 4px solid #17a2b8 !important;
+    }
+
+    .badge.bg-critical {
+        background-color: #721c24 !important;
+        color: white;
+    }
+
+    .badge.bg-high {
+        background-color: #dc3545 !important;
+        color: white;
+    }
+
+    .badge.bg-medium {
+        background-color: #ffc107 !important;
+        color: #000;
+    }
+
+    .badge.bg-low {
+        background-color: #17a2b8 !important;
+        color: white;
+    }
+
+    .control-family {
+        scroll-margin-top: 100px;
+    }
+
+    .control-description {
+        max-height: none;
+        overflow: visible;
+    }
+</style>

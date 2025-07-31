@@ -1,0 +1,338 @@
+@model CyberRiskApp.Models.CapabilityRequirement
+@{
+    ViewData["Title"] = $"Capability: {Model.CapabilityName}";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-cogs text-primary me-2"></i>
+            @Model.CapabilityName
+            <span class="badge bg-@(Model.Priority.ToString().ToLower()) ms-2">@Model.Priority</span>
+        </h2>
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-1"></i>Edit Capability
+            </a>
+            <a asp-controller="StrategyGoal" asp-action="Details" asp-route-id="@Model.StrategyGoalId" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Goal
+            </a>
+        </div>
+    </div>
+
+    <!-- Capability Overview -->
+    <div class="card mb-4">
+        <div class="card-header bg-info bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-info-circle me-2"></i>Capability Overview
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted">Type</h6>
+                    <p class="fw-bold">@Model.CapabilityType</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted">Status</h6>
+                    <span class="badge bg-@Model.StatusColor fs-6">@Model.Status</span>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted">Target Date</h6>
+                    <p class="fw-bold @(Model.IsOverdue ? "text-danger" : "")">
+                        @(Model.TargetDate?.ToString("MMMM dd, yyyy") ?? "Not set")
+                        @if (Model.IsOverdue)
+                        {
+                            <small class="d-block text-danger">Overdue</small>
+                        }
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted">Progress</h6>
+                    <div class="d-flex align-items-center">
+                        <div class="progress flex-grow-1" style="height: 25px;">
+                            <div class="progress-bar" role="progressbar" style="width: @Model.ProgressPercentage%">
+                                @Model.ProgressPercentage.ToString("F0")%
+                            </div>
+                        </div>
+                        <span class="ms-2">@Model.ProgressPercentage.ToString("F0")%</span>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Description))
+            {
+                <div class="mt-3">
+                    <h6 class="text-muted">Description</h6>
+                    <p class="mb-0">@Model.Description</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Dependencies))
+            {
+                <div class="mt-3">
+                    <h6 class="text-muted">Dependencies</h6>
+                    <p class="mb-0">@Model.Dependencies</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Effort and Cost -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-bar me-2"></i>Effort & Investment
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <h6 class="text-muted">Estimated Effort</h6>
+                    <p class="fw-bold">
+                        @if (Model.EstimatedEffortMonths.HasValue)
+                        {
+                            @Model.EstimatedEffortMonths.Value.ToString("F2") <span class="text-muted">months</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Not specified</span>
+                        }
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-muted">Estimated Cost</h6>
+                    <p class="fw-bold">
+                        @if (Model.EstimatedCost.HasValue)
+                        {
+                            @Model.EstimatedCost.Value.ToString("C")
+                        }
+                        else
+                        {
+                            <span class="text-muted">Not specified</span>
+                        }
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-muted">Actual Cost</h6>
+                    <p class="fw-bold">
+                        @if (Model.ActualCost.HasValue)
+                        {
+                            @Model.ActualCost.Value.ToString("C")
+                        }
+                        else
+                        {
+                            <span class="text-muted">Not recorded</span>
+                        }
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Implementation Progress -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-tasks me-2"></i>Implementation Progress
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted">Start Date</h6>
+                    <p class="fw-bold">@(Model.StartDate?.ToString("MMMM dd, yyyy") ?? "Not set")</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted">Assigned To</h6>
+                    <p class="fw-bold">@(!string.IsNullOrEmpty(Model.AssignedTo) ? Model.AssignedTo : "Not assigned")</p>
+                </div>
+            </div>
+            
+            @if (!string.IsNullOrEmpty(Model.Notes))
+            {
+                <div class="mt-3">
+                    <h6 class="text-muted">Notes</h6>
+                    <p class="mb-0">@Model.Notes</p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Control Mappings -->
+    <div class="card mb-4">
+        <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-project-diagram me-2"></i>Control Mappings
+            </h5>
+            <div>
+                <a asp-controller="CapabilityControlMapping" asp-action="Create" asp-route-capabilityRequirementId="@Model.Id" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Add Mapping
+                </a>
+                <a asp-controller="CapabilityControlMapping" asp-action="Index" asp-route-capabilityRequirementId="@Model.Id" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-list"></i> View All
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (Model.ControlMappings != null && Model.ControlMappings.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Framework</th>
+                                <th>Control</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Target Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var mapping in Model.ControlMappings.Take(5))
+                            {
+                                <tr>
+                                    <td>@(mapping.ComplianceControl?.Framework?.Name ?? "N/A")</td>
+                                    <td>
+                                        <strong>@(mapping.ComplianceControl?.ControlId ?? "N/A")</strong><br />
+                                        <small class="text-muted">@(mapping.ComplianceControl?.Title ?? "N/A")</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@mapping.StatusColor">
+                                            @mapping.Status
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@mapping.PriorityColor">
+                                            @mapping.Priority
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (mapping.TargetDate.HasValue)
+                                        {
+                                            <span class="@(mapping.IsOverdue ? "text-danger" : "")">
+                                                @mapping.TargetDate.Value.ToString("MMM dd, yyyy")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-controller="CapabilityControlMapping" asp-action="Details" asp-route-id="@mapping.Id" class="btn btn-sm btn-outline-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a asp-controller="CapabilityControlMapping" asp-action="Edit" asp-route-id="@mapping.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (Model.ControlMappings.Count() > 5)
+                {
+                    <div class="text-center mt-3">
+                        <p class="text-muted">Showing 5 of @Model.ControlMappings.Count() mappings</p>
+                        <a asp-controller="CapabilityControlMapping" asp-action="Index" asp-route-capabilityRequirementId="@Model.Id" class="btn btn-outline-primary">
+                            View All @Model.ControlMappings.Count() Mappings
+                        </a>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                    <p>No control mappings have been created for this capability yet.</p>
+                    <a asp-controller="CapabilityControlMapping" asp-action="Create" asp-route-capabilityRequirementId="@Model.Id" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create First Mapping
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Capability Statistics -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h3 class="text-success">@Model.ProgressPercentage%</h3>
+                    <p class="text-muted mb-0">Progress Complete</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h3 class="text-info">@Model.DaysUntilTarget</h3>
+                    <p class="text-muted mb-0">Days Until Target</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">@(Model.CostVariance >= 0 ? "+" : "")@Model.CostVariance.ToString("C")</h3>
+                    <p class="text-muted mb-0">Cost Variance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #dee2e6;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -22px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #0d6efd;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        // Optional: Add any capability-specific functionality here
+    </script>
+}

@@ -1,0 +1,145 @@
+﻿@model IEnumerable<CyberRiskApp.Models.MaturityFramework>
+@{
+    ViewData["Title"] = "Maturity Frameworks";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-line me-2"></i>Maturity Frameworks</h2>
+    <div>
+        <a asp-action="Create" class="btn btn-success">
+            <i class="fas fa-plus me-1"></i>Create Framework
+        </a>
+        <a asp-action="Upload" class="btn btn-primary">
+            <i class="fas fa-upload me-1"></i>Upload from Excel
+        </a>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Version</th>
+                            <th>Status</th>
+                            <th>Controls</th>
+                            <th>Uploaded By</th>
+                            <th>Upload Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var framework in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@framework.Name</strong>
+                                    @if (!string.IsNullOrEmpty(framework.Description))
+                                    {
+                                        <br>
+                                        <small class="text-muted">@framework.Description</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (framework.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
+                                    {
+                                        <span class="badge bg-info">NIST CSF 2.0</span>
+                                    }
+                                    else if (framework.Type == CyberRiskApp.Models.FrameworkType.C2M2)
+                                    {
+                                        <span class="badge bg-warning">C2M2</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@framework.Type</span>
+                                    }
+                                </td>
+                                <td>@framework.Version</td>
+                                <td>
+                                    @switch (framework.Status)
+                                    {
+                                        case CyberRiskApp.Models.FrameworkStatus.Active:
+                                            <span class="badge bg-success">Active</span>
+                                            break;
+                                        case CyberRiskApp.Models.FrameworkStatus.Draft:
+                                            <span class="badge bg-warning">Draft</span>
+                                            break;
+                                        case CyberRiskApp.Models.FrameworkStatus.Archived:
+                                            <span class="badge bg-secondary">Archived</span>
+                                            break;
+                                        case CyberRiskApp.Models.FrameworkStatus.Deprecated:
+                                            <span class="badge bg-danger">Deprecated</span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">@framework.Controls.Count() controls</span>
+                                </td>
+                                <td>@framework.UploadedBy</td>
+                                <td>@framework.UploadedDate.ToString("MMM dd, yyyy")</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@framework.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@framework.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" data-bs-toggle="modal" data-bs-target="#deleteModal-@framework.Id">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Delete Confirmation Modal -->
+                                    <div class="modal fade" id="deleteModal-@framework.Id" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete the framework "<strong>@framework.Name</strong>"?
+                                                    This will also delete all associated controls and assessments.
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form asp-action="Delete" asp-route-id="@framework.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-trash me-1"></i>Delete
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center">
+            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+            <h4>No Maturity Frameworks Found</h4>
+            <p class="text-muted">Get started by creating your first maturity framework or uploading one from Excel.</p>
+            <a asp-action="Create" class="btn btn-success me-2">
+                <i class="fas fa-plus me-1"></i>Create Framework
+            </a>
+            <a asp-action="Upload" class="btn btn-primary">
+                <i class="fas fa-upload me-1"></i>Upload from Excel
+            </a>
+        </div>
+    </div>
+}

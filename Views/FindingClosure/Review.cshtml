@@ -1,0 +1,296 @@
+﻿@model CyberRiskApp.Models.FindingClosureRequest
+@{
+    ViewData["Title"] = $"Review Closure Request #{Model.Id}";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="card-title mb-0">
+                                <i class="fas fa-clipboard-check me-2"></i>Review Closure Request
+                            </h3>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge bg-dark text-white fs-6">#@Model.Id</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Review Required:</strong> This closure request is pending your review.
+                        Please carefully evaluate the justification and evidence before making a decision.
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="fw-bold text-primary mb-2">
+                                Finding: @Model.LinkedFinding.FindingNumber
+                            </h5>
+                            <h6 class="text-muted mb-3">@Model.LinkedFinding.Title</h6>
+                            <div class="d-flex gap-2 mb-3">
+                                <span class="badge bg-@GetRiskColor(Model.LinkedFinding.RiskRating) fs-6">
+                                    @Model.LinkedFinding.RiskRating Risk
+                                </span>
+                                <span class="badge bg-warning fs-6">Pending Review</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <strong>Requested by:</strong><br>
+                                <i class="fas fa-user me-1"></i>@Model.Requester
+                            </div>
+                            <div class="mb-2">
+                                <strong>Request Date:</strong><br>
+                                <i class="fas fa-calendar me-1"></i>@Model.RequestDate.ToString("MMMM dd, yyyy")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Finding Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Finding Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Open Date:</strong> @Model.LinkedFinding.OpenDate.ToString("MMM dd, yyyy")<br>
+                            <strong>Days Open:</strong> @((DateTime.Today - Model.LinkedFinding.OpenDate).Days) days
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Owner:</strong> @Model.LinkedFinding.Owner<br>
+                            <strong>Asset:</strong> @Model.LinkedFinding.Asset
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Domain:</strong> @Model.LinkedFinding.Domain<br>
+                            @if (Model.LinkedFinding.SlaDate.HasValue)
+                            {
+                                <strong>SLA Date:</strong>
+                                <span class="@(Model.LinkedFinding.SlaDate < DateTime.Today ? "text-danger" : "")">
+                                    @Model.LinkedFinding.SlaDate.Value.ToString("MMM dd, yyyy")
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <strong>Finding Details:</strong>
+                        <div class="border rounded p-2 bg-light small">
+                            @Model.LinkedFinding.Details
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Closure Justification Review -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i>Closure Justification
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="border rounded p-3 bg-light">
+                        @Html.Raw(Model.ClosureJustification.Replace("\n", "<br>"))
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evidence Review -->
+            @if (!string.IsNullOrEmpty(Model.EvidenceLinks))
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-success bg-opacity-10">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-link me-2"></i>Evidence Documentation
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="border rounded p-3 bg-light">
+                            @Html.Raw(Model.EvidenceLinks.Replace("\n", "<br>"))
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Additional Notes -->
+            @if (!string.IsNullOrEmpty(Model.AdditionalNotes))
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sticky-note me-2"></i>Additional Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="border rounded p-3 bg-light">
+                            @Html.Raw(Model.AdditionalNotes.Replace("\n", "<br>"))
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Review Decision -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-gavel me-2"></i>Review Decision
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <!-- Approve Form -->
+                            <div class="card border-success h-100">
+                                <div class="card-header bg-success text-white text-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-check-circle me-2"></i>Approve Closure
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <form asp-action="Approve" asp-route-id="@Model.Id" method="post" id="approveForm">
+                                        <div class="mb-3">
+                                            <label for="approveComments" class="form-label fw-bold">Review Comments</label>
+                                            <textarea name="reviewComments" id="approveComments" class="form-control" rows="4"
+                                                      placeholder="Optional: Add comments about why this closure was approved..."></textarea>
+                                        </div>
+
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>Approving will:</strong>
+                                            <ul class="mb-0 mt-2">
+                                                <li>Mark the finding as CLOSED</li>
+                                                <li>Update the request status to APPROVED</li>
+                                                <li>Record your review decision</li>
+                                            </ul>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-success w-100" id="approveBtn"
+                                                onclick="return confirm('Are you sure you want to APPROVE this closure request? This will close the finding.')">
+                                            <i class="fas fa-check-circle me-2"></i>Approve & Close Finding
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <!-- Reject Form -->
+                            <div class="card border-danger h-100">
+                                <div class="card-header bg-danger text-white text-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-times-circle me-2"></i>Reject Closure
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <form asp-action="Reject" asp-route-id="@Model.Id" method="post" id="rejectForm">
+                                        <div class="mb-3">
+                                            <label for="rejectComments" class="form-label fw-bold">
+                                                Rejection Reason <span class="text-danger">*</span>
+                                            </label>
+                                            <textarea name="reviewComments" id="rejectComments" class="form-control" rows="4"
+                                                      placeholder="Required: Explain why this closure request is being rejected..."
+                                                      required></textarea>
+                                        </div>
+
+                                        <div class="alert alert-danger">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <strong>Rejecting will:</strong>
+                                            <ul class="mb-0 mt-2">
+                                                <li>Keep the finding OPEN</li>
+                                                <li>Mark the request as REJECTED</li>
+                                                <li>Require a new closure request</li>
+                                            </ul>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-danger w-100" id="rejectBtn"
+                                                onclick="return confirm('Are you sure you want to REJECT this closure request?')">
+                                            <i class="fas fa-times-circle me-2"></i>Reject Request
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="d-flex gap-3">
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info">
+                            <i class="fas fa-eye me-2"></i>View Details Only
+                        </a>
+
+                        <a asp-controller="Findings" asp-action="Details" asp-route-id="@Model.FindingId" class="btn btn-outline-primary">
+                            <i class="fas fa-external-link-alt me-2"></i>View Full Finding
+                        </a>
+
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-list me-2"></i>Back to Requests
+                        </a>
+
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Form submission handlers
+        document.getElementById('approveForm').addEventListener('submit', function(e) {
+            const btn = document.getElementById('approveBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Approving...';
+            btn.disabled = true;
+        });
+
+        document.getElementById('rejectForm').addEventListener('submit', function(e) {
+            const comments = document.getElementById('rejectComments').value.trim();
+
+            if (!comments) {
+                e.preventDefault();
+                alert('Please provide a reason for rejecting this closure request.');
+                return false;
+            }
+
+            if (comments.length < 10) {
+                e.preventDefault();
+                alert('Please provide a more detailed rejection reason (at least 10 characters).');
+                return false;
+            }
+
+            const btn = document.getElementById('rejectBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Rejecting...';
+            btn.disabled = true;
+        });
+    </script>
+}
+
+@functions {
+    private string GetRiskColor(CyberRiskApp.Models.RiskRating rating)
+    {
+        return rating switch
+        {
+            CyberRiskApp.Models.RiskRating.High => "danger",
+            CyberRiskApp.Models.RiskRating.Medium => "warning",
+            CyberRiskApp.Models.RiskRating.Low => "success",
+            CyberRiskApp.Models.RiskRating.Critical => "dark",
+            _ => "secondary"
+        };
+    }
+}

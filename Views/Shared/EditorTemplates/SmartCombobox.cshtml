@@ -1,0 +1,34 @@
+@model string
+@{
+    var category = ViewData["Category"]?.ToString();
+    var placeholder = ViewData["Placeholder"]?.ToString() ?? "Type to search...";
+    var canAddNew = ViewData.ContainsKey("CanAddNew") ? (bool)ViewData["CanAddNew"] : false;
+    var required = ViewData.ContainsKey("Required") ? (bool)ViewData["Required"] : false;
+    var cssClass = ViewData["htmlAttributes"] as IDictionary<string, object>;
+    var additionalClasses = cssClass?.ContainsKey("class") == true ? cssClass["class"].ToString() : "";
+    
+    // Debug output
+    <text><!-- SmartCombobox Debug: Category=@category, CanAddNew=@canAddNew, Placeholder=@placeholder --></text>
+    
+    if (string.IsNullOrEmpty(category))
+    {
+        throw new ArgumentException("Category is required for SmartCombobox. Use ViewData[\"Category\"] to specify the reference data category.");
+    }
+}
+
+<select 
+    name="@Html.NameFor(m => m)" 
+    id="@Html.IdFor(m => m)"
+    class="form-select @additionalClasses"
+    data-category="@category"
+    data-can-add-new="@canAddNew.ToString().ToLower()"
+    data-placeholder="@placeholder"
+    @(required ? Html.Raw("required") : Html.Raw(""))
+    style="width: 100%;">
+    @if (!string.IsNullOrEmpty(Model))
+    {
+        <option value="@Model" selected="selected">@Model</option>
+    }
+</select>
+
+@Html.ValidationMessageFor(m => m, "", new { @class = "text-danger" })

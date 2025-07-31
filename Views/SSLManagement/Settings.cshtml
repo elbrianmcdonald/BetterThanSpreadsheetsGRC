@@ -1,0 +1,178 @@
+@model CyberRiskApp.Models.SSLSettings
+@{
+    ViewData["Title"] = "SSL Settings";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-cog me-2"></i>SSL Settings</h2>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to SSL Management
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-sliders-h me-2"></i>HTTPS Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Settings" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="CreatedAt" />
+                    <input type="hidden" asp-for="CreatedBy" />
+
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="EnableHttpsRedirection" id="enableHttpsRedirection">
+                            <label class="form-check-label" for="enableHttpsRedirection">
+                                <strong>Enable HTTPS Redirection</strong>
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            When enabled, all HTTP requests will be automatically redirected to HTTPS. 
+                            This ensures secure communication but requires a valid SSL certificate.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="RequireHttps" id="requireHttps">
+                            <label class="form-check-label" for="requireHttps">
+                                <strong>Require HTTPS</strong>
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            When enabled, HTTP requests will be rejected with a 426 (Upgrade Required) status. 
+                            This is more strict than redirection and blocks HTTP access entirely.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="httpsPort" class="form-label">HTTPS Port</label>
+                        <input type="number" class="form-control" asp-for="HttpsPort" id="httpsPort" 
+                               min="1" max="65535" required>
+                        <div class="form-text">
+                            The port number for HTTPS connections. Standard port is 443.
+                        </div>
+                        <span asp-validation-for="HttpsPort" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="activeCertificateId" class="form-label">Active Certificate</label>
+                        <select class="form-select" asp-for="ActiveCertificateId" id="activeCertificateId">
+                            <option value="">No certificate selected</option>
+                            @* Certificate options will be populated by the controller *@
+                        </select>
+                        <div class="form-text">
+                            Select the SSL certificate to use for HTTPS connections. 
+                            Only valid, non-expired certificates are shown.
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a asp-action="Index" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-shield-alt me-2"></i>Security Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Important:</strong> Before enabling HTTPS redirection or requirement, 
+                    ensure you have a valid SSL certificate installed and configured.
+                </div>
+
+                <h6>Configuration Effects:</h6>
+                <ul class="small">
+                    <li><strong>HTTPS Redirection:</strong> Automatically redirects HTTP to HTTPS</li>
+                    <li><strong>Require HTTPS:</strong> Blocks HTTP requests entirely</li>
+                    <li><strong>Active Certificate:</strong> Used for SSL/TLS encryption</li>
+                </ul>
+
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> Changes take effect immediately. Test your configuration 
+                    carefully to avoid locking yourself out of the system.
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-tools me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-action="Upload" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-upload me-1"></i>Upload New Certificate
+                    </a>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-certificate me-1"></i>View All Certificates
+                    </a>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="testHttpsConnection()">
+                        <i class="fas fa-plug me-1"></i>Test HTTPS Connection
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Load available certificates
+            loadCertificates();
+            
+            // Form validation and warnings
+            $('#enableHttpsRedirection, #requireHttps').change(function() {
+                var activeCert = $('#activeCertificateId').val();
+                if (($(this).is(':checked')) && !activeCert) {
+                    if (!confirm('Warning: You are enabling HTTPS settings without an active certificate. This may cause connection issues. Continue?')) {
+                        $(this).prop('checked', false);
+                    }
+                }
+            });
+        });
+
+        function loadCertificates() {
+            // This would be populated by the controller with certificate options
+            // For now, showing placeholder behavior
+            console.log('Loading available certificates...');
+        }
+
+        function testHttpsConnection() {
+            var httpsPort = $('#httpsPort').val() || 443;
+            var testUrl = 'https://' + window.location.hostname + ':' + httpsPort;
+            
+            // Open test connection in new tab
+            var testWindow = window.open(testUrl, '_blank');
+            
+            setTimeout(function() {
+                if (testWindow.closed) {
+                    alert('HTTPS connection test completed. Check if the page loaded successfully.');
+                } else {
+                    alert('HTTPS connection test opened in new tab. Check if the page loads without certificate errors.');
+                }
+            }, 2000);
+        }
+    </script>
+}

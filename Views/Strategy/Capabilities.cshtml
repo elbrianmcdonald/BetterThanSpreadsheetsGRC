@@ -1,0 +1,237 @@
+@model IEnumerable<CyberRiskApp.Models.CapabilityRequirement>
+@{
+    ViewData["Title"] = "Capabilities";
+    var plan = ViewBag.Plan as CyberRiskApp.Models.StrategyPlan;
+    var statusBreakdown = ViewBag.StatusBreakdown as Dictionary<CyberRiskApp.Models.CapabilityStatus, int> ?? new Dictionary<CyberRiskApp.Models.CapabilityStatus, int>();
+    var typeBreakdown = ViewBag.TypeBreakdown as Dictionary<CyberRiskApp.Models.CapabilityType, int> ?? new Dictionary<CyberRiskApp.Models.CapabilityType, int>();
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-cogs text-primary me-2"></i>
+            Capabilities for: @plan?.PlanName
+        </h2>
+        <div>
+            <a asp-action="Details" asp-route-id="@plan?.Id" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Plan
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h4 class="text-primary">@Model.Count()</h4>
+                    <p class="mb-0">Total Capabilities</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h4 class="text-success">@Model.Count(c => c.Status == CyberRiskApp.Models.CapabilityStatus.Completed)</h4>
+                    <p class="mb-0">Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h4 class="text-warning">@Model.Count(c => c.Status == CyberRiskApp.Models.CapabilityStatus.InProgress)</h4>
+                    <p class="mb-0">In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h4 class="text-danger">@Model.Count(c => c.TargetDate < DateTime.UtcNow && c.Status != CyberRiskApp.Models.CapabilityStatus.Completed)</h4>
+                    <p class="mb-0">Overdue</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select id="statusFilter" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="NotStarted">Not Started</option>
+                        <option value="InProgress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="OnHold">On Hold</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select id="typeFilter" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="Process">Process</option>
+                        <option value="Technology">Technology</option>
+                        <option value="People">People</option>
+                        <option value="Governance">Governance</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Priority</label>
+                    <select id="priorityFilter" class="form-control">
+                        <option value="">All Priorities</option>
+                        <option value="Critical">Critical</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" id="searchFilter" class="form-control" placeholder="Search capabilities...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Capabilities List -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>All Capabilities</h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover" id="capabilitiesTable">
+                        <thead>
+                            <tr>
+                                <th>Capability</th>
+                                <th>Type</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Target Date</th>
+                                <th>Assigned To</th>
+                                <th>Cost</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var capability in Model)
+                            {
+                                <tr data-status="@capability.Status" data-type="@capability.CapabilityType" data-priority="@capability.Priority">
+                                    <td>
+                                        <strong>@capability.CapabilityName</strong>
+                                        @if (!string.IsNullOrEmpty(capability.Description))
+                                        {
+                                            <br><small class="text-muted">@capability.Description</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">@capability.CapabilityType</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@capability.PriorityColor">@capability.Priority</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@capability.StatusColor">@capability.Status</span>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar" role="progressbar" style="width: @capability.ProgressPercentage%">
+                                                @capability.ProgressPercentage%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (capability.TargetDate.HasValue)
+                                        {
+                                            <span class="@(capability.IsOverdue ? "text-danger" : "")">
+                                                @capability.TargetDate.Value.ToString("MMM dd, yyyy")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not set</span>
+                                        }
+                                    </td>
+                                    <td>@(capability.AssignedTo ?? "Unassigned")</td>
+                                    <td>
+                                        @if (capability.EstimatedCost.HasValue)
+                                        {
+                                            @capability.EstimatedCost.Value.ToString("C0")
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="/CapabilityRequirement/Edit/@capability.Id" class="btn btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-outline-info" onclick="viewCapabilityDetails(@capability.Id)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Capabilities Defined</h5>
+                    <p class="text-muted">Capabilities will be added when goals are created for this strategy plan.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Filter functionality
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value.toLowerCase();
+            const priorityFilter = document.getElementById('priorityFilter').value.toLowerCase();
+            const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
+            
+            const rows = document.querySelectorAll('#capabilitiesTable tbody tr');
+            
+            rows.forEach(row => {
+                const status = row.dataset.status.toLowerCase();
+                const type = row.dataset.type.toLowerCase();
+                const priority = row.dataset.priority.toLowerCase();
+                const text = row.textContent.toLowerCase();
+                
+                const statusMatch = !statusFilter || status.includes(statusFilter);
+                const typeMatch = !typeFilter || type.includes(typeFilter);
+                const priorityMatch = !priorityFilter || priority.includes(priorityFilter);
+                const searchMatch = !searchFilter || text.includes(searchFilter);
+                
+                row.style.display = statusMatch && typeMatch && priorityMatch && searchMatch ? '' : 'none';
+            });
+        }
+        
+        // Add event listeners
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('typeFilter').addEventListener('change', applyFilters);
+        document.getElementById('priorityFilter').addEventListener('change', applyFilters);
+        document.getElementById('searchFilter').addEventListener('input', applyFilters);
+        
+        function viewCapabilityDetails(id) {
+            // Placeholder for viewing capability details
+            window.location.href = '/CapabilityRequirement/Details/' + id;
+        }
+    </script>
+}

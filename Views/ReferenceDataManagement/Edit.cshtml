@@ -1,0 +1,147 @@
+@model CyberRiskApp.ViewModels.EditReferenceDataViewModel
+@{
+    ViewData["Title"] = $"Edit {Model.CategoryDisplayName}";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Edit @Model.CategoryDisplayName.TrimEnd('s')
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="Id" />
+                        <input type="hidden" asp-for="Category" />
+                        <input type="hidden" asp-for="CategoryDisplayName" />
+                        <input type="hidden" asp-for="UsageCount" />
+                        <input type="hidden" asp-for="CreatedBy" />
+                        <input type="hidden" asp-for="CreatedAt" />
+                        <input type="hidden" asp-for="UpdatedBy" />
+                        <input type="hidden" asp-for="UpdatedAt" />
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Value" class="form-label">
+                                        @Model.CategoryDisplayName.TrimEnd('s') Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Value" class="form-control form-control-lg" />
+                                    <span asp-validation-for="Value" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Description" class="form-label">Description</label>
+                                    <textarea asp-for="Description" class="form-control" rows="3" 
+                                              placeholder="Optional description or additional details..."></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-check mb-4">
+                                    <input type="checkbox" asp-for="IsActive" class="form-check-input" />
+                                    <label asp-for="IsActive" class="form-check-label">
+                                        Active (available for selection in forms)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a asp-action="Category" asp-route-category="@((int)Model.Category)" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-left me-1"></i>Cancel
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i>Save Changes
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Information Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Entry Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Usage Count:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-info">@Model.UsageCount</span>
+                                    @if (Model.UsageCount == 0)
+                                    {
+                                        <small class="text-muted ms-2">Never used</small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted ms-2">times used</small>
+                                    }
+                                </dd>
+                                <dt class="col-sm-4">Status:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge @(Model.IsActive == true ? "bg-success" : "bg-secondary")">
+                                        @(Model.IsActive == true ? "Active" : "Inactive")
+                                    </span>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Created:</dt>
+                                <dd class="col-sm-8">
+                                    @Model.CreatedAt.ToString("MM/dd/yyyy HH:mm")<br>
+                                    <small class="text-muted">by @Model.CreatedBy</small>
+                                </dd>
+                                @if (Model.UpdatedAt.HasValue && Model.UpdatedBy != null)
+                                {
+                                    <dt class="col-sm-4">Last Updated:</dt>
+                                    <dd class="col-sm-8">
+                                        @Model.UpdatedAt.Value.ToString("MM/dd/yyyy HH:mm")<br>
+                                        <small class="text-muted">by @Model.UpdatedBy</small>
+                                    </dd>
+                                }
+                            </dl>
+                        </div>
+                    </div>
+
+                    @if (Model.UsageCount > 0)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Warning:</strong> This entry has been used @Model.UsageCount time@(Model.UsageCount == 1 ? "" : "s"). 
+                            Changing the name may affect existing records that reference this entry.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,99 @@
+﻿@model CyberRiskApp.Models.RiskAcceptanceRequest
+@{
+    ViewData["Title"] = "Assign Risk Acceptance Request";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4><i class="fas fa-handshake me-2"></i>Assign Risk Acceptance Request #@Model.Id</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Request Details -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Request Information</h6>
+                            <p><strong>Requester:</strong> @Model.Requester</p>
+                            <p><strong>Request Date:</strong> @Model.RequestDate.ToString("MMMM dd, yyyy")</p>
+                            <p><strong>Status:</strong> <span class="badge bg-secondary">@Model.Status</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Linked To</h6>
+                            @if (Model.LinkedFinding != null)
+                            {
+                                <p>
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-search me-1"></i>Finding @Model.LinkedFinding.FindingNumber
+                                    </span>
+                                </p>
+                                <p><strong>Finding:</strong> @Model.LinkedFinding.Title</p>
+                            }
+                            else if (Model.LinkedRisk != null)
+                            {
+                                <p>
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Risk @Model.LinkedRisk.RiskNumber
+                                    </span>
+                                </p>
+                                <p><strong>Risk:</strong> @Model.LinkedRisk.Title</p>
+                            }
+                            else
+                            {
+                                <p class="text-muted">Not linked to specific finding or risk</p>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6>Risk Description</h6>
+                        <p class="border rounded p-3 bg-light">@Model.Description</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6>Business Need</h6>
+                        <p class="border rounded p-3 bg-light">@Model.BusinessNeed</p>
+                    </div>
+
+                    <hr />
+
+                    <!-- Assignment Form -->
+                    <form asp-action="AssignAcceptance" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-user me-1"></i>Assign To <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="assignedToUserId" class="form-select" asp-items="ViewBag.Users" required>
+                                        <option value="">-- Select GRC User --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-sticky-note me-1"></i>Assignment Notes
+                            </label>
+                            <textarea name="notes" class="form-control" rows="3"
+                                      placeholder="Any specific instructions for reviewing this risk acceptance request..."></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Assignments
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-user-plus me-1"></i>Assign Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

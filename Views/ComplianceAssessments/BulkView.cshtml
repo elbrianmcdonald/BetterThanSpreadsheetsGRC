@@ -1,0 +1,607 @@
+@model CyberRiskApp.Models.ComplianceAssessment
+@{
+    ViewData["Title"] = $"Bulk Control View - {Model.Title}";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <!-- Assessment Header -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4><i class="fas fa-clipboard-list me-2"></i>@Model.Title - Bulk Control View</h4>
+                    <div>
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Framework:</strong> @Model.Framework.Name @Model.Framework.Version
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Organization:</strong> @Model.Organization.Name
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Status:</strong>
+                        <span class="badge bg-@(Model.Status switch
+                        {
+                            CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+                            CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
+                            CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+                            CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
+                            _ => "secondary"
+                        })">
+                            @Model.Status
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Selection Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5><i class="fas fa-tasks me-1"></i>Controls (@Model.ControlAssessments.Count)</h5>
+                <small class="text-muted">Select controls to assess together</small>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="selectAll()">
+                    <i class="fas fa-check-square me-1"></i>Select All
+                </button>
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="clearAll()">
+                    <i class="fas fa-square me-1"></i>Clear All
+                </button>
+                <button class="btn btn-sm btn-primary" onclick="assessSelected()" id="assessSelectedBtn" disabled>
+                    <i class="fas fa-edit me-1"></i>Assess Selected (<span id="selectedCount">0</span>)
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Filters -->
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Filter by Status:</label>
+                        <select class="form-select form-select-sm" onchange="filterByStatus(this.value)">
+                            <option value="all">All Controls</option>
+                            <option value="NonCompliant">Non-Compliant</option>
+                            <option value="PartiallyCompliant">Partially Compliant</option>
+                            <option value="MajorlyCompliant">Majorly Compliant</option>
+                            <option value="FullyCompliant">Fully Compliant</option>
+                            <option value="NotApplicable">N/A</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Category:</label>
+                        <select class="form-select form-select-sm" onchange="filterByCategory(this.value)" id="categoryFilter">
+                            <option value="all">All Categories</option>
+                            @foreach (var category in Model.ControlAssessments.Select(ca => ca.Control.Category).Distinct().OrderBy(c => c))
+                            {
+                                <option value="@category">@category</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check mt-4">
+                            <input class="form-check-input" type="checkbox" id="projectNeededFilter" onchange="filterByProjectNeeded()">
+                            <label class="form-check-label" for="projectNeededFilter">
+                                Projects Needed Only
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mt-4">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
+                                <i class="fas fa-times me-1"></i>Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls List -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th width="40">
+                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                                </th>
+                                <th>Control ID</th>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Current Status</th>
+                                <th>Owner</th>
+                                <th>Project Needed</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="controlsTableBody">
+                            @foreach (var ca in Model.ControlAssessments.OrderBy(ca => ca.Control.ControlId))
+                            {
+                                <tr class="control-row" 
+                                    data-control-id="@ca.Id"
+                                    data-status="@ca.Status"
+                                    data-category="@ca.Control.Category"
+                                    data-project-needed="@ca.ProjectNeeded.ToString().ToLower()">
+                                    <td>
+                                        <input type="checkbox" 
+                                               class="control-checkbox" 
+                                               value="@ca.Id" 
+                                               onchange="updateSelectedCount()">
+                                    </td>
+                                    <td>
+                                        <code>@ca.Control.ControlId</code>
+                                    </td>
+                                    <td>
+                                        <strong>@ca.Control.Title</strong>
+                                        @if (!string.IsNullOrEmpty(ca.Control.Description))
+                                        {
+                                            <br><small class="text-muted">@ca.Control.Description.Substring(0, Math.Min(ca.Control.Description.Length, 80))@(ca.Control.Description.Length > 80 ? "..." : "")</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">@ca.Control.Category</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(ca.Status switch
+                                        {
+                                            CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "success",
+                                            CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "info",
+                                            CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "warning",
+                                            CyberRiskApp.Models.ComplianceStatus.NonCompliant => "danger",
+                                            CyberRiskApp.Models.ComplianceStatus.NotApplicable => "secondary",
+                                            _ => "secondary"
+                                        })">
+                                            @(ca.Status switch
+                                            {
+                                                CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "Fully Compliant",
+                                                CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "Majorly Compliant",
+                                                CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "Partially Compliant",
+                                                CyberRiskApp.Models.ComplianceStatus.NonCompliant => "Non-Compliant",
+                                                CyberRiskApp.Models.ComplianceStatus.NotApplicable => "N/A",
+                                                _ => "Unknown"
+                                            })
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(ca.Ownership))
+                                        {
+                                            @ca.Ownership
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not assigned</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (ca.ProjectNeeded)
+                                        {
+                                            <span class="badge bg-info">Required</span>
+                                            @if (!string.IsNullOrEmpty(ca.ProjectNumber))
+                                            {
+                                                <br><small>@ca.ProjectNumber</small>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (ca.AssessmentDate.HasValue)
+                                        {
+                                            @ca.AssessmentDate.Value.ToString("MMM dd")
+                                            <br><small class="text-muted">@ca.AssessedBy</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Never</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assessment Modal -->
+<div class="modal fade" id="assessmentModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assess Selected Controls (<span id="modalSelectedCount">0</span>)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bulkAssessmentForm">
+                    <input type="hidden" id="selectedControlIds" name="selectedControlIds">
+                    
+                    <!-- Common Fields -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6><i class="fas fa-cog me-1"></i>Apply to All Selected Controls</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Ownership</label>
+                                        <input type="text" class="form-control" id="commonOwnership" placeholder="Enter owner name">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Compliance Status</label>
+                                        <select class="form-select" id="commonStatus">
+                                            <option value="">Don't change</option>
+                                            <option value="NonCompliant">Non-Compliant</option>
+                                            <option value="PartiallyCompliant">Partially Compliant</option>
+                                            <option value="MajorlyCompliant">Majorly Compliant</option>
+                                            <option value="FullyCompliant">Fully Compliant</option>
+                                            <option value="NotApplicable">N/A</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Projected Compliance Date</label>
+                                        <input type="date" class="form-control" id="commonProjectedDate">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="commonProjectNeeded">
+                                        <label class="form-check-label" for="commonProjectNeeded">
+                                            Mark all as "Project Needed"
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="applyCommonFields()">
+                                    <i class="fas fa-copy me-1"></i>Apply to All Below
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Individual Control Assessment -->
+                    <div id="individualControlsContainer">
+                        <!-- Controls will be populated here by JavaScript -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveSelectedAssessments()">
+                    <i class="fas fa-save me-1"></i>Save All Assessments
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let selectedControls = [];
+
+        // Update selected count and button state
+        function updateSelectedCount() {
+            const checkboxes = document.querySelectorAll('.control-checkbox:checked');
+            const count = checkboxes.length;
+            selectedControls = Array.from(checkboxes).map(cb => cb.value);
+            
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('assessSelectedBtn').disabled = count === 0;
+            
+            // Update select all checkbox
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            const allCheckboxes = document.querySelectorAll('.control-checkbox:visible');
+            const visibleChecked = document.querySelectorAll('.control-checkbox:visible:checked');
+            
+            if (visibleChecked.length === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (visibleChecked.length === allCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+
+        // Toggle select all
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAllCheckbox').checked;
+            const visibleCheckboxes = document.querySelectorAll('.control-checkbox:visible');
+            
+            visibleCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+            });
+            
+            updateSelectedCount();
+        }
+
+        // Select all controls
+        function selectAll() {
+            document.querySelectorAll('.control-checkbox:visible').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateSelectedCount();
+        }
+
+        // Clear all selections
+        function clearAll() {
+            document.querySelectorAll('.control-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateSelectedCount();
+        }
+
+        // Filter functions
+        function filterByStatus(status) {
+            const rows = document.querySelectorAll('.control-row');
+            rows.forEach(row => {
+                if (status === 'all' || row.dataset.status === status) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            updateSelectedCount();
+        }
+
+        function filterByCategory(category) {
+            const rows = document.querySelectorAll('.control-row');
+            rows.forEach(row => {
+                if (category === 'all' || row.dataset.category === category) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            updateSelectedCount();
+        }
+
+        function filterByProjectNeeded() {
+            const checked = document.getElementById('projectNeededFilter').checked;
+            const rows = document.querySelectorAll('.control-row');
+            
+            rows.forEach(row => {
+                if (!checked || row.dataset.projectNeeded === 'true') {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            updateSelectedCount();
+        }
+
+        function resetFilters() {
+            document.querySelector('select[onchange="filterByStatus(this.value)"]').value = 'all';
+            document.getElementById('categoryFilter').value = 'all';
+            document.getElementById('projectNeededFilter').checked = false;
+            
+            document.querySelectorAll('.control-row').forEach(row => {
+                row.style.display = 'table-row';
+            });
+            updateSelectedCount();
+        }
+
+        // Assess selected controls
+        function assessSelected() {
+            if (selectedControls.length === 0) {
+                alert('Please select at least one control to assess.');
+                return;
+            }
+
+            document.getElementById('modalSelectedCount').textContent = selectedControls.length;
+            document.getElementById('selectedControlIds').value = selectedControls.join(',');
+            
+            // Populate individual controls in modal
+            populateIndividualControls();
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('assessmentModal')).show();
+        }
+
+        // Populate individual controls in assessment modal
+        function populateIndividualControls() {
+            const container = document.getElementById('individualControlsContainer');
+            container.innerHTML = '';
+
+            selectedControls.forEach(controlId => {
+                const row = document.querySelector(`[data-control-id="${controlId}"]`);
+                const controlCode = row.querySelector('code').textContent;
+                const controlTitle = row.querySelector('strong').textContent;
+                
+                const controlHtml = `
+                    <div class="card mb-3 control-assessment-form" data-control-id="${controlId}">
+                        <div class="card-header">
+                            <h6><code>${controlCode}</code> - ${controlTitle}</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Compliance Status</label>
+                                        <select class="form-control" name="Status_${controlId}">
+                                            <option value="NonCompliant">Non-Compliant</option>
+                                            <option value="PartiallyCompliant">Partially Compliant</option>
+                                            <option value="MajorlyCompliant">Majorly Compliant</option>
+                                            <option value="FullyCompliant">Fully Compliant</option>
+                                            <option value="NotApplicable">N/A</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Ownership</label>
+                                        <input type="text" class="form-control" name="Ownership_${controlId}" placeholder="Enter owner name">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Projected Compliance Date</label>
+                                        <input type="date" class="form-control" name="ProjectedComplianceDate_${controlId}">
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="ProjectNeeded_${controlId}">
+                                                <label class="form-check-label">Project Needed</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">T-Shirt Size</label>
+                                            <select class="form-control" name="TShirtSize_${controlId}">
+                                                <option value="">-</option>
+                                                <option value="XS">XS</option>
+                                                <option value="S">S</option>
+                                                <option value="M">M</option>
+                                                <option value="L">L</option>
+                                                <option value="XL">XL</option>
+                                                <option value="XXL">XXL</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Project Number</label>
+                                        <input type="text" class="form-control" name="ProjectNumber_${controlId}" placeholder="Enter project number">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Gap Notes</label>
+                                        <textarea class="form-control" name="GapNotes_${controlId}" rows="3" placeholder="Describe any gaps or issues..."></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Evidence of Compliance</label>
+                                        <textarea class="form-control" name="EvidenceOfCompliance_${controlId}" rows="4" placeholder="Document evidence, links, procedures, etc..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += controlHtml;
+            });
+        }
+
+        // Apply common fields to all controls
+        function applyCommonFields() {
+            const commonOwnership = document.getElementById('commonOwnership').value;
+            const commonStatus = document.getElementById('commonStatus').value;
+            const commonProjectedDate = document.getElementById('commonProjectedDate').value;
+            const commonProjectNeeded = document.getElementById('commonProjectNeeded').checked;
+
+            selectedControls.forEach(controlId => {
+                if (commonOwnership) {
+                    document.querySelector(`[name="Ownership_${controlId}"]`).value = commonOwnership;
+                }
+                if (commonStatus) {
+                    document.querySelector(`[name="Status_${controlId}"]`).value = commonStatus;
+                }
+                if (commonProjectedDate) {
+                    document.querySelector(`[name="ProjectedComplianceDate_${controlId}"]`).value = commonProjectedDate;
+                }
+                if (commonProjectNeeded) {
+                    document.querySelector(`[name="ProjectNeeded_${controlId}"]`).checked = true;
+                }
+            });
+
+            showToast('Common fields applied to all controls', 'success');
+        }
+
+        // Save selected assessments
+        function saveSelectedAssessments() {
+            const updates = [];
+            
+            selectedControls.forEach(controlId => {
+                const data = {
+                    id: controlId,
+                    Status: document.querySelector(`[name="Status_${controlId}"]`).value,
+                    Ownership: document.querySelector(`[name="Ownership_${controlId}"]`).value,
+                    ProjectedComplianceDate: document.querySelector(`[name="ProjectedComplianceDate_${controlId}"]`).value || null,
+                    ProjectNeeded: document.querySelector(`[name="ProjectNeeded_${controlId}"]`).checked,
+                    TShirtSize: document.querySelector(`[name="TShirtSize_${controlId}"]`).value || null,
+                    ProjectNumber: document.querySelector(`[name="ProjectNumber_${controlId}"]`).value,
+                    GapNotes: document.querySelector(`[name="GapNotes_${controlId}"]`).value,
+                    EvidenceOfCompliance: document.querySelector(`[name="EvidenceOfCompliance_${controlId}"]`).value
+                };
+                updates.push(data);
+            });
+
+            fetch('/ComplianceAssessments/UpdateSelectedControlAssessments', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                },
+                body: JSON.stringify(updates)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showToast(`${selectedControls.length} control assessments updated successfully!`, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('assessmentModal')).hide();
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showToast(result.message || 'Error updating control assessments', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('Error updating control assessments', 'error');
+            });
+        }
+
+        // Toast notification helper
+        function showToast(message, type) {
+            const toastContainer = document.querySelector('.toast-container') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '1055';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectedCount();
+        });
+    </script>
+}
+
+@{
+    // Add anti-forgery token for AJAX requests
+}
+<input name="__RequestVerificationToken" type="hidden" value="@Html.AntiForgeryToken()" />

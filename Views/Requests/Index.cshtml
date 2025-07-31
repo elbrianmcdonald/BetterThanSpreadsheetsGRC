@@ -1,0 +1,367 @@
+﻿@using CyberRiskApp.Extensions
+@model CyberRiskApp.ViewModels.RequestsViewModel
+
+@{
+    ViewData["Title"] = "Request Management";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">
+                    <i class="fas fa-clipboard-list me-2"></i>Request Management
+                </h2>
+                <div>
+                    <a asp-action="Create" class="btn btn-success me-2">
+                        <i class="fas fa-plus me-2"></i>New Assessment Request
+                    </a>
+                    <a asp-action="CreateAcceptance" class="btn btn-warning">
+                        <i class="fas fa-shield-alt me-2"></i>New Risk Acceptance Request
+                    </a>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card border-info">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title text-info">Assessment Requests</h5>
+                                    <p class="card-text">Total: @Model.AssessmentRequests.Count()</p>
+                                    <small class="text-muted">
+                                        Pending: @Model.AssessmentRequests.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Pending)
+                                        | In Progress: @Model.AssessmentRequests.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.InProgress)
+                                        | Completed: @Model.AssessmentRequests.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Completed)
+                                    </small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-chart-line fa-2x text-info"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title text-warning">Risk Acceptance Requests</h5>
+                                    <p class="card-text">Total: @Model.AcceptanceRequests.Count()</p>
+                                    <small class="text-muted">
+                                        Pending: @Model.AcceptanceRequests.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Pending || r.Status == CyberRiskApp.Models.RequestStatus.PendingApproval)
+                                        | Approved: @Model.AcceptanceRequests.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Approved)
+                                        | Rejected: @Model.AcceptanceRequests.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Rejected)
+                                    </small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-shield-alt fa-2x text-warning"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs for different request types -->
+            <ul class="nav nav-tabs" id="requestTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="assessment-tab" data-bs-toggle="tab" data-bs-target="#assessment"
+                            type="button" role="tab" aria-controls="assessment" aria-selected="true">
+                        <i class="fas fa-chart-line me-2"></i>Assessment Requests (@Model.AssessmentRequests.Count())
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="acceptance-tab" data-bs-toggle="tab" data-bs-target="#acceptance"
+                            type="button" role="tab" aria-controls="acceptance" aria-selected="false">
+                        <i class="fas fa-shield-alt me-2"></i>Risk Acceptance Requests (@Model.AcceptanceRequests.Count())
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="requestTabsContent">
+                <!-- Assessment Requests Tab -->
+                <div class="tab-pane fade show active" id="assessment" role="tabpanel" aria-labelledby="assessment-tab">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chart-line me-2"></i>Assessment Requests
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            @if (Model.AssessmentRequests.Any())
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Scope</th>
+                                                <th>Priority</th>
+                                                <th>Status</th>
+                                                <th>Requester</th>
+                                                <th>Assigned To</th>
+                                                <th>Timeline</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var request in Model.AssessmentRequests.OrderByDescending(r => r.RequestDate))
+                                            {
+                                                <tr class="@(request.Status == CyberRiskApp.Models.RequestStatus.Pending ? "table-warning" :
+                                                            request.Status == CyberRiskApp.Models.RequestStatus.InProgress ? "table-info" :
+                                                            request.Status == CyberRiskApp.Models.RequestStatus.Completed ? "table-success" : "")">
+                                                    <td>@request.Id</td>
+                                                    <td>
+                                                        <strong>@request.Scope</strong>
+                                                        @if (!string.IsNullOrEmpty(request.Justification))
+                                                        {
+                                                            <br>
+
+                                                            <small class="text-muted">@(request.Justification.Length > 50 ? request.Justification.Substring(0, 50) + "..." : request.Justification)</small>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @{
+                                                            var priorityBadge = request.Priority switch
+                                                            {
+                                                                CyberRiskApp.Models.Priority.Urgent => "bg-danger",
+                                                                CyberRiskApp.Models.Priority.High => "bg-warning",
+                                                                CyberRiskApp.Models.Priority.Medium => "bg-info",
+                                                                CyberRiskApp.Models.Priority.Low => "bg-success",
+                                                                _ => "bg-secondary"
+                                                            };
+                                                        }
+                                                        <span class="badge @priorityBadge">@request.Priority</span>
+                                                    </td>
+                                                    <td>
+                                                        @{
+                                                            var statusBadge = request.Status switch
+                                                            {
+                                                                CyberRiskApp.Models.RequestStatus.Pending => "bg-warning text-dark",
+                                                                CyberRiskApp.Models.RequestStatus.InProgress => "bg-info",
+                                                                CyberRiskApp.Models.RequestStatus.Completed => "bg-success",
+                                                                _ => "bg-secondary"
+                                                            };
+                                                        }
+                                                        <span class="badge @statusBadge">@request.Status</span>
+                                                    </td>
+                                                    <td>@request.RequesterName</td>
+                                                    <td>@(request.AssignedToUser?.Email ?? "Unassigned")</td>
+                                                    <td>
+                                                        @(request.RequestedTimeline?.ToShortDateString() ?? "Not set")
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <a asp-action="Details" asp-route-id="@request.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            <a asp-action="Edit" asp-route-id="@request.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Assessment Requests</h5>
+                                    <p class="text-muted">No assessment requests have been submitted yet.</p>
+                                    <a asp-action="Create" class="btn btn-success">
+                                        <i class="fas fa-plus me-2"></i>Create First Request
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Acceptance Requests Tab -->
+                <div class="tab-pane fade" id="acceptance" role="tabpanel" aria-labelledby="acceptance-tab">
+                    <div class="card">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>Risk Acceptance Requests
+                            </h5>
+                            @if (Model.AcceptanceRequests.Any())
+                            {
+                                <a asp-action="ExportAcceptanceToExcel" class="btn btn-success btn-sm">
+                                    <i class="fas fa-file-excel me-1"></i>Export to Excel
+                                </a>
+                            }
+                        </div>
+                        <div class="card-body">
+                            @if (Model.AcceptanceRequests.Any())
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Description</th>
+                                                <th>Linked Finding</th>
+                                                <th>Status</th>
+                                                <th>Requester</th>
+                                                <th>Assigned To</th>
+                                                <th>Request Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var request in Model.AcceptanceRequests.OrderByDescending(r => r.RequestDate))
+                                            {
+                                                <tr class="@(request.Status == CyberRiskApp.Models.RequestStatus.PendingApproval ? "table-warning" :
+                                                            request.Status == CyberRiskApp.Models.RequestStatus.Approved ? "table-success" :
+                                                            request.Status == CyberRiskApp.Models.RequestStatus.Rejected ? "table-danger" : "")">
+                                                    <td>@request.Id</td>
+                                                    <td>
+                                                        <strong>@request.Description</strong>
+                                                        @if (!string.IsNullOrEmpty(request.BusinessNeed))
+                                                        {
+                                                            <br>
+
+                                                            <small class="text-muted">@(request.BusinessNeed.Length > 50 ? request.BusinessNeed.Substring(0, 50) + "..." : request.BusinessNeed)</small>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (request.LinkedFinding != null)
+                                                        {
+                                                            <span class="badge bg-info">@request.LinkedFinding.FindingNumber</span>
+                                                            <br>
+
+                                                            <small class="text-muted">@request.LinkedFinding.Title</small>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">No linked finding</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @{
+                                                            var statusBadge = request.Status switch
+                                                            {
+                                                                CyberRiskApp.Models.RequestStatus.Pending => "bg-warning text-dark",
+                                                                CyberRiskApp.Models.RequestStatus.PendingApproval => "bg-warning text-dark",
+                                                                CyberRiskApp.Models.RequestStatus.Approved => "bg-success",
+                                                                CyberRiskApp.Models.RequestStatus.Rejected => "bg-danger",
+                                                                _ => "bg-secondary"
+                                                            };
+                                                        }
+                                                        <span class="badge @statusBadge">@request.Status</span>
+                                                    </td>
+                                                    <td>@request.Requester</td>
+                                                    <td>@(request.AssignedToUser?.FullName ?? "Unassigned")</td>
+                                                    <td>@request.RequestDate.ToShortDateString()</td>
+                                                    <td>
+                                                        <div class="btn-group" role="group">
+                                                            <a asp-action="AcceptanceDetails" asp-route-id="@request.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
+                                                            @if (request.Status == CyberRiskApp.Models.RequestStatus.PendingApproval)
+                                                            {
+                                                                <a asp-action="ReviewAcceptance" asp-route-id="@request.Id" class="btn btn-sm btn-outline-warning" title="Review">
+                                                                    <i class="fas fa-gavel"></i>
+                                                                </a>
+                                                            }
+                                                            @if (User.IsUserAdmin())
+                                                            {
+                                                                <button type="button" class="btn btn-sm btn-outline-danger" title="Delete Request" 
+                                                                        onclick="confirmDeleteAcceptance(@request.Id, '@request.Id', '@Html.Raw(Html.Encode(request.Description).Replace("'", "\\'"))')">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Risk Acceptance Requests</h5>
+                                    <p class="text-muted">No risk acceptance requests have been submitted yet.</p>
+                                    <a asp-action="CreateAcceptance" class="btn btn-warning">
+                                        <i class="fas fa-shield-alt me-2"></i>Create First Request
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Acceptance Request Confirmation Modal -->
+@if (User.IsUserAdmin())
+{
+    <div class="modal fade" id="deleteAcceptanceConfirmModal" tabindex="-1" aria-labelledby="deleteAcceptanceConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteAcceptanceConfirmModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone!
+                    </div>
+                    <p>Are you sure you want to delete the following risk acceptance request?</p>
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title" id="deleteAcceptanceDescription"></h6>
+                            <p class="card-text">
+                                <strong>Request ID:</strong> <span id="deleteAcceptanceId"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <form id="deleteAcceptanceForm" method="post" style="display: inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Delete Request
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        function confirmDeleteAcceptance(id, requestId, description) {
+            // Set the form action
+            document.getElementById('deleteAcceptanceForm').action = '@Url.Action("DeleteAcceptanceConfirmed", "Requests")/' + id;
+            
+            // Set the request details in the modal
+            document.getElementById('deleteAcceptanceId').textContent = requestId;
+            document.getElementById('deleteAcceptanceDescription').textContent = description;
+            
+            // Show the modal
+            var modal = new bootstrap.Modal(document.getElementById('deleteAcceptanceConfirmModal'));
+            modal.show();
+        }
+    </script>
+}

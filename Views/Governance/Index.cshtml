@@ -1,0 +1,477 @@
+﻿@model CyberRiskApp.ViewModels.GovernanceDashboardViewModel
+@using CyberRiskApp.Extensions
+@{
+    ViewData["Title"] = "GRC Governance Dashboard";
+}
+
+<style>
+    .border-left-primary {
+        border-left: 4px solid #0d6efd !important;
+    }
+    .border-left-info {
+        border-left: 4px solid #0dcaf0 !important;
+    }
+    .border-left-danger {
+        border-left: 4px solid #dc3545 !important;
+    }
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-building me-2"></i>GRC Governance Dashboard</h2>
+    @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+    {
+        <div>
+            <a asp-controller="Frameworks" asp-action="Upload" class="btn btn-primary">
+                <i class="fas fa-upload me-1"></i>Upload Framework
+            </a>
+            <a asp-controller="ComplianceAssessments" asp-action="Create" class="btn btn-success me-2">
+                <i class="fas fa-plus me-1"></i>New Compliance Assessment
+            </a>
+            <a asp-controller="MaturityAssessments" asp-action="Create" class="btn btn-info">
+                <i class="fas fa-chart-line me-1"></i>New Maturity Assessment
+            </a>
+        </div>
+    }
+</div>
+
+<!-- Enhanced Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">@(Model.Stats.ContainsKey("TotalFrameworks") ? Model.Stats["TotalFrameworks"] : 0)</h4>
+                        <p class="card-text">Compliance Frameworks</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-book fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">@(Model.Stats.ContainsKey("TotalMaturityFrameworks") ? Model.Stats["TotalMaturityFrameworks"] : 0)</h4>
+                        <p class="card-text">Maturity Frameworks</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-area fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">@(Model.Stats.ContainsKey("ActiveAssessments") ? Model.Stats["ActiveAssessments"] : 0)</h4>
+                        <p class="card-text">Active Assessments</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clipboard-check fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">@(Model.Stats.ContainsKey("AverageCompliance") ? Model.Stats["AverageCompliance"] : 0)%</h4>
+                        <p class="card-text">Avg Compliance</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-balance-scale fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-purple text-white" style="background-color: #6f42c1 !important;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">@(Model.Stats.ContainsKey("AverageMaturityLevel") ? Model.Stats["AverageMaturityLevel"] : 0)</h4>
+                        <p class="card-text">Avg Maturity</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">@(Model.Stats.ContainsKey("TotalOrganizations") ? Model.Stats["TotalOrganizations"] : 0)</h4>
+                        <p class="card-text">Organizations</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-sitemap fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assessment Status Charts -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-balance-scale me-1"></i>Compliance Assessment Status</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 250px;">
+                    <canvas id="complianceChart"></canvas>
+                </div>
+                <div class="mt-3 text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-circle text-primary"></i> In Progress: @(Model.Stats.ContainsKey("ComplianceInProgress") ? Model.Stats["ComplianceInProgress"] : 0) |
+                        <i class="fas fa-circle text-success"></i> Completed: @(Model.Stats.ContainsKey("ComplianceCompleted") ? Model.Stats["ComplianceCompleted"] : 0)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line me-1"></i>Maturity Assessment Status</h5>
+            </div>
+            <div class="card-body">
+                <div style="position: relative; height: 250px;">
+                    <canvas id="maturityChart"></canvas>
+                </div>
+                <div class="mt-3 text-center">
+                    <small class="text-muted">
+                        <i class="fas fa-circle" style="color: #6f42c1;"></i> In Progress: @(Model.Stats.ContainsKey("MaturityInProgress") ? Model.Stats["MaturityInProgress"] : 0) |
+                        <i class="fas fa-circle text-info"></i> Completed: @(Model.Stats.ContainsKey("MaturityCompleted") ? Model.Stats["MaturityCompleted"] : 0)
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Compliance Assessments -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-balance-scale me-1"></i>Recent Compliance Assessments</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.RecentAssessments.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var assessment in Model.RecentAssessments)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@assessment.Title</h6>
+                                    <small>@assessment.CreatedAt.ToString("MMM dd")</small>
+                                </div>
+                                <p class="mb-1">@assessment.Framework.Name - @assessment.Organization.Name</p>
+                                <small>
+                                    <span class="badge bg-@(assessment.Status switch
+                                    {
+                                        CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+                                        CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
+                                        CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+                                        CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
+                                        _ => "secondary"
+                                    })">
+                                        @assessment.Status
+                                    </span>
+                                    | @assessment.CompliancePercentage% Complete
+                                </small>
+                            </div>
+                        }
+                    </div>
+                    <div class="text-center mt-3">
+                        <a asp-controller="ComplianceAssessments" asp-action="Index" class="btn btn-outline-primary btn-sm">View All</a>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No compliance assessments found.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Maturity Assessments -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line me-1"></i>Recent Maturity Assessments</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.RecentMaturityAssessments.Any())
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var assessment in Model.RecentMaturityAssessments)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">@assessment.Title</h6>
+                                    <small>@assessment.CreatedAt.ToString("MMM dd")</small>
+                                </div>
+                                <p class="mb-1">@assessment.Framework.Name - @assessment.Organization.Name</p>
+                                <small>
+                                    <span class="badge bg-@(assessment.Status switch
+                                    {
+                                        CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+                                        CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
+                                        CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+                                        CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
+                                        _ => "secondary"
+                                    })">
+                                        @assessment.Status
+                                    </span>
+                                    | Level @assessment.GetDisplayMaturityLevel()
+                                </small>
+                            </div>
+                        }
+                    </div>
+                    <div class="text-center mt-3">
+                        <a asp-controller="MaturityAssessments" asp-action="Index" class="btn btn-outline-info btn-sm">View All</a>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No maturity assessments found.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Upcoming Deadlines -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-calendar-exclamation me-1"></i>Upcoming Deadlines</h5>
+            </div>
+            <div class="card-body">
+
+                @if (Model.UpcomingDeadlines.Any())
+                {
+                    <div class="row">
+                        @foreach (var assessment in Model.UpcomingDeadlines)
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-left-danger h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-danger">@assessment.Title</h6>
+                                        <p class="card-text small">@assessment.Framework.Name</p>
+                                        <p class="card-text small">@assessment.Organization.Name</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">@assessment.CompliancePercentage% Complete</small>
+                                            <small class="text-danger fw-bold">
+                                                @if (assessment.DueDate.HasValue)
+                                                {
+                                                    @assessment.DueDate.Value.ToString("MMM dd")
+                                                }
+                                            </small>
+                                        </div>
+                                        <div class="progress mt-2" style="height: 4px;">
+                                            <div class="progress-bar bg-danger" style="width: @assessment.CompliancePercentage%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="text-center mt-3">
+                        <a asp-controller="ComplianceAssessments" asp-action="Index" class="btn btn-outline-danger btn-sm">View All Deadlines</a>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No upcoming deadlines.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Frameworks -->
+<div class="row mt-4">
+    <!-- Compliance Frameworks -->
+    @if (Model.ActiveFrameworks.Any())
+    {
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-book me-1"></i>Active Compliance Frameworks</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var framework in Model.ActiveFrameworks)
+                        {
+                            <div class="col-12 mb-3">
+                                <div class="card border-left-primary">
+                                    <div class="card-body p-3">
+                                        <h6 class="card-title mb-1">@framework.Name</h6>
+                                        <p class="card-text small mb-1">@framework.Description</p>
+                                        <small class="text-muted">
+                                            @framework.Controls.Count() Controls | Version @framework.Version
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="text-center">
+                        <a asp-controller="Frameworks" asp-action="Index" class="btn btn-outline-primary btn-sm">View All</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Maturity Frameworks -->
+    @if (Model.ActiveMaturityFrameworks.Any())
+    {
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-area me-1"></i>Active Maturity Frameworks</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var framework in Model.ActiveMaturityFrameworks)
+                        {
+                            <div class="col-12 mb-3">
+                                <div class="card border-left-info">
+                                    <div class="card-body p-3">
+                                        <h6 class="card-title mb-1">@framework.Name</h6>
+                                        <p class="card-text small mb-1">@framework.Description</p>
+                                        <small class="text-muted">
+                                            @framework.Controls.Count() Controls | Version @framework.Version
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="text-center">
+                        <a asp-controller="MaturityFrameworks" asp-action="Index" class="btn btn-outline-info btn-sm">View All</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Compliance Assessment Status Chart
+            const complianceData = {
+                inProgress: @(Model.Stats.ContainsKey("ComplianceInProgress") ? Model.Stats["ComplianceInProgress"] : 0),
+                completed: @(Model.Stats.ContainsKey("ComplianceCompleted") ? Model.Stats["ComplianceCompleted"] : 0)
+            };
+
+            const complianceCtx = document.getElementById('complianceChart').getContext('2d');
+            new Chart(complianceCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['In Progress', 'Completed'],
+                    datasets: [{
+                        data: [complianceData.inProgress, complianceData.completed],
+                        backgroundColor: ['#0d6efd', '#198754'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = complianceData.inProgress + complianceData.completed;
+                                    const percentage = total > 0 ? Math.round((context.parsed / total) * 100) : 0;
+                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    },
+                    layout: {
+                        padding: 10
+                    }
+                }
+            });
+
+            // Maturity Assessment Status Chart
+            const maturityData = {
+                inProgress: @(Model.Stats.ContainsKey("MaturityInProgress") ? Model.Stats["MaturityInProgress"] : 0),
+                completed: @(Model.Stats.ContainsKey("MaturityCompleted") ? Model.Stats["MaturityCompleted"] : 0)
+            };
+
+            const maturityCtx = document.getElementById('maturityChart').getContext('2d');
+            new Chart(maturityCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['In Progress', 'Completed'],
+                    datasets: [{
+                        data: [maturityData.inProgress, maturityData.completed],
+                        backgroundColor: ['#6f42c1', '#0dcaf0'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = maturityData.inProgress + maturityData.completed;
+                                    const percentage = total > 0 ? Math.round((context.parsed / total) * 100) : 0;
+                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    },
+                    layout: {
+                        padding: 10
+                    }
+                }
+            });
+        });
+    </script>
+}

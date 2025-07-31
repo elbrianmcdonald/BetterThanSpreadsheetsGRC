@@ -1,0 +1,320 @@
+@model object
+@{
+    ViewData["Title"] = "Create Technical Control Mappings";
+    var technicalControl = ViewBag.TechnicalControl as CyberRiskApp.Models.ReferenceDataEntry;
+    var availableControls = ViewBag.AvailableControls as IEnumerable<CyberRiskApp.Models.ComplianceControlInfo> ?? new List<CyberRiskApp.Models.ComplianceControlInfo>();
+    var existingMappings = ViewBag.ExistingMappings as IEnumerable<CyberRiskApp.Models.ComplianceControlMappingInfo> ?? new List<CyberRiskApp.Models.ComplianceControlMappingInfo>();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-link me-2 text-primary"></i>Map Technical Control to Compliance Controls</h2>
+                <a asp-action="SelectTechnicalControl" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Selection
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (technicalControl != null)
+    {
+        <!-- Technical Control Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>@technicalControl.Value
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(technicalControl.Description))
+                {
+                    <p class="card-text">@technicalControl.Description</p>
+                }
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Existing Mappings:</strong> <span class="badge bg-success">@existingMappings.Count()</span>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Available Controls:</strong> <span class="badge bg-info">@availableControls.Count()</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Mappings -->
+        @if (existingMappings.Any())
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-check-circle me-2 text-success"></i>Existing Mappings</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var mapping in existingMappings)
+                        {
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                                    <div>
+                                        <strong class="text-success">@mapping.ControlId</strong>
+                                        <small class="text-muted">(@mapping.Framework)</small>
+                                        @if (!string.IsNullOrEmpty(mapping.Title))
+                                        {
+                                            <br><small>@mapping.Title</small>
+                                        }
+                                    </div>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                                            onclick="removeMapping(@mapping.MappingId)">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Create New Mappings -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-plus me-2 text-primary"></i>Add New Mappings</h6>
+            </div>
+            <div class="card-body">
+                <form id="mappingForm">
+                    <input type="hidden" id="technicalControlId" value="@technicalControl.Id" />
+                    
+                    <!-- Common Mapping Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="mappingRationale" class="form-label">Mapping Rationale</label>
+                            <textarea id="mappingRationale" class="form-control" rows="3" 
+                                      placeholder="Explain how this technical control fulfills the compliance requirements..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="implementationNotes" class="form-label">Implementation Notes</label>
+                            <textarea id="implementationNotes" class="form-control" rows="3" 
+                                      placeholder="Additional implementation details or notes..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Search and Filter -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <input type="text" id="searchControls" class="form-control" 
+                                   placeholder="Search compliance controls...">
+                        </div>
+                        <div class="col-md-3">
+                            <select id="frameworkFilter" class="form-select">
+                                <option value="">All Frameworks</option>
+                                @foreach (var framework in availableControls.Select(c => c.Framework).Distinct().OrderBy(f => f))
+                                {
+                                    <option value="@framework">@framework</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex gap-2">
+                                <button type="button" id="selectAll" class="btn btn-outline-primary btn-sm">Select All</button>
+                                <button type="button" id="selectNone" class="btn btn-outline-secondary btn-sm">Select None</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Available Compliance Controls -->
+                    @if (availableControls.Any())
+                    {
+                        <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                            <div class="row" id="controlsList">
+                                @foreach (var control in availableControls.OrderBy(c => c.Framework).ThenBy(c => c.ControlId))
+                                {
+                                    <div class="col-md-6 mb-2 control-item" 
+                                         data-framework="@control.Framework.ToLower()" 
+                                         data-search="@control.ControlId.ToLower() @control.Title.ToLower() @control.Category.ToLower()">
+                                        <div class="form-check p-3 border rounded">
+                                            <input class="form-check-input control-checkbox" type="checkbox" 
+                                                   id="control_@control.Id" value="@control.Id">
+                                            <label class="form-check-label w-100" for="control_@control.Id">
+                                                <div class="d-flex justify-content-between">
+                                                    <strong class="text-primary">@control.ControlId</strong>
+                                                    <small class="text-muted">@control.Framework</small>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(control.Title))
+                                                {
+                                                    <div class="small text-truncate" title="@control.Title">@control.Title</div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(control.Category))
+                                                {
+                                                    <div class="small text-muted">@control.Category</div>
+                                                }
+                                            </label>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-between">
+                            <div>
+                                <span id="selectedCount" class="text-muted">0 controls selected</span>
+                            </div>
+                            <div>
+                                <button type="button" id="createMappings" class="btn btn-success btn-lg" disabled>
+                                    <i class="fas fa-plus me-2"></i>Create Mappings
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning text-center">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <h5>All Controls Already Mapped</h5>
+                            <p class="mb-0">This technical control has been mapped to all available compliance controls.</p>
+                        </div>
+                    }
+                </form>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <h5><i class="fas fa-exclamation-triangle me-2"></i>Technical Control Not Found</h5>
+            <p class="mb-0">The requested technical control could not be found.</p>
+        </div>
+    }
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Creating Mappings...</h5>
+                <p class="mb-0">Please wait while we create the technical control mappings.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            const searchBox = $('#searchControls');
+            const frameworkFilter = $('#frameworkFilter');
+            const controlItems = $('.control-item');
+            const controlCheckboxes = $('.control-checkbox');
+            const selectedCount = $('#selectedCount');
+            const createButton = $('#createMappings');
+
+            // Filter functionality
+            function filterControls() {
+                const searchTerm = searchBox.val().toLowerCase();
+                const selectedFramework = frameworkFilter.val().toLowerCase();
+                let visibleCount = 0;
+
+                controlItems.each(function() {
+                    const item = $(this);
+                    const framework = item.data('framework');
+                    const searchData = item.data('search');
+                    
+                    const matchesSearch = searchTerm === '' || searchData.includes(searchTerm);
+                    const matchesFramework = selectedFramework === '' || framework.includes(selectedFramework);
+                    
+                    if (matchesSearch && matchesFramework) {
+                        item.show();
+                        visibleCount++;
+                    } else {
+                        item.hide();
+                        item.find('.control-checkbox').prop('checked', false);
+                    }
+                });
+
+                updateSelectedCount();
+            }
+
+            // Update selected count and button state
+            function updateSelectedCount() {
+                const checkedCount = controlCheckboxes.filter(':checked').length;
+                selectedCount.text(checkedCount + ' control(s) selected');
+                createButton.prop('disabled', checkedCount === 0);
+            }
+
+            // Event bindings
+            searchBox.on('input', filterControls);
+            frameworkFilter.on('change', filterControls);
+            controlCheckboxes.on('change', updateSelectedCount);
+
+            $('#selectAll').on('click', function() {
+                controlItems.filter(':visible').find('.control-checkbox').prop('checked', true);
+                updateSelectedCount();
+            });
+
+            $('#selectNone').on('click', function() {
+                controlCheckboxes.prop('checked', false);
+                updateSelectedCount();
+            });
+
+            // Create mappings
+            $('#createMappings').on('click', function() {
+                const selectedControlIds = controlCheckboxes.filter(':checked').map(function() {
+                    return parseInt($(this).val());
+                }).get();
+
+                if (selectedControlIds.length === 0) return;
+
+                const data = {
+                    technicalControlId: parseInt($('#technicalControlId').val()),
+                    complianceControlIds: selectedControlIds,
+                    mappingRationale: $('#mappingRationale').val(),
+                    implementationNotes: $('#implementationNotes').val()
+                };
+
+                $('#loadingModal').modal('show');
+
+                $.ajax({
+                    url: '/api/technicalcontrolmapping/bulk',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function(response) {
+                        $('#loadingModal').modal('hide');
+                        alert('Successfully created ' + response.count + ' mappings!');
+                        location.reload();
+                    },
+                    error: function(xhr) {
+                        $('#loadingModal').modal('hide');
+                        const error = xhr.responseJSON?.error || 'An error occurred while creating mappings.';
+                        alert('Error: ' + error);
+                    }
+                });
+            });
+
+            // Initial update
+            updateSelectedCount();
+        });
+
+        // Function to remove existing mapping
+        function removeMapping(mappingId) {
+            if (!confirm('Are you sure you want to remove this mapping?')) return;
+
+            $.ajax({
+                url: '/api/technicalcontrolmapping/' + mappingId,
+                type: 'DELETE',
+                success: function() {
+                    alert('Mapping removed successfully!');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'An error occurred while removing the mapping.';
+                    alert('Error: ' + error);
+                }
+            });
+        }
+    </script>
+}

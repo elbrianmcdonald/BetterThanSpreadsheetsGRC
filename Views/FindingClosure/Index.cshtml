@@ -1,0 +1,333 @@
+﻿@model IEnumerable<CyberRiskApp.Models.FindingClosureRequest>
+@{
+    ViewData["Title"] = "Finding Closure Requests";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            Finding Closure Requests
+        </h2>
+        <a asp-action="Create" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i>Request Closure
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (Model.Any())
+    {
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Closure Request Management
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-3 py-3">Request ID</th>
+                                <th class="px-3 py-3">Finding</th>
+                                <th class="px-3 py-3">Requester</th>
+                                <th class="px-3 py-3">Request Date</th>
+                                <th class="px-3 py-3">Status</th>
+                                <th class="px-3 py-3">Assigned To</th>
+                                <th class="px-3 py-3">Reviewer</th>
+                                <th class="px-3 py-3" style="min-width: 140px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var request in Model)
+                            {
+                                <tr class="@(request.Status == CyberRiskApp.Models.RequestStatus.Pending ? "clickable-row cursor-pointer" : "clickable-row-details cursor-pointer")"
+                                    data-pending="@(request.Status == CyberRiskApp.Models.RequestStatus.Pending ? "true" : "false")"
+                                    data-request-id="@request.Id">
+                                    <td class="px-3 py-3">
+                                        <code class="text-primary">#@request.Id</code>
+                                        @if (request.Status == CyberRiskApp.Models.RequestStatus.Pending)
+                                        {
+                                            <small class="d-block text-success">
+                                                <i class="fas fa-hand-pointer me-1"></i>Click to review
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <small class="d-block text-muted">
+                                                <i class="fas fa-eye me-1"></i>Click for details
+                                            </small>
+                                        }
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <div class="d-flex align-items-center">
+                                            <div>
+                                                @if (request.LinkedFinding != null)
+                                                {
+                                                    <strong>@request.LinkedFinding.FindingNumber</strong>
+                                                    <br>
+                                                    <small class="text-muted">@request.LinkedFinding.Title</small>
+                                                    <br>
+                                                    <span class="badge bg-@GetRiskColor(request.LinkedFinding.RiskRating)">
+                                                        @request.LinkedFinding.RiskRating
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Finding ID: @request.FindingId</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <i class="fas fa-user me-1"></i>@request.Requester
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        @request.RequestDate.ToString("MMM dd, yyyy")
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        <span class="badge bg-@GetStatusColor(request.Status) fs-6">
+                                            @GetStatusText(request.Status)
+                                        </span>
+                                        @if (request.RequestedClosureDate.HasValue)
+                                        {
+                                            <br>
+                                            <small class="text-muted">
+                                                Target: @request.RequestedClosureDate.Value.ToString("MMM dd")
+                                            </small>
+                                        }
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        @if (request.AssignedToUser != null)
+                                        {
+                                            <div>
+                                                <i class="fas fa-user me-1"></i>@request.AssignedToUser.FullName
+                                                @if (request.AssignmentDate.HasValue)
+                                                {
+                                                    <br>
+                                                    <small class="text-muted">Assigned: @request.AssignmentDate.Value.ToString("MMM dd")</small>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Unassigned</span>
+                                        }
+                                    </td>
+                                    <td class="px-3 py-3">
+                                        @if (!string.IsNullOrEmpty(request.ReviewedBy))
+                                        {
+                                            <div>
+                                                <i class="fas fa-user-check me-1"></i>@request.ReviewedBy
+                                                @if (request.ReviewDate.HasValue)
+                                                {
+                                                    <br>
+                                                    <small class="text-muted">@request.ReviewDate.Value.ToString("MMM dd")</small>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Pending Review</span>
+                                        }
+                                    </td>
+                                    <td class="px-3 py-3 action-buttons">
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <a asp-action="Details" asp-route-id="@request.Id"
+                                               class="btn btn-outline-primary btn-sm" title="View Details"
+                                               onclick="event.stopPropagation();">
+                                                <i class="fas fa-eye me-1"></i>Details
+                                            </a>
+
+                                            @if (request.Status == CyberRiskApp.Models.RequestStatus.Pending)
+                                            {
+                                                <a asp-action="Review" asp-route-id="@request.Id"
+                                                   class="btn btn-warning btn-sm text-dark" title="Review Request"
+                                                   onclick="event.stopPropagation();">
+                                                    <i class="fas fa-clipboard-check me-1"></i>Review
+                                                </a>
+                                            }
+                                            else if (request.Status == CyberRiskApp.Models.RequestStatus.Approved)
+                                            {
+                                                <span class="badge bg-success fs-6">
+                                                    <i class="fas fa-check me-1"></i>Approved
+                                                </span>
+                                            }
+                                            else if (request.Status == CyberRiskApp.Models.RequestStatus.Rejected)
+                                            {
+                                                <span class="badge bg-danger fs-6">
+                                                    <i class="fas fa-times me-1"></i>Rejected
+                                                </span>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Pending)</h3>
+                        <p class="mb-0">Pending Review</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Approved)</h3>
+                        <p class="mb-0">Approved</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center">
+                        <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Rejected)</h3>
+                        <p class="mb-0">Rejected</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h3>@Model.Count()</h3>
+                        <p class="mb-0">Total Requests</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow text-center py-5">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Closure Requests</h4>
+                <p class="text-muted">No finding closure requests have been submitted yet.</p>
+                <a asp-action="Create" class="btn btn-success btn-lg">
+                    <i class="fas fa-plus me-2"></i>Submit First Closure Request
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    .clickable-row:hover,
+    .clickable-row-details:hover {
+        background-color: #f8f9fa !important;
+        transform: translateX(2px);
+        transition: all 0.2s ease;
+    }
+
+    .clickable-row:hover {
+        background-color: #fff3cd !important; /* Light yellow for pending reviews */
+    }
+
+    .clickable-row-details:hover {
+        background-color: #e2e3e5 !important; /* Light gray for completed requests */
+    }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle row clicks
+            document.querySelectorAll('.clickable-row, .clickable-row-details').forEach(function(row) {
+                row.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on action buttons
+                    if (e.target.closest('.action-buttons')) {
+                        return;
+                    }
+
+                    const requestId = this.getAttribute('data-request-id');
+                    const isPending = this.getAttribute('data-pending') === 'true';
+
+                    // If pending, go to review screen, otherwise go to details
+                    if (isPending) {
+                        window.location.href = `/FindingClosure/Review/${requestId}`;
+                    } else {
+                        window.location.href = `/FindingClosure/Details/${requestId}`;
+                    }
+                });
+            });
+
+            // Add visual feedback on mouse over
+            document.querySelectorAll('.clickable-row, .clickable-row-details').forEach(function(row) {
+                row.addEventListener('mouseenter', function() {
+                    this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                });
+
+                row.addEventListener('mouseleave', function() {
+                    this.style.boxShadow = 'none';
+                });
+            });
+        });
+    </script>
+}
+
+@functions {
+    private string GetStatusColor(CyberRiskApp.Models.RequestStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.RequestStatus.Pending => "warning",
+            CyberRiskApp.Models.RequestStatus.Approved => "success",
+            CyberRiskApp.Models.RequestStatus.Rejected => "danger",
+            CyberRiskApp.Models.RequestStatus.InProgress => "info",
+            _ => "secondary"
+        };
+    }
+
+    private string GetStatusText(CyberRiskApp.Models.RequestStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.RequestStatus.Pending => "Pending Review",
+            CyberRiskApp.Models.RequestStatus.Approved => "Approved",
+            CyberRiskApp.Models.RequestStatus.Rejected => "Rejected",
+            CyberRiskApp.Models.RequestStatus.InProgress => "In Progress",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetRiskColor(CyberRiskApp.Models.RiskRating rating)
+    {
+        return rating switch
+        {
+            CyberRiskApp.Models.RiskRating.High => "danger",
+            CyberRiskApp.Models.RiskRating.Medium => "warning",
+            CyberRiskApp.Models.RiskRating.Low => "success",
+            CyberRiskApp.Models.RiskRating.Critical => "dark",
+            _ => "secondary"
+        };
+    }
+}

@@ -1,0 +1,329 @@
+﻿@model RiskAcceptanceRequest
+@{
+    ViewData["Title"] = "Request Risk Acceptance";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-handshake me-2"></i>Request Risk Acceptance</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Requests</a></li>
+                            <li class="breadcrumb-item active">Create Risk Acceptance Request</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-handshake me-2"></i>Request Risk Acceptance
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Important:</strong> Risk acceptance should only be used when risks cannot be mitigated to an acceptable level through other means.
+                    </div>
+
+                    <form asp-action="CreateAcceptance" method="post" id="acceptanceForm">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label">Risk Description *</label>
+                            <textarea asp-for="Description" class="form-control" rows="3" required
+                                      placeholder="Describe the specific risk that needs to be accepted..."></textarea>
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="BusinessNeed" class="form-label">Business Need *</label>
+                            <textarea asp-for="BusinessNeed" class="form-control" rows="4" required
+                                      placeholder="Explain the business need for this risk acceptance..."></textarea>
+                            <span asp-validation-for="BusinessNeed" class="text-danger"></span>
+                            <div class="form-text">
+                                Include details about why mitigation is not feasible, business impact, compensating controls, etc.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Link to Finding or Risk</label>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                You can link this acceptance request to either a Finding OR a Risk from the Risk Register. Select only one.
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="FindingId" class="form-label">Related Finding (Optional)</label>
+                                    <select asp-for="FindingId" class="form-select" id="FindingId">
+                                        <option value="">Select a finding (if applicable)</option>
+                                        @if (ViewBag.OpenFindings != null)
+                                        {
+                                            @foreach (var finding in ViewBag.OpenFindings as List<SelectListItem>)
+                                            {
+                                                <option value="@finding.Value">@finding.Text</option>
+                                            }
+                                        }
+                                    </select>
+                                    <span asp-validation-for="FindingId" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="RiskId" class="form-label">Related Risk (Optional)</label>
+                                    <select asp-for="RiskId" class="form-select" id="RiskId">
+                                        <option value="">Select a risk (if applicable)</option>
+                                        @if (ViewBag.OpenRisks != null)
+                                        {
+                                            @foreach (var risk in ViewBag.OpenRisks as List<SelectListItem>)
+                                            {
+                                                <option value="@risk.Value">@risk.Text</option>
+                                            }
+                                        }
+                                    </select>
+                                    <span asp-validation-for="RiskId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Selected Item Information</label>
+                                    <div class="bg-light p-3 rounded border">
+                                        <div id="selectedInfo" class="text-muted">
+                                            <small><i class="fas fa-info-circle me-1"></i>Select a finding or risk to view details</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning" id="submitBtn">
+                                <i class="fas fa-handshake me-1"></i>Submit Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Risk Acceptance Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-warning"><i class="fas fa-check-circle me-1"></i>When to Accept Risk:</h6>
+                    <ul class="small">
+                        <li>Mitigation costs exceed potential losses</li>
+                        <li>Technical mitigation is not feasible</li>
+                        <li>Risk is temporary and short-term</li>
+                        <li>Business requirements mandate acceptance</li>
+                    </ul>
+
+                    <h6 class="text-danger mt-3"><i class="fas fa-exclamation-triangle me-1"></i>Requirements:</h6>
+                    <ul class="small">
+                        <li>Senior management approval required</li>
+                        <li>Detailed business justification</li>
+                        <li>Documented compensating controls</li>
+                        <li>Regular review and reassessment</li>
+                    </ul>
+
+                    <div class="alert alert-info mt-3">
+                        <small>
+                            <i class="fas fa-lightbulb me-1"></i>
+                            <strong>Tip:</strong> Link to specific findings for better traceability.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            @if (ViewBag.OpenFindings != null)
+            {
+                var openFindings = ViewBag.OpenFindings as List<SelectListItem>;
+                if (openFindings != null && openFindings.Any())
+                {
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Open Findings</h6>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                There are <strong>@openFindings.Count</strong> open findings available for linking.
+                            </small>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const findingSelect = document.getElementById('FindingId');
+            const riskSelect = document.getElementById('RiskId');
+            const selectedInfo = document.getElementById('selectedInfo');
+            const descriptionTextarea = document.getElementById('Description');
+            const form = document.getElementById('acceptanceForm');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Finding data for display
+            const findingData = {
+        @if (ViewBag.OpenFindings != null)
+        {
+            @foreach (var finding in ViewBag.OpenFindings as List<SelectListItem>)
+            {
+                @Html.Raw($"'{finding.Value}': {{ title: '{Html.Encode(finding.Text)}' }},")
+            }
+        }
+            };
+
+            // Risk data for display
+            const riskData = {
+        @if (ViewBag.OpenRisks != null)
+        {
+            @foreach (var risk in ViewBag.OpenRisks as List<SelectListItem>)
+            {
+                @Html.Raw($"'{risk.Value}': {{ title: '{Html.Encode(risk.Text)}' }},")
+            }
+        }
+            };
+
+            // Handle finding selection
+            if (findingSelect) {
+                findingSelect.addEventListener('change', function() {
+                    const selectedFindingId = this.value;
+
+                    if (selectedFindingId) {
+                        // Clear risk selection
+                        if (riskSelect) riskSelect.value = '';
+
+                        if (findingData[selectedFindingId]) {
+                            const finding = findingData[selectedFindingId];
+                            selectedInfo.innerHTML = `
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-search text-warning me-2 mt-1"></i>
+                                    <div>
+                                        <strong>Selected Finding:</strong><br>
+                                        <small class="text-muted">${finding.title}</small>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Auto-fill description if empty
+                            if (descriptionTextarea && !descriptionTextarea.value.trim()) {
+                                const findingTitle = finding.title.includes(' - ') ?
+                                    finding.title.split(' - ')[1] : finding.title;
+                                descriptionTextarea.value = `Risk related to finding: ${findingTitle}`;
+                            }
+                        }
+                    } else if (!riskSelect.value) {
+                        selectedInfo.innerHTML = '<small class="text-muted"><i class="fas fa-info-circle me-1"></i>Select a finding or risk to view details</small>';
+                    }
+                });
+            }
+
+            // Handle risk selection
+            if (riskSelect) {
+                riskSelect.addEventListener('change', function() {
+                    const selectedRiskId = this.value;
+
+                    if (selectedRiskId) {
+                        // Clear finding selection
+                        if (findingSelect) findingSelect.value = '';
+
+                        if (riskData[selectedRiskId]) {
+                            const risk = riskData[selectedRiskId];
+                            selectedInfo.innerHTML = `
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-exclamation-triangle text-danger me-2 mt-1"></i>
+                                    <div>
+                                        <strong>Selected Risk:</strong><br>
+                                        <small class="text-muted">${risk.title}</small>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Auto-fill description if empty
+                            if (descriptionTextarea && !descriptionTextarea.value.trim()) {
+                                const riskTitle = risk.title.includes(' - ') ?
+                                    risk.title.split(' - ')[1] : risk.title;
+                                descriptionTextarea.value = `Risk related to: ${riskTitle}`;
+                            }
+                        }
+                    } else if (!findingSelect.value) {
+                        selectedInfo.innerHTML = '<small class="text-muted"><i class="fas fa-info-circle me-1"></i>Select a finding or risk to view details</small>';
+                    }
+                });
+            }
+
+            // Add form submission handling with better error detection
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('Form submission started...');
+
+                    // Disable submit button to prevent double submission
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Submitting...';
+                    }
+
+                    // Check for basic validation
+                    const description = document.getElementById('Description');
+                    const businessNeed = document.getElementById('BusinessNeed');
+
+                    if (!description || !description.value.trim()) {
+                        e.preventDefault();
+                        alert('Please enter a risk description.');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fas fa-handshake me-1"></i>Submit Request';
+                        }
+                        return false;
+                    }
+
+                    if (!businessNeed || !businessNeed.value.trim()) {
+                        e.preventDefault();
+                        alert('Please enter a business need.');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fas fa-handshake me-1"></i>Submit Request';
+                        }
+                        return false;
+                    }
+
+                    console.log('Form validation passed, submitting...');
+                });
+            }
+
+            // Add error handling for any JavaScript errors
+            window.addEventListener('error', function(e) {
+                console.error('JavaScript Error:', e.error);
+                console.error('Message:', e.message);
+                console.error('Source:', e.filename, 'Line:', e.lineno);
+            });
+        });
+    </script>
+}

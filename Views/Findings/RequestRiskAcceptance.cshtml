@@ -1,0 +1,244 @@
+﻿@model CyberRiskApp.Controllers.RequestRiskAcceptanceViewModel
+
+@{
+    ViewData["Title"] = "Request Risk Acceptance";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">
+                    <i class="fas fa-shield-alt me-2"></i>Request Risk Acceptance
+                </h2>
+                <a asp-action="Details" asp-route-id="@Model.Finding.Id" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Finding
+                </a>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>What happens next:</strong> This will create both a Risk Acceptance Request and automatically trigger
+                a FAIR Risk Assessment. A GRC user will perform the quantitative risk analysis first, then review your
+                acceptance request based on the assessment results.
+            </div>
+
+            <!-- Finding Summary Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-search me-2"></i>Finding Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 class="text-primary">Finding #@Model.Finding.FindingNumber - @Model.Finding.Title</h6>
+                            <p class="mb-2"><strong>Details:</strong> @Model.Finding.Details</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small><strong>Owner:</strong> @Model.Finding.Owner</small><br>
+                                    <small><strong>Business Unit:</strong> @Model.Finding.BusinessUnit</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small><strong>Domain:</strong> @Model.Finding.Domain</small><br>
+                                    <small><strong>Business Owner:</strong> @Model.Finding.BusinessOwner</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <div class="mb-2">
+                                    <span class="badge bg-@GetRiskColor(Model.Finding.RiskRating) fs-5">
+                                        @Model.Finding.RiskRating Risk
+                                    </span>
+                                </div>
+                                <small class="text-muted">
+                                    Impact: @Model.Finding.Impact<br>
+                                    Likelihood: @Model.Finding.Likelihood<br>
+                                    Exposure: @Model.Finding.Exposure
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Acceptance Request Form -->
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Risk Acceptance Request Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="RequestRiskAcceptance" asp-route-id="@Model.Finding.Id" method="post" novalidate>
+                        @Html.AntiForgeryToken()
+
+                        <!-- Debug Information -->
+                        <div class="alert alert-secondary">
+                            <strong>Debug Info:</strong><br>
+                            Finding ID: @Model.Finding.Id<br>
+                            Form Action: RequestRiskAcceptance<br>
+                            Route ID: @Model.Finding.Id
+                        </div>
+
+                        <!-- Risk Description (Auto-populated but editable) -->
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-bold">
+                                <span class="text-danger">*</span> Risk Description
+                            </label>
+                            <textarea name="description" id="description"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Describe the specific risk that needs to be accepted..."
+                                      required>@Model.RiskAcceptanceRequest.Description</textarea>
+                            @if (ViewData.ModelState["description"]?.Errors.Any() == true)
+                            {
+                                <div class="text-danger">
+                                    @foreach (var error in ViewData.ModelState["description"].Errors)
+                                    {
+                                        <div>@error.ErrorMessage</div>
+                                    }
+                                </div>
+                            }
+                            <div class="form-text">
+                                This has been auto-populated but you can modify it to be more specific.
+                            </div>
+                        </div>
+
+                        <!-- Business Justification -->
+                        <div class="mb-4">
+                            <label for="justification" class="form-label fw-bold">
+                                <span class="text-danger">*</span> Business Justification
+                            </label>
+                            <textarea name="justification" id="justification"
+                                      class="form-control"
+                                      rows="6"
+                                      placeholder="Please provide detailed business justification for accepting this risk. Include:&#10;• Business impact of NOT accepting the risk&#10;• Cost/effort required to remediate vs. business value&#10;• Any compensating controls already in place&#10;• Timeline for any planned future remediation&#10;• Stakeholder approval details"
+                                      required>@Model.RiskAcceptanceRequest.BusinessNeed</textarea>
+                            @if (ViewData.ModelState["justification"]?.Errors.Any() == true)
+                            {
+                                <div class="text-danger">
+                                    @foreach (var error in ViewData.ModelState["justification"].Errors)
+                                    {
+                                        <div>@error.ErrorMessage</div>
+                                    }
+                                </div>
+                            }
+                            <div class="form-text">
+                                Provide comprehensive justification including business impact, cost considerations,
+                                compensating controls, and any planned future actions.
+                            </div>
+                        </div>
+
+                        <!-- Workflow Information -->
+                        <div class="alert alert-light border">
+                            <h6 class="text-primary">
+                                <i class="fas fa-cogs me-2"></i>Workflow Process
+                            </h6>
+                            <ol class="mb-0">
+                                <li><strong>Risk Acceptance Request Created</strong> - Your request will be logged with status "Pending Approval"</li>
+                                <li><strong>Risk Assessment Triggered</strong> - A FAIR quantitative risk assessment will be automatically requested</li>
+                                <li><strong>GRC Assessment</strong> - A GRC user will perform the risk assessment to calculate Annual Loss Expectancy (ALE)</li>
+                                <li><strong>Review & Decision</strong> - GRC will review your justification along with the quantified risk data</li>
+                                <li><strong>Final Decision</strong> - Request will be approved/rejected and you'll be notified</li>
+                            </ol>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <a asp-action="Details" asp-route-id="@Model.Finding.Id" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <div>
+                                        <!-- Test button for debugging -->
+                                        <button type="button" class="btn btn-info me-2" onclick="testForm()">
+                                            <i class="fas fa-bug me-2"></i>Test Form
+                                        </button>
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-paper-plane me-2"></i>Submit Risk Acceptance Request
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function testForm() {
+        console.log('=== Form Test Function Called ===');
+
+        // Check if required fields are filled
+        const description = document.querySelector('textarea[name="description"]').value;
+        const justification = document.querySelector('textarea[name="justification"]').value;
+
+        console.log('Description:', description);
+        console.log('Justification:', justification);
+
+        if (!description || !justification) {
+            alert('Please fill in both Description and Justification fields');
+            return;
+        }
+
+        console.log('Form validation passed');
+        alert('Form validation passed! Try submitting now.');
+    }
+
+    // Form submission logging
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                console.log('=== Form Submit Event Triggered ===');
+                console.log('Form action:', form.action);
+                console.log('Form method:', form.method);
+
+                // Check required fields
+                const description = document.querySelector('textarea[name="description"]').value;
+                const justification = document.querySelector('textarea[name="justification"]').value;
+
+                console.log('Description value:', description);
+                console.log('Justification value:', justification);
+
+                if (!description || !justification) {
+                    console.log('=== Form validation failed ===');
+                    e.preventDefault();
+                    alert('Please fill in all required fields');
+                    return false;
+                }
+
+                console.log('=== Form submitting ===');
+                return true;
+            });
+        } else {
+            console.log('=== Form not found ===');
+        }
+    });
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+
+@functions {
+    private string GetRiskColor(CyberRiskApp.Models.RiskRating rating)
+    {
+        return rating switch
+        {
+            CyberRiskApp.Models.RiskRating.Low => "success",
+            CyberRiskApp.Models.RiskRating.Medium => "warning",
+            CyberRiskApp.Models.RiskRating.High => "danger",
+            CyberRiskApp.Models.RiskRating.Critical => "dark",
+            _ => "secondary"
+        };
+    }
+}

@@ -1,0 +1,322 @@
+﻿@model CyberRiskApp.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">GRC Dashboard</h1>
+    </div>
+
+    @if (ViewBag.CurrentUserInfo != null)
+    {
+        <div class="alert alert-info">
+            @ViewBag.CurrentUserInfo
+        </div>
+    }
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Error
+        </div>
+    }
+
+    <!-- Summary Cards Row -->
+    <div class="row">
+        <!-- Total Findings Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Open Findings
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @Model.OpenFindings
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-bug fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- High Risk Findings Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                High Risk Findings
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @Model.HighRiskFindings
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Risks Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Risks
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @Model.TotalRisks
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shield-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total ALE Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total ALE
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @Model.TotalALE.ToString("C")
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row of Cards -->
+    <div class="row">
+        <!-- Pending Requests Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Pending Requests
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @Model.PendingRequests
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overdue Items Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-dark shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                                Overdue Items
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @Model.OverdueItems
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Row -->
+    <div class="row">
+        <!-- Recent Findings -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Findings</h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentFindings.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Finding #</th>
+                                        <th>Title</th>
+                                        <th>Risk</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var finding in Model.RecentFindings)
+                                    {
+                                        <tr>
+                                            <td>@finding.FindingNumber</td>
+                                            <td>@finding.Title</td>
+                                            <td>
+                                                <span class="badge badge-@GetRiskColor(finding.RiskRating)">
+                                                    @finding.RiskRating
+                                                </span>
+                                            </td>
+                                            <td>@finding.Status</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No recent findings</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- High Value Risks -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">High Value Risks</h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.HighValueRisks.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Risk #</th>
+                                        <th>Title</th>
+                                        <th>ALE</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var risk in Model.HighValueRisks)
+                                    {
+                                        <tr>
+                                            <td>@risk.RiskNumber</td>
+                                            <td>@risk.Title</td>
+                                            <td>@risk.ALE.ToString("C")</td>
+                                            <td>@risk.Status</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No high value risks</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Assessments -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Pending Assessment Requests</h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.PendingAssessments.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Requester</th>
+                                        <th>Department</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Assigned To</th>
+                                        <th>Request Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var request in Model.PendingAssessments)
+                                    {
+                                        <tr>
+                                            <td>@request.RequesterName</td>
+                                            <td>@request.Department</td>
+                                            <td>
+                                                <span class="badge badge-@GetPriorityColor(request.Priority)">
+                                                    @request.Priority
+                                                </span>
+                                            </td>
+                                            <td>@request.Status</td>
+                                            <td>@(request.AssignedToUser?.FullName ?? "Unassigned")</td>
+                                            <td>@request.RequestDate.ToShortDateString()</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No pending assessment requests</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetRiskColor(RiskRating rating)
+    {
+        return rating switch
+        {
+            RiskRating.Critical => "danger",
+            RiskRating.High => "warning",
+            RiskRating.Medium => "info",
+            RiskRating.Low => "success",
+            _ => "secondary"
+        };
+    }
+
+    private string GetPriorityColor(Priority priority)
+    {
+        return priority switch
+        {
+            Priority.Urgent => "danger",
+            Priority.High => "warning",
+            Priority.Medium => "info",
+            Priority.Low => "success",
+            _ => "secondary"
+        };
+    }
+}

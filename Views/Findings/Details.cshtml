@@ -1,0 +1,258 @@
+﻿@model CyberRiskApp.Models.Finding
+
+@{
+    ViewData["Title"] = "Finding Details";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="text-primary">
+                    <i class="fas fa-search me-2"></i>Finding Details
+                </h2>
+                <div>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to List
+                    </a>
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                        <i class="fas fa-edit me-2"></i>Edit
+                    </a>
+
+                    @* Only show Request Risk Acceptance for Open findings *@
+                    @if (Model.Status == CyberRiskApp.Models.FindingStatus.Open)
+                    {
+                        <a href="@Url.Action("RequestRiskAcceptance", "Findings", new { id = Model.Id })"
+                           class="btn btn-info">
+                            <i class="fas fa-shield-alt me-2"></i>Request Risk Acceptance
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Debug Information -->
+            <div class="alert alert-light">
+                <strong>Debug Info:</strong><br>
+                Finding ID: @Model.Id<br>
+                Finding Status: @Model.Status<br>
+                Request Risk Acceptance URL: @Url.Action("RequestRiskAcceptance", "Findings", new { id = Model.Id })
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Finding #@Model.FindingNumber - @Model.Title
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6 class="text-primary">Details</h6>
+                            <p class="mb-3">@Model.Details</p>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Owner:</strong> @Model.Owner
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Domain:</strong> @Model.Domain
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Business Unit:</strong> @Model.BusinessUnit
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Business Owner:</strong> @Model.BusinessOwner
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <strong>Open Date:</strong> @Model.OpenDate.ToString("yyyy-MM-dd")
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>SLA Date:</strong>
+                                    @if (Model.SlaDate.HasValue)
+                                    {
+                                        <span class="@(Model.IsOverdue ? "text-danger" : "")">
+                                            @Model.SlaDate.Value.ToString("yyyy-MM-dd")
+                                            @if (Model.IsOverdue)
+                                            {
+                                                <i class="fas fa-exclamation-triangle ms-1"></i>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not set</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Risk Assessment</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-2">
+                                        <strong>Impact:</strong>
+                                        <span class="badge bg-@GetImpactColor(Model.Impact)">@Model.Impact</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Likelihood:</strong>
+                                        <span class="badge bg-@GetLikelihoodColor(Model.Likelihood)">@Model.Likelihood</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Exposure:</strong>
+                                        <span class="badge bg-@GetExposureColor(Model.Exposure)">@Model.Exposure</span>
+                                    </div>
+                                    <hr>
+                                    <div class="text-center">
+                                        <strong>Overall Risk Rating:</strong><br>
+                                        <span class="badge bg-@GetRiskColor(Model.RiskRating) fs-5">@Model.RiskRating</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card bg-light mt-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Status</h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    <i class="fas fa-@GetStatusIcon(Model.Status) text-@GetStatusColor(Model.Status) fa-2x"></i>
+                                    <br>
+                                    <strong class="text-@GetStatusColor(Model.Status)">@GetStatusText(Model.Status)</strong>
+                                </div>
+                            </div>
+
+                            @* Risk Acceptance Actions *@
+                            @if (Model.Status == CyberRiskApp.Models.FindingStatus.Open)
+                            {
+                                <div class="card bg-warning mt-3">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Risk Management</h6>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <p class="small mb-3">Need to accept this risk instead of fixing it?</p>
+                                        <a href="@Url.Action("RequestRiskAcceptance", "Findings", new { id = Model.Id })"
+                                           class="btn btn-warning btn-sm w-100">
+                                            <i class="fas fa-shield-alt me-2"></i>Request Risk Acceptance
+                                        </a>
+                                        <small class="text-muted d-block mt-2">
+                                            This will trigger a FAIR risk assessment and approval workflow.
+                                        </small>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Test the Request Risk Acceptance link
+    document.addEventListener('DOMContentLoaded', function() {
+        const riskAcceptanceLinks = document.querySelectorAll('a[href*="RequestRiskAcceptance"]');
+        console.log('Found', riskAcceptanceLinks.length, 'risk acceptance links');
+
+        riskAcceptanceLinks.forEach(function(link, index) {
+            console.log('Link', index, ':', link.href);
+
+            link.addEventListener('click', function(e) {
+                console.log('=== Risk Acceptance Link Clicked ===');
+                console.log('URL:', this.href);
+                console.log('Finding ID: @Model.Id');
+            });
+        });
+    });
+</script>
+
+@functions {
+    private string GetImpactColor(CyberRiskApp.Models.ImpactLevel impact)
+    {
+        return impact switch
+        {
+            CyberRiskApp.Models.ImpactLevel.Low => "success",
+            CyberRiskApp.Models.ImpactLevel.Medium => "warning",
+            CyberRiskApp.Models.ImpactLevel.High => "danger",
+            CyberRiskApp.Models.ImpactLevel.Critical => "dark",
+            _ => "secondary"
+        };
+    }
+
+    private string GetLikelihoodColor(CyberRiskApp.Models.LikelihoodLevel likelihood)
+    {
+        return likelihood switch
+        {
+            CyberRiskApp.Models.LikelihoodLevel.Unlikely => "success",
+            CyberRiskApp.Models.LikelihoodLevel.Possible => "warning",
+            CyberRiskApp.Models.LikelihoodLevel.Likely => "danger",
+            CyberRiskApp.Models.LikelihoodLevel.AlmostCertain => "dark",
+            _ => "secondary"
+        };
+    }
+
+    private string GetExposureColor(CyberRiskApp.Models.ExposureLevel exposure)
+    {
+        return exposure switch
+        {
+            CyberRiskApp.Models.ExposureLevel.SlightlyExposed => "success",
+            CyberRiskApp.Models.ExposureLevel.Exposed => "warning",
+            CyberRiskApp.Models.ExposureLevel.ModeratelyExposed => "danger",
+            CyberRiskApp.Models.ExposureLevel.HighlyExposed => "dark",
+            _ => "secondary"
+        };
+    }
+
+    private string GetRiskColor(CyberRiskApp.Models.RiskRating rating)
+    {
+        return rating switch
+        {
+            CyberRiskApp.Models.RiskRating.Low => "success",
+            CyberRiskApp.Models.RiskRating.Medium => "warning",
+            CyberRiskApp.Models.RiskRating.High => "danger",
+            CyberRiskApp.Models.RiskRating.Critical => "dark",
+            _ => "secondary"
+        };
+    }
+
+    private string GetStatusIcon(CyberRiskApp.Models.FindingStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.FindingStatus.Open => "exclamation-circle",
+            CyberRiskApp.Models.FindingStatus.Closed => "check-circle",
+            CyberRiskApp.Models.FindingStatus.RiskAccepted => "shield-alt",
+            _ => "question-circle"
+        };
+    }
+
+    private string GetStatusColor(CyberRiskApp.Models.FindingStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.FindingStatus.Open => "warning",
+            CyberRiskApp.Models.FindingStatus.Closed => "success",
+            CyberRiskApp.Models.FindingStatus.RiskAccepted => "info",
+            _ => "secondary"
+        };
+    }
+
+    private string GetStatusText(CyberRiskApp.Models.FindingStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.FindingStatus.Open => "Open",
+            CyberRiskApp.Models.FindingStatus.Closed => "Closed",
+            CyberRiskApp.Models.FindingStatus.RiskAccepted => "Risk Accepted",
+            _ => "Unknown"
+        };
+    }
+}

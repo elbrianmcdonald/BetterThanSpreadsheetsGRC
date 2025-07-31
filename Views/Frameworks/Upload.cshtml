@@ -1,0 +1,241 @@
+﻿@model CyberRiskApp.ViewModels.FrameworkUploadViewModel
+@{
+    ViewData["Title"] = "Upload Compliance Framework";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h4><i class="fas fa-upload me-2"></i>Upload Compliance Framework</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Upload" method="post" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Framework.Name" class="form-label">Framework Name</label>
+                                <input asp-for="Framework.Name" class="form-control" placeholder="e.g., NIST 800-53 R5 Moderate Baseline" />
+                                <span asp-validation-for="Framework.Name" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Framework.Version" class="form-label">Version</label>
+                                <input asp-for="Framework.Version" class="form-control" placeholder="e.g., R5" />
+                                <span asp-validation-for="Framework.Version" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Framework.Type" class="form-label">Framework Type</label>
+                        <select asp-for="Framework.Type" class="form-select" id="frameworkTypeSelect">
+                            <option value="">Select Framework Type</option>
+                            <option value="@CyberRiskApp.Models.FrameworkType.NIST">NIST 800-53</option>
+                            <option value="@CyberRiskApp.Models.FrameworkType.ISO27001">ISO 27001</option>
+                            <option value="@CyberRiskApp.Models.FrameworkType.SOX">SOX</option>
+                            <option value="@CyberRiskApp.Models.FrameworkType.GDPR">GDPR</option>
+                            <option value="@CyberRiskApp.Models.FrameworkType.HIPAA">HIPAA</option>
+                            <option value="@CyberRiskApp.Models.FrameworkType.Custom">Custom</option>
+                        </select>
+                        <span asp-validation-for="Framework.Type" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Framework.Description" class="form-label">Description</label>
+                        <textarea asp-for="Framework.Description" class="form-control" rows="3" placeholder="Brief description of the framework"></textarea>
+                        <span asp-validation-for="Framework.Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ExcelFile" class="form-label">Excel File</label>
+                        <input asp-for="ExcelFile" type="file" class="form-control" accept=".xlsx,.xls" />
+                        <span asp-validation-for="ExcelFile" class="text-danger"></span>
+                        <div class="form-text" id="excelFormatInstructions">
+                            Upload an Excel file containing your compliance framework controls.
+                        </div>
+                    </div>
+
+                    <!-- NIST 800-53 Format Instructions -->
+                    <div class="alert alert-primary" id="nistInstructions" style="display: none;">
+                        <h6><i class="fas fa-info-circle me-1"></i>NIST 800-53 Excel File Requirements:</h6>
+                        <p class="mb-2">Your Excel file should match the structure of the NIST 800-53 Moderate Baseline template:</p>
+                        <ul class="mb-3">
+                            <li><strong>Column A:</strong> ControlID (e.g., AC-1, AC-2(1), SI-4)</li>
+                            <li><strong>Column B:</strong> Control Name (e.g., "Policy and Procedures", "Account Management")</li>
+                            <li><strong>Column C:</strong> Control Text (detailed control requirements with assignment/selection parameters)</li>
+                            <li><strong>Column D:</strong> Description (supplemental guidance and discussion)</li>
+                        </ul>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">✓ Supported Features:</h6>
+                                <ul class="small">
+                                    <li>Base controls (e.g., AC-1, AC-2)</li>
+                                    <li>Control enhancements (e.g., AC-2(1), AC-2(2))</li>
+                                    <li>All 18 control families (AC, AT, AU, CA, CM, CP, IA, IR, MA, MP, PE, PL, PS, RA, SA, SC, SI, SR)</li>
+                                    <li>Assignment and Selection parameters</li>
+                                    <li>Automatic priority assignment</li>
+                                    <li>Family-based categorization</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success">📊 Processing Features:</h6>
+                                <ul class="small">
+                                    <li>Automatic control family detection</li>
+                                    <li>Priority assignment based on security importance</li>
+                                    <li>Text formatting and cleanup</li>
+                                    <li>Enhancement vs. base control classification</li>
+                                    <li>Unlimited text length support</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info mt-3">
+                            <strong>📄 Example File Structure:</strong><br>
+                            The system is optimized for the standard NIST 800-53 Excel format with 287 controls in the Moderate baseline.
+                        </div>
+                    </div>
+
+                    <!-- ISO 27001 Format Instructions -->
+                    <div class="alert alert-info" id="iso27001Instructions" style="display: none;">
+                        <h6><i class="fas fa-info-circle me-1"></i>ISO 27001 Excel File Requirements:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Column A:</strong> Control Reference (e.g., A.5.1.1, A.8.2.1)</li>
+                            <li><strong>Column B:</strong> Control Title (e.g., "Information security policy")</li>
+                            <li><strong>Column C:</strong> Control Text (detailed requirements)</li>
+                            <li><strong>Column D:</strong> Implementation Guidance</li>
+                            <li>The first row should contain column headers</li>
+                            <li>Data should start from row 2</li>
+                        </ul>
+                    </div>
+
+                    <!-- SOX Format Instructions -->
+                    <div class="alert alert-warning" id="soxInstructions" style="display: none;">
+                        <h6><i class="fas fa-info-circle me-1"></i>SOX Excel File Requirements:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Column A:</strong> Control ID (e.g., SOX-1, SOX-2)</li>
+                            <li><strong>Column B:</strong> Control Name (e.g., "Entity Level Controls")</li>
+                            <li><strong>Column C:</strong> Control Description</li>
+                            <li><strong>Column D:</strong> Business Process or Risk Area</li>
+                            <li>Focus on financial reporting controls</li>
+                        </ul>
+                    </div>
+
+                    <!-- GDPR Format Instructions -->
+                    <div class="alert alert-success" id="gdprInstructions" style="display: none;">
+                        <h6><i class="fas fa-info-circle me-1"></i>GDPR Excel File Requirements:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Column A:</strong> Article/Requirement ID (e.g., Art.25, Art.32)</li>
+                            <li><strong>Column B:</strong> Requirement Name (e.g., "Data Protection by Design")</li>
+                            <li><strong>Column C:</strong> Requirement Text</li>
+                            <li><strong>Column D:</strong> Implementation Notes</li>
+                            <li>Focus on data protection requirements</li>
+                        </ul>
+                    </div>
+
+                    <!-- HIPAA Format Instructions -->
+                    <div class="alert alert-secondary" id="hipaaInstructions" style="display: none;">
+                        <h6><i class="fas fa-info-circle me-1"></i>HIPAA Excel File Requirements:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Column A:</strong> Standard Reference (e.g., 164.308(a)(1))</li>
+                            <li><strong>Column B:</strong> Standard Name (e.g., "Security Officer")</li>
+                            <li><strong>Column C:</strong> Implementation Specification</li>
+                            <li><strong>Column D:</strong> Required/Addressable Status</li>
+                            <li>Include both Administrative and Physical Safeguards</li>
+                        </ul>
+                    </div>
+
+                    <!-- Custom Format Instructions -->
+                    <div class="alert alert-secondary" id="customInstructions" style="display: none;">
+                        <h6><i class="fas fa-info-circle me-1"></i>Custom Framework Excel File Requirements:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Column A:</strong> Control ID (your organization's control numbering)</li>
+                            <li><strong>Column B:</strong> Control Title</li>
+                            <li><strong>Column C:</strong> Control Description</li>
+                            <li><strong>Column D:</strong> Control Category or Domain</li>
+                            <li>The first row should contain column headers</li>
+                            <li>Data should start from row 2</li>
+                        </ul>
+                    </div>
+
+                    <!-- General Requirements -->
+                    <div class="alert alert-light border">
+                        <h6><i class="fas fa-exclamation-triangle me-1 text-warning"></i>General Requirements:</h6>
+                        <ul class="mb-0">
+                            <li>Excel file must be in .xlsx or .xls format</li>
+                            <li>First row should contain column headers</li>
+                            <li>Data should start from row 2</li>
+                            <li>Control IDs and Titles are required fields</li>
+                            <li>Text can be of unlimited length (no truncation)</li>
+                            <li>Empty rows will be skipped automatically</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Frameworks
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Upload Framework
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const frameworkTypeSelect = document.getElementById('frameworkTypeSelect');
+            const nistInstructions = document.getElementById('nistInstructions');
+            const iso27001Instructions = document.getElementById('iso27001Instructions');
+            const soxInstructions = document.getElementById('soxInstructions');
+            const gdprInstructions = document.getElementById('gdprInstructions');
+            const hipaaInstructions = document.getElementById('hipaaInstructions');
+            const customInstructions = document.getElementById('customInstructions');
+
+            function updateInstructions() {
+                // Hide all instructions
+                const allInstructions = [nistInstructions, iso27001Instructions, soxInstructions,
+                                       gdprInstructions, hipaaInstructions, customInstructions];
+                allInstructions.forEach(el => el.style.display = 'none');
+
+                // Show relevant instructions
+                const selectedType = frameworkTypeSelect.value;
+                switch(selectedType) {
+                    case '@CyberRiskApp.Models.FrameworkType.NIST':
+                        nistInstructions.style.display = 'block';
+                        break;
+                    case '@CyberRiskApp.Models.FrameworkType.ISO27001':
+                        iso27001Instructions.style.display = 'block';
+                        break;
+                    case '@CyberRiskApp.Models.FrameworkType.SOX':
+                        soxInstructions.style.display = 'block';
+                        break;
+                    case '@CyberRiskApp.Models.FrameworkType.GDPR':
+                        gdprInstructions.style.display = 'block';
+                        break;
+                    case '@CyberRiskApp.Models.FrameworkType.HIPAA':
+                        hipaaInstructions.style.display = 'block';
+                        break;
+                    case '@CyberRiskApp.Models.FrameworkType.Custom':
+                        customInstructions.style.display = 'block';
+                        break;
+                }
+            }
+
+            frameworkTypeSelect.addEventListener('change', updateInstructions);
+
+            // Initialize on page load
+            updateInstructions();
+        });
+    </script>
+}

@@ -1,0 +1,226 @@
+@model IEnumerable<CyberRiskApp.Models.TechnicalControlMappingViewModel>
+@{
+    ViewData["Title"] = "Technical Control Mappings";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-link me-2 text-primary"></i>Technical Control Mappings</h2>
+                <div class="btn-group">
+                    <a asp-action="SelectTechnicalControl" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i>Add Mappings
+                    </a>
+                    <a asp-action="Analytics" class="btn btn-info">
+                        <i class="fas fa-chart-bar me-1"></i>Analytics
+                    </a>
+                    <a asp-action="Export" class="btn btn-outline-secondary">
+                        <i class="fas fa-download me-1"></i>Export
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Summary Cards -->
+    @if (ViewBag.Analytics != null)
+    {
+        var analytics = ViewBag.Analytics as Dictionary<string, object>;
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0">@analytics["TotalTechnicalControls"]</h4>
+                                <p class="mb-0">Technical Controls</p>
+                            </div>
+                            <i class="fas fa-shield-alt fa-2x opacity-50"></i>
+                        </div>
+                        <small>@analytics["MappedTechnicalControls"] mapped (@String.Format("{0:F1}%", analytics["TechnicalControlMappingPercentage"]))</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0">@analytics["TotalMappings"]</h4>
+                                <p class="mb-0">Total Mappings</p>
+                            </div>
+                            <i class="fas fa-link fa-2x opacity-50"></i>
+                        </div>
+                        <small>Active mapping relationships</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0">@analytics["TotalComplianceControls"]</h4>
+                                <p class="mb-0">Compliance Controls</p>
+                            </div>
+                            <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                        </div>
+                        <small>@analytics["MappedComplianceControls"] mapped (@String.Format("{0:F1}%", analytics["ComplianceControlMappingPercentage"]))</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0">@analytics["UnmappedTechnicalControls"]</h4>
+                                <p class="mb-0">Unmapped Controls</p>
+                            </div>
+                            <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+                        </div>
+                        <small>Need attention</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Search and Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-5">
+                    <label for="searchTerm" class="form-label">Search Technical Controls</label>
+                    <input type="text" class="form-control" id="searchTerm" name="searchTerm" 
+                           value="@ViewBag.SearchTerm" placeholder="Search by name or description...">
+                </div>
+                <div class="col-md-3">
+                    <label for="framework" class="form-label">Filter by Framework</label>
+                    <input type="text" class="form-control" id="framework" name="framework" 
+                           value="@ViewBag.Framework" placeholder="e.g., ISO27001, NIST...">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i>Search
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Technical Control Mappings List -->
+    <div class="row">
+        @if (Model.Any())
+        {
+            @foreach (var techControl in Model)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="card-title mb-0 text-truncate" title="@techControl.TechnicalControlName">
+                                <i class="fas fa-shield-alt me-1 text-primary"></i>
+                                @techControl.TechnicalControlName
+                            </h6>
+                            <span class="badge bg-secondary">@techControl.MappedControls.Count() mappings</span>
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(techControl.TechnicalControlDescription))
+                            {
+                                <p class="card-text text-muted small mb-3">@techControl.TechnicalControlDescription</p>
+                            }
+                            
+                            @if (techControl.MappedControls.Any())
+                            {
+                                <h6 class="text-primary mb-2">Mapped Compliance Controls:</h6>
+                                <div class="mapped-controls" style="max-height: 200px; overflow-y: auto;">
+                                    @foreach (var mapping in techControl.MappedControls.Take(5))
+                                    {
+                                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                                            <div>
+                                                <strong class="text-primary">@mapping.ControlId</strong>
+                                                <br>
+                                                <small class="text-muted">@mapping.Framework</small>
+                                                @if (!string.IsNullOrEmpty(mapping.Title))
+                                                {
+                                                    <br>
+                                                    <small class="text-truncate" title="@mapping.Title">@mapping.Title</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (techControl.MappedControls.Count() > 5)
+                                    {
+                                        <div class="text-center">
+                                            <small class="text-muted">... and @(techControl.MappedControls.Count() - 5) more</small>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning small">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    No compliance controls mapped yet.
+                                </div>
+                            }
+                        </div>
+                        <div class="card-footer d-flex justify-content-between">
+                            <a asp-action="Details" asp-route-technicalControlId="@techControl.TechnicalControlId" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>View Details
+                            </a>
+                            <a asp-action="BulkCreate" asp-route-technicalControlId="@techControl.TechnicalControlId" 
+                               class="btn btn-success btn-sm">
+                                <i class="fas fa-plus me-1"></i>Add Mappings
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                    <h5>No Technical Control Mappings Found</h5>
+                    <p class="mb-3">
+                        @if (!string.IsNullOrEmpty(ViewBag.SearchTerm as string) || !string.IsNullOrEmpty(ViewBag.Framework as string))
+                        {
+                            <span>No mappings match your search criteria. Try adjusting your search terms.</span>
+                        }
+                        else
+                        {
+                            <span>No technical control mappings have been created yet. Get started by mapping technical controls to compliance controls.</span>
+                        }
+                    </p>
+                    <a asp-action="SelectTechnicalControl" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Create Your First Mapping
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-submit search form on Enter key
+        document.getElementById('searchTerm').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.target.form.submit();
+            }
+        });
+        
+        document.getElementById('framework').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.target.form.submit();
+            }
+        });
+    </script>
+}

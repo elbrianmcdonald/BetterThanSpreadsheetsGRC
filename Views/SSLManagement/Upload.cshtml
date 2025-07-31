@@ -1,0 +1,140 @@
+@{
+    ViewData["Title"] = "Upload SSL Certificate";
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-upload me-2"></i>Upload SSL Certificate</h2>
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Certificates
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-certificate me-2"></i>Certificate Upload</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Upload" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="certificateName" class="form-label">Certificate Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="certificateName" name="certificateName" required>
+                        <div class="form-text">A friendly name to identify this certificate</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="certificateFile" class="form-label">Certificate File <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="certificateFile" name="certificateFile" 
+                               accept=".crt,.cer,.pem,.p7b,.p7c,.pfx,.p12" required>
+                        <div class="form-text">Supported formats: .crt, .cer, .pem, .p7b, .p7c, .pfx, .p12</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="privateKeyFile" class="form-label">Private Key File (Optional)</label>
+                        <input type="file" class="form-control" id="privateKeyFile" name="privateKeyFile" 
+                               accept=".key,.pem">
+                        <div class="form-text">Upload separately if not included in certificate file. Supported formats: .key, .pem</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password (Optional)</label>
+                        <input type="password" class="form-control" id="password" name="password">
+                        <div class="form-text">Required only if the certificate or private key is password protected</div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a asp-action="Index" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Upload Certificate
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>Upload Guidelines</h5>
+            </div>
+            <div class="card-body">
+                <h6>Supported Certificate Formats:</h6>
+                <ul class="small">
+                    <li><strong>.crt, .cer</strong> - X.509 certificate files</li>
+                    <li><strong>.pem</strong> - Privacy-Enhanced Mail format</li>
+                    <li><strong>.p7b, .p7c</strong> - PKCS#7 certificate files</li>
+                    <li><strong>.pfx, .p12</strong> - PKCS#12 (includes private key)</li>
+                </ul>
+
+                <h6 class="mt-3">Private Key Formats:</h6>
+                <ul class="small">
+                    <li><strong>.key</strong> - Private key files</li>
+                    <li><strong>.pem</strong> - Privacy-Enhanced Mail format</li>
+                </ul>
+
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Security Note:</strong> Private keys are encrypted and stored securely. 
+                    Only administrators can access certificate management.
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Tip:</strong> PKCS#12 files (.pfx, .p12) contain both the certificate 
+                    and private key, so you don't need to upload them separately.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Show/hide password field based on file selection
+            $('#certificateFile, #privateKeyFile').change(function() {
+                var fileName = $(this).val().toLowerCase();
+                if (fileName.includes('.pfx') || fileName.includes('.p12')) {
+                    $('#password').closest('.mb-3').show();
+                    $('#password').attr('placeholder', 'Password for PKCS#12 file (if required)');
+                } else {
+                    $('#password').closest('.mb-3').show();
+                    $('#password').attr('placeholder', 'Password (if certificate/key is protected)');
+                }
+            });
+
+            // Form validation
+            $('form').submit(function(e) {
+                var certificateName = $('#certificateName').val().trim();
+                var certificateFile = $('#certificateFile').val();
+                
+                if (!certificateName) {
+                    alert('Please enter a certificate name.');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                if (!certificateFile) {
+                    alert('Please select a certificate file.');
+                    e.preventDefault();
+                    return false;
+                }
+                
+                // Show loading spinner
+                var submitBtn = $(this).find('button[type="submit"]');
+                submitBtn.prop('disabled', true);
+                submitBtn.html('<span class="spinner-border spinner-border-sm me-1" role="status"></span>Uploading...');
+                
+                return true;
+            });
+        });
+    </script>
+}

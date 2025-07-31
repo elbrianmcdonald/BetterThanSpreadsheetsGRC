@@ -1,0 +1,415 @@
+﻿@{
+    ViewData["Title"] = "Welcome";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Better Than Spreadsheets - GRC Management Platform</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .floating-shapes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+            .shape:nth-child(1) {
+                width: 80px;
+                height: 80px;
+                top: 20%;
+                left: 10%;
+                animation-delay: 0s;
+            }
+
+            .shape:nth-child(2) {
+                width: 60px;
+                height: 60px;
+                top: 60%;
+                left: 80%;
+                animation-delay: 2s;
+            }
+
+            .shape:nth-child(3) {
+                width: 40px;
+                height: 40px;
+                top: 30%;
+                left: 70%;
+                animation-delay: 4s;
+            }
+
+        @@keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .brand-logo {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 20px;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            font-size: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @@keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            animation: slideInDown 1s ease-out;
+        }
+
+        .hero-subtitle {
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 40px;
+            animation: slideInUp 1s ease-out 0.3s both;
+        }
+
+        .hero-description {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 50px;
+            animation: fadeIn 1s ease-out 0.6s both;
+        }
+
+        @@keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .cta-button {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            animation: bounceIn 1s ease-out 0.9s both;
+        }
+
+            .cta-button:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+                color: white;
+            }
+
+        @@keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+
+            70% {
+                transform: scale(0.9);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            animation: fadeInUp 1s ease-out 1.2s both;
+        }
+
+            .feature-card:hover {
+                transform: translateY(-10px);
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+        .feature-icon {
+            font-size: 3rem;
+            color: #20c997;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .feature-title {
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .feature-description {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.2rem;
+            }
+
+            .hero-description {
+                font-size: 1rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-section">
+        <div class="floating-shapes">
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10 col-xl-8">
+                    <div class="hero-content text-center">
+                        <!-- Brand Logo -->
+                        <div class="brand-logo">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+
+                        <!-- Main Headline -->
+                        <h1 class="hero-title">Better Than Spreadsheets</h1>
+
+                        <!-- Subtitle -->
+                        <p class="hero-subtitle">
+                            Transform Your GRC Management
+                        </p>
+
+                        <!-- Description -->
+                        <p class="hero-description">
+                            Say goodbye to scattered spreadsheets and manual tracking. Our comprehensive platform brings
+                            Governance, Risk, and Compliance management into one powerful, intuitive system that scales with your organization.
+                        </p>
+
+                        <!-- Call to Action -->
+                        <a href="@Url.Action("Login", "Account")" class="btn cta-button">
+                            <i class="fas fa-sign-in-alt me-2"></i>Get Started
+                        </a>
+
+                        <!-- Features Grid -->
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <h3 class="feature-title">Risk Management</h3>
+                                <p class="feature-description">
+                                    Comprehensive risk assessment, tracking, and mitigation strategies with automated risk calculations and reporting.
+                                </p>
+                            </div>
+
+                            <div class="feature-card" style="animation-delay: 1.4s;">
+                                <div class="feature-icon">
+                                    <i class="fas fa-balance-scale"></i>
+                                </div>
+                                <h3 class="feature-title">Compliance Tracking</h3>
+                                <p class="feature-description">
+                                    Monitor compliance across multiple frameworks with automated assessments and evidence management.
+                                </p>
+                            </div>
+
+                            <div class="feature-card" style="animation-delay: 1.6s;">
+                                <div class="feature-icon">
+                                    <i class="fas fa-chart-bar"></i>
+                                </div>
+                                <h3 class="feature-title">Executive Dashboards</h3>
+                                <p class="feature-description">
+                                    Real-time insights and executive-level reporting with customizable dashboards and KPI tracking.
+                                </p>
+                            </div>
+
+                            <div class="feature-card" style="animation-delay: 1.8s;">
+                                <div class="feature-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <h3 class="feature-title">Team Collaboration</h3>
+                                <p class="feature-description">
+                                    Streamlined workflows, task assignments, and progress tracking across your entire GRC team.
+                                </p>
+                            </div>
+
+                            <div class="feature-card" style="animation-delay: 2.0s;">
+                                <div class="feature-icon">
+                                    <i class="fas fa-file-export"></i>
+                                </div>
+                                <h3 class="feature-title">Smart Reporting</h3>
+                                <p class="feature-description">
+                                    Generate professional reports instantly with automated data collection and customizable templates.
+                                </p>
+                            </div>
+
+                            <div class="feature-card" style="animation-delay: 2.2s;">
+                                <div class="feature-icon">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <h3 class="feature-title">Process Automation</h3>
+                                <p class="feature-description">
+                                    Automate routine tasks, notifications, and workflows to focus on what matters most.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Smooth scroll effect for better experience
+            document.documentElement.style.scrollBehavior = 'smooth';
+
+            // Add mousemove parallax effect
+            document.addEventListener('mousemove', function(e) {
+                const shapes = document.querySelectorAll('.shape');
+                const x = e.clientX / window.innerWidth;
+                const y = e.clientY / window.innerHeight;
+
+                shapes.forEach((shape, index) => {
+                    const speed = (index + 1) * 50;
+                    const xPos = (x * speed) - (speed / 2);
+                    const yPos = (y * speed) - (speed / 2);
+                    shape.style.transform = `translate(${xPos}px, ${yPos}px)`;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
