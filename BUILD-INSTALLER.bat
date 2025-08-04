@@ -1,76 +1,57 @@
 @echo off
-echo ========================================
-echo CyberRisk App Installer Builder
-echo ========================================
+echo ======================================================
+echo Better Than Spreadsheets GRC - Installer Builder
+echo ======================================================
 echo.
-
-REM Check if running from correct directory
-if not exist "publish-windows.ps1" (
-    echo ERROR: Please run this script from the CyberRiskApp project directory
-    pause
-    exit /b 1
-)
-
-echo Step 1: Publishing application...
-echo --------------------------------
-powershell -ExecutionPolicy Bypass -File publish-windows.ps1
-if errorlevel 1 (
-    echo ERROR: Failed to publish application
-    pause
-    exit /b 1
-)
-
+echo This script will:
+echo  - Build the application as a self-contained executable
+echo  - Download dependency installers (.NET 8 + PostgreSQL)
+echo  - Create a Windows installer using Inno Setup
 echo.
-echo Step 2: Creating installer configuration...
-echo ------------------------------------------
-powershell -ExecutionPolicy Bypass -File create-installer.ps1
-if errorlevel 1 (
-    echo ERROR: Failed to create installer configuration
-    pause
-    exit /b 1
-)
-
+echo Requirements:
+echo  - Inno Setup must be installed
+echo  - Internet connection for downloading dependencies
 echo.
-echo Step 3: Checking for Inno Setup...
-echo ----------------------------------
-set INNO_PATH=C:\Program Files (x86)\Inno Setup 6\ISCC.exe
-if not exist "%INNO_PATH%" (
-    echo WARNING: Inno Setup not found at default location
+echo Press any key to continue or Ctrl+C to cancel...
+pause >nul
+
+net session >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
     echo.
-    echo Please install Inno Setup from:
-    echo https://jrsoftware.org/isdl.php
+    echo WARNING: Not running as Administrator
+    echo Some operations may require elevated permissions
     echo.
-    echo After installation, you can compile the installer manually:
-    echo 1. Open Inno Setup Compiler
-    echo 2. Open: %CD%\installer\CyberRiskApp.iss
-    echo 3. Press F9 to compile
-    echo.
-    pause
-    exit /b 0
 )
 
-echo.
-echo Step 4: Compiling installer...
-echo ------------------------------
-"%INNO_PATH%" /Q "installer\CyberRiskApp.iss"
-if errorlevel 1 (
-    echo ERROR: Failed to compile installer
-    pause
-    exit /b 1
+powershell -ExecutionPolicy Bypass -File "%~dp0create-installer.ps1"
+
+if %ERRORLEVEL% EQU 0 (
+    echo.
+    echo ======================================================
+    echo Installer Creation Complete!
+    echo ======================================================
+    echo.
+    echo The Windows installer has been created in the
+    echo installer-output directory.
+    echo.
+    echo You can now distribute the installer to install
+    echo Better Than Spreadsheets GRC on other systems.
+    echo.
+    echo The installer will automatically:
+    echo  - Install .NET 8 Runtime if needed
+    echo  - Install PostgreSQL if needed
+    echo  - Install the application as a Windows Service
+    echo  - Configure the database
+    echo.
+) else (
+    echo.
+    echo Installer creation failed. Check the output above for errors.
+    echo.
+    echo Common issues:
+    echo  - Inno Setup not installed
+    echo  - Build errors in the application
+    echo  - Network issues downloading dependencies
+    echo.
 )
 
-echo.
-echo ========================================
-echo SUCCESS! Installer created at:
-echo %CD%\installer\CyberRiskApp-Setup-1.0.0.exe
-echo ========================================
-echo.
-echo File size: 
-dir "installer\CyberRiskApp-Setup-*.exe" | find "CyberRiskApp"
-echo.
-echo You can now:
-echo 1. Test the installer locally
-echo 2. Distribute to users
-echo 3. Upload to a file server
-echo.
 pause

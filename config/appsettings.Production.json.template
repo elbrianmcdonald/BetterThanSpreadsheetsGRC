@@ -1,0 +1,45 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Database=CyberRiskDB;Username=cyberrisk_user;Password=CyberRisk123!"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning"
+    },
+    "Console": {
+      "IncludeScopes": false
+    },
+    "EventLog": {
+      "LogLevel": {
+        "Default": "Information"
+      }
+    }
+  },
+  "AllowedHosts": "*",
+  "Kestrel": {
+    "Endpoints": {
+      "Http": {
+        "Url": "http://localhost:5197"  
+      },
+      "Https": {
+        "Url": "https://localhost:7212"
+      }
+    }
+  },
+  "IdentityOptions": {
+    "Password": {
+      "RequireDigit": true,
+      "RequiredLength": 8,
+      "RequireNonAlphanumeric": true,
+      "RequireUppercase": true,
+      "RequireLowercase": true
+    },
+    "Lockout": {
+      "DefaultLockoutTimeSpan": "00:30:00",
+      "MaxFailedAccessAttempts": 5
+    }
+  },
+  "Environment": "Production"
+}
