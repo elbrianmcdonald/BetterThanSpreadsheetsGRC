@@ -1,0 +1,64 @@
+# Production Dockerfile
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 5000
+
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y curl gnupg2 && \
+    # Add PostgreSQL official APT repository for pg_dump
+    sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && \
+    wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
+    apt-get update && \
+    apt-get install -y postgresql-client-16 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN adduser --disabled-password --gecos '' app
+
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy project files
+COPY ["CyberRiskApp.csproj", "./"]
+RUN dotnet restore "CyberRiskApp.csproj"
+
+# Copy source code
+COPY . .
+WORKDIR "/src"
+RUN dotnet build "CyberRiskApp.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "CyberRiskApp.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+
+# Create directories with proper permissions
+RUN mkdir -p /app/wwwroot/uploads /app/logs /app/backups /app/temp && \
+    chown -R app:app /app && \
+    chmod -R 755 /app
+
+# Copy published application
+COPY --from=publish --chown=app:app /app/publish .
+
+# Copy health check script
+COPY --chown=app:app deployment/scripts/health-check.sh /usr/local/bin/health-check.sh
+RUN chmod +x /usr/local/bin/health-check.sh
+
+# Switch to non-root user
+USER app
+
+# Set environment variables
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_URLS=http://+:5000
+ENV TZ=UTC
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD /usr/local/bin/health-check.sh
+
+# Security: Set secure headers
+ENV ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+
+ENTRYPOINT ["dotnet", "CyberRiskApp.dll"]

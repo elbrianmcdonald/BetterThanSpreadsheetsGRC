@@ -1,0 +1,166 @@
+version: '3.8'
+
+services:
+  cyberrisk-db:
+    image: postgres:16
+    container_name: cyberrisk-postgres-prod
+    environment:
+      POSTGRES_DB: CyberRiskDB
+      POSTGRES_USER: cyberrisk_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backups:/backups
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"  # Bind to localhost only
+    networks:
+      - cyberrisk-network
+    restart: unless-stopped
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyberrisk_user -d CyberRiskDB"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  cyberrisk-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: cyberrisk-app-prod
+    depends_on:
+      cyberrisk-db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: "Host=cyberrisk-db;Port=5432;Database=CyberRiskDB;Username=cyberrisk_user;Password_File=/run/secrets/db_password"
+      AdminSetup__AdminEmail: ${ADMIN_EMAIL}
+      AdminSetup__RequirePasswordChange: "true"
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft.AspNetCore: Warning
+    volumes:
+      - app_data:/app/wwwroot/uploads
+      - app_logs:/app/logs
+      - app_backups:/app/backups
+    networks:
+      - cyberrisk-network
+    restart: unless-stopped
+    secrets:
+      - db_password
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+  cyberrisk-nginx:
+    image: nginx:alpine
+    container_name: cyberrisk-nginx-prod
+    depends_on:
+      - cyberrisk-app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+      - nginx_cache:/var/cache/nginx
+    networks:
+      - cyberrisk-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  cyberrisk-backup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    container_name: cyberrisk-backup
+    depends_on:
+      - cyberrisk-db
+    environment:
+      POSTGRES_HOST: cyberrisk-db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: CyberRiskDB
+      POSTGRES_USER: cyberrisk_user
+      BACKUP_SCHEDULE: "0 2 * * *"  # Daily at 2 AM
+      BACKUP_RETENTION_DAYS: 30
+    volumes:
+      - postgres_backups:/backups
+      - app_backups:/app-backups
+    networks:
+      - cyberrisk-network
+    restart: unless-stopped
+    secrets:
+      - db_password
+
+  cyberrisk-monitoring:
+    image: prom/prometheus:latest
+    container_name: cyberrisk-prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - cyberrisk-network
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_backups:
+    driver: local
+  app_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_backups:
+    driver: local
+  nginx_cache:
+    driver: local
+  prometheus_data:
+    driver: local
+
+networks:
+  cyberrisk-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
