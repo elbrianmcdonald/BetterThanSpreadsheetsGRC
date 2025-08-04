@@ -1,0 +1,324 @@
+@model CyberRiskApp.Services.BackupInfo
+@{
+    ViewData["Title"] = "Backup Details";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-info-circle text-primary me-2"></i>
+            Backup Details
+        </h2>
+        <div>
+            <a asp-action="Download" asp-route-fileName="@Model.FileName" class="btn btn-success me-2">
+                <i class="fas fa-download me-1"></i>Download
+            </a>
+            @if (Model.IsValid)
+            {
+                <button type="button" class="btn btn-warning me-2" onclick="confirmRestore('@Model.FileName', '@Model.BackupName')">
+                    <i class="fas fa-undo me-1"></i>Restore
+                </button>
+            }
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Backup Information -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="fas fa-database me-2"></i>Backup Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold">Name:</td>
+                                    <td>@Model.BackupName</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">File Name:</td>
+                                    <td><code>@Model.FileName</code></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Type:</td>
+                                    <td>
+                                        @if (Model.Type == CyberRiskApp.Services.BackupType.DatabaseOnly)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-database me-1"></i>Database Only
+                                            </span>
+                                        }
+                                        else if (Model.Type == CyberRiskApp.Services.BackupType.FullBackup)
+                                        {
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-archive me-1"></i>Full Backup
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-cog me-1"></i>Configuration
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Size:</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">@Model.FormattedSize</span>
+                                        <small class="text-muted">(@Model.SizeInBytes.ToString("N0") bytes)</small>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td class="fw-bold">Created:</td>
+                                    <td>@Model.FormattedDate</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Created By:</td>
+                                    <td>@Model.CreatedBy</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Status:</td>
+                                    <td>
+                                        @if (Model.IsValid)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Valid
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Invalid
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Age:</td>
+                                    <td>
+                                        @{
+                                            var age = DateTime.UtcNow - Model.CreatedAt;
+                                        }
+                                        @if (age.TotalDays >= 1)
+                                        {
+                                            <span>@((int)age.TotalDays) days ago</span>
+                                        }
+                                        else if (age.TotalHours >= 1)
+                                        {
+                                            <span>@((int)age.TotalHours) hours ago</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@((int)age.TotalMinutes) minutes ago</span>
+                                        }
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <div class="mt-3">
+                            <h6 class="fw-bold">Description:</h6>
+                            <p class="text-muted">@Model.Description</p>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.ValidationMessage))
+                    {
+                        <div class="mt-3">
+                            <h6 class="fw-bold">Validation Message:</h6>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                @Model.ValidationMessage
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Backup Contents (for Full Backups) -->
+            @if (Model.Type == CyberRiskApp.Services.BackupType.FullBackup)
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-info bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-archive me-2"></i>Backup Contents
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-database me-2 text-success"></i>Database Components</h6>
+                                <ul class="list-unstyled ms-3">
+                                    <li><i class="fas fa-check text-success me-2"></i>All data tables</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Risk assessments</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Compliance frameworks</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>User accounts</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>System settings</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-cog me-2 text-info"></i>Configuration Files</h6>
+                                <ul class="list-unstyled ms-3">
+                                    <li><i class="fas fa-check text-success me-2"></i>Application settings</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Risk matrix configurations</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Framework definitions</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>System preferences</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Action Panel -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-action="Download" asp-route-fileName="@Model.FileName" class="btn btn-success">
+                            <i class="fas fa-download me-2"></i>Download Backup
+                        </a>
+
+                        @if (Model.IsValid)
+                        {
+                            <button type="button" class="btn btn-warning" onclick="confirmRestore('@Model.FileName', '@Model.BackupName')">
+                                <i class="fas fa-undo me-2"></i>Restore from Backup
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-warning" disabled title="Cannot restore invalid backup">
+                                <i class="fas fa-undo me-2"></i>Restore from Backup
+                            </button>
+                        }
+
+                        <form method="post" asp-action="Validate" asp-route-fileName="@Model.FileName">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-info w-100">
+                                <i class="fas fa-check-circle me-2"></i>Validate Backup
+                            </button>
+                        </form>
+
+                        <button type="button" class="btn btn-outline-danger" onclick="confirmDelete('@Model.FileName', '@Model.BackupName')">
+                            <i class="fas fa-trash me-2"></i>Delete Backup
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup Guidelines -->
+            <div class="card mt-4">
+                <div class="card-header bg-secondary bg-opacity-10">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Backup Guidelines
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <h6 class="text-primary">Before Restoring:</h6>
+                        <ul class="small mb-3">
+                            <li>Validate the backup file</li>
+                            <li>Notify all users about the maintenance</li>
+                            <li>Create a current backup first</li>
+                            <li>Ensure adequate disk space</li>
+                        </ul>
+
+                        <h6 class="text-success">Best Practices:</h6>
+                        <ul class="small mb-0">
+                            <li>Store backups in multiple locations</li>
+                            <li>Test restore procedures regularly</li>
+                            <li>Keep backups for compliance requirements</li>
+                            <li>Document backup and restore procedures</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden forms for actions -->
+<form id="restoreForm" method="post" style="display: none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="confirm" value="true">
+</form>
+
+<form id="deleteForm" method="post" style="display: none;">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script>
+        function confirmRestore(fileName, backupName) {
+            const message = `Are you sure you want to restore from '${backupName}'?\n\n` +
+                          `This will:\n` +
+                          `• Replace all current data\n` +
+                          `• Overwrite existing configurations\n` +
+                          `• Cannot be undone\n\n` +
+                          `We recommend creating a current backup first.`;
+
+            if (confirm(message)) {
+                const form = document.getElementById('restoreForm');
+                form.action = `/Backup/Restore/${encodeURIComponent(fileName)}`;
+                form.submit();
+            }
+        }
+
+        function confirmDelete(fileName, backupName) {
+            if (confirm(`Are you sure you want to delete the backup '${backupName}'?\n\nThis action cannot be undone.`)) {
+                const form = document.getElementById('deleteForm');
+                form.action = `/Backup/Delete/${encodeURIComponent(fileName)}`;
+                form.submit();
+            }
+        }
+
+        // Auto-hide success alerts after 8 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert-success');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 8000);
+    </script>
+}

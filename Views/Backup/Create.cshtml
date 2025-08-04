@@ -1,0 +1,193 @@
+@{
+    ViewData["Title"] = "Create Backup";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-plus text-success me-2"></i>
+            Create New Backup
+        </h2>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Backups
+        </a>
+    </div>
+
+    <!-- Alerts -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success bg-opacity-10">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Backup Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-action="CreateDatabase">
+                        @Html.AntiForgeryToken()
+                        
+                        <div class="mb-4">
+                            <label for="backupName" class="form-label fw-bold">
+                                <i class="fas fa-tag me-1"></i>Backup Name
+                            </label>
+                            <input type="text" class="form-control" id="backupName" name="backupName" 
+                                   placeholder="e.g., WeeklyBackup, BeforeMaintenance, PreUpgrade" required>
+                            <div class="form-text">A descriptive name to identify this backup</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-bold">
+                                <i class="fas fa-file-alt me-1"></i>Description (Optional)
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                      placeholder="Optional description of what this backup contains or why it was created"></textarea>
+                            <div class="form-text">Provide additional context for this backup</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="backupType" class="form-label fw-bold">
+                                <i class="fas fa-archive me-1"></i>Backup Type
+                            </label>
+                            <select class="form-select" id="backupType" name="backupType" onchange="updateBackupInfo()">
+                                <option value="DatabaseOnly">Database Only</option>
+                                <option value="FullBackup">Full Backup</option>
+                            </select>
+                            
+                            <div id="backupTypeInfo" class="mt-2">
+                                <div class="alert alert-info" id="databaseOnlyInfo">
+                                    <h6><i class="fas fa-database me-2"></i>Database Only Backup</h6>
+                                    <ul class="mb-0">
+                                        <li>All data tables and records</li>
+                                        <li>User accounts and permissions</li>
+                                        <li>Risk assessments and compliance data</li>
+                                        <li>Faster to create and restore</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="alert alert-primary d-none" id="fullBackupInfo">
+                                    <h6><i class="fas fa-archive me-2"></i>Full Backup</h6>
+                                    <ul class="mb-0">
+                                        <li>Complete database backup</li>
+                                        <li>Application configuration files</li>
+                                        <li>Risk matrix configurations</li>
+                                        <li>Framework definitions</li>
+                                        <li>System settings and preferences</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-database me-2"></i>Create Backup
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Backup Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">What's Included:</h6>
+                    <ul class="small mb-3">
+                        <li>All risk assessment data</li>
+                        <li>Compliance assessment results</li>
+                        <li>Maturity assessment records</li>
+                        <li>User accounts and roles</li>
+                        <li>System configuration</li>
+                        <li>Threat modeling data</li>
+                        <li>Third-party risk records</li>
+                    </ul>
+
+                    <h6 class="text-success">Best Practices:</h6>
+                    <ul class="small mb-3">
+                        <li>Use descriptive names</li>
+                        <li>Create backups before major changes</li>
+                        <li>Test restore procedures regularly</li>
+                        <li>Store backups in secure locations</li>
+                        <li>Keep multiple backup copies</li>
+                    </ul>
+
+                    <h6 class="text-warning">Important Notes:</h6>
+                    <ul class="small mb-0">
+                        <li>Backup creation may take several minutes</li>
+                        <li>Large databases will create larger files</li>
+                        <li>Ensure adequate disk space</li>
+                        <li>Don't interrupt the backup process</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Recent Backups
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small text-muted">
+                        <p>Check the main backup page to see all available backups and their status.</p>
+                        <a asp-action="Index" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-list me-1"></i>View All Backups
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function updateBackupInfo() {
+            const backupType = document.getElementById('backupType').value;
+            const databaseInfo = document.getElementById('databaseOnlyInfo');
+            const fullInfo = document.getElementById('fullBackupInfo');
+
+            if (backupType === 'DatabaseOnly') {
+                databaseInfo.classList.remove('d-none');
+                fullInfo.classList.add('d-none');
+            } else {
+                databaseInfo.classList.add('d-none');
+                fullInfo.classList.remove('d-none');
+            }
+        }
+
+        // Set default state
+        updateBackupInfo();
+
+        // Auto-hide success alerts after 8 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert-success');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 8000);
+    </script>
+}

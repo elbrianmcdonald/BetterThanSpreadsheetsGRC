@@ -1,0 +1,565 @@
+@model IEnumerable<CyberRiskApp.Services.BackupInfo>
+@{
+    ViewData["Title"] = "Backup Management";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-database text-primary me-2"></i>
+            Backup Management
+        </h2>
+        <div>
+            <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#createBackupModal">
+                <i class="fas fa-plus me-1"></i>Create Backup
+            </button>
+            <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#uploadBackupModal">
+                <i class="fas fa-upload me-1"></i>Upload Backup
+            </button>
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#cleanupModal">
+                <i class="fas fa-trash-alt me-1"></i>Cleanup Old Backups
+            </button>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Warning"] != null && TempData["ConfirmRestore"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @TempData["Warning"]
+            <form method="post" asp-action="ConfirmRestore" asp-route-fileName="@TempData["ConfirmRestore"]" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-danger btn-sm ms-2">
+                    <i class="fas fa-check me-1"></i>Yes, Restore
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm ms-1" data-bs-dismiss="alert">Cancel</button>
+            </form>
+        </div>
+    }
+
+    <!-- Backup Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">@Model.Count()</h4>
+                            <p class="mb-0">Total Backups</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-database fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">@Model.Count(b => b.Type == CyberRiskApp.Services.BackupType.DatabaseOnly)</h4>
+                            <p class="mb-0">Database Backups</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-server fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">@Model.Count(b => b.Type == CyberRiskApp.Services.BackupType.FullBackup)</h4>
+                            <p class="mb-0">Full Backups</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-archive fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">@(Model.Sum(b => b.SizeInBytes) / (1024 * 1024)):N1 MB</h4>
+                            <p class="mb-0">Total Size</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-hdd fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backups Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i>Available Backups
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Created</th>
+                                <th>Size</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var backup in Model.OrderByDescending(b => b.CreatedAt))
+                            {
+                                <tr class="@(!backup.IsValid ? "table-warning" : "")">
+                                    <td>
+                                        <div>
+                                            <strong>@backup.BackupName</strong>
+                                            @if (!string.IsNullOrEmpty(backup.Description))
+                                            {
+                                                <br><small class="text-muted">@backup.Description</small>
+                                            }
+                                            <br><small class="text-muted font-monospace">@backup.FileName</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (backup.Type == CyberRiskApp.Services.BackupType.DatabaseOnly)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-database me-1"></i>Database
+                                            </span>
+                                        }
+                                        else if (backup.Type == CyberRiskApp.Services.BackupType.FullBackup)
+                                        {
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-archive me-1"></i>Full Backup
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-cog me-1"></i>Config
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div>
+                                            @backup.FormattedDate
+                                            <br><small class="text-muted">by @backup.CreatedBy</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">@backup.FormattedSize</span>
+                                    </td>
+                                    <td>
+                                        @if (backup.IsValid)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Valid
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Invalid
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-action="Details" asp-route-fileName="@backup.FileName" 
+                                               class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                            <a asp-action="Download" asp-route-fileName="@backup.FileName" 
+                                               class="btn btn-sm btn-outline-success" title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            @if (backup.IsValid)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                        title="Restore" onclick="confirmRestore('@backup.FileName', '@backup.BackupName')">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                            }
+                                            <form method="post" asp-action="Validate" asp-route-fileName="@backup.FileName" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-outline-info" title="Validate">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </button>
+                                            </form>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    title="Delete" onclick="confirmDelete('@backup.FileName', '@backup.BackupName')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Backups Found</h5>
+                    <p class="text-muted">Create your first backup to get started.</p>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createBackupModal">
+                        <i class="fas fa-plus me-1"></i>Create First Backup
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Create Backup Modal -->
+<div class="modal fade" id="createBackupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="CreateDatabase">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus me-2"></i>Create New Backup
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="backupName" class="form-label">Backup Name</label>
+                        <input type="text" class="form-control" id="backupName" name="backupName" 
+                               placeholder="e.g., WeeklyBackup, BeforeMaintenance" required>
+                        <div class="form-text">A descriptive name for this backup</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Optional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Optional description of what this backup contains or why it was created"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="backupType" class="form-label">Backup Type</label>
+                        <select class="form-select" id="backupType" name="backupType">
+                            <option value="DatabaseOnly">Database Only (Faster)</option>
+                            <option value="FullBackup">Full Backup (Database + Configuration)</option>
+                        </select>
+                        <div class="form-text">
+                            <strong>Database Only:</strong> Backs up all data tables<br>
+                            <strong>Full Backup:</strong> Includes database + configuration files
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-database me-1"></i>Create Backup
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Backup Modal -->
+<div class="modal fade" id="uploadBackupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="Upload" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-upload me-2"></i>Upload Backup
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="backupFile" class="form-label">Select Backup File</label>
+                        <input type="file" class="form-control" id="backupFile" name="backupFile" 
+                               accept=".sql,.zip" required>
+                        <div class="form-text">
+                            Supported formats: .sql (database backup), .zip (full backup)
+                        </div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="restoreImmediately" name="restoreImmediately" value="true">
+                        <label class="form-check-label text-warning" for="restoreImmediately">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Restore immediately after upload</strong>
+                        </label>
+                        <div class="form-text text-danger">
+                            <small>
+                                <i class="fas fa-warning me-1"></i>
+                                Warning: This will overwrite all current data. Use with caution!
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-upload me-1"></i>Upload Backup
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Cleanup Modal -->
+<div class="modal fade" id="cleanupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="Cleanup">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-trash-alt me-2"></i>Cleanup Old Backups
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This will permanently delete old backup files. This action cannot be undone.
+                    </div>
+                    <div class="mb-3">
+                        <label for="keepDays" class="form-label">Keep backups from the last</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="keepDays" name="keepDays" 
+                                   value="30" min="1" max="365" required>
+                            <span class="input-group-text">days</span>
+                        </div>
+                        <div class="form-text">
+                            Backups older than this will be deleted. Default is 30 days.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-trash-alt me-1"></i>Cleanup Old Backups
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden forms for actions -->
+<form id="restoreForm" method="post" style="display: none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="confirm" value="true">
+</form>
+
+<form id="deleteForm" method="post" style="display: none;">
+    @Html.AntiForgeryToken()
+</form>
+
+@section Scripts {
+    <script>
+        function confirmRestore(fileName, backupName) {
+            if (confirm(`Are you sure you want to restore from '${backupName}'?\n\nThis will overwrite all current data and cannot be undone.`)) {
+                showRestoreProgress(fileName, backupName);
+            }
+        }
+
+        function showRestoreProgress(fileName, backupName) {
+            // Create progress modal
+            const modalHtml = `
+                <div class="modal fade" id="restoreProgressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-sync-alt fa-spin me-2"></i>Restoring Backup
+                                </h5>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <strong>Backup:</strong> ${backupName}
+                                </div>
+                                <div class="progress mb-3" style="height: 25px;">
+                                    <div id="restoreProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 0%;">0%</div>
+                                </div>
+                                <div id="restoreStatus" class="text-center text-muted">
+                                    <i class="fas fa-hourglass-start me-2"></i>Initializing...
+                                </div>
+                                <div id="restoreDetails" class="text-center text-muted small mt-2"></div>
+                            </div>
+                            <div class="modal-footer d-none" id="restoreCompleteFooter">
+                                <button type="button" class="btn btn-primary" onclick="location.reload();">
+                                    <i class="fas fa-check me-1"></i>Close and Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add modal to page if not exists
+            if (!document.getElementById('restoreProgressModal')) {
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('restoreProgressModal'));
+            modal.show();
+
+            // Start restore via API
+            fetch(`/api/backup/restore/${encodeURIComponent(fileName)}`, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]').value,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.progressId) {
+                    trackRestoreProgress(data.progressId);
+                }
+            })
+            .catch(error => {
+                updateRestoreUI('Failed to start restore', 0, 'danger', error.message);
+            });
+        }
+
+        function trackRestoreProgress(progressId) {
+            const interval = setInterval(() => {
+                fetch(`/api/backup/restore/progress/${progressId}`)
+                    .then(response => response.json())
+                    .then(progress => {
+                        updateRestoreUI(progress.currentStep, progress.percentComplete, 
+                                      getProgressBarClass(progress.state), progress.details);
+
+                        if (progress.state === 5) { // Completed
+                            clearInterval(interval);
+                            document.getElementById('restoreCompleteFooter').classList.remove('d-none');
+                        } else if (progress.state === 6) { // Failed
+                            clearInterval(interval);
+                            document.getElementById('restoreCompleteFooter').classList.remove('d-none');
+                        }
+                    })
+                    .catch(() => {
+                        // Continue polling even if one request fails
+                    });
+            }, 1000); // Poll every second
+        }
+
+        function updateRestoreUI(step, percent, barClass, details) {
+            const progressBar = document.getElementById('restoreProgressBar');
+            const status = document.getElementById('restoreStatus');
+            const detailsDiv = document.getElementById('restoreDetails');
+
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = percent + '%';
+            progressBar.className = `progress-bar progress-bar-striped progress-bar-animated ${barClass}`;
+            
+            status.innerHTML = `<i class="fas ${getStatusIcon(barClass)} me-2"></i>${step}`;
+            if (details) {
+                detailsDiv.textContent = details;
+            }
+        }
+
+        function getProgressBarClass(state) {
+            switch (state) {
+                case 0: case 1: case 2: case 3: case 4: // Starting through VerifyingRestore
+                    return 'bg-primary';
+                case 5: // Completed
+                    return 'bg-success';
+                case 6: // Failed
+                    return 'bg-danger';
+                default:
+                    return 'bg-primary';
+            }
+        }
+
+        function getStatusIcon(barClass) {
+            switch (barClass) {
+                case 'bg-success':
+                    return 'fa-check-circle';
+                case 'bg-danger':
+                    return 'fa-exclamation-circle';
+                default:
+                    return 'fa-sync-alt fa-spin';
+            }
+        }
+
+        function confirmDelete(fileName, backupName) {
+            if (confirm(`Are you sure you want to delete the backup '${backupName}'?\n\nThis action cannot be undone.`)) {
+                const form = document.getElementById('deleteForm');
+                // Create a hidden input with the fileName
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'fileName';
+                input.value = fileName;
+                form.appendChild(input);
+                form.action = '@Url.Action("Delete", "Backup")';
+                form.submit();
+            }
+        }
+
+        // Auto-hide alerts after 10 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                if (alert.classList.contains('alert-success')) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            });
+        }, 10000);
+    </script>
+}
+
+<style>
+    .btn-group .btn {
+        margin-right: 2px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .font-monospace {
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+    }
+</style>
