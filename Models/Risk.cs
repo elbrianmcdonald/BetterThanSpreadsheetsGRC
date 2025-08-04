@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace CyberRiskApp.Models
 {
     [Table("Risks")]
-    public class Risk
+    public class Risk : IAuditableEntity
     {
         [Key]
         public int Id { get; set; }
@@ -31,8 +31,9 @@ namespace CyberRiskApp.Models
         [StringLength(200)]
         public string Asset { get; set; } = string.Empty;
 
+        [Required]
         [StringLength(100)]
-        [Display(Name = "Risk Owner")]
+        [Display(Name = "Business Owner")]
         public string Owner { get; set; } = string.Empty;
 
         [Display(Name = "Impact")]
@@ -67,6 +68,17 @@ namespace CyberRiskApp.Models
         [DataType(DataType.Date)]
         public DateTime? NextReviewDate { get; set; }
 
+        [Display(Name = "Date Closed")]
+        [DataType(DataType.Date)]
+        public DateTime? ClosedDate { get; set; }
+
+        [Display(Name = "Remediation Details")]
+        public string RemediationDetails { get; set; } = string.Empty;
+
+        [Display(Name = "Closed By")]
+        [StringLength(100)]
+        public string ClosedBy { get; set; } = string.Empty;
+
         // Legacy fields for compatibility
         [Display(Name = "Annual Loss Expectancy")]
         [Column(TypeName = "decimal(18,2)")]
@@ -77,8 +89,24 @@ namespace CyberRiskApp.Models
 
         public RiskStatus Status { get; set; }
 
+        // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Created By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string CreatedBy { get; set; } = string.Empty;
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Updated By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string UpdatedBy { get; set; } = string.Empty;
+        
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         // Foreign Keys with explicit column names
         [Column("FindingId")]

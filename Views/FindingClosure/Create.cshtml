@@ -53,9 +53,10 @@
 
                         <div class="mb-3">
                             <label asp-for="RequestedClosureDate" class="form-label fw-bold">
-                                Requested Closure Date
+                                Request Date
                             </label>
-                            <input asp-for="RequestedClosureDate" type="date" class="form-control" />
+                            <input asp-for="RequestedClosureDate" type="date" class="form-control" readonly value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <small class="text-muted">Automatically set to today's date</small>
                         </div>
 
                         <div class="d-flex gap-3">
@@ -77,4 +78,15 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    <script>
+        // Ensure the request date is always set to today
+        document.addEventListener('DOMContentLoaded', function() {
+            const requestDateInput = document.getElementById('RequestedClosureDate');
+            if (requestDateInput) {
+                const today = new Date();
+                const formattedDate = today.toISOString().split('T')[0];
+                requestDateInput.value = formattedDate;
+            }
+        });
+    </script>
 }

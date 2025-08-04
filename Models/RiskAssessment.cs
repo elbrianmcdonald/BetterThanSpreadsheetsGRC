@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CyberRiskApp.Models
 {
-    public class RiskAssessment
+    public class RiskAssessment : IAuditableEntity
     {
         public int Id { get; set; }
 
@@ -307,9 +307,24 @@ namespace CyberRiskApp.Models
         [Column(TypeName = "decimal(5,2)")]
         public decimal? QualitativeRiskScore { get; set; }
 
-        // Common metadata fields
+        // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Created By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string CreatedBy { get; set; } = string.Empty;
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Updated By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string UpdatedBy { get; set; } = string.Empty;
+        
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         // ADDED: Navigation property for the linked finding
         [ForeignKey("FindingId")]
@@ -327,6 +342,9 @@ namespace CyberRiskApp.Models
 
         // Collection for qualitative controls (no effectiveness calculation)
         public virtual ICollection<QualitativeControl> QualitativeControls { get; set; } = new List<QualitativeControl>();
+
+        // Collection for threat models linked to this risk assessment
+        public virtual ICollection<ThreatModel> LinkedThreatModels { get; set; } = new List<ThreatModel>();
 
         // Method to calculate risk level from ALE or qualitative score
         public string CalculateRiskLevel()

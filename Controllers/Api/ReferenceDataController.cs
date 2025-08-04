@@ -59,6 +59,7 @@ namespace CyberRiskApp.Controllers.Api
 
         // POST: api/referencedata
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
         public async Task<IActionResult> Create([FromBody] CreateReferenceDataViewModel model)
         {

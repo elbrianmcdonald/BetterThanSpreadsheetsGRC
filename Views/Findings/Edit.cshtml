@@ -132,9 +132,7 @@
                                 <label asp-for="Owner" class="form-label fw-bold">
                                     Technical Owner <span class="text-danger">*</span>
                                 </label>
-                                <input asp-for="Owner" class="form-control"
-                                       placeholder="Person/team responsible for remediation" />
-                                <span asp-validation-for="Owner" class="text-danger"></span>
+                                @Html.OwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"), required: true)
                             </div>
 
                             <div class="col-md-6">
@@ -143,18 +141,8 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label asp-for="Domain" class="form-label fw-bold">Security Domain</label>
-                                <select asp-for="Domain" class="form-select">
-                                    <option value="">Select Domain</option>
-                                    <option value="Infrastructure">Infrastructure</option>
-                                    <option value="Applications">Applications</option>
-                                    <option value="Network">Network</option>
-                                    <option value="Identity Management">Identity Management</option>
-                                    <option value="Data Protection">Data Protection</option>
-                                    <option value="Physical Security">Physical Security</option>
-                                    <option value="Cloud Security">Cloud Security</option>
-                                    <option value="DevSecOps">DevSecOps</option>
-                                </select>
+                                <label asp-for="Domain" class="form-label fw-bold">Domain</label>
+                                @Html.AssetComboboxFor(m => m.Domain, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
                             </div>
 
                             <div class="col-md-6">

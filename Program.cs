@@ -11,15 +11,63 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to accept custom domains
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Listen on all interfaces for HTTP
+    options.ListenAnyIP(5197); // HTTP
+    
+    // Only configure HTTPS if we have a development certificate or in production
+    // In development, this will use the dev certificate if available
+    if (builder.Environment.IsDevelopment())
+    {
+        // Try to use HTTPS in development if dev certificate is available
+        try
+        {
+            options.ListenAnyIP(7212, listenOptions =>
+            {
+                listenOptions.UseHttps(); // This will use the dev certificate if available
+            });
+        }
+        catch
+        {
+            // If no dev certificate, just log and continue with HTTP only
+            Console.WriteLine("⚠️  No development HTTPS certificate found. Running HTTP only.");
+        }
+    }
+    else
+    {
+        // In production, HTTPS will be configured dynamically via SSL service
+        // For now, just HTTP until certificate is properly configured
+        Console.WriteLine("ℹ️  Production mode: HTTPS will be available after SSL certificate configuration.");
+    }
+});
+
+// Add Initial Setup Service
+builder.Services.AddScoped<IInitialSetupService, InitialSetupService>();
+
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.MaxDepth = 64;
+    });
 
 // Database configuration
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-    "Host=localhost;Database=CyberRiskDB;Username=cyberrisk_user;Password=CyberRisk123!";
+    "Host=localhost;Database=CyberRiskDB;Username=cyberrisk_user;Password=CyberRisk123!;Pooling=true;MinPoolSize=5;MaxPoolSize=50;ConnectionIdleLifetime=300;ConnectionPruningInterval=10";
 
 builder.Services.AddDbContext<CyberRiskContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.CommandTimeout(30);
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null);
+    }));
 
 // Configure Identity (your existing setup)
 builder.Services.AddIdentity<User, IdentityRole>(options =>
@@ -46,6 +94,11 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(PolicyConstants.RequireAnyRole, policy =>
         policy.RequireRole("Admin", "GRCUser", "ITUser"));
 });
+
+// Register audit and transaction services for concurrency control
+builder.Services.AddHttpContextAccessor(); // Required for AuditService to get current user
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 // Register existing Risk Management services
 builder.Services.AddScoped<IFindingService, FindingService>();
@@ -78,6 +131,22 @@ builder.Services.AddScoped<IRiskMatrixService, RiskMatrixService>();
 builder.Services.AddScoped<IStrategyPlanningService, StrategyPlanningService>();
 // Register SSL Management service
 builder.Services.AddScoped<ISSLService, SSLService>();
+// Register DNS Management service
+builder.Services.AddScoped<IDomainService, DomainService>();
+// Register App Settings service
+builder.Services.AddScoped<IAppSettingsService, AppSettingsService>();
+// Register Threat Modeling service
+builder.Services.AddScoped<IThreatModelingService, ThreatModelingService>();
+// Register MITRE Import service
+builder.Services.AddScoped<IMitreImportService, MitreImportService>();
+// Register Backup service
+builder.Services.AddScoped<IBackupService, BackupService>();
+// Register HTTP Client Factory for external API calls
+builder.Services.AddHttpClient();
+
+// Register Memory Cache for reference data caching
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<ICacheService, CacheService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -181,6 +250,9 @@ using (var scope = app.Services.CreateScope())
         var riskMatrixService = services.GetRequiredService<IRiskMatrixService>();
         await riskMatrixService.SeedDefaultMatricesAsync();
         Console.WriteLine("✅ Initialized default risk matrices");
+
+        // SSL settings are created on-demand when certificates are uploaded
+        Console.WriteLine("✅ SSL will be available once certificates are uploaded");
     }
     catch (Exception ex)
     {

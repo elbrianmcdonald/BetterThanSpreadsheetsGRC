@@ -11,6 +11,7 @@ namespace CyberRiskApp.Services
         private readonly CyberRiskContext _context;
         private readonly UserManager<User> _userManager;
         private readonly ILogger<ReferenceDataService> _logger;
+        private readonly ICacheService _cacheService;
 
         // Regex for input validation - alphanumeric, spaces, and common business characters
         private static readonly Regex ValueValidationRegex = new(@"^[a-zA-Z0-9\s\-\._\(\)\[\]&/]+$", RegexOptions.Compiled);
@@ -18,11 +19,13 @@ namespace CyberRiskApp.Services
         public ReferenceDataService(
             CyberRiskContext context,
             UserManager<User> userManager,
-            ILogger<ReferenceDataService> logger)
+            ILogger<ReferenceDataService> logger,
+            ICacheService cacheService)
         {
             _context = context;
             _userManager = userManager;
             _logger = logger;
+            _cacheService = cacheService;
         }
 
         public async Task<ReferenceDataSearchResult> SearchAsync(ReferenceDataCategory category, string searchTerm, string userId)

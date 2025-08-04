@@ -91,6 +91,10 @@ namespace CyberRiskApp.Controllers
                 Console.WriteLine($"Framework ID: {model.Assessment.ComplianceFrameworkId}");
                 Console.WriteLine($"Organization ID: {model.Assessment.BusinessOrganizationId}");
 
+                // Remove audit fields from model validation since they're set automatically
+                ModelState.Remove("Assessment.CreatedBy");
+                ModelState.Remove("Assessment.UpdatedBy");
+
                 if (ModelState.IsValid)
                 {
                     model.Assessment.Assessor = User.Identity?.Name ?? "Current User";
@@ -218,6 +222,7 @@ namespace CyberRiskApp.Controllers
 
         // Only users who can perform assessments can update control assessments
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> UpdateControlAssessment(int id, [FromBody] Dictionary<string, object> data)
         {
@@ -235,9 +240,13 @@ namespace CyberRiskApp.Controllers
                 }
 
                 // Update fields from the data dictionary
-                if (data.ContainsKey("Status") && Enum.TryParse<ComplianceStatus>(data["Status"].ToString(), out var status))
+                if (data.ContainsKey("Status"))
                 {
-                    controlAssessment.Status = status;
+                    var statusValue = data["Status"]?.ToString();
+                    if (!string.IsNullOrEmpty(statusValue) && Enum.TryParse<ComplianceStatus>(statusValue, out var status))
+                    {
+                        controlAssessment.Status = status;
+                    }
                 }
 
                 if (data.ContainsKey("Ownership"))
@@ -248,17 +257,28 @@ namespace CyberRiskApp.Controllers
                 if (data.ContainsKey("ProjectedComplianceDate"))
                 {
                     var dateValue = data["ProjectedComplianceDate"]?.ToString();
-                    controlAssessment.ProjectedComplianceDate = string.IsNullOrEmpty(dateValue) ? null : DateTime.Parse(dateValue);
+                    if (!string.IsNullOrEmpty(dateValue) && DateTime.TryParse(dateValue, out var parsedDate))
+                    {
+                        controlAssessment.ProjectedComplianceDate = parsedDate;
+                    }
                 }
 
-                if (data.ContainsKey("ProjectNeeded") && bool.TryParse(data["ProjectNeeded"].ToString(), out var projectNeeded))
+                if (data.ContainsKey("ProjectNeeded"))
                 {
-                    controlAssessment.ProjectNeeded = projectNeeded;
+                    var projectNeededValue = data["ProjectNeeded"]?.ToString();
+                    if (!string.IsNullOrEmpty(projectNeededValue) && bool.TryParse(projectNeededValue, out var projectNeeded))
+                    {
+                        controlAssessment.ProjectNeeded = projectNeeded;
+                    }
                 }
 
-                if (data.ContainsKey("TShirtSize") && Enum.TryParse<TShirtSize>(data["TShirtSize"].ToString(), out var tShirtSize))
+                if (data.ContainsKey("TShirtSize"))
                 {
-                    controlAssessment.TShirtSize = tShirtSize;
+                    var tShirtSizeValue = data["TShirtSize"]?.ToString();
+                    if (!string.IsNullOrEmpty(tShirtSizeValue) && Enum.TryParse<TShirtSize>(tShirtSizeValue, out var tShirtSize))
+                    {
+                        controlAssessment.TShirtSize = tShirtSize;
+                    }
                 }
 
                 if (data.ContainsKey("ProjectNumber"))
@@ -291,6 +311,7 @@ namespace CyberRiskApp.Controllers
 
         // Only users who can perform assessments can update all control assessments
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> UpdateAllControlAssessments([FromBody] List<Dictionary<string, object>> updates)
         {
@@ -306,15 +327,21 @@ namespace CyberRiskApp.Controllers
                     if (!update.ContainsKey("id"))
                         continue;
 
-                    var id = Convert.ToInt32(update["id"]);
+                    if (!int.TryParse(update["id"]?.ToString(), out var id))
+                        continue;
+
                     var controlAssessment = await _governanceService.GetControlAssessmentByIdAsync(id);
                     if (controlAssessment == null)
                         continue;
 
                     // Update fields from the data dictionary
-                    if (update.ContainsKey("Status") && Enum.TryParse<ComplianceStatus>(update["Status"].ToString(), out var status))
+                    if (update.ContainsKey("Status"))
                     {
-                        controlAssessment.Status = status;
+                        var statusValue = update["Status"]?.ToString();
+                        if (!string.IsNullOrEmpty(statusValue) && Enum.TryParse<ComplianceStatus>(statusValue, out var status))
+                        {
+                            controlAssessment.Status = status;
+                        }
                     }
 
                     if (update.ContainsKey("Ownership"))
@@ -325,17 +352,28 @@ namespace CyberRiskApp.Controllers
                     if (update.ContainsKey("ProjectedComplianceDate"))
                     {
                         var dateValue = update["ProjectedComplianceDate"]?.ToString();
-                        controlAssessment.ProjectedComplianceDate = string.IsNullOrEmpty(dateValue) ? null : DateTime.Parse(dateValue);
+                        if (!string.IsNullOrEmpty(dateValue) && DateTime.TryParse(dateValue, out var parsedDate))
+                        {
+                            controlAssessment.ProjectedComplianceDate = parsedDate;
+                        }
                     }
 
-                    if (update.ContainsKey("ProjectNeeded") && bool.TryParse(update["ProjectNeeded"].ToString(), out var projectNeeded))
+                    if (update.ContainsKey("ProjectNeeded"))
                     {
-                        controlAssessment.ProjectNeeded = projectNeeded;
+                        var projectNeededValue = update["ProjectNeeded"]?.ToString();
+                        if (!string.IsNullOrEmpty(projectNeededValue) && bool.TryParse(projectNeededValue, out var projectNeeded))
+                        {
+                            controlAssessment.ProjectNeeded = projectNeeded;
+                        }
                     }
 
-                    if (update.ContainsKey("TShirtSize") && Enum.TryParse<TShirtSize>(update["TShirtSize"].ToString(), out var tShirtSize))
+                    if (update.ContainsKey("TShirtSize"))
                     {
-                        controlAssessment.TShirtSize = tShirtSize;
+                        var tShirtSizeValue = update["TShirtSize"]?.ToString();
+                        if (!string.IsNullOrEmpty(tShirtSizeValue) && Enum.TryParse<TShirtSize>(tShirtSizeValue, out var tShirtSize))
+                        {
+                            controlAssessment.TShirtSize = tShirtSize;
+                        }
                     }
 
                     if (update.ContainsKey("ProjectNumber"))
@@ -369,6 +407,7 @@ namespace CyberRiskApp.Controllers
 
         // Only users who can perform assessments can update selected control assessments
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> UpdateSelectedControlAssessments([FromBody] List<ControlAssessmentUpdate> updates)
         {
@@ -472,6 +511,7 @@ namespace CyberRiskApp.Controllers
 
         // Assessment workflow actions - only for users who can perform assessments
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> StartAssessment(int id)
         {
@@ -501,6 +541,7 @@ namespace CyberRiskApp.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> CompleteAssessment(int id)
         {

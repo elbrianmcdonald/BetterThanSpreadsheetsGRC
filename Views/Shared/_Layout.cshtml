@@ -86,6 +86,11 @@
                                         </a>
                                     </li>
                                     <li>
+                                        <a class="dropdown-item" asp-controller="ThreatModeling" asp-action="Index">
+                                            <i class="fas fa-crosshairs me-1"></i>Threat Modeling
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a class="dropdown-item" asp-controller="Requests" asp-action="CreateAcceptance">
                                             <i class="fas fa-handshake me-1"></i>Request Risk Acceptance
                                         </a>
@@ -198,6 +203,17 @@
                                         <li>
                                             <a class="dropdown-item" asp-controller="SSLManagement" asp-action="Index">
                                                 <i class="fas fa-lock me-1"></i>SSL Management
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="AppSettings" asp-action="Index">
+                                                <i class="fas fa-globe me-1"></i>Application Domain
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Backup" asp-action="Index">
+                                                <i class="fas fa-database me-1"></i>Backup & Restore
                                             </a>
                                         </li>
                                     </ul>

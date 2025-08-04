@@ -173,5 +173,24 @@ namespace CyberRiskApp.Extensions
                 required,
                 htmlAttributes);
         }
+
+        /// <summary>
+        /// Renders a smart combobox for finding owner selection
+        /// </summary>
+        public static IHtmlContent OwnerComboboxFor<TModel, TProperty>(
+            this IHtmlHelper<TModel> htmlHelper,
+            Expression<Func<TModel, TProperty>> expression,
+            bool canAddNew = false,
+            bool required = false,
+            object? htmlAttributes = null)
+        {
+            return htmlHelper.SmartComboboxFor(
+                expression,
+                ReferenceDataCategory.FindingOwner,
+                canAddNew,
+                "Type to search for owners...",
+                required,
+                htmlAttributes);
+        }
     }
 }

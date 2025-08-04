@@ -1,0 +1,248 @@
+@model CyberRiskApp.Models.ThreatEnvironment
+
+@{
+    ViewData["Title"] = "Edit Environment";
+    var threatModel = ViewBag.ThreatModel as CyberRiskApp.Models.ThreatModel;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@threatModel?.Id">@threatModel?.Name</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Environments" asp-route-id="@threatModel?.Id">Environments</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Edit @Model.Name</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-edit me-2"></i>Edit Environment
+                    </h2>
+                    <p class="text-muted">Modify environment settings for @Model.Name</p>
+                </div>
+                <div>
+                    <a asp-action="Environments" asp-route-id="@threatModel?.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Environments
+                    </a>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">
+                                <i class="fas @GetEnvironmentIcon(Model.EnvironmentType) me-2"></i>@Model.Name
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="EditEnvironment" method="post">
+                                @Html.AntiForgeryToken()
+                                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                                
+                                <input type="hidden" asp-for="Id" />
+                                <input type="hidden" asp-for="ThreatModelId" />
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Name" class="form-label">Environment Name</label>
+                                        <input asp-for="Name" class="form-control" />
+                                        <span asp-validation-for="Name" class="text-danger"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="EnvironmentType" class="form-label">Environment Type</label>
+                                        <select asp-for="EnvironmentType" class="form-select" asp-items="ViewBag.EnvironmentTypes">
+                                            <option value="">Select environment type...</option>
+                                        </select>
+                                        <span asp-validation-for="EnvironmentType" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Description" class="form-label">Description</label>
+                                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="AccessType" class="form-label">Access Type</label>
+                                        <select asp-for="AccessType" class="form-select" asp-items="ViewBag.AccessTypes">
+                                            <option value="">Select access type...</option>
+                                        </select>
+                                        <span asp-validation-for="AccessType" class="text-danger"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Priority" class="form-label">Priority Level (1-10)</label>
+                                        <input asp-for="Priority" type="range" class="form-range" min="1" max="10" 
+                                               oninput="this.nextElementSibling.value = this.value">
+                                        <output>@Model.Priority</output>
+                                        <span asp-validation-for="Priority" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input asp-for="IsEnabled" class="form-check-input" type="checkbox">
+                                            <label asp-for="IsEnabled" class="form-check-label">
+                                                Environment Enabled
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Disabled environments are excluded from threat modeling</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check form-switch">
+                                            <input asp-for="IsSegmented" class="form-check-input" type="checkbox">
+                                            <label asp-for="IsSegmented" class="form-check-label">
+                                                Network Segmentation Enabled
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Network segmentation controls in place</small>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="NetworkDetails" class="form-label">Network Details</label>
+                                    <textarea asp-for="NetworkDetails" class="form-control" rows="3" 
+                                              placeholder="Network architecture, VLANs, subnets, IP ranges..."></textarea>
+                                    <span asp-validation-for="NetworkDetails" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="SecurityControls" class="form-label">Security Controls</label>
+                                    <textarea asp-for="SecurityControls" class="form-control" rows="3" 
+                                              placeholder="Firewalls, IDS/IPS, monitoring systems, access controls..."></textarea>
+                                    <span asp-validation-for="SecurityControls" class="text-danger"></span>
+                                </div>
+
+
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-save me-2"></i>Update Environment
+                                        </button>
+                                        <a asp-action="Environments" asp-route-id="@threatModel?.Id" class="btn btn-secondary ms-2">
+                                            <i class="fas fa-times me-2"></i>Cancel
+                                        </a>
+                                    </div>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                            <i class="fas fa-trash me-2"></i>Delete Environment
+                                        </button>
+                                    }
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (User.IsInRole("Admin"))
+{
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Environment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning!</strong> This action cannot be undone.
+                    </div>
+                    <p>Are you sure you want to delete the environment <strong>@Model.Name</strong>?</p>
+                    <p class="text-muted">This will also remove all associated technique mappings and scenario references.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form asp-action="DeleteEnvironment" asp-route-id="@Model.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-2"></i>Delete Environment
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@functions {
+    string GetEnvironmentIcon(string environmentType)
+    {
+        return environmentType switch
+        {
+            "CrownJewels" => "fa-crown",
+            "Azure" => "fa-cloud",
+            "Corporate" => "fa-building",
+            "Remote" => "fa-laptop-house",
+            "Plant" => "fa-industry",
+            "OT" => "fa-cogs",
+            _ => "fa-server"
+        };
+    }
+}
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+    $(document).ready(function() {
+        // Priority slider update
+        $('input[type="range"]').on('input', function() {
+            $(this).next('output').text($(this).val());
+        });
+        
+        // Set initial slider output
+        const prioritySlider = $('input[name="Priority"]');
+        prioritySlider.next('output').text(prioritySlider.val());
+        
+        // Environment type icon preview
+        $('#EnvironmentType').change(function() {
+            const type = $(this).val();
+            const iconMap = {
+                'CrownJewels': 'fa-crown',
+                'Azure': 'fa-cloud',
+                'Corporate': 'fa-building',
+                'Remote': 'fa-laptop-house',
+                'Plant': 'fa-industry',
+                'OT': 'fa-cogs'
+            };
+            
+            if (type && iconMap[type]) {
+                $('.card-header i').attr('class', 'fas ' + iconMap[type] + ' me-2');
+            }
+        });
+    });
+    </script>
+}
+
+@section Styles {
+<style>
+.form-range::-webkit-slider-thumb {
+    background: #ffc107;
+}
+
+.form-range::-moz-range-thumb {
+    background: #ffc107;
+}
+
+.card-header {
+    border-bottom: none;
+}
+
+.form-check-label {
+    font-weight: 500;
+}
+</style>
+}

@@ -1,0 +1,339 @@
+@model CyberRiskApp.Models.AttackScenario
+
+@{
+    ViewData["Title"] = "Attack Scenario Details";
+    var killChainFlow = ViewBag.KillChainFlow as Dictionary<CyberRiskApp.Models.CyberKillChainPhase, List<CyberRiskApp.Models.AttackScenarioStep>> ?? new Dictionary<CyberRiskApp.Models.CyberKillChainPhase, List<CyberRiskApp.Models.AttackScenarioStep>>();
+    var environments = ViewBag.Environments as IEnumerable<CyberRiskApp.Models.ThreatEnvironment> ?? new List<CyberRiskApp.Models.ThreatEnvironment>();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.ThreatModelId">@Model.ThreatModel?.Name</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Scenarios" asp-route-id="@Model.ThreatModelId">Scenarios</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">@Model.Name</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-chess me-2"></i>@Model.Name
+                    </h2>
+                    <p class="text-muted">Attack Scenario Details</p>
+                </div>
+                <div>
+                    @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                    {
+                        <a asp-action="EditScenario" asp-route-id="@Model.Id" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-edit me-2"></i>Edit
+                        </a>
+                        <button type="button" class="btn btn-outline-danger me-2" data-bs-toggle="modal" data-bs-target="#deleteScenarioModal">
+                            <i class="fas fa-trash me-2"></i>Delete
+                        </button>
+                    }
+                    <a asp-action="Scenarios" asp-route-id="@Model.ThreatModelId" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Scenarios
+                    </a>
+                </div>
+            </div>
+
+            <!-- Status and Overview Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-chess fa-2x mb-2"></i>
+                            <h4 class="card-title">@Model.Status</h4>
+                            <p class="card-text">Scenario Status</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clock fa-2x mb-2"></i>
+                            <h4 class="card-title">@Model.EstimatedDurationHours</h4>
+                            <p class="card-text">Hours (Estimated)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-dark h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-chart-line fa-2x mb-2"></i>
+                            <h4 class="card-title">@Model.Complexity</h4>
+                            <p class="card-text">Attack Complexity</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-list fa-2x mb-2"></i>
+                            <h4 class="card-title">@Model.Steps.Count</h4>
+                            <p class="card-text">Attack Steps</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Row -->
+            <div class="row">
+                <!-- Left Column -->
+                <div class="col-lg-8">
+                    <!-- Scenario Information -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Scenario Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-3">Description:</dt>
+                                <dd class="col-sm-9">@(Model.Description ?? "N/A")</dd>
+                                
+                                <dt class="col-sm-3">Initial Access:</dt>
+                                <dd class="col-sm-9">@(Model.InitialAccess ?? "N/A")</dd>
+                                
+                                <dt class="col-sm-3">Objective:</dt>
+                                <dd class="col-sm-9">@(Model.Objective ?? "N/A")</dd>
+                                
+                                <dt class="col-sm-3">Created:</dt>
+                                <dd class="col-sm-9">@Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</dd>
+                                
+                                <dt class="col-sm-3">Last Updated:</dt>
+                                <dd class="col-sm-9">@Model.UpdatedAt.ToString("MMM dd, yyyy HH:mm")</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Controls and Mitigations -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Controls & Mitigations</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-check-circle me-1 text-success"></i>Existing Controls</h6>
+                                    <div class="border rounded p-3 mb-3" style="min-height: 100px; background-color: #f8f9fa;">
+                                        @if (!string.IsNullOrEmpty(Model.ExistingControls))
+                                        {
+                                            <p class="mb-0">@Model.ExistingControls</p>
+                                        }
+                                        else
+                                        {
+                                            <p class="text-muted mb-0">No existing controls documented</p>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-exclamation-triangle me-1 text-warning"></i>Control Gaps</h6>
+                                    <div class="border rounded p-3 mb-3" style="min-height: 100px; background-color: #f8f9fa;">
+                                        @if (!string.IsNullOrEmpty(Model.ControlGaps))
+                                        {
+                                            <p class="mb-0">@Model.ControlGaps</p>
+                                        }
+                                        else
+                                        {
+                                            <p class="text-muted mb-0">No control gaps identified</p>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <h6><i class="fas fa-lightbulb me-1 text-info"></i>Recommended Mitigations</h6>
+                            <div class="border rounded p-3" style="background-color: #f8f9fa;">
+                                @if (!string.IsNullOrEmpty(Model.RecommendedMitigations))
+                                {
+                                    <p class="mb-0">@Model.RecommendedMitigations</p>
+                                }
+                                else
+                                {
+                                    <p class="text-muted mb-0">No mitigations recommended</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attack Steps -->
+                    @if (Model.Steps.Any())
+                    {
+                        <div class="card mb-4">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="fas fa-list-ol me-2"></i>Attack Steps</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="list-group">
+                                    @foreach (var step in Model.Steps.OrderBy(s => s.StepNumber))
+                                    {
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1">
+                                                    <span class="badge bg-primary me-2">Step @step.StepNumber</span>
+                                                    @step.Name
+                                                </h6>
+                                                <small class="text-muted">@step.KillChainPhase</small>
+                                            </div>
+                                            <p class="mb-1">@step.Description</p>
+                                            @if (step.MitreTechnique != null)
+                                            {
+                                                <small class="text-muted">
+                                                    <i class="fas fa-tag me-1"></i>MITRE Technique: @step.MitreTechnique.TechniqueId - @step.MitreTechnique.Name
+                                                </small>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Right Column -->
+                <div class="col-lg-4">
+                    <!-- Quick Actions -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Quick Actions</h6>
+                        </div>
+                        <div class="card-body">
+                            @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                            {
+                                <div class="d-grid gap-2">
+                                    <a asp-action="EditScenario" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-edit me-2"></i>Edit Scenario
+                                    </a>
+                                    <a asp-action="ScenarioBuilder" asp-route-id="@Model.ThreatModelId" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-project-diagram me-2"></i>Visual Builder
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteScenarioModal">
+                                        <i class="fas fa-trash me-2"></i>Delete Scenario
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Scenario Metadata -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-info me-2"></i>Metadata</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-6">Status:</dt>
+                                <dd class="col-6">
+                                    @{
+                                        var statusBadge = Model.Status switch
+                                        {
+                                            CyberRiskApp.Models.ScenarioStatus.Draft => "bg-warning text-dark",
+                                            CyberRiskApp.Models.ScenarioStatus.UnderReview => "bg-info",
+                                            CyberRiskApp.Models.ScenarioStatus.Approved => "bg-success",
+                                            CyberRiskApp.Models.ScenarioStatus.Archived => "bg-secondary",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @statusBadge">@Model.Status</span>
+                                </dd>
+                                
+                                <dt class="col-6">Complexity:</dt>
+                                <dd class="col-6">
+                                    @{
+                                        var complexityBadge = Model.Complexity switch
+                                        {
+                                            CyberRiskApp.Models.AttackComplexity.Low => "bg-success",
+                                            CyberRiskApp.Models.AttackComplexity.Medium => "bg-warning text-dark",
+                                            CyberRiskApp.Models.AttackComplexity.High => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @complexityBadge">@Model.Complexity</span>
+                                </dd>
+                                
+                                <dt class="col-6">Duration:</dt>
+                                <dd class="col-6">@Model.EstimatedDurationHours hours</dd>
+                                
+                                <dt class="col-6">Steps:</dt>
+                                <dd class="col-6">@Model.Steps.Count</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Related Information -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-link me-2"></i>Related</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                <a asp-action="Details" asp-route-id="@Model.ThreatModelId" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-shield-alt me-2"></i>
+                                    Threat Model: @Model.ThreatModel?.Name
+                                </a>
+                                <a asp-action="Scenarios" asp-route-id="@Model.ThreatModelId" class="list-group-item list-group-item-action">
+                                    <i class="fas fa-chess me-2"></i>
+                                    All Scenarios
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteScenarioModal" tabindex="-1" aria-labelledby="deleteScenarioModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteScenarioModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Attack Scenario
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    <strong>Are you sure you want to delete this attack scenario?</strong>
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>Scenario:</strong> @Model.Name
+                </div>
+                <p class="text-muted mb-0">
+                    <small>This action cannot be undone. All associated attack steps, paths, and recommendations will also be deleted.</small>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <form asp-action="DeleteScenario" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Scenario
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+<style>
+.scenario-step {
+    border-left: 4px solid #0d6efd;
+    padding-left: 15px;
+    margin-bottom: 15px;
+}
+
+.scenario-step:hover {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+}
+</style>
+}

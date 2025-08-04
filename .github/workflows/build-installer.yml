@@ -1,0 +1,121 @@
+name: Build and Release Installer
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build application
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Publish application
+      run: dotnet publish -c Release -o ./publish/CyberRiskApp --no-self-contained
+      
+    - name: Copy installation scripts
+      run: |
+        New-Item -ItemType Directory -Path "./publish/CyberRiskApp/scripts" -Force
+        Copy-Item "install.ps1" -Destination "./publish/CyberRiskApp/scripts/" -Force
+        Copy-Item "setup-secure.ps1" -Destination "./publish/CyberRiskApp/scripts/" -Force
+        Copy-Item "setup-database.ps1" -Destination "./publish/CyberRiskApp/scripts/" -Force
+      shell: pwsh
+      
+    - name: Install Inno Setup
+      run: |
+        Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "innosetup.exe"
+        Start-Process -FilePath "innosetup.exe" -ArgumentList "/SILENT" -Wait
+      shell: pwsh
+      
+    - name: Create Inno Setup script
+      run: |
+        $version = "${{ github.ref_name }}".Replace('v', '')
+        $innoScript = @"
+        #define MyAppName "CyberRisk Management Platform"
+        #define MyAppVersion "$version"
+        #define MyAppPublisher "CyberRisk Solutions"
+        #define MyAppURL "https://github.com/${{ github.repository }}"
+        #define MyAppExeName "CyberRiskApp.exe"
+
+        [Setup]
+        AppId={{8B3A5F2C-1234-4567-8901-ABCDEF123456}}
+        AppName={#MyAppName}
+        AppVersion={#MyAppVersion}
+        AppPublisher={#MyAppPublisher}
+        AppPublisherURL={#MyAppURL}
+        AppSupportURL={#MyAppURL}/issues
+        AppUpdatesURL={#MyAppURL}/releases
+        DefaultDirName={autopf}\CyberRiskApp
+        DisableProgramGroupPage=yes
+        OutputDir=installer
+        OutputBaseFilename=CyberRiskApp-Setup-{#MyAppVersion}
+        Compression=lzma
+        SolidCompression=yes
+        WizardStyle=modern
+        PrivilegesRequired=admin
+        ArchitecturesInstallIn64BitMode=x64
+
+        [Languages]
+        Name: "english"; MessagesFile: "compiler:Default.isl"
+
+        [Tasks]
+        Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+        Name: "windowsservice"; Description: "Install as Windows Service"; GroupDescription: "Service Installation:"; Flags: checked
+
+        [Files]
+        Source: "publish\CyberRiskApp\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+        [Icons]
+        Name: "{autoprograms}\{#MyAppName}"; Filename: "http://localhost:5000"; IconFilename: "{app}\{#MyAppExeName}"
+        Name: "{autodesktop}\{#MyAppName}"; Filename: "http://localhost:5000"; IconFilename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+        [Run]
+        Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\scripts\install.ps1"" -InstallPath ""{app}"" -UseWebSetup"; StatusMsg: "Installing service..."; Tasks: windowsservice; Flags: runhidden
+        Filename: "http://localhost:5000/Setup"; Description: "Complete Initial Setup"; Flags: shellexec postinstall skipifsilent
+
+        [UninstallRun]
+        Filename: "sc.exe"; Parameters: "stop CyberRiskApp"; Flags: runhidden
+        Filename: "sc.exe"; Parameters: "delete CyberRiskApp"; Flags: runhidden
+        "@
+        
+        New-Item -ItemType Directory -Path "installer" -Force
+        $innoScript | Out-File -FilePath "installer\CyberRiskApp.iss" -Encoding UTF8
+      shell: pwsh
+      
+    - name: Build installer
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\CyberRiskApp.iss
+      shell: pwsh
+      
+    - name: Create portable package
+      run: |
+        $version = "${{ github.ref_name }}".Replace('v', '')
+        Compress-Archive -Path "publish\CyberRiskApp\*" -DestinationPath "installer\CyberRiskApp-Portable-$version.zip"
+      shell: pwsh
+      
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          installer/CyberRiskApp-Setup-*.exe
+          installer/CyberRiskApp-Portable-*.zip
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

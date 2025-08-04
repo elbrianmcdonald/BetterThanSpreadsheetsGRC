@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "firegiant.wix-toolset-extension",
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode"
+  ]
+}

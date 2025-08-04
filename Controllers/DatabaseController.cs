@@ -22,6 +22,7 @@ namespace CyberRiskApp.Controllers
         }
         
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateRiskAcceptanceSchema()
         {
             try
@@ -106,6 +107,7 @@ END $$;";
         }
         
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> VerifySchema()
         {
             try

@@ -9,6 +9,7 @@ namespace CyberRiskApp.Services
         Task<Risk> CreateRiskAsync(Risk risk);
         Task<Risk> UpdateRiskAsync(Risk risk);
         Task<bool> DeleteRiskAsync(int id);
+        Task<bool> CloseRiskAsync(int id, string remediationDetails, string closedBy);
 
         // Dashboard and summary methods
         Task<decimal> GetTotalALEAsync();

@@ -173,4 +173,78 @@
         Permanent = 2,
         Custom = 3
     }
+
+    // NEW: Lockheed Martin Cyber Kill Chain Phases
+    public enum CyberKillChainPhase
+    {
+        Reconnaissance = 1,     // Research, identification and selection of targets
+        Weaponization = 2,      // Coupling exploit with backdoor into deliverable payload
+        Delivery = 3,           // Transmission of weapon to targeted environment
+        Exploitation = 4,       // Execution of code on victim's system
+        Installation = 5,       // Installation of malware on the asset
+        CommandAndControl = 6,  // Channel for remote manipulation of victim
+        ActionsOnObjectives = 7 // Intruders accomplish their original goals
+    }
+
+    // NEW: Threat Model Status
+    public enum ThreatModelStatus
+    {
+        Draft = 1,
+        InReview = 2,
+        Approved = 3,
+        Active = 4,
+        Archived = 5
+    }
+
+    // NEW: Attack Vector Types
+    public enum AttackVector
+    {
+        Network = 1,
+        Adjacent = 2,
+        Local = 3,
+        Physical = 4,
+        Social = 5,
+        Email = 6,
+        Web = 7,
+        Wireless = 8,
+        Supply_Chain = 9,
+        Insider = 10
+    }
+
+    // NEW: Attack Complexity
+    public enum AttackComplexity
+    {
+        Low = 1,
+        Medium = 2,
+        High = 3
+    }
+
+    // NEW: Threat Actor Types
+    public enum ThreatActorType
+    {
+        Script_Kiddie = 1,
+        Cybercriminal = 2,
+        Hacktivist = 3,
+        Insider_Threat = 4,
+        Nation_State = 5,
+        Advanced_Persistent_Threat = 6,
+        Competitor = 7,
+        Terrorist = 8
+    }
+
+    // NEW: Threat Modeling Framework Selection
+    public enum ThreatModelingFramework
+    {
+        MITRE = 1,
+        KillChain = 2,
+        Both = 3
+    }
+
+    // NEW: MITRE ATT&CK Framework Types
+    public enum MitreFrameworkType
+    {
+        Enterprise = 1,
+        ICS = 2,
+        Mobile = 3
+    }
 }

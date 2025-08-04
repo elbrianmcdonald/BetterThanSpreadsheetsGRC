@@ -3,6 +3,234 @@
     ViewData["Title"] = "Risk Assessment Details";
 }
 
+<style>
+    .kill-chain-card {
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease-in-out;
+        height: 100%;
+    }
+    
+    .kill-chain-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .kill-chain-card .card-header {
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .threat-scenario {
+        border-left: 4px solid #6c757d;
+        padding-left: 15px;
+    }
+    
+    .threat-scenario:hover {
+        border-left-color: #0d6efd;
+    }
+
+    /* Attack Scenario Flow Visualization Styles */
+    .scenario-flow-container {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    }
+
+    .scenario-header {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 15px;
+    }
+
+    .kill-chain-flow {
+        min-height: 200px;
+        position: relative;
+        overflow-x: auto;
+        padding: 20px 0;
+    }
+
+    .flow-stage {
+        display: inline-block;
+        margin: 0 15px;
+        text-align: center;
+        position: relative;
+        vertical-align: top;
+    }
+
+    .flow-stage:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: -25px;
+        width: 20px;
+        height: 2px;
+        background: linear-gradient(to right, #6c757d, #007bff);
+        z-index: 1;
+    }
+
+    .flow-stage:not(:last-child)::before {
+        content: '▶';
+        position: absolute;
+        top: 50%;
+        right: -30px;
+        transform: translateY(-50%);
+        color: #007bff;
+        font-size: 12px;
+        z-index: 2;
+    }
+
+    .stage-header {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px 6px 0 0;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0;
+        min-width: 150px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stage-techniques {
+        background: white;
+        border: 2px solid #6c757d;
+        border-top: none;
+        border-radius: 0 0 6px 6px;
+        min-height: 120px;
+        min-width: 150px;
+        max-width: 200px;
+        width: 180px;
+        padding: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .technique-box {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 8px;
+        margin-bottom: 8px;
+        font-size: 11px;
+        line-height: 1.3;
+        position: relative;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .technique-box:hover {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-color: #2196f3;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    .technique-box:last-child {
+        margin-bottom: 0;
+    }
+
+    .technique-name {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 3px;
+        display: block;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+    }
+
+    .technique-description {
+        color: #6c757d;
+        font-size: 10px;
+        line-height: 1.2;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+    }
+
+    .mitre-technique {
+        border-left: 4px solid #4caf50;
+    }
+
+    .killchain-technique {
+        border-left: 4px solid #ff9800;
+    }
+
+    .empty-stage {
+        color: #6c757d;
+        font-style: italic;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+        text-align: center;
+        font-size: 12px;
+    }
+
+    /* Stage Colors */
+    .stage-reconnaissance .stage-header { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
+    .stage-reconnaissance .stage-techniques { border-color: #17a2b8; }
+
+    .stage-weaponization .stage-header { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); }
+    .stage-weaponization .stage-techniques { border-color: #ffc107; }
+
+    .stage-delivery .stage-header { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
+    .stage-delivery .stage-techniques { border-color: #dc3545; }
+
+    .stage-exploitation .stage-header { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); }
+    .stage-exploitation .stage-techniques { border-color: #007bff; }
+
+    .stage-installation .stage-header { background: linear-gradient(135deg, #6f42c1 0%, #59359a 100%); }
+    .stage-installation .stage-techniques { border-color: #6f42c1; }
+
+    .stage-commandandcontrol .stage-header { background: linear-gradient(135deg, #343a40 0%, #23272b 100%); }
+    .stage-commandandcontrol .stage-techniques { border-color: #343a40; }
+
+    .stage-actionsonobjectives .stage-header { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+    .stage-actionsonobjectives .stage-techniques { border-color: #28a745; }
+
+    @@media (max-width: 768px) {
+        .kill-chain-flow {
+            white-space: nowrap;
+        }
+        
+        .flow-stage {
+            margin: 0 10px;
+        }
+        
+        .stage-techniques {
+            min-width: 120px;
+            max-width: 140px;
+            width: 130px;
+        }
+        
+        .technique-box {
+            font-size: 10px;
+            padding: 6px;
+        }
+        
+        .technique-name {
+            font-size: 10px;
+        }
+        
+        .technique-description {
+            font-size: 9px;
+            -webkit-line-clamp: 3;
+        }
+    }
+</style>
+
 @functions {
     private string GetRiskLevelColor(string riskLevel)
     {
@@ -95,6 +323,18 @@
             _ => 0.0m
         };
     }
+
+    string GetScenarioStatusColor(CyberRiskApp.Models.ScenarioStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.ScenarioStatus.Draft => "secondary",
+            CyberRiskApp.Models.ScenarioStatus.UnderReview => "warning",
+            CyberRiskApp.Models.ScenarioStatus.Approved => "success", 
+            CyberRiskApp.Models.ScenarioStatus.Archived => "dark",
+            _ => "secondary"
+        };
+    }
 }
 
 <div class="container-fluid">
@@ -161,11 +401,13 @@
                                         @Model.CalculateRiskLevel() Risk
                                     </span>
                                 </div>
+                                <div class="row text-center small">
                                     <div class="col-6">
                                         <div class="fw-bold text-info">@string.Format("{0:F2}", Model.LossEventFrequency)</div>
                                         <div class="text-muted">LEF/Year</div>
                                     </div>
-                                                         }
+                                </div>
+                            }
                             else
                             {
                                 <div class="mb-3">
@@ -425,6 +667,110 @@
                 </div>
             }
 
+            <!-- Attack Scenarios Flow Visualization -->
+            @* Debug: LinkedThreatModels count: @(Model.LinkedThreatModels?.Count() ?? 0) *@
+            @if (Model.LinkedThreatModels?.Any() == true)
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-primary bg-opacity-10">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chess me-2"></i>Attack Scenarios Flow (@Model.LinkedThreatModels.Count threat models)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var threatModel in Model.LinkedThreatModels)
+                        {
+                            var attackScenariosDict = ViewBag.AttackScenarios as Dictionary<int, IEnumerable<CyberRiskApp.Models.AttackScenario>>;
+                            var attackScenarios = attackScenariosDict?.ContainsKey(threatModel.Id) == true 
+                                ? attackScenariosDict[threatModel.Id]
+                                : new List<CyberRiskApp.Models.AttackScenario>();
+
+                            <div class="threat-model-section mb-5">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-crosshairs me-2 text-primary"></i>@threatModel.Name
+                                        </h6>
+                                        <p class="text-muted mb-0 small">@threatModel.Description</p>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-info me-2">@(attackScenarios?.Count() ?? 0) scenarios</span>
+                                        <a asp-controller="ThreatModeling" asp-action="Details" asp-route-id="@threatModel.Id" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye me-1"></i>View Full Model
+                                        </a>
+                                        @* Debug info *@
+                                        @if (attackScenarios?.Any() == true)
+                                        {
+                                            <small class="text-muted d-block">Scenarios: @string.Join(", ", attackScenarios.Select(s => $"{s.Name} (ID: {s.Id})"))</small>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (attackScenarios?.Any() == true)
+                                {
+                                    @foreach (var scenario in attackScenarios.OrderByDescending(s => s.UpdatedAt))
+                                    {
+                                        <div class="scenario-flow-container mb-4" data-scenario-id="@scenario.Id">
+                                            <div class="scenario-header mb-3">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">
+                                                        <span class="badge bg-@GetScenarioStatusColor(scenario.Status) me-2">@scenario.Status</span>
+                                                        @scenario.Name
+                                                    </h6>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="@Url.Action("ScenarioBuilder", "ThreatModeling", new { id = threatModel.Id, scenarioId = scenario.Id })" 
+                                                           class="btn btn-outline-primary btn-sm" title="Edit Scenario">
+                                                            <i class="fas fa-edit"></i> Edit
+                                                        </a>
+                                                        <a href="@Url.Action("ScenarioDetails", "ThreatModeling", new { id = scenario.Id })" 
+                                                           class="btn btn-outline-info btn-sm" title="View Details">
+                                                            <i class="fas fa-eye"></i> Details
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(scenario.Description))
+                                                {
+                                                    <p class="text-muted mt-2 mb-0 small">@scenario.Description</p>
+                                                }
+                                            </div>
+                                            
+                                            <!-- Kill Chain Flow Visualization -->
+                                            <div class="kill-chain-flow" id="flow-@scenario.Id">
+                                                <div class="text-center">
+                                                    <i class="fas fa-spinner fa-spin"></i> Loading attack flow...
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        @if (!attackScenarios.Last().Equals(scenario))
+                                        {
+                                            <hr class="my-3">
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                                        <p class="mb-0">No attack scenarios defined for this threat model</p>
+                                        <a asp-controller="ThreatModeling" asp-action="CreateScenario" asp-route-id="@threatModel.Id" 
+                                           class="btn btn-outline-success btn-sm mt-2">
+                                            <i class="fas fa-plus me-1"></i>Create Attack Scenario
+                                        </a>
+                                    </div>
+                                }
+                            </div>
+                            
+                            @if (!Model.LinkedThreatModels.Last().Equals(threatModel))
+                            {
+                                <hr class="my-4">
+                            }
+                        }
+                    </div>
+                </div>
+            }
+
             <!-- Identified Risks -->
             @if (Model.IdentifiedRisks?.Any() == true)
             {
@@ -462,3 +808,244 @@
         </div>
     </div>
 </div>
+
+<!-- Technique Details Modal -->
+<div class="modal fade" id="techniqueDetailsModal" tabindex="-1" aria-labelledby="techniqueDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="techniqueDetailsModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>Technique Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="techniqueDetailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// Load attack scenario flows when page loads
+$(document).ready(function() {
+    $('.scenario-flow-container').each(function() {
+        const scenarioId = $(this).data('scenario-id');
+        loadScenarioFlow(scenarioId);
+    });
+});
+
+function loadScenarioFlow(scenarioId) {
+    const flowContainer = $('#flow-' + scenarioId);
+    
+    console.log('Loading scenario flow for scenario ID:', scenarioId);
+    
+    // Fetch scenario steps from API
+    fetch(`/api/threatmodeling/GetAttackScenarioSteps/${scenarioId}`)
+        .then(response => {
+            console.log('API response status:', response.status);
+            return response.json();
+        })
+        .then(steps => {
+            console.log('Loaded steps for scenario', scenarioId, ':', steps);
+            renderFlowVisualization(flowContainer, steps);
+        })
+        .catch(error => {
+            console.error('Error loading scenario flow:', error);
+            flowContainer.html('<div class="text-center text-muted"><i class="fas fa-exclamation-triangle"></i> Error loading attack flow</div>');
+        });
+}
+
+function renderFlowVisualization(container, steps) {
+    if (!steps || steps.length === 0) {
+        container.html('<div class="text-center text-muted"><i class="fas fa-info-circle"></i> No techniques defined for this scenario</div>');
+        return;
+    }
+    
+    // Group steps by kill chain phase
+    const phases = [
+        { key: 'Reconnaissance', name: 'Reconnaissance', steps: [] },
+        { key: 'Weaponization', name: 'Weaponization', steps: [] },
+        { key: 'Delivery', name: 'Delivery', steps: [] },
+        { key: 'Exploitation', name: 'Exploitation', steps: [] },
+        { key: 'Installation', name: 'Installation', steps: [] },
+        { key: 'CommandAndControl', name: 'Command & Control', steps: [] },
+        { key: 'ActionsOnObjectives', name: 'Actions on Objectives', steps: [] }
+    ];
+    
+    // Organize steps by phase
+    steps.forEach(step => {
+        if (step.killChainActivity && step.killChainActivity.phase) {
+            const phaseKey = step.killChainActivity.phase;
+            const phase = phases.find(p => p.key === phaseKey);
+            if (phase) {
+                phase.steps.push(step);
+            }
+        } else if (step.mitreTechnique) {
+            // For MITRE techniques without kill chain mapping, try to infer phase or put in general category
+            phases[0].steps.push(step); // Default to reconnaissance for unmapped MITRE techniques
+        }
+    });
+    
+    // Build HTML
+    let html = '<div class="d-flex justify-content-start align-items-start" style="white-space: nowrap;">';
+    
+    phases.forEach((phase, index) => {
+        const phaseClass = 'stage-' + phase.key.toLowerCase();
+        
+        html += `
+            <div class="flow-stage ${phaseClass}">
+                <div class="stage-header">${phase.name}</div>
+                <div class="stage-techniques">`;
+        
+        if (phase.steps.length === 0) {
+            html += '<div class="empty-stage">No techniques</div>';
+        } else {
+            phase.steps.forEach(step => {
+                const isKillChain = step.killChainActivity != null;
+                const techniqueClass = isKillChain ? 'killchain-technique' : 'mitre-technique';
+                
+                let techniqueName, techniqueDesc;
+                
+                if (isKillChain) {
+                    techniqueName = step.killChainActivity.name || 'Custom Technique';
+                    techniqueDesc = step.killChainActivity.description || step.description || '';
+                } else if (step.mitreTechnique) {
+                    techniqueName = step.mitreTechnique.name || step.mitreTechnique.techniqueId || 'MITRE Technique';
+                    techniqueDesc = step.mitreTechnique.description || step.description || '';
+                } else {
+                    techniqueName = 'Technique';
+                    techniqueDesc = step.description || '';
+                }
+                
+                // Truncate description if too long
+                if (techniqueDesc.length > 80) {
+                    techniqueDesc = techniqueDesc.substring(0, 80) + '...';
+                }
+                
+                html += `
+                    <div class="technique-box ${techniqueClass}" title="${techniqueDesc}" onclick="showTechniqueDetails(${JSON.stringify(step).replace(/"/g, '&quot;')})">
+                        <span class="technique-name">${techniqueName}</span>
+                        <div class="technique-description">${techniqueDesc}</div>
+                    </div>`;
+            });
+        }
+        
+        html += '</div></div>';
+    });
+    
+    html += '</div>';
+    
+    container.html(html);
+}
+
+function showTechniqueDetails(step) {
+    const modalTitle = document.getElementById('techniqueDetailsModalLabel');
+    const modalContent = document.getElementById('techniqueDetailsContent');
+    
+    let techniqueType = '';
+    let techniqueName = '';
+    let techniqueId = '';
+    let description = '';
+    let additionalInfo = '';
+    
+    if (step.killChainActivity) {
+        // Kill Chain Activity
+        techniqueType = 'Kill Chain Activity';
+        techniqueName = step.killChainActivity.name;
+        techniqueId = `KC-${step.killChainActivity.id}`;
+        description = step.killChainActivity.description;
+        
+        additionalInfo = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-layer-group me-2"></i>Phase</h6>
+                    <p class="text-muted">${step.killChainActivity.phase.replace(/([A-Z])/g, ' $1').trim()}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-chart-line me-2"></i>Complexity</h6>
+                    <p class="text-muted">${step.killChainActivity.complexity}</p>
+                </div>
+            </div>
+            ${step.killChainActivity.environmentType ? `
+            <div class="mb-3">
+                <h6><i class="fas fa-server me-2"></i>Environment Type</h6>
+                <p class="text-muted">${step.killChainActivity.environmentType}</p>
+            </div>` : ''}
+        `;
+    } else if (step.mitreTechnique) {
+        // MITRE ATT&CK Technique
+        techniqueType = 'MITRE ATT&CK Technique';
+        techniqueName = step.mitreTechnique.name;
+        techniqueId = step.mitreTechnique.techniqueId;
+        description = step.mitreTechnique.description;
+        
+        additionalInfo = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-bullseye me-2"></i>Tactic</h6>
+                    <p class="text-muted">${step.mitreTechnique.tactic}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-hashtag me-2"></i>Technique ID</h6>
+                    <p class="text-muted">${step.mitreTechnique.techniqueId}</p>
+                </div>
+            </div>
+        `;
+    } else {
+        // Generic technique
+        techniqueType = 'Custom Technique';
+        techniqueName = step.name || 'Unnamed Technique';
+        description = step.description || 'No description available.';
+    }
+    
+    // Update modal title
+    modalTitle.innerHTML = `<i class="fas fa-info-circle me-2"></i>${techniqueName}`;
+    
+    // Update modal content
+    modalContent.innerHTML = `
+        <div class="technique-details">
+            <div class="mb-3">
+                <span class="badge bg-${step.killChainActivity ? 'warning' : 'success'} mb-2">${techniqueType}</span>
+                ${techniqueId ? `<span class="badge bg-secondary mb-2 ms-2">${techniqueId}</span>` : ''}
+            </div>
+            
+            <div class="mb-3">
+                <h6><i class="fas fa-align-left me-2"></i>Description</h6>
+                <p class="text-muted">${description}</p>
+            </div>
+            
+            ${additionalInfo}
+            
+            ${step.detectionMethods ? `
+            <div class="mb-3">
+                <h6><i class="fas fa-search me-2"></i>Detection Methods</h6>
+                <p class="text-muted">${step.detectionMethods}</p>
+            </div>` : ''}
+            
+            <div class="mb-3">
+                <h6><i class="fas fa-list-ol me-2"></i>Step Information</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted">Step Number:</small>
+                        <p class="text-muted mb-1">#${step.stepNumber}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Kill Chain Phase:</small>
+                        <p class="text-muted mb-1">${step.killChainPhase?.replace(/([A-Z])/g, ' $1').trim() || 'Not specified'}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('techniqueDetailsModal'));
+    modal.show();
+}
+</script>
+}

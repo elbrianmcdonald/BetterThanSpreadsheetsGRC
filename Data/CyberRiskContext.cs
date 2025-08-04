@@ -66,6 +66,24 @@ namespace CyberRiskApp.Data
         public DbSet<SSLCertificate> SSLCertificates { get; set; }
         public DbSet<SSLSettings> SSLSettings { get; set; }
 
+        // App Settings DbSet
+        public DbSet<AppSettings> AppSettings { get; set; }
+
+        // Application Domain Management DbSets
+        public DbSet<ApplicationDomain> ApplicationDomains { get; set; }
+        public DbSet<DomainAlias> DomainAliases { get; set; }
+        public DbSet<DomainAccessLog> DomainAccessLogs { get; set; }
+
+        // Threat Modeling DbSets
+        public DbSet<ThreatModel> ThreatModels { get; set; }
+        public DbSet<Attack> Attacks { get; set; }
+        public DbSet<MitreTechnique> MitreTechniques { get; set; }
+        public DbSet<KillChainActivity> KillChainActivities { get; set; }
+        public DbSet<AttackScenario> AttackScenarios { get; set; }
+        public DbSet<AttackScenarioStep> AttackScenarioSteps { get; set; }
+        public DbSet<AttackPath> AttackPaths { get; set; }
+        public DbSet<ScenarioRecommendation> ScenarioRecommendations { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -124,18 +142,24 @@ namespace CyberRiskApp.Data
                 entity.Property(r => r.RiskAssessmentId)
                     .HasColumnName("RiskAssessmentId");
 
-                // Configure relationships with explicit foreign key names
+                // Configure relationships with explicit foreign key names and optimal loading
                 entity.HasOne(r => r.LinkedFinding)
                     .WithMany(f => f.RelatedRisks)
                     .HasForeignKey(r => r.FindingId)
                     .HasConstraintName("FK_Risks_Findings_FindingId")
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
 
                 entity.HasOne(r => r.LinkedAssessment)
                     .WithMany()
                     .HasForeignKey(r => r.RiskAssessmentId)
                     .HasConstraintName("FK_Risks_RiskAssessments_RiskAssessmentId")
-                    .OnDelete(DeleteBehavior.SetNull);
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+
+                // Configure navigation properties for optimized queries
+                entity.Navigation(r => r.LinkedFinding).EnableLazyLoading(false);
+                entity.Navigation(r => r.LinkedAssessment).EnableLazyLoading(false);
             });
 
             // ADDED: Configure RiskAssessment entity to include Finding relationship
@@ -500,6 +524,265 @@ namespace CyberRiskApp.Data
 
             modelBuilder.Entity<SSLSettings>()
                 .Property(s => s.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // ========================================
+            // APP SETTINGS CONFIGURATION
+            // ========================================
+
+            // Ensure only one app settings record exists
+            modelBuilder.Entity<AppSettings>()
+                .HasIndex(s => s.Id)
+                .IsUnique();
+
+            // Default values for AppSettings
+            modelBuilder.Entity<AppSettings>()
+                .Property(s => s.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // ========================================
+            // APPLICATION DOMAIN MANAGEMENT CONFIGURATION
+            // ========================================
+
+            // Ensure domain names are unique
+            modelBuilder.Entity<ApplicationDomain>()
+                .HasIndex(d => d.DomainName)
+                .IsUnique();
+
+            // Ensure only one primary domain exists (PostgreSQL syntax)
+            modelBuilder.Entity<ApplicationDomain>()
+                .HasIndex(d => d.IsPrimary)
+                .HasFilter("\"IsPrimary\" = true");
+
+            // Default values for ApplicationDomain
+            modelBuilder.Entity<ApplicationDomain>()
+                .Property(d => d.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Domain alias configuration
+            modelBuilder.Entity<DomainAlias>()
+                .HasOne(a => a.ApplicationDomain)
+                .WithMany(d => d.Aliases)
+                .HasForeignKey(a => a.ApplicationDomainId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Ensure alias names are unique
+            modelBuilder.Entity<DomainAlias>()
+                .HasIndex(a => a.AliasName)
+                .IsUnique();
+
+            // Default values for DomainAlias
+            modelBuilder.Entity<DomainAlias>()
+                .Property(a => a.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Domain access log indexing for performance
+            modelBuilder.Entity<DomainAccessLog>()
+                .HasIndex(l => l.AccessTime);
+
+            modelBuilder.Entity<DomainAccessLog>()
+                .HasIndex(l => l.RequestedDomain);
+
+            modelBuilder.Entity<DomainAccessLog>()
+                .HasIndex(l => l.ResponseCode);
+
+            modelBuilder.Entity<DomainAccessLog>()
+                .Property(l => l.AccessTime)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // ========================================
+            // NEW: THREAT MODELING CONFIGURATION
+            // ========================================
+
+            // ThreatModel -> Attack (One-to-Many)
+            modelBuilder.Entity<Attack>()
+                .HasOne(a => a.ThreatModel)
+                .WithMany(tm => tm.Attacks)
+                .HasForeignKey(a => a.ThreatModelId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ThreatModel -> RiskAssessment (Many-to-One) - Optional linkage
+            modelBuilder.Entity<ThreatModel>()
+                .HasOne(tm => tm.LinkedRiskAssessment)
+                .WithMany(ra => ra.LinkedThreatModels)
+                .HasForeignKey(tm => tm.RiskAssessmentId)
+                .HasConstraintName("FK_ThreatModels_RiskAssessments_RiskAssessmentId")
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Attack -> Finding (Many-to-One) - Optional linkage
+            modelBuilder.Entity<Attack>()
+                .HasOne(a => a.LinkedFinding)
+                .WithMany()
+                .HasForeignKey(a => a.FindingId)
+                .HasConstraintName("FK_Attacks_Findings_FindingId")
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Attack -> Risk (Many-to-One) - Optional linkage
+            modelBuilder.Entity<Attack>()
+                .HasOne(a => a.LinkedRisk)
+                .WithMany()
+                .HasForeignKey(a => a.RiskId)
+                .HasConstraintName("FK_Attacks_Risks_RiskId")
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Configure foreign key column names explicitly
+            modelBuilder.Entity<ThreatModel>()
+                .Property(tm => tm.RiskAssessmentId)
+                .HasColumnName("RiskAssessmentId");
+
+            modelBuilder.Entity<Attack>()
+                .Property(a => a.ThreatModelId)
+                .HasColumnName("ThreatModelId");
+
+            modelBuilder.Entity<Attack>()
+                .Property(a => a.FindingId)
+                .HasColumnName("FindingId");
+
+            modelBuilder.Entity<Attack>()
+                .Property(a => a.RiskId)
+                .HasColumnName("RiskId");
+
+            // Default values for threat modeling tables
+            modelBuilder.Entity<ThreatModel>()
+                .Property(tm => tm.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<ThreatModel>()
+                .Property(tm => tm.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<Attack>()
+                .Property(a => a.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<Attack>()
+                .Property(a => a.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // ========================================
+            // NEW: ENHANCED THREAT MODELING RELATIONSHIPS
+            // ========================================
+
+            // ThreatModel -> AttackScenario (One-to-Many)
+            modelBuilder.Entity<AttackScenario>()
+                .HasOne(s => s.ThreatModel)
+                .WithMany(tm => tm.AttackScenarios)
+                .HasForeignKey(s => s.ThreatModelId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // AttackScenario -> AttackScenarioStep (One-to-Many)
+            modelBuilder.Entity<AttackScenarioStep>()
+                .HasOne(s => s.AttackScenario)
+                .WithMany(s => s.Steps)
+                .HasForeignKey(s => s.AttackScenarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // AttackScenario -> AttackPath (One-to-Many)
+            modelBuilder.Entity<AttackPath>()
+                .HasOne(p => p.AttackScenario)
+                .WithMany(s => s.AttackPaths)
+                .HasForeignKey(p => p.AttackScenarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ThreatEnvironment -> AttackPath (Source and Target)
+            modelBuilder.Entity<AttackPath>()
+                .HasOne(p => p.SourceEnvironment)
+                .WithMany(e => e.SourcePaths)
+                .HasForeignKey(p => p.SourceEnvironmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<AttackPath>()
+                .HasOne(p => p.TargetEnvironment)
+                .WithMany(e => e.TargetPaths)
+                .HasForeignKey(p => p.TargetEnvironmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // MitreTechnique -> TechniqueEnvironmentMapping (One-to-Many)
+            modelBuilder.Entity<TechniqueEnvironmentMapping>()
+                .HasOne(m => m.MitreTechnique)
+                .WithMany(t => t.EnvironmentMappings)
+                .HasForeignKey(m => m.MitreTechniqueId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ThreatEnvironment -> TechniqueEnvironmentMapping (One-to-Many)
+            modelBuilder.Entity<TechniqueEnvironmentMapping>()
+                .HasOne(m => m.Environment)
+                .WithMany(e => e.TechniqueMappings)
+                .HasForeignKey(m => m.EnvironmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            modelBuilder.Entity<AttackScenarioStep>()
+                .HasOne(s => s.MitreTechnique)
+                .WithMany()
+                .HasForeignKey(s => s.MitreTechniqueId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<AttackScenarioStep>()
+                .HasOne(s => s.KillChainActivity)
+                .WithMany(k => k.ScenarioSteps)
+                .HasForeignKey(s => s.KillChainActivityId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // AttackScenario -> ScenarioRecommendation (One-to-Many)
+            modelBuilder.Entity<ScenarioRecommendation>()
+                .HasOne(r => r.AttackScenario)
+                .WithMany(s => s.Recommendations)
+                .HasForeignKey(r => r.AttackScenarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // MitreTechnique self-referencing for sub-techniques
+            modelBuilder.Entity<MitreTechnique>()
+                .HasOne(t => t.ParentTechnique)
+                .WithMany(t => t.SubTechniques)
+                .HasForeignKey(t => t.ParentTechniqueId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Many-to-Many: AttackScenario <-> MitreTechnique
+            modelBuilder.Entity<AttackScenario>()
+                .HasMany(s => s.MitreTechniques)
+                .WithMany(t => t.AttackScenarios)
+                .UsingEntity(j => j.ToTable("AttackScenarioMitreTechniques"));
+
+            // Indexes for better performance
+            modelBuilder.Entity<MitreTechnique>()
+                .HasIndex(t => t.TechniqueId)
+                .IsUnique();
+
+            modelBuilder.Entity<ThreatEnvironment>()
+                .HasIndex(e => new { e.ThreatModelId, e.EnvironmentType });
+
+            modelBuilder.Entity<KillChainActivity>()
+                .HasIndex(k => new { k.Phase, k.EnvironmentType });
+
+            // Default values for new tables
+            modelBuilder.Entity<ThreatEnvironment>()
+                .Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<MitreTechnique>()
+                .Property(t => t.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<AttackScenario>()
+                .Property(s => s.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<AttackScenarioStep>()
+                .Property(s => s.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<KillChainActivity>()
+                .Property(k => k.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<AttackPath>()
+                .Property(p => p.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+
+            modelBuilder.Entity<ScenarioRecommendation>()
+                .Property(r => r.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         }
     }

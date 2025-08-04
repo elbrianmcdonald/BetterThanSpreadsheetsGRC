@@ -207,7 +207,33 @@ namespace CyberRiskApp.Controllers
         // GET: SSLManagement/Settings
         public async Task<IActionResult> Settings()
         {
-            var settings = await _sslService.GetSSLSettingsAsync();
+            var settings = await _sslService.GetSSLSettingsAsync() ?? new SSLSettings
+            {
+                EnableHttpsRedirection = false,
+                RequireHttps = false,
+                HttpsPort = 443,
+                CreatedBy = "System",
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            // Get all valid certificates for the dropdown
+            var certificates = await _sslService.GetAllCertificatesAsync();
+            var validCertificates = certificates.Where(c => c.IsValid && c.ValidTo > DateTime.UtcNow).ToList();
+            
+            ViewBag.AvailableCertificates = validCertificates.Select(c => new
+            {
+                Value = c.Id,
+                Text = $"{c.Name} (Expires: {c.ValidTo:MMM dd, yyyy}){(c.IsActive ? " - ACTIVE" : "")}"
+            });
+            
+            // Debug logging
+            _logger.LogInformation($"SSL Settings - ActiveCertificateId: {settings.ActiveCertificateId}");
+            _logger.LogInformation($"Available certificates: {validCertificates.Count}");
+            foreach (var cert in validCertificates)
+            {
+                _logger.LogInformation($"Certificate: {cert.Name} (ID: {cert.Id}, IsActive: {cert.IsActive})");
+            }
+            
             return View(settings);
         }
 
@@ -231,6 +257,16 @@ namespace CyberRiskApp.Controllers
                 _logger.LogError(ex, "Error updating SSL settings");
                 TempData["Error"] = $"Error updating SSL settings: {ex.Message}";
             }
+
+            // Re-populate certificates for dropdown in case of errors
+            var certificates = await _sslService.GetAllCertificatesAsync();
+            var validCertificates = certificates.Where(c => c.IsValid && c.ValidTo > DateTime.UtcNow).ToList();
+            
+            ViewBag.AvailableCertificates = validCertificates.Select(c => new
+            {
+                Value = c.Id,
+                Text = $"{c.Name} (Expires: {c.ValidTo:MMM dd, yyyy})"
+            });
 
             return View(settings);
         }

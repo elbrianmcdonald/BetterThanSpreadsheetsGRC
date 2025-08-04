@@ -21,10 +21,24 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Review Required:</strong> This closure request is pending your review.
-                        Please carefully evaluate the justification and evidence before making a decision.
+                    <div class="card border-danger mb-3">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Action Required - Closure Review
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-danger mb-0">
+                                <i class="fas fa-gavel me-2"></i>
+                                <strong>This closure request requires your immediate review.</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Carefully evaluate the justification provided</li>
+                                    <li>Review any evidence documentation</li>
+                                    <li>Your decision will either close the finding or keep it open</li>
+                                    <li>This action cannot be undone without creating a new request</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row">
@@ -174,8 +188,8 @@
                                             </ul>
                                         </div>
 
-                                        <button type="submit" class="btn btn-success w-100" id="approveBtn"
-                                                onclick="return confirm('Are you sure you want to APPROVE this closure request? This will close the finding.')">
+                                        <button type="button" class="btn btn-success w-100" id="approveBtn"
+                                                onclick="showApproveConfirmation()">
                                             <i class="fas fa-check-circle me-2"></i>Approve & Close Finding
                                         </button>
                                     </form>
@@ -212,8 +226,8 @@
                                             </ul>
                                         </div>
 
-                                        <button type="submit" class="btn btn-danger w-100" id="rejectBtn"
-                                                onclick="return confirm('Are you sure you want to REJECT this closure request?')">
+                                        <button type="button" class="btn btn-danger w-100" id="rejectBtn"
+                                                onclick="showRejectConfirmation()">
                                             <i class="fas fa-times-circle me-2"></i>Reject Request
                                         </button>
                                     </form>
@@ -250,34 +264,162 @@
     </div>
 </div>
 
+<!-- Approve Confirmation Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="approveModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Finding Closure
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Warning: This action cannot be undone!</strong>
+                </div>
+                <p class="mb-3">
+                    You are about to <strong>APPROVE</strong> the closure request for:
+                </p>
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title mb-1">@Model.LinkedFinding.FindingNumber</h6>
+                        <p class="card-text mb-0">@Model.LinkedFinding.Title</p>
+                    </div>
+                </div>
+                <p class="mb-0">
+                    This will:
+                </p>
+                <ul>
+                    <li>Permanently close the finding</li>
+                    <li>Mark this request as approved</li>
+                    <li>Record your decision in the audit log</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmApprove()">
+                    <i class="fas fa-check-circle me-2"></i>Yes, Approve & Close Finding
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Confirmation Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="rejectModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Rejection
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Please confirm your rejection decision.</strong>
+                </div>
+                <p class="mb-3">
+                    You are about to <strong>REJECT</strong> the closure request for:
+                </p>
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title mb-1">@Model.LinkedFinding.FindingNumber</h6>
+                        <p class="card-text mb-0">@Model.LinkedFinding.Title</p>
+                    </div>
+                </div>
+                <p class="mb-0">
+                    This will:
+                </p>
+                <ul>
+                    <li>Keep the finding in OPEN status</li>
+                    <li>Mark this request as rejected</li>
+                    <li>Require a new closure request to be submitted</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="confirmReject()">
+                    <i class="fas fa-times-circle me-2"></i>Yes, Reject Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
-        // Form submission handlers
-        document.getElementById('approveForm').addEventListener('submit', function(e) {
-            const btn = document.getElementById('approveBtn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Approving...';
-            btn.disabled = true;
+        // Modal instances
+        let approveModal;
+        let rejectModal;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            approveModal = new bootstrap.Modal(document.getElementById('approveModal'));
+            rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
         });
-
-        document.getElementById('rejectForm').addEventListener('submit', function(e) {
+        
+        // Show approve confirmation modal
+        function showApproveConfirmation() {
+            approveModal.show();
+        }
+        
+        // Show reject confirmation modal
+        function showRejectConfirmation() {
             const comments = document.getElementById('rejectComments').value.trim();
-
+            
             if (!comments) {
-                e.preventDefault();
                 alert('Please provide a reason for rejecting this closure request.');
                 return false;
             }
-
+            
             if (comments.length < 10) {
-                e.preventDefault();
                 alert('Please provide a more detailed rejection reason (at least 10 characters).');
                 return false;
             }
-
+            
+            rejectModal.show();
+        }
+        
+        // Confirm approve action
+        function confirmApprove() {
+            const form = document.getElementById('approveForm');
+            const btn = document.getElementById('approveBtn');
+            const modalBtn = event.target;
+            
+            // Update both buttons
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Approving...';
+            btn.disabled = true;
+            modalBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            modalBtn.disabled = true;
+            
+            // Hide modal and submit form
+            approveModal.hide();
+            form.submit();
+        }
+        
+        // Confirm reject action
+        function confirmReject() {
+            const form = document.getElementById('rejectForm');
             const btn = document.getElementById('rejectBtn');
+            const modalBtn = event.target;
+            
+            // Update both buttons
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Rejecting...';
             btn.disabled = true;
-        });
+            modalBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            modalBtn.disabled = true;
+            
+            // Hide modal and submit form
+            rejectModal.hide();
+            form.submit();
+        }
     </script>
 }
 

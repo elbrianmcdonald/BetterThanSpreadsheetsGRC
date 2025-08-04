@@ -1,0 +1,110 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-app",
+            "type": "shell",
+            "command": "dotnet",
+            "args": [
+                "publish",
+                "-c",
+                "Release",
+                "-o",
+                "./publish/CyberRiskApp",
+                "--no-self-contained"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-installer-wix",
+            "type": "shell",
+            "command": "msbuild",
+            "args": [
+                "Installer/CyberRiskApp.wixproj",
+                "/p:Configuration=Release",
+                "/p:Platform=x86"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "dependsOn": "build-app",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-installer-inno",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "create-installer.ps1"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "dependsOn": "build-app",
+            "problemMatcher": []
+        },
+        {
+            "label": "build-all-packages",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "build-release.ps1",
+                "-Version",
+                "1.0.0"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "build",
+            "type": "dotnet",
+            "task": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run",
+            "type": "dotnet",
+            "task": "run",
+            "group": "test",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "type": "dotnet",
+            "task": "clean",
+            "group": "clean",
+            "problemMatcher": [],
+            "label": "dotnet: clean"
+        },
+        {
+            "type": "dotnet",
+            "task": "build C:\\Dev\\CyberRiskPlatform\\CyberRiskApp\\CyberRiskApp\\CyberRiskApp\\CyberRiskApp.csproj",
+            "file": "C:\\Dev\\CyberRiskPlatform\\CyberRiskApp\\CyberRiskApp\\CyberRiskApp\\CyberRiskApp.csproj",
+            "group": "build",
+            "problemMatcher": [],
+            "label": "dotnet: build C:\\Dev\\CyberRiskPlatform\\CyberRiskApp\\CyberRiskApp\\CyberRiskApp\\CyberRiskApp.csproj"
+        }
+    ]
+}

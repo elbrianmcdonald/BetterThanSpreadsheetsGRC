@@ -138,44 +138,33 @@
         <div class="card mb-4">
             <div class="card-header bg-success bg-opacity-10">
                 <h5 class="mb-0">
-                    <i class="fas fa-th me-2"></i>Risk Matrix
+                    <i class="fas fa-fire me-2"></i>Risk Matrix Heatmap
                 </h5>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered table-sm matrix-preview">
-                        <thead>
-                            <tr>
-                                <th class="matrix-corner">
-                                    <div class="corner-text">
-                                        <div class="impact-label">Impact →</div>
-                                        <div class="likelihood-label">↓ Likelihood</div>
-                                    </div>
-                                </th>
-                                @{
-                                    var likelihoodLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue) ?? Enumerable.Empty<CyberRiskApp.Models.RiskMatrixLevel>();
-                                }
-                                @foreach (var level in likelihoodLevels)
+                @{
+                    var likelihoodLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue) ?? Enumerable.Empty<CyberRiskApp.Models.RiskMatrixLevel>();
+                    var impactLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Impact).OrderByDescending(l => l.LevelValue) ?? Enumerable.Empty<CyberRiskApp.Models.RiskMatrixLevel>();
+                }
+                
+                <div class="risk-heatmap-container">
+                    <div class="heatmap-grid">
+                        <!-- Y-axis labels (Impact) -->
+                        <div class="y-axis-label">
+                            <div class="axis-title">Impact</div>
+                            <div class="impact-labels">
+                                @foreach (var level in impactLevels)
                                 {
-                                    <th class="text-center likelihood-header" style="background-color: @(level.ColorCode)20; border: 2px solid @level.ColorCode;">
-                                        <div class="fw-bold">@level.LevelName</div>
-                                        <small class="text-muted">Level @level.LevelValue</small>
-                                    </th>
+                                    <div class="impact-label">@level.LevelName</div>
                                 }
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @{
-                                var impactLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Impact).OrderByDescending(l => l.LevelValue) ?? Enumerable.Empty<CyberRiskApp.Models.RiskMatrixLevel>();
-                            }
+                            </div>
+                        </div>
+
+                        <!-- Heatmap cells -->
+                        <div class="heatmap-cells">
                             @foreach (var impactLevel in impactLevels)
                             {
-                                <tr>
-                                    <th class="impact-header" style="background-color: @(impactLevel.ColorCode)20; border: 2px solid @impactLevel.ColorCode;">
-                                        <div class="fw-bold">@impactLevel.LevelName</div>
-                                        <small class="text-muted">Level @impactLevel.LevelValue</small>
-                                    </th>
-                                    
+                                <div class="heatmap-row">
                                     @foreach (var likelihoodLevel in likelihoodLevels)
                                     {
                                         var cell = cells.FirstOrDefault(c => 
@@ -186,22 +175,58 @@
                                         
                                         @if (cell != null)
                                         {
-                                            <td class="text-center matrix-cell" style="background-color: @GetRiskLevelColor(cell.ResultingRiskLevel.ToString()); color: white; font-weight: bold;">
-                                                <div class="risk-score">@cell.RiskScore</div>
-                                                <small class="risk-level">@cell.ResultingRiskLevel.ToString()</small>
-                                            </td>
+                                            <div class="heatmap-cell @GetHeatmapCellClass(cell.ResultingRiskLevel.ToString())" 
+                                                 title="@impactLevel.LevelName Impact × @likelihoodLevel.LevelName Likelihood = @cell.ResultingRiskLevel Risk (Score: @cell.RiskScore)"
+                                                 data-impact="@impactLevel.LevelValue" 
+                                                 data-likelihood="@likelihoodLevel.LevelValue"
+                                                 data-score="@cell.RiskScore">
+                                                <div class="cell-content">
+                                                    <div class="risk-count">@cell.RiskScore</div>
+                                                    <div class="risk-level-text">@cell.ResultingRiskLevel</div>
+                                                </div>
+                                            </div>
                                         }
                                         else
                                         {
-                                            <td class="text-center matrix-cell bg-light">
-                                                <div class="text-muted">-</div>
-                                            </td>
+                                            <div class="heatmap-cell cell-none" 
+                                                 title="@impactLevel.LevelName Impact × @likelihoodLevel.LevelName Likelihood = No Data">
+                                                <div class="cell-content">
+                                                    <div class="risk-count">-</div>
+                                                    <div class="risk-level-text">No Data</div>
+                                                </div>
+                                            </div>
                                         }
                                     }
-                                </tr>
+                                </div>
                             }
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
+
+                    <!-- X-axis labels (Likelihood) -->
+                    <div class="x-axis-labels">
+                        @foreach (var level in likelihoodLevels)
+                        {
+                            <div class="likelihood-label">@level.LevelName</div>
+                        }
+                    </div>
+                    <div class="x-axis-title">Likelihood</div>
+                </div>
+
+                <!-- Legend -->
+                <div class="heatmap-legend mt-3">
+                    <strong>Risk Level Legend:</strong>
+                    <span class="legend-item">
+                        <span class="legend-color bg-success"></span> Low
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color bg-info"></span> Medium
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color bg-warning"></span> High
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color bg-danger"></span> Critical
+                    </span>
                 </div>
                 
                 @if (Model.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihoodExposure)
@@ -281,68 +306,236 @@
             _ => "#6c757d"
         };
     }
+
+    private string GetHeatmapCellClass(string riskLevel)
+    {
+        return riskLevel?.ToLower() switch
+        {
+            "critical" => "cell-critical",
+            "high" => "cell-high",
+            "medium" => "cell-medium",
+            "low" => "cell-low",
+            _ => "cell-none"
+        };
+    }
 }
 
 @section Styles {
     <style>
-        .matrix-preview {
+        /* Risk Heatmap Styles */
+        .risk-heatmap-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .heatmap-grid {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .y-axis-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 10px;
+        }
+
+        .axis-title {
+            writing-mode: vertical-lr;
+            text-orientation: mixed;
+            font-weight: bold;
             font-size: 0.9rem;
-            min-width: 600px;
+            color: #495057;
+            margin-bottom: 20px;
         }
-        
-        .matrix-corner {
-            background-color: #f8f9fa !important;
-            width: 120px;
-            height: 80px;
-            position: relative;
-            padding: 0;
+
+        .impact-labels {
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            margin-top: 10px;
         }
-        
-        .corner-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: bold;
-        }
-        
+
         .impact-label {
-            margin-bottom: 0.25rem;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #495057;
+            writing-mode: horizontal-tb;
+            min-width: 60px;
+            text-align: right;
+            padding-right: 5px;
         }
-        
-        .likelihood-header, .impact-header {
-            background-color: #f8f9fa !important;
-            font-weight: bold;
-            min-width: 100px;
-            padding: 0.75rem;
+
+        .heatmap-cells {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
-        
-        .matrix-cell {
-            min-width: 100px;
-            height: 80px;
-            vertical-align: middle !important;
+
+        .heatmap-row {
+            display: flex;
+            gap: 2px;
+        }
+
+        .heatmap-cell {
+            width: 100px;
+            height: 70px;
+            border: 2px solid #fff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
             position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        
-        .risk-score {
-            font-size: 1.25rem;
+
+        .heatmap-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .cell-content {
+            text-align: center;
+            color: white;
             font-weight: bold;
-            line-height: 1;
         }
-        
-        .risk-level {
-            font-size: 0.75rem;
+
+        .risk-count {
+            font-size: 1.5rem;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .risk-level-text {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             opacity: 0.9;
         }
-        
-        .legend-color {
+
+        /* Risk level color coding */
+        .cell-critical {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .cell-high {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529 !important;
+        }
+
+        .cell-high .cell-content {
+            color: #212529 !important;
+        }
+
+        .cell-medium {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+        }
+
+        .cell-low {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+        }
+
+        .cell-none {
+            background: linear-gradient(135deg, #6c757d, #545b62);
+        }
+
+        .x-axis-labels {
+            display: flex;
+            gap: 2px;
+            margin-top: 10px;
+            margin-left: 80px;
+        }
+
+        .likelihood-label {
+            width: 100px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #495057;
+            padding: 5px;
+        }
+
+        .x-axis-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #495057;
+            margin-top: 10px;
+            margin-left: 80px;
+        }
+
+        /* Legend */
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
             border: 1px solid #dee2e6;
         }
-        
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
         .risk-level-badge {
             display: inline-block;
+        }
+
+        /* Responsive design */
+        @@media (max-width: 768px) {
+            .risk-heatmap-container {
+                padding: 10px;
+            }
+            
+            .heatmap-cell {
+                width: 60px;
+                height: 45px;
+            }
+            
+            .risk-count {
+                font-size: 1.1rem;
+            }
+            
+            .risk-level-text {
+                font-size: 0.6rem;
+            }
+            
+            .impact-label, .likelihood-label {
+                font-size: 0.7rem;
+            }
+            
+            .x-axis-labels, .x-axis-title {
+                margin-left: 50px;
+            }
+            
+            .likelihood-label {
+                width: 60px;
+            }
         }
     </style>
 }

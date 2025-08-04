@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CyberRiskApp.Models
 {
-    public class Finding
+    public class Finding : IAuditableEntity
     {
         public int Id { get; set; }
 
@@ -83,8 +83,24 @@ namespace CyberRiskApp.Models
         [Display(Name = "Assigned To")]
         public string AssignedTo { get; set; } = string.Empty;
 
+        // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Created By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string CreatedBy { get; set; } = string.Empty;
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Updated By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string UpdatedBy { get; set; } = string.Empty;
+        
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         // Navigation properties for relationships
         public virtual ICollection<Risk> RelatedRisks { get; set; } = new List<Risk>();

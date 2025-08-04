@@ -9,7 +9,8 @@ namespace CyberRiskApp.Models
         BusinessOwner = 2,
         BusinessUnit = 3,
         TechnicalControl = 4,
-        SecurityControlName = 5
+        SecurityControlName = 5,
+        FindingOwner = 6
     }
 
     public class ReferenceDataEntry

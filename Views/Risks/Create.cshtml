@@ -217,6 +217,13 @@
     
     <script>
         $(document).ready(function() {
+            // Initialize smart comboboxes
+            if (window.initializeSmartComboboxes) {
+                console.log('Initializing smart comboboxes for Risk Create form...');
+                window.initializeSmartComboboxes();
+            } else {
+                console.error('Smart combobox initialization function not found');
+            }
             // Auto-calculate Inherent Risk Level when Impact, Likelihood, or Exposure changes
             $('#Impact, #Likelihood, #Exposure').change(function() {
                 calculateInherentRisk();

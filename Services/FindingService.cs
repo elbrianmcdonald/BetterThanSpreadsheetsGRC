@@ -7,10 +7,12 @@ namespace CyberRiskApp.Services
     public class FindingService : IFindingService
     {
         private readonly CyberRiskContext _context;
+        private readonly IAuditService _auditService;
 
-        public FindingService(CyberRiskContext context)
+        public FindingService(CyberRiskContext context, IAuditService auditService)
         {
             _context = context;
+            _auditService = auditService;
         }
 
         public async Task<IEnumerable<Finding>> GetAllFindingsAsync()
@@ -62,22 +64,50 @@ namespace CyberRiskApp.Services
 
         public async Task<Finding> CreateFindingAsync(Finding finding)
         {
-            finding.FindingNumber = await GenerateFindingNumberAsync();
-            finding.OpenDate = DateTime.Today;
-            finding.Status = FindingStatus.Open; // Always start as Open
-            finding.CreatedAt = DateTime.UtcNow;
-            finding.UpdatedAt = DateTime.UtcNow;
+            try
+            {
+                finding.FindingNumber = await GenerateFindingNumberAsync();
+                finding.OpenDate = DateTime.Today;
+                finding.Status = FindingStatus.Open; // Always start as Open
+                
+                // Set audit fields using AuditService
+                _auditService.SetAuditFields(finding, _auditService.GetCurrentUser());
 
-            _context.Findings.Add(finding);
-            await _context.SaveChangesAsync();
-            return finding;
+                _context.Findings.Add(finding);
+                await _context.SaveChangesAsync();
+                return finding;
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (await _auditService.HandleConcurrencyException(ex, finding))
+                {
+                    await _context.SaveChangesAsync();
+                    return finding;
+                }
+                throw;
+            }
         }
 
         public async Task<Finding> UpdateFindingAsync(Finding finding)
         {
-            _context.Entry(finding).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return finding;
+            try
+            {
+                // Set audit fields for update
+                _auditService.SetAuditFields(finding, _auditService.GetCurrentUser(), true);
+                
+                _context.Entry(finding).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+                return finding;
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (await _auditService.HandleConcurrencyException(ex, finding))
+                {
+                    await _context.SaveChangesAsync();
+                    return finding;
+                }
+                throw;
+            }
         }
 
         public async Task<bool> DeleteFindingAsync(int id)

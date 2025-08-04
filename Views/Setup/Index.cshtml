@@ -1,0 +1,131 @@
+@model CyberRiskApp.Controllers.SetupViewModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CyberRisk App - Initial Setup</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .setup-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .setup-header h1 {
+            color: #333;
+            font-weight: 600;
+        }
+        .btn-setup {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .btn-setup:hover {
+            background: #5a67d8;
+            color: white;
+        }
+        .password-options {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-header">
+            <h1>CyberRisk Initial Setup</h1>
+            <p class="text-muted">Configure your application for first use</p>
+        </div>
+
+        <form asp-action="Initialize" method="post">
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="OrganizationName" class="form-label"></label>
+                <input asp-for="OrganizationName" class="form-control" placeholder="Enter your organization name" />
+                <span asp-validation-for="OrganizationName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="AdminEmail" class="form-label"></label>
+                <input asp-for="AdminEmail" class="form-control" type="email" />
+                <span asp-validation-for="AdminEmail" class="text-danger"></span>
+                <small class="form-text text-muted">This will be the primary administrator account</small>
+            </div>
+
+            <div class="password-options">
+                <div class="form-check mb-3">
+                    <input asp-for="GeneratePassword" class="form-check-input" type="checkbox" id="generatePassword" checked />
+                    <label class="form-check-label" for="generatePassword">
+                        Generate secure password automatically
+                    </label>
+                </div>
+
+                <div id="passwordInput" style="display: none;">
+                    <label asp-for="AdminPassword" class="form-label"></label>
+                    <input asp-for="AdminPassword" class="form-control" type="password" />
+                    <span asp-validation-for="AdminPassword" class="text-danger"></span>
+                    <small class="form-text text-muted">Minimum 8 characters with mixed case, numbers, and symbols</small>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="PrimaryDomain" class="form-label"></label>
+                <input asp-for="PrimaryDomain" class="form-control" placeholder="e.g., cyberrisk.company.com" />
+                <small class="form-text text-muted">The primary domain for accessing the application</small>
+            </div>
+
+            <button type="submit" class="btn btn-setup">
+                <i class="fas fa-rocket"></i> Initialize Application
+            </button>
+        </form>
+
+        <div class="mt-4 text-center">
+            <small class="text-muted">
+                <i class="fas fa-lock"></i> All passwords are encrypted and stored securely
+            </small>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        $(function() {
+            $('#generatePassword').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#passwordInput').hide();
+                    $('#AdminPassword').val('');
+                } else {
+                    $('#passwordInput').show();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

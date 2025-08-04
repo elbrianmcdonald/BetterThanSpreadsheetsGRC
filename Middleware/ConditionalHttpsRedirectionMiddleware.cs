@@ -28,28 +28,45 @@ namespace CyberRiskApp.Middleware
                 var sslService = context.RequestServices.GetRequiredService<ISSLService>();
                 var sslSettings = await sslService.GetSSLSettingsAsync();
 
-                // Check if HTTPS redirection is enabled
-                if (sslSettings.EnableHttpsRedirection && !context.Request.IsHttps)
+                // If no SSL settings exist, allow HTTP traffic (default behavior)
+                if (sslSettings == null)
                 {
-                    var httpsUrl = $"https://{context.Request.Host.Host}:{sslSettings.HttpsPort}{context.Request.Path}{context.Request.QueryString}";
-                    
-                    _logger.LogInformation($"Redirecting HTTP request to HTTPS: {httpsUrl}");
-                    context.Response.Redirect(httpsUrl, permanent: true);
+                    await _next(context);
                     return;
                 }
 
-                // Check if HTTPS is required
-                if (sslSettings.RequireHttps && !context.Request.IsHttps)
+                // Check if there's an active certificate
+                bool hasActiveCertificate = sslSettings.ActiveCertificate != null && 
+                                          sslSettings.ActiveCertificate.IsValid && 
+                                          sslSettings.ActiveCertificate.IsActive;
+
+                // Only enforce HTTPS if there's an active certificate and settings are configured
+                if (hasActiveCertificate)
                 {
-                    context.Response.StatusCode = 426; // Upgrade Required
-                    await context.Response.WriteAsync("HTTPS Required");
-                    return;
+                    // Check if HTTPS redirection is enabled
+                    if (sslSettings.EnableHttpsRedirection && !context.Request.IsHttps)
+                    {
+                        var httpsUrl = $"https://{context.Request.Host.Host}:{sslSettings.HttpsPort}{context.Request.Path}{context.Request.QueryString}";
+                        
+                        _logger.LogInformation($"Redirecting HTTP request to HTTPS: {httpsUrl}");
+                        context.Response.Redirect(httpsUrl, permanent: true);
+                        return;
+                    }
+
+                    // Check if HTTPS is required
+                    if (sslSettings.RequireHttps && !context.Request.IsHttps)
+                    {
+                        context.Response.StatusCode = 426; // Upgrade Required
+                        await context.Response.WriteAsync("HTTPS Required - Valid SSL certificate is installed");
+                        return;
+                    }
                 }
+                // If no active certificate, allow HTTP traffic without any restrictions
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in HTTPS redirection middleware");
-                // Continue without redirection if there's an error
+                // Continue without redirection if there's an error - defaults to allowing HTTP
             }
 
             await _next(context);

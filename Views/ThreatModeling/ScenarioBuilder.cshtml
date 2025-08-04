@@ -1,0 +1,1261 @@
+@model CyberRiskApp.Models.AttackScenario
+
+@{
+    ViewData["Title"] = "Attack Scenario Builder";
+    var threatModel = ViewBag.ThreatModel as CyberRiskApp.Models.ThreatModel;
+    var techniques = ViewBag.Techniques as IEnumerable<CyberRiskApp.Models.MitreTechnique> ?? new List<CyberRiskApp.Models.MitreTechnique>();
+    var killChainActivities = ViewBag.KillChainActivities as IEnumerable<CyberRiskApp.Models.KillChainActivity> ?? new List<CyberRiskApp.Models.KillChainActivity>();
+}
+
+<div class="scenario-builder-container">
+    <div class="header">
+        <h1>🛡️ Attack Scenario Builder</h1>
+        <p>Build attack scenarios with drag-and-drop MITRE ATT&CK techniques or Cyber Kill Chain phases for @threatModel?.Name</p>
+    </div>
+    
+    <!-- Scenario Configuration Panel -->
+    <div class="config-panel">
+        <div class="config-section">
+            <div class="form-group">
+                <label for="scenarioName">Scenario Name</label>
+                <input type="text" id="scenarioName" placeholder="Enter attack scenario name" value="@Model?.Name">
+            </div>
+            
+            <div class="form-group">
+                <label for="threatActor">Threat Actor</label>
+                <select id="threatActor">
+                    <option value="">Select threat actor</option>
+                    <option value="script-kiddie">Script Kiddie</option>
+                    <option value="cybercriminal">Cybercriminal</option>
+                    <option value="hacktivist">Hacktivist</option>
+                    <option value="nation-state">Nation State</option>
+                    <option value="insider-threat">Insider Threat</option>
+                    <option value="apt">Advanced Persistent Threat</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Framework</label>
+                <div class="framework-toggle">
+                    <button type="button" class="framework-btn active" data-framework="mitre">MITRE ATT&CK</button>
+                    <button type="button" class="framework-btn" data-framework="killchain">Kill Chain</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="scenarioDescription">Description</label>
+                <textarea id="scenarioDescription" rows="3" placeholder="Describe the attack scenario...">@Model?.Description</textarea>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Builder Interface -->
+    <div class="builder-interface">
+        <!-- Technique Library Sidebar -->
+        <div class="technique-library">
+            <div class="library-header">
+                <h3>📚 Technique Library</h3>
+                <div class="search-box">
+                    <input type="text" id="techniqueSearch" placeholder="Search techniques...">
+                    <select id="tacticFilter">
+                        <option value="">All Tactics</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="library-content" id="libraryContent">
+                <!-- Techniques will be loaded here -->
+            </div>
+        </div>
+        
+        <!-- Attack Flow Canvas -->
+        <div class="attack-canvas">
+            <div class="canvas-header">
+                <h3 id="canvasTitle">🎯 MITRE ATT&CK Attack Flow</h3>
+                <div class="canvas-controls">
+                    <button type="button" class="btn btn-outline" onclick="clearCanvas()">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                    <button type="button" class="btn btn-outline" onclick="autoArrange()">
+                        <i class="fas fa-magic"></i> Auto Arrange
+                    </button>
+                </div>
+            </div>
+            
+            <!-- MITRE ATT&CK Phases -->
+            <div id="mitrePhases" class="attack-phases">
+                <div class="phase-column" data-tactic="Initial Access">
+                    <div class="phase-header">
+                        <div class="phase-icon">🚪</div>
+                        <div class="phase-title">Initial Access</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Initial Access">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Execution">
+                    <div class="phase-header">
+                        <div class="phase-icon">⚙️</div>
+                        <div class="phase-title">Execution</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Execution">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Persistence">
+                    <div class="phase-header">
+                        <div class="phase-icon">🔒</div>
+                        <div class="phase-title">Persistence</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Persistence">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Privilege Escalation">
+                    <div class="phase-header">
+                        <div class="phase-icon">⬆️</div>
+                        <div class="phase-title">Privilege Escalation</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Privilege Escalation">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Defense Evasion">
+                    <div class="phase-header">
+                        <div class="phase-icon">🛡️</div>
+                        <div class="phase-title">Defense Evasion</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Defense Evasion">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Credential Access">
+                    <div class="phase-header">
+                        <div class="phase-icon">🔑</div>
+                        <div class="phase-title">Credential Access</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Credential Access">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Discovery">
+                    <div class="phase-header">
+                        <div class="phase-icon">🔍</div>
+                        <div class="phase-title">Discovery</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Discovery">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Lateral Movement">
+                    <div class="phase-header">
+                        <div class="phase-icon">↔️</div>
+                        <div class="phase-title">Lateral Movement</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Lateral Movement">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Collection">
+                    <div class="phase-header">
+                        <div class="phase-icon">📦</div>
+                        <div class="phase-title">Collection</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Collection">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Command and Control">
+                    <div class="phase-header">
+                        <div class="phase-icon">🎮</div>
+                        <div class="phase-title">Command & Control</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Command and Control">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Exfiltration">
+                    <div class="phase-header">
+                        <div class="phase-icon">📤</div>
+                        <div class="phase-title">Exfiltration</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Exfiltration">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+                
+                <div class="phase-column" data-tactic="Impact">
+                    <div class="phase-header">
+                        <div class="phase-icon">💥</div>
+                        <div class="phase-title">Impact</div>
+                    </div>
+                    <div class="phase-dropzone" data-tactic="Impact">
+                        <div class="dropzone-hint">Drag techniques here</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Kill Chain Phases (hidden by default) -->
+            <div id="killChainPhases" class="attack-phases" style="display: none;">
+                @foreach (var phase in Enum.GetValues(typeof(CyberKillChainPhase)).Cast<CyberKillChainPhase>())
+                {
+                    <div class="phase-column" data-phase="@phase">
+                        <div class="phase-header">
+                            <div class="phase-icon">
+                                @switch(phase)
+                                {
+                                    case CyberKillChainPhase.Reconnaissance:
+                                        <text>🔍</text>
+                                        break;
+                                    case CyberKillChainPhase.Weaponization:
+                                        <text>⚔️</text>
+                                        break;
+                                    case CyberKillChainPhase.Delivery:
+                                        <text>📧</text>
+                                        break;
+                                    case CyberKillChainPhase.Exploitation:
+                                        <text>💣</text>
+                                        break;
+                                    case CyberKillChainPhase.Installation:
+                                        <text>📥</text>
+                                        break;
+                                    case CyberKillChainPhase.CommandAndControl:
+                                        <text>🎮</text>
+                                        break;
+                                    case CyberKillChainPhase.ActionsOnObjectives:
+                                        <text>🎯</text>
+                                        break;
+                                }
+                            </div>
+                            <div class="phase-title">@phase.ToString().Replace("_", " ")</div>
+                        </div>
+                        <div class="phase-dropzone" data-phase="@phase">
+                            <div class="dropzone-hint">Drag activities here</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Panel -->
+    <div class="action-panel">
+        <button type="button" class="btn btn-secondary" onclick="saveScenario()">
+            <i class="fas fa-save"></i> Save Scenario
+        </button>
+        <button type="button" class="btn btn-primary" id="addTechniqueBtn" onclick="showAddTechniqueModal()" style="display: none;">
+            <i class="fas fa-plus"></i> Add Custom Technique
+        </button>
+        <a href="@Url.Action("Details", "ThreatModeling", new { id = threatModel?.Id })" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Back to Threat Model
+        </a>
+    </div>
+</div>
+
+<!-- Technique Details Modal -->
+<div class="modal fade" id="techniqueModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Technique Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body technique-details" id="techniqueDetails">
+                <!-- Details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Custom Technique Modal -->
+<div class="modal fade" id="addTechniqueModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Custom Kill Chain Technique</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addTechniqueForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="techniqueName" class="form-label">Technique Name</label>
+                                <input type="text" class="form-control" id="techniqueName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="techniquePhase" class="form-label">Kill Chain Phase</label>
+                                <select class="form-control" id="techniquePhase" required>
+                                    <option value="">Select Phase</option>
+                                    <option value="Reconnaissance">Reconnaissance</option>
+                                    <option value="Weaponization">Weaponization</option>
+                                    <option value="Delivery">Delivery</option>
+                                    <option value="Exploitation">Exploitation</option>
+                                    <option value="Installation">Installation</option>
+                                    <option value="CommandAndControl">Command and Control</option>
+                                    <option value="ActionsOnObjectives">Actions on Objectives</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="techniqueDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="techniqueDescription" rows="3" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="techniqueEnvironment" class="form-label">Environment Context (Optional)</label>
+                                <input type="text" class="form-control" id="techniqueEnvironment" placeholder="e.g., Cloud, Network, Endpoint">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="techniqueComplexity" class="form-label">Complexity</label>
+                                <select class="form-control" id="techniqueComplexity" required>
+                                    <option value="">Select Complexity</option>
+                                    <option value="Low">Low</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="High">High</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="techniqueTechniques" class="form-label">Specific Techniques</label>
+                                <input type="text" class="form-control" id="techniqueTechniques" placeholder="e.g., Password spraying, Credential stuffing">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="techniqueTools" class="form-label">Tools</label>
+                                <input type="text" class="form-control" id="techniqueTools" placeholder="e.g., Mimikatz, PowerShell">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="techniqueTime" class="form-label">Estimated Time (minutes)</label>
+                                <input type="number" class="form-control" id="techniqueTime" min="1" value="30">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="techniqueUserInteraction" class="form-label">Requires User Interaction</label>
+                                <select class="form-control" id="techniqueUserInteraction">
+                                    <option value="false">No</option>
+                                    <option value="true">Yes</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="techniquePrerequisites" class="form-label">Prerequisites</label>
+                        <textarea class="form-control" id="techniquePrerequisites" rows="2" placeholder="What is needed before this technique can be executed"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="techniqueOutcome" class="form-label">Expected Outcome</label>
+                        <textarea class="form-control" id="techniqueOutcome" rows="2" placeholder="What should be achieved by this technique"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveCustomTechnique()">Add Technique</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let currentFramework = 'mitre';
+let scenarioData = {
+    id: @(Model?.Id ?? 0),
+    threatModelId: @(threatModel?.Id ?? 0),
+    name: '@Model?.Name',
+    description: '@Model?.Description',
+    techniques: []
+};
+
+// Drag and Drop functionality
+let draggedElement = null;
+
+function initializeDragAndDrop() {
+    // Make technique cards draggable
+    document.addEventListener('dragstart', function(e) {
+        if (e.target.classList.contains('technique-card')) {
+            draggedElement = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('text/html', e.target.innerHTML);
+        }
+    });
+
+    document.addEventListener('dragend', function(e) {
+        if (e.target.classList.contains('technique-card')) {
+            e.target.classList.remove('dragging');
+        }
+    });
+
+    // Setup dropzones
+    document.querySelectorAll('.phase-dropzone').forEach(dropzone => {
+        dropzone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            this.classList.add('drag-over');
+        });
+
+        dropzone.addEventListener('dragleave', function(e) {
+            if (!this.contains(e.relatedTarget)) {
+                this.classList.remove('drag-over');
+            }
+        });
+
+        dropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+
+            if (draggedElement) {
+                const techniqueData = {
+                    id: draggedElement.dataset.techniqueId,
+                    name: draggedElement.dataset.techniqueName,
+                    tactic: draggedElement.dataset.tactic,
+                    type: draggedElement.dataset.type
+                };
+
+                if (this.querySelector('.dropzone-hint')) {
+                    this.querySelector('.dropzone-hint').style.display = 'none';
+                }
+
+                const placedTechnique = createPlacedTechnique(techniqueData);
+                this.appendChild(placedTechnique);
+                
+                // Add to scenario data
+                scenarioData.techniques.push({
+                    ...techniqueData,
+                    phase: this.dataset.tactic || this.dataset.phase
+                });
+            }
+        });
+    });
+}
+
+function createPlacedTechnique(techniqueData) {
+    const div = document.createElement('div');
+    div.className = 'placed-technique';
+    div.innerHTML = `
+        <div class="placed-technique-content">
+            <div class="${techniqueData.type === 'mitre' ? 'technique-id' : 'activity-name'}">${techniqueData.id}</div>
+            <div class="technique-name">${techniqueData.name}</div>
+        </div>
+        <div class="placed-technique-actions">
+            <button class="btn-remove" onclick="removeTechnique(this, '${techniqueData.id}')" title="Remove">×</button>
+        </div>
+    `;
+    return div;
+}
+
+function removeTechnique(button, techniqueId) {
+    const technique = button.closest('.placed-technique');
+    const dropzone = technique.parentElement;
+    technique.remove();
+    
+    // Remove from scenario data
+    scenarioData.techniques = scenarioData.techniques.filter(t => t.id !== techniqueId);
+    
+    // Show hint if dropzone is empty
+    if (dropzone.querySelectorAll('.placed-technique').length === 0) {
+        const hint = dropzone.querySelector('.dropzone-hint');
+        if (hint) hint.style.display = 'block';
+    }
+}
+
+// Framework switching
+document.querySelectorAll('.framework-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        currentFramework = this.dataset.framework;
+        
+        // Update button states
+        document.querySelectorAll('.framework-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Show/hide appropriate phases and buttons
+        if (currentFramework === 'mitre') {
+            document.getElementById('mitrePhases').style.display = 'flex';
+            document.getElementById('killChainPhases').style.display = 'none';
+            document.getElementById('canvasTitle').textContent = '🎯 MITRE ATT&CK Attack Flow';
+            document.getElementById('addTechniqueBtn').style.display = 'none';
+        } else {
+            document.getElementById('mitrePhases').style.display = 'none';
+            document.getElementById('killChainPhases').style.display = 'flex';
+            document.getElementById('canvasTitle').textContent = '🎯 Cyber Kill Chain Attack Flow';
+            document.getElementById('addTechniqueBtn').style.display = 'inline-flex';
+        }
+        
+        // Load appropriate techniques
+        loadTechniques();
+    });
+});
+
+// Load techniques based on selected framework
+function loadTechniques() {
+    const libraryContent = document.getElementById('libraryContent');
+    libraryContent.innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+    
+    if (currentFramework === 'mitre') {
+        loadMitreTechniques();
+    } else {
+        loadKillChainActivities();
+    }
+}
+
+function loadMitreTechniques() {
+    fetch('/api/threatmodeling/mitretechniques')
+        .then(response => response.json())
+        .then(techniques => {
+            displayTechniques(techniques, 'mitre');
+            // Populate tactic filter
+            const tactics = [...new Set(techniques.map(t => t.tactic))].filter(t => t);
+            const tacticFilter = document.getElementById('tacticFilter');
+            tacticFilter.innerHTML = '<option value="">All Tactics</option>';
+            tactics.forEach(tactic => {
+                const option = document.createElement('option');
+                option.value = tactic;
+                option.textContent = tactic;
+                tacticFilter.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading MITRE techniques:', error);
+            document.getElementById('libraryContent').innerHTML = '<div class="alert alert-danger">Failed to load techniques</div>';
+        });
+}
+
+function loadKillChainActivities() {
+    // Load Kill Chain activities via API
+    fetch('/api/threatmodeling/killchainactivities')
+        .then(response => response.json())
+        .then(activities => displayActivities(activities))
+        .catch(error => console.error('Error loading activities:', error));
+}
+
+function displayTechniques(techniques, type) {
+    const libraryContent = document.getElementById('libraryContent');
+    libraryContent.innerHTML = '';
+    
+    techniques.forEach(technique => {
+        const card = document.createElement('div');
+        card.className = 'technique-card';
+        card.draggable = true;
+        card.dataset.techniqueId = technique.id;
+        card.dataset.techniqueName = technique.name;
+        card.dataset.tactic = technique.tactic;
+        card.dataset.type = type;
+        
+        card.innerHTML = `
+            <div class="technique-id">${technique.id}</div>
+            <div class="technique-name">${technique.name}</div>
+            <div class="technique-tactic">${technique.tactic}</div>
+            <div class="technique-actions">
+                <button class="btn-info" onclick="showTechniqueDetails('${technique.id}')" title="Details">i</button>
+            </div>
+        `;
+        
+        libraryContent.appendChild(card);
+    });
+}
+
+function displayActivities(activities) {
+    const libraryContent = document.getElementById('libraryContent');
+    libraryContent.innerHTML = '';
+    
+    activities.forEach(activity => {
+        const card = document.createElement('div');
+        card.className = 'technique-card';
+        card.draggable = true;
+        card.dataset.techniqueId = `KC-${activity.id}`;
+        card.dataset.techniqueName = activity.name;
+        card.dataset.tactic = activity.phase;
+        card.dataset.type = 'killchain';
+        
+        card.innerHTML = `
+            <div class="activity-name">${activity.name}</div>
+            <div class="activity-description">${activity.description}</div>
+            <div class="activity-phase">Phase: ${activity.phase}</div>
+            <div class="technique-actions">
+                <button class="btn-info" onclick="showActivityDetails(${activity.id})" title="Details">i</button>
+            </div>
+        `;
+        
+        libraryContent.appendChild(card);
+    });
+}
+
+// Search and filter functionality
+document.getElementById('techniqueSearch').addEventListener('input', function(e) {
+    filterTechniques();
+});
+
+document.getElementById('tacticFilter').addEventListener('change', function(e) {
+    filterTechniques();
+});
+
+function filterTechniques() {
+    const searchTerm = document.getElementById('techniqueSearch').value.toLowerCase();
+    const selectedTactic = document.getElementById('tacticFilter').value;
+    
+    document.querySelectorAll('.technique-card').forEach(card => {
+        const text = card.textContent.toLowerCase();
+        const tactic = card.dataset.tactic || '';
+        
+        const matchesSearch = !searchTerm || text.includes(searchTerm);
+        const matchesTactic = !selectedTactic || tactic === selectedTactic;
+        
+        card.style.display = (matchesSearch && matchesTactic) ? 'block' : 'none';
+    });
+}
+
+// Save scenario
+function saveScenario() {
+    scenarioData.name = document.getElementById('scenarioName').value;
+    scenarioData.description = document.getElementById('scenarioDescription').value;
+    scenarioData.threatActor = document.getElementById('threatActor').value;
+    
+    fetch('/api/threatmodeling/savescenario', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]').value
+        },
+        body: JSON.stringify(scenarioData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Scenario saved successfully!', 'success');
+        } else {
+            showToast('Failed to save scenario', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred', 'error');
+    });
+}
+
+// Clear canvas
+function clearCanvas() {
+    if (confirm('Are you sure you want to clear all techniques?')) {
+        document.querySelectorAll('.placed-technique').forEach(t => t.remove());
+        document.querySelectorAll('.dropzone-hint').forEach(h => h.style.display = 'block');
+        scenarioData.techniques = [];
+    }
+}
+
+// Show technique details
+function showTechniqueDetails(techniqueId) {
+    const modal = new bootstrap.Modal(document.getElementById('techniqueModal'));
+    document.getElementById('techniqueDetails').innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+    modal.show();
+    
+    fetch(`/api/threatmodeling/techniques/${techniqueId}`)
+        .then(response => response.json())
+        .then(technique => {
+            document.getElementById('techniqueDetails').innerHTML = `
+                <div class="detail-row">
+                    <strong>Technique ID:</strong> ${technique.id}
+                </div>
+                <div class="detail-row">
+                    <strong>Name:</strong> ${technique.name}
+                </div>
+                <div class="detail-row">
+                    <strong>Tactic:</strong> ${technique.tactic}
+                </div>
+                <div class="detail-row">
+                    <strong>Description:</strong> ${technique.description}
+                </div>
+                <div class="detail-row">
+                    <strong>Platforms:</strong> ${technique.platforms || 'N/A'}
+                </div>
+                <div class="detail-row">
+                    <strong>Data Sources:</strong> ${technique.dataSources || 'N/A'}
+                </div>
+                ${technique.mitigation ? `<div class="detail-row"><strong>Mitigation:</strong> ${technique.mitigation}</div>` : ''}
+                ${technique.detection ? `<div class="detail-row"><strong>Detection:</strong> ${technique.detection}</div>` : ''}
+                ${technique.examples ? `<div class="detail-row"><strong>Examples:</strong> ${technique.examples}</div>` : ''}
+            `;
+        })
+        .catch(error => {
+            console.error('Error loading technique details:', error);
+            document.getElementById('techniqueDetails').innerHTML = '<div class="alert alert-danger">Failed to load technique details</div>';
+        });
+}
+
+// Show add technique modal
+function showAddTechniqueModal() {
+    const modal = new bootstrap.Modal(document.getElementById('addTechniqueModal'));
+    // Reset form
+    document.getElementById('addTechniqueForm').reset();
+    modal.show();
+}
+
+// Save custom technique
+function saveCustomTechnique() {
+    const form = document.getElementById('addTechniqueForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const technique = {
+        name: document.getElementById('techniqueName').value,
+        description: document.getElementById('techniqueDescription').value,
+        phase: document.getElementById('techniquePhase').value,
+        environmentType: document.getElementById('techniqueEnvironment').value,
+        techniques: document.getElementById('techniqueTechniques').value,
+        tools: document.getElementById('techniqueTools').value,
+        estimatedTimeMinutes: parseInt(document.getElementById('techniqueTime').value) || 30,
+        complexity: document.getElementById('techniqueComplexity').value,
+        requiresUserInteraction: document.getElementById('techniqueUserInteraction').value === 'true',
+        prerequisites: document.getElementById('techniquePrerequisites').value,
+        expectedOutcome: document.getElementById('techniqueOutcome').value,
+        isCustom: true
+    };
+
+    fetch('/api/threatmodeling/killchainactivities', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]').value
+        },
+        body: JSON.stringify(technique)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Custom technique added successfully!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addTechniqueModal')).hide();
+            // Reload kill chain activities to include the new technique
+            loadKillChainActivities();
+        } else {
+            showToast('Failed to add technique: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving technique:', error);
+        showToast('An error occurred while saving the technique', 'error');
+    });
+}
+
+// Show activity details
+function showActivityDetails(activityId) {
+    const modal = new bootstrap.Modal(document.getElementById('techniqueModal'));
+    document.getElementById('techniqueDetails').innerHTML = '<div class="text-center"><div class="spinner-border"></div></div>';
+    modal.show();
+    
+    fetch(`/api/threatmodeling/killchainactivities/${activityId}`)
+        .then(response => response.json())
+        .then(activity => {
+            document.getElementById('techniqueDetails').innerHTML = `
+                <div class="detail-row">
+                    <strong>Activity Name:</strong> ${activity.name}
+                </div>
+                <div class="detail-row">
+                    <strong>Phase:</strong> ${activity.phase}
+                </div>
+                <div class="detail-row">
+                    <strong>Environment:</strong> ${activity.environmentType}
+                </div>
+                <div class="detail-row">
+                    <strong>Description:</strong> ${activity.description}
+                </div>
+                <div class="detail-row">
+                    <strong>Complexity:</strong> ${activity.complexity}
+                </div>
+                <div class="detail-row">
+                    <strong>Estimated Time:</strong> ${activity.estimatedTimeMinutes} minutes
+                </div>
+                ${activity.techniques ? `<div class="detail-row"><strong>Techniques:</strong> ${activity.techniques}</div>` : ''}
+                ${activity.tools ? `<div class="detail-row"><strong>Tools:</strong> ${activity.tools}</div>` : ''}
+                ${activity.prerequisites ? `<div class="detail-row"><strong>Prerequisites:</strong> ${activity.prerequisites}</div>` : ''}
+                ${activity.expectedOutcome ? `<div class="detail-row"><strong>Expected Outcome:</strong> ${activity.expectedOutcome}</div>` : ''}
+            `;
+        })
+        .catch(error => {
+            console.error('Error loading activity details:', error);
+            document.getElementById('techniqueDetails').innerHTML = '<div class="alert alert-danger">Failed to load activity details</div>';
+        });
+}
+
+// Toast notification
+function showToast(message, type) {
+    // Simple alert for now - could be enhanced with proper toasts
+    alert(message);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDragAndDrop();
+    loadTechniques();
+});
+</script>
+}
+
+@section Styles {
+<style>
+* {
+    box-sizing: border-box;
+}
+
+.scenario-builder-container {
+    width: 100%;
+    height: 100vh;
+    background: white;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 30px;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.header p {
+    margin: 10px 0 0 0;
+    opacity: 0.9;
+}
+
+.config-panel {
+    padding: 20px 30px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.config-section {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+}
+
+.form-group {
+    flex: 1;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #34495e;
+    font-size: 12px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.framework-toggle {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 2px solid #e0e0e0;
+}
+
+.framework-btn {
+    flex: 1;
+    padding: 8px 16px;
+    background: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 500;
+}
+
+.framework-btn.active {
+    background: #3498db;
+    color: white;
+}
+
+.framework-btn:hover:not(.active) {
+    background: #f8f9fa;
+}
+
+.builder-interface {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.technique-library {
+    width: 300px;
+    background: #f8f9fa;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.library-header {
+    padding: 20px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.library-header h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+}
+
+.search-box input,
+.search-box select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    font-size: 12px;
+}
+
+.library-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.technique-card {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: grab;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.technique-card:hover {
+    border-color: #3498db;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(52,152,219,0.2);
+}
+
+.technique-card.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.technique-id, .activity-name {
+    font-weight: bold;
+    color: #3498db;
+    font-size: 12px;
+    margin-bottom: 4px;
+}
+
+.technique-name {
+    color: #2c3e50;
+    font-size: 13px;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.technique-tactic, .activity-phase {
+    color: #7f8c8d;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.activity-description {
+    color: #5d6d7e;
+    font-size: 11px;
+    margin-top: 4px;
+    line-height: 1.2;
+}
+
+.technique-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.attack-canvas {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+}
+
+.canvas-header {
+    padding: 20px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.canvas-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.canvas-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.attack-phases {
+    flex: 1;
+    display: flex;
+    overflow-x: auto;
+    padding: 20px;
+    gap: 15px;
+    background: #f8f9fa;
+}
+
+.phase-column {
+    min-width: 180px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.phase-header {
+    padding: 15px;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    text-align: center;
+}
+
+.phase-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.phase-title {
+    font-weight: bold;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.phase-dropzone {
+    flex: 1;
+    min-height: 200px;
+    padding: 15px;
+    border: 2px dashed #bdc3c7;
+    border-radius: 0 0 12px 12px;
+    background: #fafafa;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.phase-dropzone.drag-over {
+    border-color: #3498db;
+    background: #e3f2fd;
+}
+
+.dropzone-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #95a5a6;
+    font-size: 12px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.placed-technique {
+    background: linear-gradient(135deg, #ecf0f1, #d5dbdb);
+    border: 2px solid #3498db;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.placed-technique-content .technique-id,
+.placed-technique-content .activity-name {
+    color: #2c3e50;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.placed-technique-content .technique-name {
+    color: #34495e;
+    font-size: 12px;
+    margin: 2px 0;
+}
+
+.placed-technique-actions {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+}
+
+.btn-remove {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.action-panel {
+    padding: 20px 30px;
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.btn-outline {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.technique-details .detail-row {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.technique-details .detail-row:last-child {
+    border-bottom: none;
+}
+
+/* Responsive Design */
+@@media (max-width: 1200px) {
+    .config-section {
+        flex-wrap: wrap;
+    }
+    
+    .form-group {
+        min-width: 200px;
+    }
+}
+
+@@media (max-width: 768px) {
+    .builder-interface {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .technique-library {
+        width: 100%;
+        height: 300px;
+    }
+    
+    .attack-phases {
+        flex-wrap: wrap;
+        height: 400px;
+    }
+    
+    .phase-column {
+        min-width: 140px;
+    }
+    
+    .config-section {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .action-panel {
+        flex-wrap: wrap;
+    }
+}
+</style>
+}
+
+@Html.AntiForgeryToken()

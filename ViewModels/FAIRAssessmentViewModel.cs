@@ -17,6 +17,10 @@ namespace CyberRiskApp.ViewModels
         
         public RiskLevelSettings? RiskLevelSettings { get; set; }
         
+        // Threat model selection support
+        public List<int> SelectedThreatModelIds { get; set; } = new List<int>();
+        public List<ThreatModel> AvailableThreatModels { get; set; } = new List<ThreatModel>();
+        
         // For display purposes
         public decimal CalculatedVulnerabilityPercentage => (Assessment.CalculatedVulnerability ?? 1) * 100;
         public decimal CombinedControlEffectiveness => CalculateCombinedControlEffectiveness();

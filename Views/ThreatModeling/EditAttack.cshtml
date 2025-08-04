@@ -1,0 +1,440 @@
+@model CyberRiskApp.Models.Attack
+
+@{
+    ViewData["Title"] = "Edit Attack Scenario";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@Model.ThreatModelId">@ViewBag.ThreatModelName</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Edit Attack</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-danger mb-0">
+                        <i class="fas fa-edit me-2"></i>Edit Attack Scenario
+                    </h2>
+                    <p class="text-muted">Threat Model: <strong>@ViewBag.ThreatModelName</strong></p>
+                </div>
+                <div>
+                    <a asp-action="Details" asp-route-id="@Model.ThreatModelId" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Threat Model
+                    </a>
+                </div>
+            </div>
+
+            <form asp-action="EditAttack" method="post">
+                @Html.AntiForgeryToken()
+                <input asp-for="Id" type="hidden" />
+                <input asp-for="ThreatModelId" type="hidden" />
+                <input asp-for="CreatedAt" type="hidden" />
+                
+                <div class="row">
+                    <!-- Main Attack Information -->
+                    <div class="col-lg-8">
+                        <div class="card mb-4">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Attack Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="Name" class="form-label"></label>
+                                            <input asp-for="Name" class="form-control" />
+                                            <span asp-validation-for="Name" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="KillChainPhase" class="form-label"></label>
+                                            <select asp-for="KillChainPhase" class="form-select" asp-items="ViewBag.KillChainPhases">
+                                            </select>
+                                            <span asp-validation-for="KillChainPhase" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="AttackVector" class="form-label"></label>
+                                            <select asp-for="AttackVector" class="form-select" asp-items="ViewBag.AttackVectors">
+                                            </select>
+                                            <span asp-validation-for="AttackVector" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="ThreatActorType" class="form-label"></label>
+                                            <select asp-for="ThreatActorType" class="form-select" asp-items="ViewBag.ThreatActorTypes">
+                                            </select>
+                                            <span asp-validation-for="ThreatActorType" class="text-danger"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="AttackComplexity" class="form-label"></label>
+                                            <select asp-for="AttackComplexity" class="form-select" asp-items="ViewBag.AttackComplexities">
+                                            </select>
+                                            <span asp-validation-for="AttackComplexity" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="DetectionDifficulty" class="form-label"></label>
+                                            <select asp-for="DetectionDifficulty" class="form-select" asp-items="ViewBag.AttackComplexities">
+                                            </select>
+                                            <span asp-validation-for="DetectionDifficulty" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="MitreAttackTechnique" class="form-label"></label>
+                                            <input asp-for="MitreAttackTechnique" class="form-control" />
+                                            <span asp-validation-for="MitreAttackTechnique" class="text-danger"></span>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label asp-for="MitreAttackTactic" class="form-label"></label>
+                                            <input asp-for="MitreAttackTactic" class="form-control" />
+                                            <span asp-validation-for="MitreAttackTactic" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Description" class="form-label"></label>
+                                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Prerequisites" class="form-label"></label>
+                                    <textarea asp-for="Prerequisites" class="form-control" rows="2"></textarea>
+                                    <span asp-validation-for="Prerequisites" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kill Chain Attack Steps -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="fas fa-crosshairs me-2"></i>Cyber Kill Chain Attack Steps</h5>
+                                <small>Click on a phase in the guide to navigate to that section</small>
+                            </div>
+                            <div class="card-body">
+                                <!-- Reconnaissance -->
+                                <div id="reconnaissance-section" class="kill-chain-section mb-4">
+                                    <h6 class="text-primary border-bottom pb-2">
+                                        <i class="fas fa-search me-2"></i>1. Reconnaissance
+                                        <small class="text-muted ms-2">Research, identification and selection of targets</small>
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label asp-for="ReconnaissanceSteps" class="form-label">Reconnaissance Steps</label>
+                                        <textarea asp-for="ReconnaissanceSteps" class="form-control" rows="3" placeholder="What research and target identification steps would the attacker take?"></textarea>
+                                        <span asp-validation-for="ReconnaissanceSteps" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Weaponization -->
+                                <div id="weaponization-section" class="kill-chain-section mb-4">
+                                    <h6 class="text-primary border-bottom pb-2">
+                                        <i class="fas fa-bomb me-2"></i>2. Weaponization
+                                        <small class="text-muted ms-2">Coupling exploit with backdoor into deliverable payload</small>
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label asp-for="WeaponizationSteps" class="form-label">Weaponization Steps</label>
+                                        <textarea asp-for="WeaponizationSteps" class="form-control" rows="3" placeholder="How would the attacker create or prepare the attack payload?"></textarea>
+                                        <span asp-validation-for="WeaponizationSteps" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Delivery -->
+                                <div id="delivery-section" class="kill-chain-section mb-4">
+                                    <h6 class="text-primary border-bottom pb-2">
+                                        <i class="fas fa-paper-plane me-2"></i>3. Delivery
+                                        <small class="text-muted ms-2">Transmission of weapon to targeted environment</small>
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label asp-for="DeliverySteps" class="form-label">Delivery Steps</label>
+                                        <textarea asp-for="DeliverySteps" class="form-control" rows="3" placeholder="How would the attacker deliver the payload to the target?"></textarea>
+                                        <span asp-validation-for="DeliverySteps" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Exploitation -->
+                                <div id="exploitation-section" class="kill-chain-section mb-4">
+                                    <h6 class="text-primary border-bottom pb-2">
+                                        <i class="fas fa-unlock me-2"></i>4. Exploitation
+                                        <small class="text-muted ms-2">Execution of code on victim's system</small>
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label asp-for="ExploitationSteps" class="form-label">Exploitation Steps</label>
+                                        <textarea asp-for="ExploitationSteps" class="form-control" rows="3" placeholder="How would the attacker exploit vulnerabilities to execute code?"></textarea>
+                                        <span asp-validation-for="ExploitationSteps" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Installation -->
+                                <div id="installation-section" class="kill-chain-section mb-4">
+                                    <h6 class="text-primary border-bottom pb-2">
+                                        <i class="fas fa-download me-2"></i>5. Installation
+                                        <small class="text-muted ms-2">Installation of malware on the asset</small>
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label asp-for="InstallationSteps" class="form-label">Installation Steps</label>
+                                        <textarea asp-for="InstallationSteps" class="form-control" rows="3" placeholder="How would the attacker install and persist malware on the system?"></textarea>
+                                        <span asp-validation-for="InstallationSteps" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Command and Control -->
+                                <div id="command-control-section" class="kill-chain-section mb-4">
+                                    <h6 class="text-primary border-bottom pb-2">
+                                        <i class="fas fa-satellite-dish me-2"></i>6. Command & Control
+                                        <small class="text-muted ms-2">Channel for remote manipulation of victim</small>
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label asp-for="CommandAndControlSteps" class="form-label">Command & Control Steps</label>
+                                        <textarea asp-for="CommandAndControlSteps" class="form-control" rows="3" placeholder="How would the attacker establish communication and control?"></textarea>
+                                        <span asp-validation-for="CommandAndControlSteps" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Actions on Objectives -->
+                                <div id="actions-objectives-section" class="kill-chain-section mb-4">
+                                    <h6 class="text-primary border-bottom pb-2">
+                                        <i class="fas fa-bullseye me-2"></i>7. Actions on Objectives
+                                        <small class="text-muted ms-2">Intruders accomplish their original goals</small>
+                                    </h6>
+                                    <div class="mb-3">
+                                        <label asp-for="ActionsOnObjectivesSteps" class="form-label">Actions on Objectives Steps</label>
+                                        <textarea asp-for="ActionsOnObjectivesSteps" class="form-control" rows="3" placeholder="What would the attacker do to achieve their final objectives?"></textarea>
+                                        <span asp-validation-for="ActionsOnObjectivesSteps" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Technical Details -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Technical Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="ToolsAndTechniques" class="form-label"></label>
+                                    <textarea asp-for="ToolsAndTechniques" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="ToolsAndTechniques" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="IndicatorsOfCompromise" class="form-label"></label>
+                                    <textarea asp-for="IndicatorsOfCompromise" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="IndicatorsOfCompromise" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="ExistingControls" class="form-label"></label>
+                                    <textarea asp-for="ExistingControls" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="ExistingControls" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="RecommendedMitigations" class="form-label"></label>
+                                    <textarea asp-for="RecommendedMitigations" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="RecommendedMitigations" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Notes" class="form-label"></label>
+                                    <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                                    <span asp-validation-for="Notes" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Update Attack Scenario
+                                </button>
+                                <a asp-action="Details" asp-route-id="@Model.ThreatModelId" class="btn btn-secondary ms-2">
+                                    <i class="fas fa-times me-2"></i>Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Panel -->
+                    <div class="col-lg-4">
+                        <div class="card mb-4">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Attack Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <dl class="row">
+                                    <dt class="col-sm-6">Kill Chain Phase:</dt>
+                                    <dd class="col-sm-6">
+                                        <span class="badge bg-dark">@Model.KillChainPhase</span>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-6">Current Risk:</dt>
+                                    <dd class="col-sm-6">
+                                        @{
+                                            var riskBadge = Model.RiskLevel switch
+                                            {
+                                                CyberRiskApp.Models.RiskLevel.Critical => "bg-danger",
+                                                CyberRiskApp.Models.RiskLevel.High => "bg-warning text-dark",
+                                                CyberRiskApp.Models.RiskLevel.Medium => "bg-info",
+                                                CyberRiskApp.Models.RiskLevel.Low => "bg-success",
+                                                _ => "bg-secondary"
+                                            };
+                                        }
+                                        <span class="badge @riskBadge">@Model.RiskLevel</span>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-6">Created:</dt>
+                                    <dd class="col-sm-6">@Model.CreatedAt.ToString("yyyy-MM-dd")</dd>
+                                    
+                                    <dt class="col-sm-6">Last Updated:</dt>
+                                    <dd class="col-sm-6">@Model.UpdatedAt.ToString("yyyy-MM-dd")</dd>
+                                </dl>
+
+                                @if (Model.LinkedFinding != null)
+                                {
+                                    <hr>
+                                    <h6>Linked Finding:</h6>
+                                    <a asp-controller="Findings" asp-action="Details" asp-route-id="@Model.LinkedFinding.Id" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>@Model.LinkedFinding.FindingNumber
+                                    </a>
+                                }
+
+                                @if (Model.LinkedRisk != null)
+                                {
+                                    <hr>
+                                    <h6>Linked Risk:</h6>
+                                    <a asp-controller="Risks" asp-action="Details" asp-route-id="@Model.LinkedRisk.Id" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-shield-alt me-1"></i>@Model.LinkedRisk.RiskNumber
+                                    </a>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="card mb-4">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="fas fa-crosshairs me-2"></i>Kill Chain Phase Guide</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="list-group list-group-flush">
+                                    <a href="#reconnaissance-section" class="list-group-item list-group-item-action px-0 py-2 kill-chain-nav-link">
+                                        <strong><i class="fas fa-search me-2"></i>1. Reconnaissance</strong><br>
+                                        <small class="text-muted">Information gathering, target research</small>
+                                    </a>
+                                    <a href="#weaponization-section" class="list-group-item list-group-item-action px-0 py-2 kill-chain-nav-link">
+                                        <strong><i class="fas fa-bomb me-2"></i>2. Weaponization</strong><br>
+                                        <small class="text-muted">Exploit creation, payload development</small>
+                                    </a>
+                                    <a href="#delivery-section" class="list-group-item list-group-item-action px-0 py-2 kill-chain-nav-link">
+                                        <strong><i class="fas fa-paper-plane me-2"></i>3. Delivery</strong><br>
+                                        <small class="text-muted">Email, web, USB, supply chain</small>
+                                    </a>
+                                    <a href="#exploitation-section" class="list-group-item list-group-item-action px-0 py-2 kill-chain-nav-link">
+                                        <strong><i class="fas fa-unlock me-2"></i>4. Exploitation</strong><br>
+                                        <small class="text-muted">Vulnerability exploitation, code execution</small>
+                                    </a>
+                                    <a href="#installation-section" class="list-group-item list-group-item-action px-0 py-2 kill-chain-nav-link">
+                                        <strong><i class="fas fa-download me-2"></i>5. Installation</strong><br>
+                                        <small class="text-muted">Backdoor/malware installation</small>
+                                    </a>
+                                    <a href="#command-control-section" class="list-group-item list-group-item-action px-0 py-2 kill-chain-nav-link">
+                                        <strong><i class="fas fa-satellite-dish me-2"></i>6. Command & Control</strong><br>
+                                        <small class="text-muted">Communication channel establishment</small>
+                                    </a>
+                                    <a href="#actions-objectives-section" class="list-group-item list-group-item-action px-0 py-2 kill-chain-nav-link">
+                                        <strong><i class="fas fa-bullseye me-2"></i>7. Actions on Objectives</strong><br>
+                                        <small class="text-muted">Data theft, destruction, manipulation</small>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>MITRE ATT&CK</h5>
+                            </div>
+                            <div class="card-body">
+                                @if (!string.IsNullOrEmpty(Model.MitreAttackTechnique) || !string.IsNullOrEmpty(Model.MitreAttackTactic))
+                                {
+                                    @if (!string.IsNullOrEmpty(Model.MitreAttackTechnique))
+                                    {
+                                        <p><strong>Technique:</strong> @Model.MitreAttackTechnique</p>
+                                    }
+                                    
+                                    @if (!string.IsNullOrEmpty(Model.MitreAttackTactic))
+                                    {
+                                        <p><strong>Tactic:</strong> @Model.MitreAttackTactic</p>
+                                    }
+                                }
+                                else
+                                {
+                                    <p class="text-muted small">Consider mapping this attack to MITRE ATT&CK techniques and tactics for better threat intelligence integration.</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Smooth scrolling for kill chain navigation
+            $('.kill-chain-nav-link').click(function(e) {
+                e.preventDefault();
+                var target = $(this.getAttribute('href'));
+                
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top - 100
+                    }, 500);
+                    
+                    // Highlight the target section briefly
+                    target.addClass('highlight-section');
+                    setTimeout(function() {
+                        target.removeClass('highlight-section');
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+    
+    <style>
+        .kill-chain-section {
+            transition: background-color 0.3s ease;
+        }
+        
+        .highlight-section {
+            background-color: #fff3cd !important;
+            border-left: 4px solid #ffc107;
+            padding-left: 15px;
+            border-radius: 4px;
+        }
+        
+        .kill-chain-nav-link {
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+        }
+        
+        .kill-chain-nav-link:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+}

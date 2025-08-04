@@ -205,6 +205,10 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
         public async Task<IActionResult> Create(Risk risk)
         {
+            // Remove audit fields from model validation since they're set automatically
+            ModelState.Remove("CreatedBy");
+            ModelState.Remove("UpdatedBy");
+            
             if (ModelState.IsValid)
             {
                 try
@@ -324,6 +328,47 @@ namespace CyberRiskApp.Controllers
             }
         }
 
+        // POST: Risks/CloseConfirmed
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        public async Task<IActionResult> CloseConfirmed(int id, string remediationDetails)
+        {
+            try
+            {
+                var risk = await _riskService.GetRiskByIdAsync(id);
+                if (risk == null)
+                {
+                    TempData["Error"] = "Risk not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (risk.Status == RiskStatus.Closed)
+                {
+                    TempData["Warning"] = "Risk is already closed.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var currentUser = User?.Identity?.Name ?? "Unknown";
+                var success = await _riskService.CloseRiskAsync(id, remediationDetails, currentUser);
+
+                if (success)
+                {
+                    TempData["Success"] = $"Risk {risk.RiskNumber} '{risk.Title}' has been closed successfully.";
+                }
+                else
+                {
+                    TempData["Error"] = "Failed to close risk. Please try again.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error closing risk: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
         // Admin-only delete action
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
@@ -402,7 +447,8 @@ namespace CyberRiskApp.Controllers
                             var aleString = GetCellValue(worksheet, row, 6)?.Trim();
                             var riskLevelString = GetCellValue(worksheet, row, 7)?.Trim();
                             var treatmentString = GetCellValue(worksheet, row, 8)?.Trim();
-                            var owner = GetCellValue(worksheet, row, 9)?.Trim() ?? "";
+                            var owner = GetCellValue(worksheet, row, 9)?.Trim();
+                            if (string.IsNullOrEmpty(owner)) owner = "Unknown";
 
                             // Skip rows without a title
                             if (string.IsNullOrEmpty(title))

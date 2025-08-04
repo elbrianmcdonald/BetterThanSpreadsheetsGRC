@@ -1,0 +1,374 @@
+@{
+    ViewData["Title"] = "Threat Modeling Analytics";
+    var attackCountByPhase = ViewBag.OverallAttackCountByPhase as Dictionary<CyberRiskApp.Models.CyberKillChainPhase, int> ?? new Dictionary<CyberRiskApp.Models.CyberKillChainPhase, int>();
+    var attackCountByRisk = ViewBag.OverallAttackCountByRisk as Dictionary<CyberRiskApp.Models.RiskLevel, int> ?? new Dictionary<CyberRiskApp.Models.RiskLevel, int>();
+    var attackCountByActor = ViewBag.OverallAttackCountByActor as Dictionary<CyberRiskApp.Models.ThreatActorType, int> ?? new Dictionary<CyberRiskApp.Models.ThreatActorType, int>();
+    var attackCountByVector = ViewBag.OverallAttackCountByVector as Dictionary<CyberRiskApp.Models.AttackVector, int> ?? new Dictionary<CyberRiskApp.Models.AttackVector, int>();
+    var highRiskAttacks = ViewBag.HighRiskAttacks as IEnumerable<CyberRiskApp.Models.Attack> ?? new List<CyberRiskApp.Models.Attack>();
+    var activeThreatModels = ViewBag.ActiveThreatModels as IEnumerable<CyberRiskApp.Models.ThreatModel> ?? new List<CyberRiskApp.Models.ThreatModel>();
+    var attacksRequiringMitigation = ViewBag.AttacksRequiringMitigation as IEnumerable<CyberRiskApp.Models.Attack> ?? new List<CyberRiskApp.Models.Attack>();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Analytics</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Threat Modeling Analytics
+                    </h2>
+                </div>
+                <div>
+                    <a asp-action="Index" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Threat Models
+                    </a>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-primary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title text-primary">Active Models</h5>
+                                    <h3 class="mb-0">@activeThreatModels.Count()</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-shield-alt fa-2x text-primary"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title text-warning">Total Attacks</h5>
+                                    <h3 class="mb-0">@attackCountByRisk.Values.Sum()</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-danger">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title text-danger">High Risk</h5>
+                                    <h3 class="mb-0">@highRiskAttacks.Count()</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-fire fa-2x text-danger"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title text-info">Need Mitigation</h5>
+                                    <h3 class="mb-0">@attacksRequiringMitigation.Count()</h3>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-tools fa-2x text-info"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cyber Kill Chain Analysis -->
+            @if (attackCountByPhase.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-dark text-white">
+                                <h5 class="mb-0"><i class="fas fa-crosshairs me-2"></i>Cyber Kill Chain Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    @foreach (var phase in Enum.GetValues<CyberRiskApp.Models.CyberKillChainPhase>())
+                                    {
+                                        var count = attackCountByPhase.ContainsKey(phase) ? attackCountByPhase[phase] : 0;
+                                        var percentage = attackCountByRisk.Values.Sum() > 0 ? (count * 100.0 / attackCountByRisk.Values.Sum()) : 0;
+                                        var phaseColor = count > 0 ? "primary" : "light";
+                                        
+                                        <div class="col-lg-3 col-md-6 mb-3">
+                                            <div class="card border-@phaseColor h-100">
+                                                <div class="card-body text-center">
+                                                    <h6 class="card-title text-@phaseColor">@((int)phase + 1). @phase.ToString()</h6>
+                                                    <h3 class="text-@phaseColor">@count</h3>
+                                                    <div class="progress mb-2">
+                                                        <div class="progress-bar bg-@phaseColor" role="progressbar" style="width: @percentage%" aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small class="text-muted">@percentage.ToString("F1")% of attacks</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="row mb-4">
+                <!-- Risk Level Distribution -->
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Risk Level Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (attackCountByRisk.Any())
+                            {
+                                @foreach (var risk in attackCountByRisk.OrderByDescending(r => (int)r.Key))
+                                {
+                                    var riskColor = risk.Key switch
+                                    {
+                                        CyberRiskApp.Models.RiskLevel.Critical => "danger",
+                                        CyberRiskApp.Models.RiskLevel.High => "warning",
+                                        CyberRiskApp.Models.RiskLevel.Medium => "info",
+                                        CyberRiskApp.Models.RiskLevel.Low => "success",
+                                        _ => "secondary"
+                                    };
+                                    var percentage = attackCountByRisk.Values.Sum() > 0 ? (risk.Value * 100.0 / attackCountByRisk.Values.Sum()) : 0;
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="flex-grow-1">
+                                            <span class="badge bg-@riskColor me-2">@risk.Key</span>
+                                            <span>@risk.Value attacks</span>
+                                        </div>
+                                        <div class="flex-grow-1 mx-3">
+                                            <div class="progress">
+                                                <div class="progress-bar bg-@riskColor" role="progressbar" style="width: @percentage%" aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <small>@percentage.ToString("F1")%</small>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted text-center">No attack data available</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Threat Actor Distribution -->
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Threat Actor Types</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (attackCountByActor.Any())
+                            {
+                                @foreach (var actor in attackCountByActor.OrderByDescending(a => a.Value).Take(8))
+                                {
+                                    var percentage = attackCountByActor.Values.Sum() > 0 ? (actor.Value * 100.0 / attackCountByActor.Values.Sum()) : 0;
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div class="flex-grow-1">
+                                            <span class="badge bg-info me-2">@actor.Key.ToString().Replace("_", " ")</span>
+                                            <span>@actor.Value</span>
+                                        </div>
+                                        <div class="flex-grow-1 mx-3">
+                                            <div class="progress">
+                                                <div class="progress-bar bg-info" role="progressbar" style="width: @percentage%" aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <small>@percentage.ToString("F1")%</small>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted text-center">No threat actor data available</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attack Vector Analysis -->
+            @if (attackCountByVector.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="fas fa-network-wired me-2"></i>Attack Vector Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    @foreach (var vector in attackCountByVector.OrderByDescending(v => v.Value))
+                                    {
+                                        var percentage = attackCountByVector.Values.Sum() > 0 ? (vector.Value * 100.0 / attackCountByVector.Values.Sum()) : 0;
+                                        
+                                        <div class="col-lg-3 col-md-6 mb-3">
+                                            <div class="card border-secondary">
+                                                <div class="card-body text-center">
+                                                    <h6 class="card-title">@vector.Key.ToString().Replace("_", " ")</h6>
+                                                    <h4 class="text-secondary">@vector.Value</h4>
+                                                    <div class="progress">
+                                                        <div class="progress-bar bg-secondary" role="progressbar" style="width: @percentage%" aria-valuenow="@percentage" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <small class="text-muted">@percentage.ToString("F1")%</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- High Risk Attacks -->
+            @if (highRiskAttacks.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="fas fa-fire me-2"></i>High Risk Attack Scenarios</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Attack Name</th>
+                                                <th>Threat Model</th>
+                                                <th>Kill Chain Phase</th>
+                                                <th>Threat Actor</th>
+                                                <th>Risk Level</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var attack in highRiskAttacks.Take(10))
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <strong>@attack.Name</strong>
+                                                        @if (!string.IsNullOrEmpty(attack.MitreAttackTechnique))
+                                                        {
+                                                            <br><small class="text-muted">MITRE: @attack.MitreAttackTechnique</small>
+                                                        }
+                                                    </td>
+                                                    <td>@attack.ThreatModel.Name</td>
+                                                    <td><span class="badge bg-dark">@attack.KillChainPhase</span></td>
+                                                    <td><span class="badge bg-info">@attack.ThreatActorType.ToString().Replace("_", " ")</span></td>
+                                                    <td>
+                                                        @{
+                                                            var riskBadge = attack.RiskLevel switch
+                                                            {
+                                                                CyberRiskApp.Models.RiskLevel.Critical => "bg-danger",
+                                                                CyberRiskApp.Models.RiskLevel.High => "bg-warning text-dark",
+                                                                _ => "bg-secondary"
+                                                            };
+                                                        }
+                                                        <span class="badge @riskBadge">@attack.RiskLevel</span>
+                                                    </td>
+                                                    <td>
+                                                        <a asp-action="Details" asp-route-id="@attack.ThreatModelId" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye"></i> View Model
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Attacks Requiring Mitigation -->
+            @if (attacksRequiringMitigation.Any())
+            {
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Attacks Requiring Mitigation Strategy</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">These high-risk attacks need mitigation recommendations:</p>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Attack Name</th>
+                                                <th>Threat Model</th>
+                                                <th>Risk Level</th>
+                                                <th>Kill Chain Phase</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var attack in attacksRequiringMitigation.Take(10))
+                                            {
+                                                <tr>
+                                                    <td><strong>@attack.Name</strong></td>
+                                                    <td>@attack.ThreatModel.Name</td>
+                                                    <td>
+                                                        @{
+                                                            var riskBadge = attack.RiskLevel switch
+                                                            {
+                                                                CyberRiskApp.Models.RiskLevel.Critical => "bg-danger",
+                                                                CyberRiskApp.Models.RiskLevel.High => "bg-warning text-dark",
+                                                                _ => "bg-secondary"
+                                                            };
+                                                        }
+                                                        <span class="badge @riskBadge">@attack.RiskLevel</span>
+                                                    </td>
+                                                    <td><span class="badge bg-dark">@attack.KillChainPhase</span></td>
+                                                    <td>
+                                                        <a asp-action="EditAttack" asp-route-id="@attack.Id" class="btn btn-sm btn-warning">
+                                                            <i class="fas fa-edit"></i> Add Mitigations
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

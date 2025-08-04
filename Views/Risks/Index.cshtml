@@ -294,6 +294,15 @@
                                                 <a asp-action="Edit" asp-route-id="@risk.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
+                                                @if (risk.Status != CyberRiskApp.Models.RiskStatus.Closed)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                            data-bs-toggle="modal" 
+                                                            data-bs-target="#closeModal@(risk.Id)"
+                                                            title="Close Risk">
+                                                        <i class="fas fa-times-circle"></i>
+                                                    </button>
+                                                }
                                             }
                                             @if (User.IsInRole("Admin"))
                                             {
@@ -308,6 +317,106 @@
                                         </div>
                                     </td>
                                 </tr>
+                                
+                                <!-- Close Risk Modal -->
+                                @if (risk.Status != CyberRiskApp.Models.RiskStatus.Closed && (User.IsInRole("GRCUser") || User.IsInRole("Admin")))
+                                {
+                                    <div class="modal fade" id="closeModal@(risk.Id)" tabindex="-1">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-warning text-dark">
+                                                    <h5 class="modal-title">
+                                                        <i class="fas fa-times-circle me-2"></i>Close Risk
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="alert alert-info">
+                                                        <i class="fas fa-info-circle me-2"></i>
+                                                        <strong>Important:</strong> Closing this risk will mark it as resolved. This action can be reversed by editing the risk later if needed.
+                                                    </div>
+
+                                                    <!-- Risk Summary -->
+                                                    <div class="card mb-4">
+                                                        <div class="card-header">
+                                                            <h6 class="mb-0">Risk Details</h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="row">
+                                                                <div class="col-md-6">
+                                                                    <p><strong>Register ID:</strong> <code class="text-primary">@risk.RiskNumber</code></p>
+                                                                    <p><strong>Title:</strong> @risk.Title</p>
+                                                                    <p><strong>Risk Owner:</strong> @risk.Owner</p>
+                                                                    <p><strong>Organization:</strong> @risk.BusinessUnit</p>
+                                                                    <p><strong>Asset:</strong> @risk.Asset</p>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <p><strong>Risk Level:</strong> 
+                                                                        <span class="badge bg-@GetRiskLevelColor(risk.RiskLevel)">@risk.RiskLevel</span>
+                                                                    </p>
+                                                                    <p><strong>ALE:</strong> @risk.ALE.ToString("C")</p>
+                                                                    <p><strong>Current Status:</strong> 
+                                                                        <span class="badge bg-@GetStatusColor(risk.Status)">@risk.Status</span>
+                                                                    </p>
+                                                                    <p><strong>Date Opened:</strong> @risk.OpenDate.ToString("MM/dd/yyyy")</p>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            @if (!string.IsNullOrEmpty(risk.ThreatScenario))
+                                                            {
+                                                                <div class="row mt-3">
+                                                                    <div class="col-12">
+                                                                        <p><strong>Threat Scenario:</strong></p>
+                                                                        <p class="text-muted">@risk.ThreatScenario</p>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            
+                                                            @if (!string.IsNullOrEmpty(risk.Description))
+                                                            {
+                                                                <div class="row mt-3">
+                                                                    <div class="col-12">
+                                                                        <p><strong>Risk Statement:</strong></p>
+                                                                        <p class="text-muted">@risk.Description</p>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Close Risk Form -->
+                                                    <form asp-action="CloseConfirmed" method="post" id="closeForm@(risk.Id)">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@risk.Id" />
+                                                        
+                                                        <div class="form-group mb-3">
+                                                            <label for="remediationDetails@(risk.Id)" class="form-label">
+                                                                <strong>Remediation Details <span class="text-danger">*</span></strong>
+                                                            </label>
+                                                            <textarea id="remediationDetails@(risk.Id)" 
+                                                                      name="remediationDetails" 
+                                                                      class="form-control" 
+                                                                      rows="5" 
+                                                                      required
+                                                                      placeholder="Please provide detailed information about how this risk was remediated, including:&#10;&#10;• Actions taken to address the risk&#10;• Controls implemented&#10;• Evidence of resolution&#10;• Any residual risk considerations&#10;• Date of completion"></textarea>
+                                                            <div class="form-text">
+                                                                Describe the specific actions taken to remediate this risk, including any controls implemented and evidence of resolution.
+                                                            </div>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                                                    </button>
+                                                    <button type="button" class="btn btn-warning" onclick="submitCloseForm(@risk.Id)">
+                                                        <i class="fas fa-times-circle me-2"></i>Close Risk
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             }
                         </tbody>
                     </table>
@@ -701,3 +810,18 @@
         margin-right: 2px;
     }
 </style>
+
+<script>
+    function submitCloseForm(riskId) {
+        var textarea = document.getElementById('remediationDetails' + riskId);
+        if (!textarea.value.trim()) {
+            alert('Please provide remediation details before closing the risk.');
+            textarea.focus();
+            return;
+        }
+        
+        if (confirm('Are you sure you want to close this risk? Make sure you have provided complete remediation details.')) {
+            document.getElementById('closeForm' + riskId).submit();
+        }
+    }
+</script>

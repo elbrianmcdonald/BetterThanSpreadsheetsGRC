@@ -1,0 +1,371 @@
+@model Dictionary<string, object>
+@{
+    ViewData["Title"] = "Domain Management";
+    var statistics = Model.ContainsKey("Statistics") ? Model["Statistics"] as CyberRiskApp.Models.DomainStatistics : new CyberRiskApp.Models.DomainStatistics();
+    var primaryDomain = Model.ContainsKey("PrimaryDomain") ? Model["PrimaryDomain"] as CyberRiskApp.Models.ApplicationDomain : null;
+    var isHealthy = Model.ContainsKey("IsHealthy") ? (bool)Model["IsHealthy"] : false;
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-globe text-primary me-2"></i>
+            Domain Management
+        </h2>
+        <div>
+            <a asp-action="Domains" class="btn btn-primary me-2">
+                <i class="fas fa-cog me-1"></i>Manage Domains
+            </a>
+            <button type="button" class="btn btn-info me-2" onclick="checkDomainHealth()">
+                <i class="fas fa-heartbeat me-1"></i>Health Check
+            </button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-tools me-1"></i>Tools
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" asp-action="AccessLogs"><i class="fas fa-list me-1"></i>Access Logs</a></li>
+                    <li><a class="dropdown-item" asp-action="Analytics"><i class="fas fa-chart-bar me-1"></i>Analytics</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Warning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @TempData["Warning"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Domain Status Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card @(isHealthy ? "bg-success" : "bg-danger") text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">@(isHealthy ? "Healthy" : "Needs Attention")</h4>
+                            <p class="mb-0">Domain Health</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas @(isHealthy ? "fa-check-circle" : "fa-exclamation-circle") fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">@statistics.TotalDomains.ToString("N0")</h4>
+                            <p class="mb-0">Total Domains</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-globe fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">@statistics.ActiveDomains.ToString("N0")</h4>
+                            <p class="mb-0">Active Domains</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="mb-0">@statistics.TotalAliases.ToString("N0")</h4>
+                            <p class="mb-0">Domain Aliases</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-link fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Domain Configuration Overview -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Primary Domain Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (primaryDomain != null)
+                    {
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Primary Domain:</strong> @primaryDomain.DomainName<br>
+                                <strong>HTTP Port:</strong> @primaryDomain.HttpPort<br>
+                                <strong>HTTPS Port:</strong> @primaryDomain.HttpsPort<br>
+                                <strong>Status:</strong> 
+                                <span class="badge @(primaryDomain.IsActive ? "bg-success" : "bg-secondary")">
+                                    @(primaryDomain.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Force HTTPS:</strong> 
+                                <span class="badge @(primaryDomain.ForceHttps ? "bg-success" : "bg-secondary")">
+                                    @(primaryDomain.ForceHttps ? "Enabled" : "Disabled")
+                                </span><br>
+                                <strong>HSTS:</strong> 
+                                <span class="badge @(primaryDomain.EnableHSTS ? "bg-success" : "bg-secondary")">
+                                    @(primaryDomain.EnableHSTS ? $"Enabled ({primaryDomain.HSTSMaxAge}s)" : "Disabled")
+                                </span><br>
+                                <strong>Security Status:</strong> 
+                                <span class="badge 
+                                    @(primaryDomain.SecurityStatus == "High Security" ? "bg-success" : 
+                                      primaryDomain.SecurityStatus == "HTTPS Only" ? "bg-warning" : "bg-secondary")">
+                                    @primaryDomain.SecurityStatus
+                                </span><br>
+                                <strong>Full URL:</strong> 
+                                <a href="@(primaryDomain.ForceHttps ? primaryDomain.FullHttpsUrl : primaryDomain.FullHttpUrl)" target="_blank">
+                                    @(primaryDomain.ForceHttps ? primaryDomain.FullHttpsUrl : primaryDomain.FullHttpUrl)
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                            <p>No primary domain configured. <a asp-action="Create">Configure primary domain</a></p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Access Statistics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>Total Requests:</span>
+                        <span class="badge bg-primary">@statistics.TotalRequests.ToString("N0")</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>HTTPS Requests:</span>
+                        <span class="badge bg-success">@statistics.HttpsRequests.ToString("N0")</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span>Redirected Requests:</span>
+                        <span class="badge bg-warning">@statistics.RedirectedRequests.ToString("N0")</span>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <a asp-action="AccessLogs" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-list me-1"></i>View Access Logs
+                        </a>
+                        <a asp-action="Analytics" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-chart-bar me-1"></i>View Analytics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Domains and Quick Actions -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Top Accessed Domains
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (statistics.TopDomains.Any())
+                    {
+                        <ul class="list-unstyled">
+                            @foreach (var domain in statistics.TopDomains.Take(5))
+                            {
+                                <li class="mb-1">
+                                    <i class="fas fa-globe text-muted me-2"></i>@domain
+                                    @if (statistics.RequestsByDomain.ContainsKey(domain))
+                                    {
+                                        <span class="badge bg-light text-dark ms-2">@statistics.RequestsByDomain[domain] requests</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                        <a asp-action="Analytics" class="btn btn-outline-primary btn-sm">View All Analytics</a>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No access data available</p>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-action="Create" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Add New Domain
+                        </a>
+                        <a asp-action="Domains" class="btn btn-primary">
+                            <i class="fas fa-list me-1"></i>Manage All Domains
+                        </a>
+                        <button type="button" class="btn btn-info" onclick="testDomainResolution()">
+                            <i class="fas fa-search me-1"></i>Test Domain Resolution
+                        </button>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-sm" id="testDomain" placeholder="Enter domain to test">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" onclick="testDomainAccess()">
+                            <i class="fas fa-external-link-alt"></i>
+                        </button>
+                    </div>
+                    <div id="testResult" class="mt-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function checkDomainHealth() {
+            $.get('@Url.Action("Health")', function(data) {
+                if (data.healthy) {
+                    showAlert('success', '<i class="fas fa-check-circle me-2"></i>' + data.message);
+                } else {
+                    showAlert('danger', '<i class="fas fa-exclamation-triangle me-2"></i>' + data.message);
+                }
+            }).fail(function() {
+                showAlert('danger', '<i class="fas fa-exclamation-triangle me-2"></i>Error checking domain health');
+            });
+        }
+
+        function testDomainResolution() {
+            const domain = document.getElementById('testDomain').value.trim();
+            if (!domain) {
+                showAlert('warning', 'Please enter a domain name');
+                return;
+            }
+
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = '<div class="text-center small"><i class="fas fa-spinner fa-spin"></i> Testing...</div>';
+
+            // Simple domain accessibility test
+            fetch(`http://${domain}`, { mode: 'no-cors' })
+                .then(() => {
+                    resultDiv.innerHTML = `<div class="alert alert-success alert-sm">Domain ${domain} appears to be accessible</div>`;
+                })
+                .catch(() => {
+                    resultDiv.innerHTML = `<div class="alert alert-warning alert-sm">Could not verify ${domain} accessibility (may be due to CORS)</div>`;
+                });
+        }
+
+        function testDomainAccess() {
+            const domain = document.getElementById('testDomain').value.trim();
+            if (!domain) {
+                showAlert('warning', 'Please enter a domain name');
+                return;
+            }
+
+            window.open(`http://${domain}`, '_blank');
+        }
+
+        function showAlert(type, message) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Insert alert at the top of the container
+            const container = document.querySelector('.container-fluid');
+            const firstChild = container.children[1]; // After the header
+            firstChild.insertAdjacentHTML('afterend', alertHtml);
+            
+            // Auto-hide success alerts after 5 seconds
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    const alerts = document.querySelectorAll('.alert-' + type);
+                    alerts.forEach(alert => {
+                        const bsAlert = new bootstrap.Alert(alert);
+                        bsAlert.close();
+                    });
+                }, 5000);
+            }
+        }
+    </script>
+}
+
+<style>
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    
+    .badge {
+        font-size: 0.75em;
+    }
+    
+    .alert-sm {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>

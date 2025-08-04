@@ -1,6 +1,7 @@
 ﻿using CyberRiskApp.Data;
 using CyberRiskApp.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CyberRiskApp.Services
 {
@@ -10,14 +11,19 @@ namespace CyberRiskApp.Services
         private readonly IRiskLevelSettingsService _settingsService;
         private readonly IRiskService _riskService;
         private readonly IMonteCarloSimulationService _monteCarloService;
+        private readonly ILogger<RiskAssessmentService> _logger;
+        private readonly IAuditService _auditService;
 
         public RiskAssessmentService(CyberRiskContext context, IRiskLevelSettingsService settingsService, 
-            IRiskService riskService, IMonteCarloSimulationService monteCarloService)
+            IRiskService riskService, IMonteCarloSimulationService monteCarloService, ILogger<RiskAssessmentService> logger,
+            IAuditService auditService)
         {
             _context = context;
             _settingsService = settingsService;
             _riskService = riskService;
             _monteCarloService = monteCarloService;
+            _logger = logger;
+            _auditService = auditService;
         }
 
         public async Task<IEnumerable<RiskAssessment>> GetAllAssessmentsAsync()
@@ -43,6 +49,8 @@ namespace CyberRiskApp.Services
                 return await _context.RiskAssessments
                     .Include(a => a.IdentifiedRisks)
                     .Include(a => a.Controls)
+                    .Include(a => a.QualitativeControls)
+                    .Include(a => a.LinkedThreatModels)
                     .FirstOrDefaultAsync(a => a.Id == id);
             }
             catch
@@ -53,50 +61,104 @@ namespace CyberRiskApp.Services
 
         public async Task<RiskAssessment> CreateAssessmentAsync(RiskAssessment assessment)
         {
-            // Calculate results based on assessment type
-            if (assessment.AssessmentType == AssessmentType.FAIR)
+            try
             {
-                assessment = CalculateFAIRResults(assessment);
+                // Calculate results based on assessment type
+                if (assessment.AssessmentType == AssessmentType.FAIR)
+                {
+                    assessment = CalculateFAIRResults(assessment);
+                }
+                else if (assessment.AssessmentType == AssessmentType.Qualitative)
+                {
+                    assessment = CalculateQualitativeResults(assessment);
+                }
+
+                // Set audit fields using AuditService
+                _auditService.SetAuditFields(assessment, _auditService.GetCurrentUser());
+
+                assessment.DateCompleted = DateTime.Today;
+                assessment.Status = AssessmentStatus.Completed;
+
+                _context.RiskAssessments.Add(assessment);
+                await _context.SaveChangesAsync();
+
+                return assessment;
             }
-            else if (assessment.AssessmentType == AssessmentType.Qualitative)
+            catch (DbUpdateConcurrencyException ex)
             {
-                assessment = CalculateQualitativeResults(assessment);
+                if (await _auditService.HandleConcurrencyException(ex, assessment))
+                {
+                    await _context.SaveChangesAsync();
+                    return assessment;
+                }
+                throw;
             }
-
-            // Set timestamps
-            assessment.CreatedAt = DateTime.UtcNow;
-            assessment.UpdatedAt = DateTime.UtcNow;
-
-            assessment.DateCompleted = DateTime.Today;
-            assessment.Status = AssessmentStatus.Completed;
-
-            _context.RiskAssessments.Add(assessment);
-            await _context.SaveChangesAsync();
-
-            // AUTOMATICALLY CREATE RISK ENTRY WHEN ASSESSMENT IS CREATED
-            await CreateRiskFromAssessmentAsync(assessment);
-
-            return assessment;
         }
 
         public async Task<RiskAssessment> UpdateAssessmentAsync(RiskAssessment assessment)
         {
-            // Recalculate results based on assessment type
-            if (assessment.AssessmentType == AssessmentType.FAIR)
+            try
             {
-                assessment = CalculateFAIRResults(assessment);
+                // Find the existing tracked entity
+                var existingEntity = _context.RiskAssessments.Local
+                    .FirstOrDefault(e => e.Id == assessment.Id);
+
+                if (existingEntity != null)
+                {
+                    // Update the existing tracked entity with values from the incoming assessment
+                    _context.Entry(existingEntity).CurrentValues.SetValues(assessment);
+                    
+                    // Recalculate results based on assessment type
+                    if (existingEntity.AssessmentType == AssessmentType.FAIR)
+                    {
+                        existingEntity = CalculateFAIRResults(existingEntity);
+                    }
+                    else if (existingEntity.AssessmentType == AssessmentType.Qualitative)
+                    {
+                        existingEntity = CalculateQualitativeResults(existingEntity);
+                    }
+
+                    // Set audit fields for update
+                    _auditService.SetAuditFields(existingEntity, _auditService.GetCurrentUser(), true);
+                    
+                    await _context.SaveChangesAsync();
+                    return existingEntity;
+                }
+                else
+                {
+                    // No existing tracked entity, proceed normally
+                    // Recalculate results based on assessment type
+                    if (assessment.AssessmentType == AssessmentType.FAIR)
+                    {
+                        assessment = CalculateFAIRResults(assessment);
+                    }
+                    else if (assessment.AssessmentType == AssessmentType.Qualitative)
+                    {
+                        assessment = CalculateQualitativeResults(assessment);
+                    }
+
+                    // Set audit fields for update
+                    _auditService.SetAuditFields(assessment, _auditService.GetCurrentUser(), true);
+
+                    _context.Entry(assessment).State = EntityState.Modified;
+                    await _context.SaveChangesAsync();
+                    return assessment;
+                }
             }
-            else if (assessment.AssessmentType == AssessmentType.Qualitative)
+            catch (DbUpdateConcurrencyException ex)
             {
-                assessment = CalculateQualitativeResults(assessment);
+                if (await _auditService.HandleConcurrencyException(ex, assessment))
+                {
+                    await _context.SaveChangesAsync();
+                    return assessment;
+                }
+                throw;
             }
-
-            // Update timestamp
-            assessment.UpdatedAt = DateTime.UtcNow;
-
-            _context.Entry(assessment).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return assessment;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating assessment: {Message}", ex.Message);
+                throw;
+            }
         }
 
         public async Task<bool> DeleteAssessmentAsync(int id)
@@ -117,69 +179,6 @@ namespace CyberRiskApp.Services
             }
         }
 
-        // CREATE RISK ENTRY AUTOMATICALLY WHEN ASSESSMENT IS CREATED
-        private async Task CreateRiskFromAssessmentAsync(RiskAssessment assessment)
-        {
-            try
-            {
-                // Create risk entry
-                var risk = new Risk
-                {
-                    Title = assessment.Title,
-                    Description = assessment.Description,
-                    Asset = assessment.Asset,
-                    BusinessUnit = assessment.BusinessUnit ?? "Unknown",
-                    ThreatScenario = assessment.ThreatScenario,
-                    Owner = assessment.Assessor,
-                    ALE = Math.Max(assessment.AnnualLossExpectancy ?? 0, 0)
-                    // RiskNumber will be auto-generated by RiskService.CreateRiskAsync()
-                };
-
-                // Set ALE with minimum value
-                if (risk.ALE < 1000)
-                {
-                    risk.ALE = Math.Max((assessment.AnnualLossExpectancy ?? 0), 1000);
-                }
-
-                // Calculate risk level from ALE
-                var currentSettings = await _settingsService.GetActiveSettingsAsync();
-                if (currentSettings != null)
-                {
-                    risk.RiskLevel = assessment.AssessmentType == AssessmentType.FAIR
-                        ? risk.ALE >= currentSettings.FairCriticalThreshold ? RiskLevel.Critical :
-                          risk.ALE >= currentSettings.FairHighThreshold ? RiskLevel.High :
-                          risk.ALE >= currentSettings.FairMediumThreshold ? RiskLevel.Medium : RiskLevel.Low
-                        : assessment.QualitativeRiskScore >= currentSettings.QualitativeCriticalThreshold ? RiskLevel.Critical :
-                          assessment.QualitativeRiskScore >= currentSettings.QualitativeHighThreshold ? RiskLevel.High :
-                          assessment.QualitativeRiskScore >= currentSettings.QualitativeMediumThreshold ? RiskLevel.Medium : RiskLevel.Low;
-                }
-                else
-                {
-                    // Fallback to default risk categorization
-                    risk.RiskLevel = risk.ALE >= 100000 ? RiskLevel.Critical :
-                                    risk.ALE >= 50000 ? RiskLevel.High :
-                                    risk.ALE >= 10000 ? RiskLevel.Medium : RiskLevel.Low;
-                }
-
-                // Set risk metadata
-                risk.Status = RiskStatus.Open;
-                risk.OpenDate = DateTime.Today;
-                risk.NextReviewDate = DateTime.Today.AddMonths(3);
-                risk.CreatedAt = DateTime.UtcNow;
-                risk.UpdatedAt = DateTime.UtcNow;
-                risk.RiskAssessmentId = assessment.Id;
-
-                // CreateRiskAsync will automatically generate and assign the RiskNumber
-                await _riskService.CreateRiskAsync(risk);
-
-                Console.WriteLine($"Automatically created risk {risk.RiskNumber} with ALE: ${risk.ALE}, Level: {risk.RiskLevel}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error creating risk from assessment: {ex.Message}");
-                // Don't throw exception to avoid breaking assessment creation
-            }
-        }
 
         // Enhanced FAIR Calculation Method with Monte Carlo Simulation
         public RiskAssessment CalculateFAIRResults(RiskAssessment assessment)

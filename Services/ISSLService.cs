@@ -17,7 +17,8 @@ namespace CyberRiskApp.Services
         Task<SSLCertificate> ProcessUploadedCertificateAsync(byte[] certificateData, byte[]? privateKeyData, string? password, string name, string createdBy);
 
         // SSL Settings Management
-        Task<SSLSettings> GetSSLSettingsAsync();
+        Task<SSLSettings?> GetSSLSettingsAsync();
+        Task<SSLSettings> GetOrCreateSSLSettingsAsync();
         Task<SSLSettings> UpdateSSLSettingsAsync(SSLSettings settings);
         Task<bool> SetActiveCertificateAsync(int certificateId, string updatedBy);
 

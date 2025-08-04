@@ -154,7 +154,12 @@
         </div>
         <div class="card-body">
             <div id="matrixPreview" class="table-responsive">
-                <!-- Matrix will be dynamically generated here -->
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading matrix preview...</p>
+                </div>
             </div>
             
             <div class="mt-4">
@@ -347,40 +352,80 @@
 
             // Preview Matrix Function
             function previewMatrix() {
+                console.log('Starting matrix preview...');
                 fetch(`/RiskMatrix/GetMatrixData/${matrixId}`)
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Matrix data received:', data);
                     if (data.success) {
                         renderMatrixPreview(data.matrix, data.levels, data.cells);
                     } else {
-                        showAlert('Error loading matrix data: ' + data.message, 'danger');
+                        console.error('API returned error:', data.message);
+                        document.getElementById('matrixPreview').innerHTML = `<div class="alert alert-warning">Error loading matrix data: ${data.message}</div>`;
                     }
                 })
                 .catch(error => {
-                    showAlert('Error loading matrix data: ' + error.message, 'danger');
+                    console.error('Error loading matrix data:', error);
+                    document.getElementById('matrixPreview').innerHTML = `<div class="alert alert-danger">Error loading matrix data: ${error.message}</div>`;
                 });
             }
 
             // Render Matrix Preview
             function renderMatrixPreview(matrix, levels, cells) {
+                console.log('Rendering matrix preview:', { matrix, levels, cells });
                 const previewDiv = document.getElementById('matrixPreview');
                 
-                let html = '<table class="table table-bordered table-sm matrix-preview">';
-                
-                // Header row
-                html += '<thead><tr><th class="matrix-corner">Risk Matrix</th>';
+                if (!levels || levels.length === 0) {
+                    renderDefaultPreview(matrix);
+                    return;
+                }
+
+                if (!cells || cells.length === 0) {
+                    previewDiv.innerHTML = '<div class="alert alert-info">No matrix cells generated yet. Click "Generate Risk Matrix" to create the matrix cells.</div>';
+                    return;
+                }
                 
                 const likelihoodLevels = levels.filter(l => l.levelType === 'Likelihood').sort((a, b) => a.levelValue - b.levelValue);
-                likelihoodLevels.forEach(level => {
-                    html += `<th class="text-center likelihood-header" style="background-color: ${level.color}20">${level.levelName}</th>`;
-                });
-                html += '</tr></thead><tbody>';
-
-                // Matrix rows
                 const impactLevels = levels.filter(l => l.levelType === 'Impact').sort((a, b) => b.levelValue - a.levelValue);
+                
+                console.log('Likelihood levels:', likelihoodLevels);
+                console.log('Impact levels:', impactLevels);
+                
+                if (likelihoodLevels.length === 0) {
+                    previewDiv.innerHTML = '<div class="alert alert-warning">No likelihood levels found. Please configure levels first.</div>';
+                    return;
+                }
+                
+                if (impactLevels.length === 0) {
+                    previewDiv.innerHTML = '<div class="alert alert-warning">No impact levels found. Please configure levels first.</div>';
+                    return;
+                }
+                
+                // Create heatmap-style visualization
+                let html = `
+                    <div class="risk-heatmap-container">
+                        <div class="heatmap-grid">
+                            <!-- Y-axis labels (Impact) -->
+                            <div class="y-axis-label">
+                                <div class="axis-title">Impact</div>
+                                <div class="impact-labels">`;
+                
+                impactLevels.forEach(level => {
+                    html += `<div class="impact-label">${level.levelName}</div>`;
+                });
+                
+                html += `
+                                </div>
+                            </div>
+                            
+                            <!-- Heatmap cells -->
+                            <div class="heatmap-cells">`;
+                
                 impactLevels.forEach(impactLevel => {
-                    html += '<tr>';
-                    html += `<th class="impact-header" style="background-color: ${impactLevel.color}20">${impactLevel.levelName}</th>`;
+                    html += '<div class="heatmap-row">';
                     
                     likelihoodLevels.forEach(likelihoodLevel => {
                         const cell = cells.find(c => 
@@ -391,19 +436,64 @@
                         
                         if (cell) {
                             const riskLevel = getRiskLevelFromScore(cell.riskScore);
-                            const bgColor = getRiskLevelColor(riskLevel);
-                            html += `<td class="text-center matrix-cell" style="background-color: ${bgColor}; color: white; font-weight: bold;">
-                                        ${cell.riskScore}
-                                        <br><small>${riskLevel}</small>
-                                    </td>`;
+                            const cellClass = getHeatmapCellClass(riskLevel);
+                            html += `
+                                <div class="heatmap-cell ${cellClass}" 
+                                     title="${impactLevel.levelName} Impact × ${likelihoodLevel.levelName} Likelihood = ${riskLevel} Risk (Score: ${cell.riskScore})"
+                                     data-impact="${impactLevel.levelValue}" 
+                                     data-likelihood="${likelihoodLevel.levelValue}"
+                                     data-score="${cell.riskScore}">
+                                    <div class="cell-content">
+                                        <div class="risk-count">${cell.riskScore}</div>
+                                        <div class="risk-level-text">${riskLevel}</div>
+                                    </div>
+                                </div>`;
                         } else {
-                            html += '<td class="text-center">-</td>';
+                            html += `
+                                <div class="heatmap-cell cell-none" 
+                                     title="${impactLevel.levelName} Impact × ${likelihoodLevel.levelName} Likelihood = No Data">
+                                    <div class="cell-content">
+                                        <div class="risk-count">-</div>
+                                        <div class="risk-level-text">No Data</div>
+                                    </div>
+                                </div>`;
                         }
                     });
-                    html += '</tr>';
+                    html += '</div>';
                 });
-
-                html += '</tbody></table>';
+                
+                html += `
+                            </div>
+                        </div>
+                        
+                        <!-- X-axis labels (Likelihood) -->
+                        <div class="x-axis-labels">`;
+                
+                likelihoodLevels.forEach(level => {
+                    html += `<div class="likelihood-label">${level.levelName}</div>`;
+                });
+                
+                html += `
+                        </div>
+                        <div class="x-axis-title">Likelihood</div>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="heatmap-legend mt-3">
+                        <strong>Risk Level Legend:</strong>
+                        <span class="legend-item">
+                            <span class="legend-color bg-success"></span> Low
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color bg-info"></span> Medium
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color bg-warning"></span> High
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color bg-danger"></span> Critical
+                        </span>
+                    </div>`;
                 
                 if (is3D) {
                     html += '<p class="text-muted mt-2"><small><i class="fas fa-info-circle me-1"></i>This preview shows the base 2D matrix. The 3D matrix includes exposure levels as multipliers.</small></p>';
@@ -434,6 +524,140 @@
                 }
             }
 
+            function getHeatmapCellClass(riskLevel) {
+                switch (riskLevel) {
+                    case 'Critical': return 'cell-critical';
+                    case 'High': return 'cell-high';
+                    case 'Medium': return 'cell-medium';
+                    case 'Low': return 'cell-low';
+                    default: return 'cell-none';
+                }
+            }
+
+            function renderDefaultPreview(matrix) {
+                const previewDiv = document.getElementById('matrixPreview');
+                const size = matrix.matrixSize || 5;
+                
+                // Create default level names
+                const defaultImpactLevels = [];
+                const defaultLikelihoodLevels = [];
+                
+                for (let i = size; i >= 1; i--) {
+                    defaultImpactLevels.push({
+                        levelValue: i,
+                        levelName: `Impact ${i}`
+                    });
+                }
+                
+                for (let i = 1; i <= size; i++) {
+                    defaultLikelihoodLevels.push({
+                        levelValue: i,
+                        levelName: `Likelihood ${i}`
+                    });
+                }
+                
+                // Generate default cells
+                const defaultCells = [];
+                for (let impact = 1; impact <= size; impact++) {
+                    for (let likelihood = 1; likelihood <= size; likelihood++) {
+                        const riskScore = impact * likelihood;
+                        const riskLevel = getRiskLevelFromScore(riskScore);
+                        defaultCells.push({
+                            impactLevel: impact,
+                            likelihoodLevel: likelihood,
+                            riskScore: riskScore,
+                            riskLevel: riskLevel
+                        });
+                    }
+                }
+                
+                // Create heatmap-style visualization
+                let html = `
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Preview Mode:</strong> This shows a default ${size}×${size} matrix. Configure levels and generate the matrix for customized preview.
+                    </div>
+                    <div class="risk-heatmap-container">
+                        <div class="heatmap-grid">
+                            <!-- Y-axis labels (Impact) -->
+                            <div class="y-axis-label">
+                                <div class="axis-title">Impact</div>
+                                <div class="impact-labels">`;
+                
+                defaultImpactLevels.forEach(level => {
+                    html += `<div class="impact-label">${level.levelName}</div>`;
+                });
+                
+                html += `
+                                </div>
+                            </div>
+                            
+                            <!-- Heatmap cells -->
+                            <div class="heatmap-cells">`;
+                
+                defaultImpactLevels.forEach(impactLevel => {
+                    html += '<div class="heatmap-row">';
+                    
+                    defaultLikelihoodLevels.forEach(likelihoodLevel => {
+                        const cell = defaultCells.find(c => 
+                            c.impactLevel === impactLevel.levelValue && 
+                            c.likelihoodLevel === likelihoodLevel.levelValue
+                        );
+                        
+                        if (cell) {
+                            const cellClass = getHeatmapCellClass(cell.riskLevel);
+                            html += `
+                                <div class="heatmap-cell ${cellClass}" 
+                                     title="${impactLevel.levelName} × ${likelihoodLevel.levelName} = ${cell.riskLevel} Risk (Score: ${cell.riskScore})"
+                                     data-impact="${impactLevel.levelValue}" 
+                                     data-likelihood="${likelihoodLevel.levelValue}"
+                                     data-score="${cell.riskScore}">
+                                    <div class="cell-content">
+                                        <div class="risk-count">${cell.riskScore}</div>
+                                        <div class="risk-level-text">${cell.riskLevel}</div>
+                                    </div>
+                                </div>`;
+                        }
+                    });
+                    html += '</div>';
+                });
+                
+                html += `
+                            </div>
+                        </div>
+                        
+                        <!-- X-axis labels (Likelihood) -->
+                        <div class="x-axis-labels">`;
+                
+                defaultLikelihoodLevels.forEach(level => {
+                    html += `<div class="likelihood-label">${level.levelName}</div>`;
+                });
+                
+                html += `
+                        </div>
+                        <div class="x-axis-title">Likelihood</div>
+                    </div>
+                    
+                    <!-- Legend -->
+                    <div class="heatmap-legend mt-3">
+                        <strong>Risk Level Legend:</strong>
+                        <span class="legend-item">
+                            <span class="legend-color bg-success"></span> Low
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color bg-info"></span> Medium
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color bg-warning"></span> High
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color bg-danger"></span> Critical
+                        </span>
+                    </div>`;
+                
+                previewDiv.innerHTML = html;
+            }
+
             function showAlert(message, type) {
                 const alertDiv = document.createElement('div');
                 alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
@@ -460,27 +684,6 @@
     </script>
 
     <style>
-        .matrix-preview {
-            font-size: 0.9rem;
-        }
-        
-        .matrix-corner {
-            background-color: #f8f9fa !important;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-        }
-        
-        .likelihood-header, .impact-header {
-            background-color: #f8f9fa !important;
-            font-weight: bold;
-        }
-        
-        .matrix-cell {
-            min-width: 80px;
-            height: 60px;
-            vertical-align: middle !important;
-        }
-        
         .level-config {
             border: 1px solid #dee2e6;
             border-radius: 0.375rem;
@@ -491,6 +694,218 @@
         .form-control-color {
             width: 100%;
             height: 38px;
+        }
+
+        /* Risk Heatmap Styles */
+        .risk-heatmap-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .heatmap-grid {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .y-axis-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 10px;
+        }
+
+        .axis-title {
+            writing-mode: vertical-lr;
+            text-orientation: mixed;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .impact-labels {
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .impact-label {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #495057;
+            writing-mode: horizontal-tb;
+            min-width: 60px;
+            text-align: right;
+            padding-right: 5px;
+        }
+
+        .heatmap-cells {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .heatmap-row {
+            display: flex;
+            gap: 2px;
+        }
+
+        .heatmap-cell {
+            width: 100px;
+            height: 70px;
+            border: 2px solid #fff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10;
+        }
+
+        .cell-content {
+            text-align: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .risk-count {
+            font-size: 1.5rem;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .risk-level-text {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
+        }
+
+        /* Risk level color coding */
+        .cell-critical {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+        }
+
+        .cell-high {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529 !important;
+        }
+
+        .cell-high .cell-content {
+            color: #212529 !important;
+        }
+
+        .cell-medium {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+        }
+
+        .cell-low {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+        }
+
+        .cell-none {
+            background: linear-gradient(135deg, #6c757d, #545b62);
+        }
+
+        .x-axis-labels {
+            display: flex;
+            gap: 2px;
+            margin-top: 10px;
+            margin-left: 80px;
+        }
+
+        .likelihood-label {
+            width: 100px;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #495057;
+            padding: 5px;
+        }
+
+        .x-axis-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #495057;
+            margin-top: 10px;
+            margin-left: 80px;
+        }
+
+        /* Legend */
+        .heatmap-legend {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        /* Responsive design */
+        @@media (max-width: 768px) {
+            .risk-heatmap-container {
+                padding: 10px;
+            }
+            
+            .heatmap-cell {
+                width: 60px;
+                height: 45px;
+            }
+            
+            .risk-count {
+                font-size: 1.1rem;
+            }
+            
+            .risk-level-text {
+                font-size: 0.6rem;
+            }
+            
+            .impact-label, .likelihood-label {
+                font-size: 0.7rem;
+            }
+            
+            .x-axis-labels, .x-axis-title {
+                margin-left: 50px;
+            }
+            
+            .likelihood-label {
+                width: 60px;
+            }
         }
     </style>
 }

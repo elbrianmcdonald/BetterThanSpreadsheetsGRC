@@ -1,0 +1,485 @@
+@model IEnumerable<CyberRiskApp.Models.MitreTechnique>
+
+@{
+    ViewData["Title"] = "MITRE ATT&CK Techniques";
+    var tactics = ViewBag.Tactics as string[] ?? new string[0];
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">MITRE ATT&CK Techniques</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>MITRE ATT&CK Techniques
+                    </h2>
+                    <p class="text-muted">Browse and search MITRE ATT&CK v13 techniques and tactics</p>
+                </div>
+                <div>
+                    <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-download me-2"></i>Import Techniques
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Threat Models
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search techniques by ID, name, or description..." value="@Context.Request.Query["search"]">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="tacticFilter" onchange="filterByTactic()">
+                        <option value="">All Tactics</option>
+                        @foreach (var tactic in tactics)
+                        {
+                            <option value="@tactic" selected="@(Context.Request.Query["tactic"] == tactic)">@tactic</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Techniques Grid -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-list me-2"></i>Techniques (@Model.Count())
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (Model.Any())
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 100px;">Technique ID</th>
+                                                <th>Name</th>
+                                                <th style="width: 150px;">Tactic</th>
+                                                <th style="width: 120px;">Platforms</th>
+                                                <th style="width: 100px;">Sub-Techniques</th>
+                                                <th style="width: 120px;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var technique in Model.Where(t => !t.IsSubTechnique).OrderBy(t => t.TechniqueId))
+                                            {
+                                                <tr class="technique-row" data-technique-id="@technique.TechniqueId" data-tactic="@technique.Tactic">
+                                                    <td>
+                                                        <strong class="text-primary">@technique.TechniqueId</strong>
+                                                        @if (technique.IsDeprecated)
+                                                        {
+                                                            <span class="badge bg-warning ms-1">Deprecated</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <strong>@technique.Name</strong>
+                                                            @if (!string.IsNullOrEmpty(technique.Description) && technique.Description.Length > 100)
+                                                            {
+                                                                <p class="text-muted small mb-0">@technique.Description.Substring(0, 100)...</p>
+                                                            }
+                                                            else if (!string.IsNullOrEmpty(technique.Description))
+                                                            {
+                                                                <p class="text-muted small mb-0">@technique.Description</p>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-info">@technique.Tactic</span>
+                                                    </td>
+                                                    <td>
+                                                        <small class="text-muted">
+                                                            @if (!string.IsNullOrEmpty(technique.Platforms))
+                                                            {
+                                                                @technique.Platforms.Split(',').Take(2).FirstOrDefault()
+                                                                @if (technique.Platforms.Split(',').Length > 1)
+                                                                {
+                                                                    <text>, +@(technique.Platforms.Split(',').Length - 1) more</text>
+                                                                }
+                                                            }
+                                                        </small>
+                                                    </td>
+                                                    <td>
+                                                        @{
+                                                            var subTechniques = Model.Where(t => t.ParentTechniqueId == technique.Id).Count();
+                                                        }
+                                                        @if (subTechniques > 0)
+                                                        {
+                                                            <span class="badge bg-secondary">@subTechniques sub-techniques</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-muted">-</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-outline-primary" onclick="viewTechnique('@technique.Id')" title="View Details">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                            <button class="btn btn-outline-success" onclick="mapTechnique('@technique.Id')" title="Map to Environment">
+                                                                <i class="fas fa-map-marker-alt"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                
+                                                <!-- Sub-techniques -->
+                                                @foreach (var subTechnique in Model.Where(t => t.ParentTechniqueId == technique.Id))
+                                                {
+                                                    <tr class="sub-technique-row" data-parent="@technique.TechniqueId" style="display: none;">
+                                                        <td class="ps-4">
+                                                            <i class="fas fa-level-down-alt text-muted me-1"></i>
+                                                            <span class="text-primary">@subTechnique.TechniqueId</span>
+                                                        </td>
+                                                        <td>@subTechnique.Name</td>
+                                                        <td><span class="badge bg-light text-dark">@subTechnique.Tactic</span></td>
+                                                        <td><small class="text-muted">@subTechnique.Platforms?.Split(',').FirstOrDefault()</small></td>
+                                                        <td>-</td>
+                                                        <td>
+                                                            <button class="btn btn-outline-primary btn-sm" onclick="viewTechnique('@subTechnique.Id')" title="View Details">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center py-5">
+                                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No techniques found</h5>
+                                    <p class="text-muted">Try adjusting your search or import techniques from MITRE ATT&CK.</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import MITRE ATT&CK Techniques</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This will import the latest MITRE ATT&CK v13 techniques and tactics from the official framework.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Framework Version</label>
+                    <select class="form-select" id="frameworkVersion">
+                        <option value="13.0" selected>ATT&CK v13.0 (Latest)</option>
+                        <option value="12.1">ATT&CK v12.1</option>
+                        <option value="11.3">ATT&CK v11.3</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeSubTechniques" checked>
+                        <label class="form-check-label" for="includeSubTechniques">
+                            Include Sub-Techniques
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="replaceExisting">
+                        <label class="form-check-label" for="replaceExisting">
+                            Replace Existing Techniques
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="importTechniques()">
+                    <i class="fas fa-download me-2"></i>Import Techniques
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Technique Details Modal -->
+<div class="modal fade" id="techniqueModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="techniqueModalTitle">Technique Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="techniqueModalBody">
+                <!-- Details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Environment Mapping Modal -->
+<div class="modal fade" id="mappingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Map Technique to Environment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mappingForm">
+                    <input type="hidden" id="mappingTechniqueId">
+                    <div class="mb-3">
+                        <label class="form-label">Select Threat Model</label>
+                        <select class="form-select" id="threatModelSelect" onchange="loadEnvironments()">
+                            <option value="">Choose a threat model...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Environment</label>
+                        <select class="form-select" id="environmentSelect" disabled>
+                            <option value="">Choose an environment...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Risk Score (0-100)</label>
+                        <input type="range" class="form-range" id="riskScore" min="0" max="100" value="50" oninput="this.nextElementSibling.value = this.value">
+                        <output>50</output>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Implementation Difficulty</label>
+                        <select class="form-select" id="implementationDifficulty">
+                            <option value="1">Low</option>
+                            <option value="2" selected>Medium</option>
+                            <option value="3">High</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Environment-Specific Notes</label>
+                        <textarea class="form-control" id="environmentNotes" rows="3" placeholder="Describe how this technique applies to the selected environment..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveTechniqueMapping()">
+                    <i class="fas fa-save me-2"></i>Save Mapping
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let searchTimeout;
+
+$(document).ready(function() {
+    // Load threat models for mapping
+    loadThreatModels();
+    
+    // Search functionality
+    $('#searchInput').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            performSearch();
+        }, 500);
+    });
+    
+    // Toggle sub-techniques visibility
+    $('.technique-row').click(function(e) {
+        if ($(e.target).closest('.btn-group').length === 0) {
+            const techniqueId = $(this).data('technique-id');
+            $(`.sub-technique-row[data-parent="${techniqueId}"]`).toggle();
+        }
+    });
+});
+
+function performSearch() {
+    const search = $('#searchInput').val();
+    const tactic = $('#tacticFilter').val();
+    
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (tactic) params.set('tactic', tactic);
+    
+    window.location.href = '@Url.Action("Techniques", "ThreatModeling")?' + params.toString();
+}
+
+function filterByTactic() {
+    performSearch();
+}
+
+function clearFilters() {
+    $('#searchInput').val('');
+    $('#tacticFilter').val('');
+    window.location.href = '@Url.Action("Techniques", "ThreatModeling")';
+}
+
+function viewTechnique(techniqueId) {
+    $.get('@Url.Action("GetMitreTechniqueById", "ThreatModeling")?id=' + techniqueId)
+        .done(function(technique) {
+            $('#techniqueModalTitle').text(technique.techniqueId + ' - ' + technique.name);
+            $('#techniqueModalBody').html(`
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Technique ID:</dt>
+                            <dd class="col-sm-8">${technique.techniqueId}</dd>
+                            <dt class="col-sm-4">Tactic:</dt>
+                            <dd class="col-sm-8"><span class="badge bg-info">${technique.tactic}</span></dd>
+                            <dt class="col-sm-4">Platforms:</dt>
+                            <dd class="col-sm-8">${technique.platforms || 'N/A'}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Version:</dt>
+                            <dd class="col-sm-8">${technique.version}</dd>
+                            <dt class="col-sm-4">Data Sources:</dt>
+                            <dd class="col-sm-8">${technique.dataSources || 'N/A'}</dd>
+                        </dl>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Description</h6>
+                        <p>${technique.description || 'No description available.'}</p>
+                        
+                        ${technique.detection ? `<h6>Detection</h6><p>${technique.detection}</p>` : ''}
+                        ${technique.mitigation ? `<h6>Mitigation</h6><p>${technique.mitigation}</p>` : ''}
+                        ${technique.examples ? `<h6>Examples</h6><p>${technique.examples}</p>` : ''}
+                    </div>
+                </div>
+            `);
+            $('#techniqueModal').modal('show');
+        })
+        .fail(function() {
+            toastr.error('Error loading technique details');
+        });
+}
+
+function mapTechnique(techniqueId) {
+    $('#mappingTechniqueId').val(techniqueId);
+    $('#mappingModal').modal('show');
+}
+
+function loadThreatModels() {
+    $.get('@Url.Action("GetAllThreatModels", "ThreatModeling")')
+        .done(function(threatModels) {
+            const select = $('#threatModelSelect');
+            select.empty().append('<option value="">Choose a threat model...</option>');
+            
+            threatModels.forEach(tm => {
+                select.append(`<option value="${tm.id}">${tm.name}</option>`);
+            });
+        });
+}
+
+function loadEnvironments() {
+    const threatModelId = $('#threatModelSelect').val();
+    const envSelect = $('#environmentSelect');
+    
+    if (!threatModelId) {
+        envSelect.prop('disabled', true).empty().append('<option value="">Choose an environment...</option>');
+        return;
+    }
+    
+    $.get('@Url.Action("GetEnvironmentsByThreatModelId", "ThreatModeling")?threatModelId=' + threatModelId)
+        .done(function(environments) {
+            envSelect.empty().append('<option value="">Choose an environment...</option>');
+            
+            environments.forEach(env => {
+                if (env.isEnabled) {
+                    envSelect.append(`<option value="${env.id}">${env.name}</option>`);
+                }
+            });
+            
+            envSelect.prop('disabled', false);
+        });
+}
+
+function saveTechniqueMapping() {
+    const mapping = {
+        MitreTechniqueId: $('#mappingTechniqueId').val(),
+        EnvironmentId: $('#environmentSelect').val(),
+        RiskScore: $('#riskScore').val(),
+        ImplementationDifficulty: $('#implementationDifficulty').val(),
+        EnvironmentSpecificNotes: $('#environmentNotes').val(),
+        IsApplicable: true
+    };
+    
+    if (!mapping.MitreTechniqueId || !mapping.EnvironmentId) {
+        toastr.error('Please select both a technique and environment');
+        return;
+    }
+    
+    $.ajax({
+        url: '@Url.Action("MapTechnique", "ThreatModeling")',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(mapping)
+    })
+    .done(function(result) {
+        if (result.success) {
+            toastr.success('Technique mapped successfully!');
+            $('#mappingModal').modal('hide');
+        } else {
+            toastr.error('Error mapping technique: ' + result.error);
+        }
+    })
+    .fail(function() {
+        toastr.error('Error saving technique mapping');
+    });
+}
+
+function importTechniques() {
+    const importData = {
+        version: $('#frameworkVersion').val(),
+        includeSubTechniques: $('#includeSubTechniques').is(':checked'),
+        replaceExisting: $('#replaceExisting').is(':checked')
+    };
+    
+    // Show loading state
+    const btn = $(event.target);
+    const originalText = btn.html();
+    btn.html('<i class="fas fa-spinner fa-spin me-2"></i>Importing...').prop('disabled', true);
+    
+    // This would need to be implemented
+    toastr.info('MITRE ATT&CK import functionality would be implemented here');
+    
+    setTimeout(() => {
+        btn.html(originalText).prop('disabled', false);
+        $('#importModal').modal('hide');
+    }, 2000);
+}
+</script>
+}

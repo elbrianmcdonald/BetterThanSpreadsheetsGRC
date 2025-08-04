@@ -7,10 +7,14 @@ namespace CyberRiskApp.Services
     public class RiskService : IRiskService
     {
         private readonly CyberRiskContext _context;
+        private readonly IAuditService _auditService;
+        private readonly ITransactionService _transactionService;
 
-        public RiskService(CyberRiskContext context)
+        public RiskService(CyberRiskContext context, IAuditService auditService, ITransactionService transactionService)
         {
             _context = context;
+            _auditService = auditService;
+            _transactionService = transactionService;
         }
 
         public async Task<IEnumerable<Risk>> GetAllRisksAsync()
@@ -32,26 +36,58 @@ namespace CyberRiskApp.Services
 
         public async Task<Risk> CreateRiskAsync(Risk risk)
         {
-            // AUTO-GENERATE RISK NUMBER if not already set
-            if (string.IsNullOrWhiteSpace(risk.RiskNumber))
+            try
             {
-                risk.RiskNumber = await GenerateNextRiskNumberAsync();
+                // AUTO-GENERATE RISK NUMBER if not already set
+                if (string.IsNullOrWhiteSpace(risk.RiskNumber))
+                {
+                    risk.RiskNumber = await GenerateNextRiskNumberAsync();
+                }
+
+                // Ensure Owner is never null
+                if (string.IsNullOrEmpty(risk.Owner))
+                {
+                    risk.Owner = "Unknown";
+                }
+
+                // Set audit fields
+                _auditService.SetAuditFields(risk, _auditService.GetCurrentUser());
+
+                _context.Risks.Add(risk);
+                await _context.SaveChangesAsync();
+                return risk;
             }
-
-            risk.CreatedAt = DateTime.Now;
-            risk.UpdatedAt = DateTime.Now;
-
-            _context.Risks.Add(risk);
-            await _context.SaveChangesAsync();
-            return risk;
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (await _auditService.HandleConcurrencyException(ex, risk))
+                {
+                    await _context.SaveChangesAsync();
+                    return risk;
+                }
+                throw;
+            }
         }
 
         public async Task<Risk> UpdateRiskAsync(Risk risk)
         {
-            risk.UpdatedAt = DateTime.Now;
-            _context.Entry(risk).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return risk;
+            try
+            {
+                // Set audit fields
+                _auditService.SetAuditFields(risk, _auditService.GetCurrentUser(), true);
+                
+                _context.Entry(risk).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+                return risk;
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (await _auditService.HandleConcurrencyException(ex, risk))
+                {
+                    await _context.SaveChangesAsync();
+                    return risk;
+                }
+                throw;
+            }
         }
 
         public async Task<bool> DeleteRiskAsync(int id)
@@ -65,6 +101,41 @@ namespace CyberRiskApp.Services
                 _context.Risks.Remove(risk);
                 await _context.SaveChangesAsync();
                 return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> CloseRiskAsync(int id, string remediationDetails, string closedBy)
+        {
+            var risk = await _context.Risks.FindAsync(id);
+            if (risk == null)
+                return false;
+                
+            try
+            {
+                risk.Status = RiskStatus.Closed;
+                risk.ClosedDate = DateTime.UtcNow;
+                risk.RemediationDetails = remediationDetails ?? string.Empty;
+                risk.ClosedBy = closedBy ?? "Unknown";
+                
+                // Set audit fields
+                _auditService.SetAuditFields(risk, _auditService.GetCurrentUser(), true);
+
+                _context.Entry(risk).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                if (await _auditService.HandleConcurrencyException(ex, risk))
+                {
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+                return false;
             }
             catch
             {
@@ -173,13 +244,14 @@ namespace CyberRiskApp.Services
             }
         }
 
-        // NEW: Bulk operations for Excel upload
+        // NEW: Bulk operations for Excel upload with optimized transactions
         public async Task<List<Risk>> CreateRisksAsync(List<Risk> risks)
         {
-            var createdRisks = new List<Risk>();
-
-            try
+            return await _transactionService.ExecuteInTransactionAsync(async () =>
             {
+                var createdRisks = new List<Risk>();
+                var currentUser = _auditService.GetCurrentUser();
+
                 foreach (var risk in risks)
                 {
                     try
@@ -190,9 +262,8 @@ namespace CyberRiskApp.Services
                             risk.RiskNumber = await GenerateNextRiskNumberAsync();
                         }
 
-                        // Set timestamps
-                        risk.CreatedAt = DateTime.UtcNow;
-                        risk.UpdatedAt = DateTime.UtcNow;
+                        // Set audit fields
+                        _auditService.SetAuditFields(risk, currentUser);
 
                         // Ensure required fields have defaults
                         if (risk.OpenDate == default)
@@ -205,9 +276,13 @@ namespace CyberRiskApp.Services
                             risk.Status = RiskStatus.Open;
 
                         _context.Risks.Add(risk);
-                        await _context.SaveChangesAsync();
-
                         createdRisks.Add(risk);
+
+                        // Batch save every 50 records for better performance
+                        if (createdRisks.Count % 50 == 0)
+                        {
+                            await _context.SaveChangesAsync();
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -216,13 +291,14 @@ namespace CyberRiskApp.Services
                     }
                 }
 
+                // Save remaining risks
+                if (createdRisks.Count % 50 != 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
                 return createdRisks;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in bulk risk creation: {ex.Message}");
-                return createdRisks; // Return whatever was successfully created
-            }
+            });
         }
 
         public async Task<int> GetRiskCountAsync()

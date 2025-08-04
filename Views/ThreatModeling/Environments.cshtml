@@ -1,0 +1,420 @@
+@model IEnumerable<CyberRiskApp.Models.ThreatEnvironment>
+
+@{
+    ViewData["Title"] = "Environment Configuration";
+    var threatModel = ViewBag.ThreatModel as CyberRiskApp.Models.ThreatModel;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@threatModel?.Id">@threatModel?.Name</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Environments</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-building me-2"></i>Environment Configuration
+                    </h2>
+                    <p class="text-muted">Configure environments for @threatModel?.Name</p>
+                </div>
+                <div>
+                    <a asp-action="CreateEnvironment" asp-route-id="@threatModel?.Id" class="btn btn-success me-2">
+                        <i class="fas fa-plus me-2"></i>Add Environment
+                    </a>
+                    <a asp-action="Details" asp-route-id="@threatModel?.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Threat Model
+                    </a>
+                </div>
+            </div>
+
+            <!-- Environment Cards -->
+            <div class="row" id="environmentCards">
+                @foreach (var environment in Model)
+                {
+                    <div class="col-lg-4 col-md-6 mb-4" data-environment-id="@environment.Id">
+                        <div class="card h-100 environment-card @(environment.IsEnabled ? "border-success" : "border-secondary")">
+                            <div class="card-header d-flex justify-content-between align-items-center @(environment.IsEnabled ? "bg-success text-white" : "bg-secondary text-white")">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas @GetEnvironmentIcon(environment.EnvironmentType) me-2"></i>
+                                    <span class="environment-name" data-field="Name">@environment.Name</span>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input environment-toggle" type="checkbox" 
+                                           data-environment-id="@environment.Id" 
+                                           @(environment.IsEnabled ? "checked" : "")>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <small class="text-muted">Description</small>
+                                    <p class="environment-description editable-field" 
+                                       data-field="Description" 
+                                       data-environment-id="@environment.Id">@environment.Description</p>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <small class="text-muted">Access Type</small>
+                                        <select class="form-select form-select-sm environment-field" 
+                                                data-field="AccessType" 
+                                                data-environment-id="@environment.Id">
+                                            <option value="0" selected="@(environment.AccessType == CyberRiskApp.Models.AccessType.Internal)">Internal</option>
+                                            <option value="1" selected="@(environment.AccessType == CyberRiskApp.Models.AccessType.External)">External</option>
+                                            <option value="2" selected="@(environment.AccessType == CyberRiskApp.Models.AccessType.Both)">Both</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Network Segmentation</small>
+                                        <div class="form-check form-switch mt-1">
+                                            <input class="form-check-input environment-field" 
+                                                   type="checkbox" 
+                                                   data-field="IsSegmented" 
+                                                   data-environment-id="@environment.Id"
+                                                   @(environment.IsSegmented ? "checked" : "")>
+                                            <label class="form-check-label small">
+                                                @(environment.IsSegmented ? "Segmented" : "Not Segmented")
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <small class="text-muted">Network Details</small>
+                                    <textarea class="form-control form-control-sm environment-field" 
+                                              data-field="NetworkDetails" 
+                                              data-environment-id="@environment.Id" 
+                                              rows="2" 
+                                              placeholder="Network architecture, VLANs, subnets...">@environment.NetworkDetails</textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <small class="text-muted">Security Controls</small>
+                                    <textarea class="form-control form-control-sm environment-field" 
+                                              data-field="SecurityControls" 
+                                              data-environment-id="@environment.Id" 
+                                              rows="2" 
+                                              placeholder="Firewalls, IDS/IPS, monitoring...">@environment.SecurityControls</textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <small class="text-muted">Priority Level</small>
+                                    <input type="range" 
+                                           class="form-range environment-field" 
+                                           data-field="Priority" 
+                                           data-environment-id="@environment.Id" 
+                                           min="1" 
+                                           max="10" 
+                                           value="@environment.Priority" 
+                                           oninput="this.nextElementSibling.value = this.value">
+                                    <output class="small text-muted">@environment.Priority</output>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        <span class="technique-count">0</span> Techniques Mapped
+                                    </small>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" 
+                                                onclick="viewTechniques(@environment.Id)" title="View Techniques">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <a asp-action="EditEnvironment" asp-route-id="@environment.Id" 
+                                           class="btn btn-outline-warning" title="Edit Environment">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <button class="btn btn-outline-danger" 
+                                                    onclick="confirmDeleteEnvironment(@environment.Id, '@environment.Name')" title="Delete Environment">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Save Changes Button -->
+            <div class="row">
+                <div class="col-12 text-center">
+                    <button class="btn btn-success btn-lg" id="saveChanges" style="display: none;">
+                        <i class="fas fa-save me-2"></i>Save All Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Technique Mapping Modal -->
+<div class="modal fade" id="techniqueModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">MITRE ATT&CK Techniques</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>Available Techniques</h6>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="techniqueSearch" placeholder="Search techniques...">
+                        </div>
+                        <div class="mb-3">
+                            <select class="form-select" id="tacticFilter">
+                                <option value="">All Tactics</option>
+                                <option value="Initial Access">Initial Access</option>
+                                <option value="Execution">Execution</option>
+                                <option value="Persistence">Persistence</option>
+                                <option value="Privilege Escalation">Privilege Escalation</option>
+                                <option value="Defense Evasion">Defense Evasion</option>
+                                <option value="Credential Access">Credential Access</option>
+                                <option value="Discovery">Discovery</option>
+                                <option value="Lateral Movement">Lateral Movement</option>
+                                <option value="Collection">Collection</option>
+                                <option value="Command and Control">Command and Control</option>
+                                <option value="Exfiltration">Exfiltration</option>
+                                <option value="Impact">Impact</option>
+                            </select>
+                        </div>
+                        <div id="availableTechniques" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Techniques will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <h6>Environment Mapping</h6>
+                        <div id="environmentTechniques">
+                            <!-- Mapped techniques will be shown here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetEnvironmentIcon(string environmentType)
+    {
+        return environmentType switch
+        {
+            "CrownJewels" => "fa-crown",
+            "Azure" => "fa-cloud",
+            "Corporate" => "fa-building",
+            "Remote" => "fa-laptop-house",
+            "Plant" => "fa-industry",
+            "OT" => "fa-cogs",
+            _ => "fa-server"
+        };
+    }
+}
+
+@section Scripts {
+<script>
+let pendingChanges = new Map();
+let currentEnvironmentId = null;
+
+$(document).ready(function() {
+    // Load technique counts for each environment
+    loadTechniqueCounts();
+    
+    // Handle environment toggle
+    $('.environment-toggle').change(function() {
+        const environmentId = $(this).data('environment-id');
+        const isEnabled = $(this).is(':checked');
+        
+        updateEnvironmentField(environmentId, 'IsEnabled', isEnabled);
+        
+        // Update card styling
+        const card = $(this).closest('.environment-card');
+        const header = card.find('.card-header');
+        
+        if (isEnabled) {
+            card.removeClass('border-secondary').addClass('border-success');
+            header.removeClass('bg-secondary').addClass('bg-success');
+        } else {
+            card.removeClass('border-success').addClass('border-secondary');  
+            header.removeClass('bg-success').addClass('bg-secondary');
+        }
+    });
+    
+    // Handle field changes
+    $('.environment-field').on('change input', function() {
+        const environmentId = $(this).data('environment-id');
+        const field = $(this).data('field');
+        let value = $(this).val();
+        
+        if ($(this).attr('type') === 'checkbox') {
+            value = $(this).is(':checked');
+        } else if ($(this).attr('type') === 'range') {
+            $(this).next('output').text(value);
+        }
+        
+        updateEnvironmentField(environmentId, field, value);
+    });
+    
+    // Handle editable descriptions
+    $('.editable-field').on('blur', function() {
+        const environmentId = $(this).data('environment-id');
+        const field = $(this).data('field');
+        const value = $(this).text().trim();
+        
+        updateEnvironmentField(environmentId, field, value);
+    }).attr('contenteditable', 'true');
+    
+    // Save changes button
+    $('#saveChanges').click(function() {
+        saveAllChanges();
+    });
+});
+
+function updateEnvironmentField(environmentId, field, value) {
+    if (!pendingChanges.has(environmentId)) {
+        pendingChanges.set(environmentId, {});
+    }
+    
+    pendingChanges.get(environmentId)[field] = value;
+    $('#saveChanges').show();
+}
+
+function saveAllChanges() {
+    const promises = [];
+    
+    pendingChanges.forEach((changes, environmentId) => {
+        const environmentData = {
+            Id: environmentId,
+            ThreatModelId: @(threatModel?.Id ?? 0),
+            ...changes
+        };
+        
+        promises.push(
+            $.ajax({
+                url: '@Url.Action("UpdateEnvironment", "ThreatModeling")',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(environmentData)
+            })
+        );
+    });
+    
+    Promise.all(promises)
+        .then(() => {
+            toastr.success('All environment changes saved successfully!');
+            pendingChanges.clear();
+            $('#saveChanges').hide();
+        })
+        .catch((error) => {
+            toastr.error('Error saving changes: ' + error.responseText);
+        });
+}
+
+function loadTechniqueCounts() {
+    @foreach (var env in Model)
+    {
+        <text>
+        $.get('@Url.Action("GetTechniqueMappingsForEnvironment", "ThreatModeling")?environmentId=@env.Id')
+            .done(function(data) {
+                $('[data-environment-id="@env.Id"]').find('.technique-count').text(data.length || 0);
+            });
+        </text>
+    }
+}
+
+function viewTechniques(environmentId) {
+    currentEnvironmentId = environmentId;
+    loadAvailableTechniques();
+    loadEnvironmentTechniques(environmentId);
+    $('#techniqueModal').modal('show');
+}
+
+function loadAvailableTechniques() {
+    $.get('@Url.Action("Techniques", "ThreatModeling")')
+        .done(function(data) {
+            // This would need to be implemented to return JSON data
+            $('#availableTechniques').html('<p>Available techniques loaded...</p>');
+        });
+}
+
+function loadEnvironmentTechniques(environmentId) {
+    $.get('@Url.Action("GetTechniqueMappingsForEnvironment", "ThreatModeling")?environmentId=' + environmentId)
+        .done(function(data) {
+            $('#environmentTechniques').html('<p>' + data.length + ' techniques mapped to this environment.</p>');
+        });
+}
+
+function confirmDeleteEnvironment(environmentId, environmentName) {
+    if (confirm(`Are you sure you want to delete the environment "${environmentName}"?\n\nThis will also remove all associated technique mappings and scenario references.\n\nThis action cannot be undone.`)) {
+        // Create a form and submit it
+        const form = $('<form>', {
+            'method': 'POST',
+            'action': '@Url.Action("DeleteEnvironment", "ThreatModeling")/' + environmentId
+        });
+        
+        // Add antiforgery token
+        form.append($('@Html.AntiForgeryToken()'));
+        
+        // Add to body and submit
+        $('body').append(form);
+        form.submit();
+    }
+}
+</script>
+}
+
+@section Styles {
+<style>
+.environment-card {
+    transition: all 0.3s ease;
+}
+
+.environment-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.editable-field {
+    cursor: text;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.editable-field:hover {
+    background-color: #f8f9fa;
+}
+
+.editable-field:focus {
+    outline: 2px solid #0d6efd;
+    background-color: white;
+}
+
+.form-range::-webkit-slider-thumb {
+    background: #0d6efd;
+}
+
+.technique-card {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.technique-card:hover {
+    background-color: #e3f2fd;
+}
+
+.technique-card.selected {
+    background-color: #1976d2;
+    color: white;
+}
+</style>
+}

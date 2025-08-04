@@ -154,6 +154,7 @@ namespace CyberRiskApp.Controllers.Api
 
         // POST: api/technicalcontrolmapping
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateMapping([FromBody] CreateMappingViewModel model)
         {
             if (!ModelState.IsValid)

@@ -129,6 +129,10 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
         public async Task<IActionResult> Create(MaturityAssessmentViewModel model)
         {
+            // Remove audit fields from model validation since they're set automatically
+            ModelState.Remove("Assessment.CreatedBy");
+            ModelState.Remove("Assessment.UpdatedBy");
+            
             if (ModelState.IsValid)
             {
                 model.Assessment.Assessor = User.Identity?.Name ?? "Unknown";

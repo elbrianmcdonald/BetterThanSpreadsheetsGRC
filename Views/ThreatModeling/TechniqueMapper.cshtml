@@ -1,0 +1,719 @@
+@model IEnumerable<CyberRiskApp.Models.MitreTechnique>
+
+@{
+    ViewData["Title"] = "MITRE ATT&CK Technique Mapper";
+    var threatModel = ViewBag.ThreatModel as CyberRiskApp.Models.ThreatModel;
+    var environments = ViewBag.Environments as IEnumerable<CyberRiskApp.Models.ThreatEnvironment> ?? new List<CyberRiskApp.Models.ThreatEnvironment>();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@threatModel?.Id">@threatModel?.Name</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Technique Mapper</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-map-marked-alt me-2"></i>MITRE ATT&CK Technique Mapper
+                    </h2>
+                    <p class="text-muted">Drag and drop MITRE ATT&CK techniques to map them to environments</p>
+                </div>
+                <div>
+                    <button class="btn btn-success me-2" onclick="saveAllMappings()">
+                        <i class="fas fa-save me-2"></i>Save All Mappings
+                    </button>
+                    <a asp-action="Details" asp-route-id="@threatModel?.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Threat Model
+                    </a>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- MITRE ATT&CK Techniques Panel -->
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-shield-alt me-2"></i>MITRE ATT&CK Techniques
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Search and Filter Controls -->
+                            <div class="mb-3">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" class="form-control" id="techniqueSearch" 
+                                           placeholder="Search techniques...">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <select class="form-select form-select-sm" id="tacticFilter">
+                                    <option value="">All Tactics</option>
+                                    <option value="Initial Access">Initial Access</option>
+                                    <option value="Execution">Execution</option>
+                                    <option value="Persistence">Persistence</option>
+                                    <option value="Privilege Escalation">Privilege Escalation</option>
+                                    <option value="Defense Evasion">Defense Evasion</option>
+                                    <option value="Credential Access">Credential Access</option>
+                                    <option value="Discovery">Discovery</option>
+                                    <option value="Lateral Movement">Lateral Movement</option>
+                                    <option value="Collection">Collection</option>
+                                    <option value="Command and Control">Command and Control</option>
+                                    <option value="Exfiltration">Exfiltration</option>
+                                    <option value="Impact">Impact</option>
+                                </select>
+                            </div>
+
+                            <!-- Techniques List -->
+                            <div id="techniquesList" class="technique-source" style="max-height: 600px; overflow-y: auto;">
+                                @foreach (var technique in Model.Where(t => !t.IsSubTechnique).OrderBy(t => t.TechniqueId))
+                                {
+                                    <div class="technique-item" 
+                                         draggable="true" 
+                                         data-technique-id="@technique.Id"
+                                         data-technique-name="@technique.Name"
+                                         data-tactic="@technique.Tactic"
+                                         data-mitre-id="@technique.TechniqueId">
+                                        <div class="d-flex align-items-start">
+                                            <div class="technique-drag-handle me-2">
+                                                <i class="fas fa-grip-vertical text-muted"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <strong class="technique-id">@technique.TechniqueId</strong>
+                                                    <span class="badge tactic-badge" data-tactic="@technique.Tactic">@technique.Tactic</span>
+                                                </div>
+                                                <div class="technique-name">@technique.Name</div>
+                                                @if (!string.IsNullOrEmpty(technique.Description) && technique.Description.Length > 80)
+                                                {
+                                                    <small class="text-muted">@technique.Description.Substring(0, 80)...</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Environment Mapping Panel -->
+                <div class="col-md-8">
+                    <div class="card h-100">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-building me-2"></i>Environment Technique Mapping
+                            </h5>
+                        </div>
+                        <div class="card-body p-2">
+                            <div class="row g-2" id="environmentsGrid">
+                                @foreach (var environment in environments.Where(e => e.IsEnabled))
+                                {
+                                    <div class="col-lg-6 col-xl-4">
+                                        <div class="environment-drop-zone" 
+                                             data-environment-id="@environment.Id"
+                                             data-environment-name="@environment.Name">
+                                            <div class="environment-header">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas @GetEnvironmentIcon(environment.EnvironmentType) me-2"></i>
+                                                        <strong>@environment.Name</strong>
+                                                    </div>
+                                                    <span class="badge bg-info technique-counter">0</span>
+                                                </div>
+                                                <small class="text-muted">@environment.Description</small>
+                                            </div>
+                                            <div class="mapped-techniques-container" 
+                                                 data-environment-id="@environment.Id"
+                                                 style="min-height: 200px; max-height: 400px; overflow-y: auto;">
+                                                <div class="drop-placeholder">
+                                                    <i class="fas fa-plus-circle text-muted"></i>
+                                                    <p class="text-muted mb-0">Drag techniques here</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mapping Progress -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-chart-bar me-2"></i>Mapping Progress
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="mappingStats">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-primary mb-0" id="totalTechniques">@Model.Count()</h4>
+                                        <small class="text-muted">Total Techniques</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-success mb-0" id="mappedTechniques">0</h4>
+                                        <small class="text-muted">Mapped Techniques</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-info mb-0" id="activeEnvironments">@environments.Count(e => e.IsEnabled)</h4>
+                                        <small class="text-muted">Active Environments</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h4 class="text-warning mb-0" id="totalMappings">0</h4>
+                                        <small class="text-muted">Total Mappings</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="progress mt-3">
+                                <div class="progress-bar" role="progressbar" style="width: 0%" id="mappingProgress"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Technique Configuration Modal -->
+<div class="modal fade" id="techniqueConfigModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Configure Technique Mapping</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mappingConfigForm">
+                    <input type="hidden" id="configTechniqueId">
+                    <input type="hidden" id="configEnvironmentId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Technique</label>
+                        <div id="configTechniqueName" class="form-control-plaintext"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Environment</label>
+                        <div id="configEnvironmentName" class="form-control-plaintext"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="configRiskScore" class="form-label">Risk Score (0-100)</label>
+                        <input type="range" class="form-range" id="configRiskScore" min="0" max="100" value="50">
+                        <div class="d-flex justify-content-between">
+                            <small>Low</small>
+                            <span id="riskScoreValue">50</span>
+                            <small>High</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="configDifficulty" class="form-label">Implementation Difficulty</label>
+                        <select class="form-select" id="configDifficulty">
+                            <option value="1">Low</option>
+                            <option value="2" selected>Medium</option>
+                            <option value="3">High</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="configNotes" class="form-label">Environment-Specific Notes</label>
+                        <textarea class="form-control" id="configNotes" rows="3" 
+                                  placeholder="Describe how this technique applies to this environment..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="saveTechniqueMapping()">
+                    <i class="fas fa-save me-2"></i>Save Mapping
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetEnvironmentIcon(string environmentType)
+    {
+        return environmentType switch
+        {
+            "CrownJewels" => "fa-crown",
+            "Azure" => "fa-cloud",
+            "Corporate" => "fa-building",
+            "Remote" => "fa-laptop-house",
+            "Plant" => "fa-industry",
+            "OT" => "fa-cogs",
+            _ => "fa-server"
+        };
+    }
+}
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+let pendingMappings = new Map();
+let draggedTechnique = null;
+
+$(document).ready(function() {
+    initializeDragAndDrop();
+    loadExistingMappings();
+    setupSearch();
+    
+    // Risk score slider
+    $('#configRiskScore').on('input', function() {
+        $('#riskScoreValue').text($(this).val());
+    });
+});
+
+function initializeDragAndDrop() {
+    // Initialize techniques list as sortable (draggable source)
+    new Sortable(document.getElementById('techniquesList'), {
+        group: {
+            name: 'techniques',
+            pull: 'clone',
+            put: false
+        },
+        animation: 150,
+        sort: false,
+        onStart: function(evt) {
+            const item = evt.item;
+            draggedTechnique = {
+                id: item.dataset.techniqueId,
+                name: item.dataset.techniqueName,
+                tactic: item.dataset.tactic,
+                mitreId: item.dataset.mitreId
+            };
+        }
+    });
+
+    // Initialize environment drop zones
+    document.querySelectorAll('.mapped-techniques-container').forEach(container => {
+        new Sortable(container, {
+            group: {
+                name: 'techniques',
+                put: true,
+                pull: true
+            },
+            animation: 150,
+            onAdd: function(evt) {
+                const environmentId = evt.to.dataset.environmentId;
+                const techniqueElement = evt.item;
+                
+                // Remove placeholder if it exists
+                $(evt.to).find('.drop-placeholder').hide();
+                
+                // Configure the dropped technique
+                configureTechnique(draggedTechnique, environmentId, techniqueElement);
+            },
+            onRemove: function(evt) {
+                const environmentId = evt.from.dataset.environmentId;
+                const techniqueId = evt.item.dataset.techniqueId;
+                
+                // Remove from pending mappings
+                const key = `${techniqueId}-${environmentId}`;
+                pendingMappings.delete(key);
+                
+                // Show placeholder if container is empty
+                if (evt.from.children.length === 0) {
+                    $(evt.from).find('.drop-placeholder').show();
+                }
+                
+                updateMappingStats();
+                updateEnvironmentCounter(environmentId);
+            }
+        });
+    });
+}
+
+function configureTechnique(technique, environmentId, element) {
+    // Store technique data in element
+    element.dataset.techniqueId = technique.id;
+    element.dataset.environmentId = environmentId;
+    
+    // Transform element to mapped technique style
+    element.className = 'mapped-technique-item';
+    element.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong class="text-primary">${technique.mitreId}</strong>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary btn-sm" onclick="editMapping('${technique.id}', '${environmentId}')" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="removeMapping(this)" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="technique-name">${technique.name}</div>
+                <div class="mapping-info">
+                    <span class="badge bg-secondary risk-badge">Risk: 50</span>
+                    <span class="badge bg-info difficulty-badge">Medium</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Show configuration modal
+    $('#configTechniqueId').val(technique.id);
+    $('#configEnvironmentId').val(environmentId);
+    $('#configTechniqueName').text(`${technique.mitreId} - ${technique.name}`);
+    $('#configEnvironmentName').text($(`[data-environment-id="${environmentId}"]`).data('environment-name'));
+    $('#techniqueConfigModal').modal('show');
+}
+
+function editMapping(techniqueId, environmentId) {
+    const key = `${techniqueId}-${environmentId}`;
+    const mapping = pendingMappings.get(key);
+    
+    if (mapping) {
+        $('#configTechniqueId').val(techniqueId);
+        $('#configEnvironmentId').val(environmentId);
+        $('#configRiskScore').val(mapping.riskScore);
+        $('#configDifficulty').val(mapping.implementationDifficulty);
+        $('#configNotes').val(mapping.environmentSpecificNotes);
+        $('#riskScoreValue').text(mapping.riskScore);
+        $('#techniqueConfigModal').modal('show');
+    }
+}
+
+function removeMapping(button) {
+    const item = $(button).closest('.mapped-technique-item');
+    const techniqueId = item.data('technique-id');
+    const environmentId = item.data('environment-id');
+    const key = `${techniqueId}-${environmentId}`;
+    
+    // Remove from pending mappings
+    pendingMappings.delete(key);
+    
+    // Remove element
+    item.remove();
+    
+    // Show placeholder if container is empty
+    const container = $(`[data-environment-id="${environmentId}"]`);
+    if (container.find('.mapped-technique-item').length === 0) {
+        container.find('.drop-placeholder').show();
+    }
+    
+    updateMappingStats();
+    updateEnvironmentCounter(environmentId);
+}
+
+function saveTechniqueMapping() {
+    const techniqueId = $('#configTechniqueId').val();
+    const environmentId = $('#configEnvironmentId').val();
+    const riskScore = $('#configRiskScore').val();
+    const difficulty = $('#configDifficulty').val();
+    const notes = $('#configNotes').val();
+    
+    const mapping = {
+        mitreTechniqueId: techniqueId,
+        environmentId: environmentId,
+        riskScore: parseInt(riskScore),
+        implementationDifficulty: parseInt(difficulty),
+        environmentSpecificNotes: notes,
+        isApplicable: true
+    };
+    
+    const key = `${techniqueId}-${environmentId}`;
+    pendingMappings.set(key, mapping);
+    
+    // Update the visual representation
+    const item = $(`.mapped-technique-item[data-technique-id="${techniqueId}"][data-environment-id="${environmentId}"]`);
+    item.find('.risk-badge').text(`Risk: ${riskScore}`);
+    item.find('.difficulty-badge').text(['Low', 'Medium', 'High'][difficulty - 1]);
+    
+    $('#techniqueConfigModal').modal('hide');
+    updateMappingStats();
+    updateEnvironmentCounter(environmentId);
+}
+
+function saveAllMappings() {
+    if (pendingMappings.size === 0) {
+        toastr.info('No new mappings to save');
+        return;
+    }
+    
+    const promises = [];
+    
+    pendingMappings.forEach((mapping, key) => {
+        promises.push(
+            $.ajax({
+                url: '@Url.Action("MapTechnique", "ThreatModeling")',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(mapping)
+            })
+        );
+    });
+    
+    Promise.all(promises)
+        .then(() => {
+            toastr.success(`${pendingMappings.size} technique mappings saved successfully!`);
+            pendingMappings.clear();
+        })
+        .catch((error) => {
+            toastr.error('Error saving mappings: ' + error.responseText);
+        });
+}
+
+function loadExistingMappings() {
+    @foreach (var env in environments.Where(e => e.IsEnabled))
+    {
+        <text>
+        $.get('@Url.Action("GetTechniqueMappingsForEnvironment", "ThreatModeling")?environmentId=@env.Id')
+            .done(function(mappings) {
+                const container = $('[data-environment-id="@env.Id"]');
+                container.find('.drop-placeholder').hide();
+                
+                mappings.forEach(mapping => {
+                    const techniqueHtml = `
+                        <div class="mapped-technique-item" 
+                             data-technique-id="${mapping.mitreTechniqueId}" 
+                             data-environment-id="@env.Id">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong class="text-primary">${mapping.mitreTechnique?.techniqueId || 'N/A'}</strong>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="editMapping('${mapping.mitreTechniqueId}', '@env.Id')" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" onclick="removeMapping(this)" title="Remove">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="technique-name">${mapping.mitreTechnique?.name || 'Unknown Technique'}</div>
+                                    <div class="mapping-info">
+                                        <span class="badge bg-secondary risk-badge">Risk: ${mapping.riskScore || 50}</span>
+                                        <span class="badge bg-info difficulty-badge">${['Low', 'Medium', 'High'][mapping.implementationDifficulty - 1] || 'Medium'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.append(techniqueHtml);
+                });
+                
+                updateEnvironmentCounter('@env.Id');
+            });
+        </text>
+    }
+    
+    // Update stats after loading
+    setTimeout(updateMappingStats, 1000);
+}
+
+function setupSearch() {
+    let searchTimeout;
+    
+    $('#techniqueSearch').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filterTechniques();
+        }, 300);
+    });
+    
+    $('#tacticFilter').on('change', function() {
+        filterTechniques();
+    });
+}
+
+function filterTechniques() {
+    const searchTerm = $('#techniqueSearch').val().toLowerCase();
+    const selectedTactic = $('#tacticFilter').val();
+    
+    $('.technique-item').each(function() {
+        const $item = $(this);
+        const techniqueName = $item.data('technique-name').toLowerCase();
+        const mitreId = $item.data('mitre-id').toLowerCase();
+        const tactic = $item.data('tactic');
+        
+        const matchesSearch = !searchTerm || techniqueName.includes(searchTerm) || mitreId.includes(searchTerm);
+        const matchesTactic = !selectedTactic || tactic === selectedTactic;
+        
+        $item.toggle(matchesSearch && matchesTactic);
+    });
+}
+
+function updateEnvironmentCounter(environmentId) {
+    const count = $(`.mapped-techniques-container[data-environment-id="${environmentId}"] .mapped-technique-item`).length;
+    $(`.environment-drop-zone[data-environment-id="${environmentId}"] .technique-counter`).text(count);
+}
+
+function updateMappingStats() {
+    const totalMappings = $('.mapped-technique-item').length + pendingMappings.size;
+    const uniqueTechniques = new Set();
+    
+    $('.mapped-technique-item').each(function() {
+        uniqueTechniques.add($(this).data('technique-id'));
+    });
+    
+    pendingMappings.forEach((mapping, key) => {
+        uniqueTechniques.add(mapping.mitreTechniqueId);
+    });
+    
+    $('#mappedTechniques').text(uniqueTechniques.size);
+    $('#totalMappings').text(totalMappings);
+    
+    const totalTechniques = parseInt($('#totalTechniques').text());
+    const progress = (uniqueTechniques.size / totalTechniques * 100).toFixed(1);
+    $('#mappingProgress').css('width', progress + '%').text(progress + '%');
+}
+</script>
+}
+
+@section Styles {
+<style>
+.technique-item {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.technique-item:hover {
+    background: #e9ecef;
+    border-color: #0d6efd;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.technique-item:active {
+    cursor: grabbing;
+}
+
+.technique-drag-handle {
+    color: #6c757d;
+    cursor: grab;
+}
+
+.technique-id {
+    color: #0d6efd;
+    font-family: 'Courier New', monospace;
+}
+
+.technique-name {
+    font-size: 0.9rem;
+    margin: 4px 0;
+}
+
+.tactic-badge {
+    font-size: 0.7rem;
+}
+
+.environment-drop-zone {
+    background: #ffffff;
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 12px;
+    min-height: 300px;
+    transition: all 0.3s ease;
+}
+
+.environment-drop-zone.sortable-ghost {
+    border-color: #0d6efd;
+    background: #f0f8ff;
+}
+
+.environment-header {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border-left: 4px solid #0d6efd;
+}
+
+.mapped-techniques-container {
+    background: #fbfbfb;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+.mapped-technique-item {
+    background: #e8f4f8;
+    border: 1px solid #b3d9e6;
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 6px;
+    transition: all 0.2s ease;
+}
+
+.mapped-technique-item:hover {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+.drop-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.mapping-info {
+    margin-top: 6px;
+}
+
+.mapping-info .badge {
+    margin-right: 4px;
+    font-size: 0.7rem;
+}
+
+/* Sortable.js styles */
+.sortable-drag {
+    opacity: 0.6;
+}
+
+.sortable-ghost {
+    opacity: 0.4;
+    background: #007bff !important;
+    color: white !important;
+}
+
+.sortable-chosen {
+    background: #e3f2fd !important;
+}
+
+/* Tactic color coding */
+.tactic-badge[data-tactic="Initial Access"] { background-color: #e74c3c !important; }
+.tactic-badge[data-tactic="Execution"] { background-color: #f39c12 !important; }
+.tactic-badge[data-tactic="Persistence"] { background-color: #f1c40f !important; }
+.tactic-badge[data-tactic="Privilege Escalation"] { background-color: #2ecc71 !important; }
+.tactic-badge[data-tactic="Defense Evasion"] { background-color: #3498db !important; }
+.tactic-badge[data-tactic="Credential Access"] { background-color: #9b59b6 !important; }
+.tactic-badge[data-tactic="Discovery"] { background-color: #1abc9c !important; }
+.tactic-badge[data-tactic="Lateral Movement"] { background-color: #34495e !important; }
+.tactic-badge[data-tactic="Collection"] { background-color: #e67e22 !important; }
+.tactic-badge[data-tactic="Command and Control"] { background-color: #95a5a6 !important; }
+.tactic-badge[data-tactic="Exfiltration"] { background-color: #c0392b !important; }
+.tactic-badge[data-tactic="Impact"] { background-color: #8e44ad !important; }
+</style>
+}

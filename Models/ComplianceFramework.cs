@@ -146,7 +146,7 @@ namespace CyberRiskApp.Models
         public virtual ICollection<ComplianceAssessment> Assessments { get; set; } = new List<ComplianceAssessment>();
     }
 
-    public class ComplianceAssessment
+    public class ComplianceAssessment : IAuditableEntity
     {
         public int Id { get; set; }
 
@@ -177,8 +177,24 @@ namespace CyberRiskApp.Models
         [Range(1, int.MaxValue, ErrorMessage = "Please select a valid organization")]
         public int BusinessOrganizationId { get; set; }
 
+        // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Created By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string CreatedBy { get; set; } = string.Empty;
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Updated By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string UpdatedBy { get; set; } = string.Empty;
+        
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         // Navigation properties
         public virtual ComplianceFramework? Framework { get; set; }
@@ -186,7 +202,7 @@ namespace CyberRiskApp.Models
         public virtual ICollection<ControlAssessment> ControlAssessments { get; set; } = new List<ControlAssessment>();
     }
 
-    public class ControlAssessment
+    public class ControlAssessment : IAuditableEntity
     {
         public int Id { get; set; }
 
@@ -248,8 +264,24 @@ namespace CyberRiskApp.Models
         public int ComplianceControlId { get; set; }
         public int ComplianceAssessmentId { get; set; }
 
+        // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Created By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string CreatedBy { get; set; } = string.Empty;
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Updated By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string UpdatedBy { get; set; } = string.Empty;
+        
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         // Navigation properties
         public virtual ComplianceControl Control { get; set; } = null!;

@@ -1,0 +1,124 @@
+@model CyberRiskApp.Controllers.SetupCompleteViewModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Setup Complete - CyberRisk App</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .success-icon {
+            font-size: 64px;
+            color: #48bb78;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .credentials-box {
+            background: #f7fafc;
+            border: 2px dashed #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .copy-btn {
+            cursor: pointer;
+            color: #667eea;
+            margin-left: 10px;
+        }
+        .copy-btn:hover {
+            color: #5a67d8;
+        }
+        .important-notice {
+            background: #fff5f5;
+            border-left: 4px solid #fc8181;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        
+        <h1 class="text-center mb-4">Setup Complete!</h1>
+        
+        <p class="text-center text-muted">@Model.Message</p>
+
+        <div class="credentials-box">
+            <h5>Administrator Credentials</h5>
+            <div class="mb-2">
+                <strong>Email:</strong> 
+                <span id="adminEmail">@Model.AdminEmail</span>
+                <i class="fas fa-copy copy-btn" onclick="copyToClipboard('adminEmail')" title="Copy"></i>
+            </div>
+            <div>
+                <strong>Password:</strong> 
+                <span id="adminPassword">@Model.AdminPassword</span>
+                <i class="fas fa-copy copy-btn" onclick="copyToClipboard('adminPassword')" title="Copy"></i>
+            </div>
+        </div>
+
+        <div class="important-notice">
+            <h6><i class="fas fa-exclamation-triangle"></i> Important Security Notice</h6>
+            <ul class="mb-0">
+                <li>Save these credentials in a secure password manager</li>
+                <li>You will be required to change the password on first login</li>
+                <li>This password will not be shown again</li>
+                <li>Delete any setup logs containing passwords</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="/Account/Login" class="btn btn-primary btn-lg">
+                <i class="fas fa-sign-in-alt"></i> Proceed to Login
+            </a>
+        </div>
+
+        <div class="mt-4 text-center">
+            <small class="text-muted">
+                <i class="fas fa-shield-alt"></i> Secured with industry-standard encryption
+            </small>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        function copyToClipboard(elementId) {
+            var text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Copied to clipboard!');
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        // Auto-hide password after 5 minutes
+        setTimeout(function() {
+            document.getElementById('adminPassword').textContent = '********';
+            alert('For security, the password has been hidden. Please ensure you have saved it.');
+        }, 300000); // 5 minutes
+    </script>
+</body>
+</html>

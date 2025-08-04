@@ -101,6 +101,10 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
         public async Task<IActionResult> Create(Finding finding)
         {
+            // Remove audit fields from model validation since they're set automatically
+            ModelState.Remove("CreatedBy");
+            ModelState.Remove("UpdatedBy");
+            
             if (ModelState.IsValid)
             {
                 try

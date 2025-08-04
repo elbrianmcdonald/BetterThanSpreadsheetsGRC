@@ -95,6 +95,48 @@
                             <label asp-for="Assessment.Description" class="form-label fw-bold">Additional Description</label>
                             <textarea asp-for="Assessment.Description" class="form-control" rows="2" placeholder="Optional additional details"></textarea>
                         </div>
+
+                        <!-- Threat Model Selection -->
+                        @if (Model.AvailableThreatModels != null && Model.AvailableThreatModels.Any())
+                        {
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Link Threat Models (Optional)</label>
+                                <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                    @foreach (var threatModel in Model.AvailableThreatModels)
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                   name="SelectedThreatModelIds" 
+                                                   value="@threatModel.Id" 
+                                                   id="threat_@threatModel.Id"
+                                                   @(Model.SelectedThreatModelIds.Contains(threatModel.Id) ? "checked" : "") />
+                                            <label class="form-check-label" for="threat_@threatModel.Id">
+                                                <strong>@threatModel.Name</strong>
+                                                @if (threatModel.Status == CyberRiskApp.Models.ThreatModelStatus.Active)
+                                                {
+                                                    <span class="badge bg-success ms-2">Active</span>
+                                                }
+                                                else if (threatModel.Status == CyberRiskApp.Models.ThreatModelStatus.Approved)
+                                                {
+                                                    <span class="badge bg-primary ms-2">Approved</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark ms-2">@threatModel.Status</span>
+                                                }
+                                                <br>
+                                                <small class="text-muted">@(threatModel.Description?.Length > 100 ? threatModel.Description.Substring(0, 100) + "..." : threatModel.Description)</small>
+                                                @if (threatModel.Attacks.Any())
+                                                {
+                                                    <br><small class="text-info">@threatModel.Attacks.Count attack scenarios</small>
+                                                }
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                                <small class="form-text text-muted">Select threat models to link with this risk assessment. This helps track which attack scenarios are being assessed.</small>
+                            </div>
+                        }
                     </div>
                 </div>
 

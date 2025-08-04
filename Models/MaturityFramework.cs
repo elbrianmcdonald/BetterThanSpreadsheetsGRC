@@ -81,7 +81,7 @@ namespace CyberRiskApp.Models
         public virtual ICollection<MaturityControlAssessment> Assessments { get; set; } = new List<MaturityControlAssessment>();
     }
 
-    public class MaturityAssessment
+    public class MaturityAssessment : IAuditableEntity
     {
         public int Id { get; set; }
 
@@ -112,8 +112,24 @@ namespace CyberRiskApp.Models
         [Range(1, int.MaxValue, ErrorMessage = "Please select a valid organization")]
         public int BusinessOrganizationId { get; set; }
 
+        // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Created By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string CreatedBy { get; set; } = string.Empty;
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Updated By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string UpdatedBy { get; set; } = string.Empty;
+        
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         // Navigation properties
         public virtual MaturityFramework? Framework { get; set; }
@@ -145,7 +161,7 @@ namespace CyberRiskApp.Models
         }
     }
 
-    public class MaturityControlAssessment
+    public class MaturityControlAssessment : IAuditableEntity
     {
         public int Id { get; set; }
 
@@ -182,8 +198,24 @@ namespace CyberRiskApp.Models
         public int MaturityControlId { get; set; }
         public int MaturityAssessmentId { get; set; }
 
+        // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Created By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string CreatedBy { get; set; } = string.Empty;
+        
+        [Required]
+        [StringLength(100)]
+        [Display(Name = "Updated By")]
+        [ScaffoldColumn(false)] // Hide from forms
+        public string UpdatedBy { get; set; } = string.Empty;
+        
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
         // Navigation properties
         public virtual MaturityControl Control { get; set; } = null!;

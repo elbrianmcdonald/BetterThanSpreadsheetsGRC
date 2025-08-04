@@ -1,0 +1,375 @@
+@model IEnumerable<CyberRiskApp.Models.AttackScenario>
+
+@{
+    ViewData["Title"] = "Attack Scenarios";
+    var threatModel = ViewBag.ThreatModel as CyberRiskApp.Models.ThreatModel;
+    var environments = ViewBag.Environments as IEnumerable<CyberRiskApp.Models.ThreatEnvironment> ?? new List<CyberRiskApp.Models.ThreatEnvironment>();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@threatModel?.Id">@threatModel?.Name</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Attack Scenarios</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-chess me-2"></i>Attack Scenarios
+                    </h2>
+                    <p class="text-muted">Manage attack scenarios for @threatModel?.Name</p>
+                </div>
+                <div>
+                    <div class="btn-group me-2" role="group">
+                        <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-plus me-2"></i>Create Scenario
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" asp-action="CreateScenario" asp-route-id="@threatModel?.Id">
+                                <i class="fas fa-chess me-2"></i>Standard Form
+                            </a></li>
+                            <li><a class="dropdown-item" asp-action="ScenarioBuilder" asp-route-id="@threatModel?.Id">
+                                <i class="fas fa-project-diagram me-2"></i>Visual Builder
+                            </a></li>
+                        </ul>
+                    </div>
+                    <a asp-action="Details" asp-route-id="@threatModel?.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Threat Model
+                    </a>
+                </div>
+            </div>
+
+            <!-- Scenarios Overview Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-0">Total Scenarios</h5>
+                                    <h2 class="mb-0">@Model.Count()</h2>
+                                </div>
+                                <i class="fas fa-chess fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-0">High Risk</h5>
+                                    <h2 class="mb-0">@Model.Count(s => s.Status == CyberRiskApp.Models.ScenarioStatus.UnderReview)</h2>
+                                </div>
+                                <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-0">In Progress</h5>
+                                    <h2 class="mb-0">@Model.Count(s => s.Status == CyberRiskApp.Models.ScenarioStatus.UnderReview)</h2>
+                                </div>
+                                <i class="fas fa-clock fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-0">Approved</h5>
+                                    <h2 class="mb-0">@Model.Count(s => s.Status == CyberRiskApp.Models.ScenarioStatus.Approved)</h2>
+                                </div>
+                                <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scenarios List -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Attack Scenarios
+                        </h5>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-light btn-sm" onclick="toggleView('card')" id="cardViewBtn">
+                                <i class="fas fa-th-large"></i> Card View
+                            </button>
+                            <button class="btn btn-outline-light btn-sm" onclick="toggleView('table')" id="tableViewBtn">
+                                <i class="fas fa-table"></i> Table View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Any())
+                    {
+                        <!-- Card View -->
+                        <div id="cardView" class="p-3">
+                            <div class="row">
+                                @foreach (var scenario in Model.OrderByDescending(s => s.CreatedAt))
+                                {
+                                    <div class="col-lg-6 col-xl-4 mb-4">
+                                        <div class="card h-100 scenario-card border-start border-4 border-primary">
+                                            <div class="card-header d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <h6 class="card-title mb-1">@scenario.Name</h6>
+                                                    <small class="text-muted">Attack Scenario</small>
+                                                </div>
+                                                <span class="badge @GetStatusBadgeClass(scenario.Status)">@scenario.Status</span>
+                                            </div>
+                                            <div class="card-body">
+                                                <p class="card-text small">
+                                                    @if (scenario.Description.Length > 120)
+                                                    {
+                                                        @(scenario.Description.Substring(0, 120) + "...")
+                                                    }
+                                                    else
+                                                    {
+                                                        @scenario.Description
+                                                    }
+                                                </p>
+                                                
+                                                
+                                                <div class="mb-2">
+                                                    <small class="text-muted">Steps: </small>
+                                                    <span class="badge bg-secondary">@scenario.Steps.Count()</span>
+                                                    <small class="text-muted ms-2">Paths: </small>
+                                                    <span class="badge bg-secondary">@scenario.AttackPaths.Count()</span>
+                                                </div>
+                                                
+                                            </div>
+                                            <div class="card-footer">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar me-1"></i>
+                                                        @scenario.CreatedAt.ToString("MMM dd, yyyy")
+                                                    </small>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="@Url.Action("ScenarioDetails", new { id = scenario.Id })" class="btn btn-outline-primary btn-sm">
+                                                            <i class="fas fa-eye me-1"></i>View
+                                                        </a>
+                                                        <button class="btn btn-outline-success btn-sm" onclick="duplicateScenario(@scenario.Id)">
+                                                            <i class="fas fa-copy me-1"></i>Copy
+                                                        </button>
+                                                        @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                                        {
+                                                            <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteScenario(@scenario.Id, '@scenario.Name')">
+                                                                <i class="fas fa-trash me-1"></i>Delete
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Table View -->
+                        <div id="tableView" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Scenario Name</th>
+                                            <th>Status</th>
+                                            <th>Complexity</th>
+                                            <th>Duration (Hours)</th>
+                                            <th>Steps</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var scenario in Model.OrderByDescending(s => s.CreatedAt))
+                                        {
+                                            <tr>
+                                                <td>
+                                                    <strong>@scenario.Name</strong>
+                                                    <br><small class="text-muted">@scenario.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                                </td>
+                                                <td><span class="badge @GetStatusBadgeClass(scenario.Status)">@scenario.Status</span></td>
+                                                <td><span class="badge bg-info">@scenario.Complexity</span></td>
+                                                <td>@scenario.EstimatedDurationHours</td>
+                                                <td>
+                                                    <span class="badge bg-secondary">@scenario.Steps.Count()</span>
+                                                    <small class="text-muted">steps</small>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a href="@Url.Action("ScenarioDetails", new { id = scenario.Id })" class="btn btn-outline-primary btn-sm">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <button class="btn btn-outline-success btn-sm" onclick="duplicateScenario(@scenario.Id)">
+                                                            <i class="fas fa-copy"></i>
+                                                        </button>
+                                                        @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                                        {
+                                                            <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteScenario(@scenario.Id, '@scenario.Name')">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-chess fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No attack scenarios created yet</h5>
+                            <p class="text-muted">Create your first attack scenario to start modeling potential threats.</p>
+                            <a asp-action="CreateScenario" asp-route-id="@threatModel?.Id" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Attack Scenario
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteScenarioModal" tabindex="-1" aria-labelledby="deleteScenarioModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteScenarioModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Delete Attack Scenario
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">
+                    <strong>Are you sure you want to delete this attack scenario?</strong>
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>Scenario:</strong> <span id="deleteScenarioName"></span>
+                </div>
+                <p class="text-muted mb-0">
+                    <small>This action cannot be undone. All associated attack steps, paths, and recommendations will also be deleted.</small>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <form asp-action="DeleteScenario" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="deleteScenarioId" name="id" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Scenario
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+
+    string GetStatusBadgeClass(CyberRiskApp.Models.ScenarioStatus status)
+    {
+        return status switch
+        {
+            CyberRiskApp.Models.ScenarioStatus.Draft => "bg-secondary",
+            CyberRiskApp.Models.ScenarioStatus.UnderReview => "bg-warning",
+            CyberRiskApp.Models.ScenarioStatus.Approved => "bg-success",
+            CyberRiskApp.Models.ScenarioStatus.Archived => "bg-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+
+
+}
+
+@section Scripts {
+<script>
+function toggleView(viewType) {
+    if (viewType === 'card') {
+        $('#cardView').show();
+        $('#tableView').hide();
+        $('#cardViewBtn').removeClass('btn-outline-light').addClass('btn-light');
+        $('#tableViewBtn').removeClass('btn-light').addClass('btn-outline-light');
+    } else {
+        $('#cardView').hide();
+        $('#tableView').show();
+        $('#tableViewBtn').removeClass('btn-outline-light').addClass('btn-light');
+        $('#cardViewBtn').removeClass('btn-light').addClass('btn-outline-light');
+    }
+    
+    // Save preference
+    localStorage.setItem('scenarioViewPreference', viewType);
+}
+
+function duplicateScenario(scenarioId) {
+    if (confirm('Create a copy of this attack scenario?')) {
+        $.post('@Url.Action("DuplicateScenario", "ThreatModeling")', { id: scenarioId })
+            .done(function(result) {
+                if (result.success) {
+                    toastr.success('Scenario duplicated successfully!');
+                    location.reload();
+                } else {
+                    toastr.error('Error duplicating scenario: ' + result.error);
+                }
+            })
+            .fail(function() {
+                toastr.error('Error duplicating scenario');
+            });
+    }
+}
+
+function confirmDeleteScenario(scenarioId, scenarioName) {
+    $('#deleteScenarioId').val(scenarioId);
+    $('#deleteScenarioName').text(scenarioName);
+    $('#deleteScenarioModal').modal('show');
+}
+
+$(document).ready(function() {
+    // Restore view preference
+    const viewPreference = localStorage.getItem('scenarioViewPreference') || 'card';
+    toggleView(viewPreference);
+});
+</script>
+}
+
+@section Styles {
+<style>
+.scenario-card {
+    transition: all 0.3s ease;
+}
+
+.scenario-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.border-start {
+    border-left-width: 4px !important;
+}
+</style>
+}

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension"
+     xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension">
+
+  <?define ProductName = "CyberRisk Management Platform" ?>
+  <?define ProductVersion = "1.0.0" ?>
+  <?define ProductCode = "{8B3A5F2C-1234-4567-8901-ABCDEF123456}" ?>
+  <?define UpgradeCode = "{9C4B6F3D-2345-5678-9012-BCDEF1234567}" ?>
+  <?define Manufacturer = "CyberRisk Solutions" ?>
+
+  <Product Id="$(var.ProductCode)" 
+           Name="$(var.ProductName)" 
+           Language="1033" 
+           Version="$(var.ProductVersion)" 
+           Manufacturer="$(var.Manufacturer)" 
+           UpgradeCode="$(var.UpgradeCode)">
+
+    <Package InstallerVersion="200" 
+             Compressed="yes" 
+             InstallScope="perMachine"
+             Platform="x64"
+             Description="$(var.ProductName) Installer" />
+
+    <!-- Major upgrade handling -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    
+    <!-- Media and cab files -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Custom properties -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/YourUsername/CyberRiskPlatform" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/YourUsername/CyberRiskPlatform" />
+
+    <!-- Prerequisites check -->
+    <PropertyRef Id="WIX_IS_NETFRAMEWORK_48_OR_LATER_INSTALLED"/>
+    <Condition Message="This application requires .NET Framework 4.8 or later.">
+      <![CDATA[Installed OR WIX_IS_NETFRAMEWORK_48_OR_LATER_INSTALLED]]>
+    </Condition>
+
+    <!-- Directory structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="CyberRiskApp">
+          <Directory Id="SCRIPTSFOLDER" Name="scripts" />
+          <Directory Id="WWWROOTFOLDER" Name="wwwroot" />
+        </Directory>
+      </Directory>
+      
+      <!-- Start Menu -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="$(var.ProductName)" />
+      </Directory>
+      
+      <!-- Desktop -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+    </Directory>
+
+    <!-- Components -->
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      
+      <!-- Main application files -->
+      <Component Id="MainExecutable" Guid="{1A2B3C4D-5E6F-7890-ABCD-EF1234567890}">
+        <File Id="CyberRiskAppExe" 
+              Source="..\publish\CyberRiskApp\CyberRiskApp.exe" 
+              KeyPath="yes" />
+        
+        <!-- Firewall exception -->
+        <fire:FirewallException Id="CyberRiskAppFirewall"
+                               Name="CyberRisk Management Platform"
+                               Port="5000"
+                               Protocol="tcp"
+                               Scope="localSubnet" />
+      </Component>
+
+      <!-- Application DLLs and dependencies -->
+      <Component Id="Dependencies" Guid="{2B3C4D5E-6F78-9012-BCDE-F12345678901}">
+        <File Source="..\publish\CyberRiskApp\CyberRiskApp.dll" />
+        <File Source="..\publish\CyberRiskApp\CyberRiskApp.deps.json" />
+        <File Source="..\publish\CyberRiskApp\CyberRiskApp.runtimeconfig.json" />
+        <File Source="..\publish\CyberRiskApp\appsettings.json" />
+        <File Source="..\publish\CyberRiskApp\appsettings.Production.json" />
+      </Component>
+
+      <!-- Scripts -->
+      <Component Id="Scripts" Guid="{3C4D5E6F-7890-1234-CDEF-123456789012}" Directory="SCRIPTSFOLDER">
+        <File Source="..\install.ps1" />
+        <File Source="..\setup-secure.ps1" />
+        <File Source="..\setup-database.ps1" />
+      </Component>
+
+      <!-- Windows Service -->
+      <Component Id="WindowsService" Guid="{4D5E6F78-9012-3456-DEF1-234567890123}">
+        <ServiceInstall Id="CyberRiskService"
+                       Name="CyberRiskApp"
+                       DisplayName="CyberRisk Management Platform"
+                       Description="Enterprise Cyber Risk Management and GRC Platform"
+                       Type="ownProcess"
+                       Start="auto"
+                       Account="LocalSystem"
+                       ErrorControl="normal"
+                       Arguments="--service" />
+        
+        <ServiceControl Id="StartCyberRiskService"
+                       Name="CyberRiskApp"
+                       Start="install"
+                       Stop="both"
+                       Remove="uninstall"
+                       Wait="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- Features -->
+    <Feature Id="MainApplication" 
+             Title="CyberRisk Application" 
+             Description="Core application files"
+             Level="1"
+             ConfigurableDirectory="INSTALLFOLDER"
+             AllowAdvertise="no">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <Feature Id="WindowsServiceFeature"
+             Title="Windows Service"
+             Description="Install as Windows Service (Recommended)"
+             Level="1"
+             AllowAdvertise="no">
+      <ComponentRef Id="WindowsService" />
+    </Feature>
+
+    <!-- Shortcuts -->
+    <Feature Id="Shortcuts" 
+             Title="Shortcuts" 
+             Description="Application shortcuts"
+             Level="1"
+             AllowAdvertise="no">
+      
+      <!-- Start Menu shortcut -->
+      <Component Id="StartMenuShortcut" 
+                 Directory="ApplicationProgramsFolder" 
+                 Guid="{5E6F7890-1234-5678-EF12-345678901234}">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                 Name="$(var.ProductName)"
+                 Description="Open CyberRisk Management Platform"
+                 Target="http://localhost:5000"
+                 WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" 
+                      Key="Software\Microsoft\$(var.ProductName)" 
+                      Name="installed" 
+                      Type="integer" 
+                      Value="1" 
+                      KeyPath="yes" />
+      </Component>
+
+      <!-- Desktop shortcut (optional) -->
+      <Component Id="DesktopShortcut" 
+                 Directory="DesktopFolder" 
+                 Guid="{6F789012-3456-7890-F123-456789012345}">
+        <Shortcut Id="ApplicationDesktopShortcut"
+                 Name="$(var.ProductName)"
+                 Description="Open CyberRisk Management Platform"
+                 Target="http://localhost:5000"
+                 WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" 
+                      Key="Software\Microsoft\$(var.ProductName)" 
+                      Name="desktopShortcut" 
+                      Type="integer" 
+                      Value="1" 
+                      KeyPath="yes" />
+      </Component>
+    </Feature>
+
+    <!-- Custom Actions -->
+    <CustomAction Id="OpenSetupPage" 
+                  BinaryKey="WixCA" 
+                  DllEntry="WixShellExec" 
+                  Execute="immediate" 
+                  Return="ignore" />
+    
+    <CustomAction Id="SetOpenSetupPageTarget" 
+                  Property="OpenSetupPage" 
+                  Value="http://localhost:5000/Setup" />
+
+    <!-- UI and dialogs -->
+    <UIRef Id="WixUI_FeatureTree" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <!-- Install sequence -->
+    <InstallExecuteSequence>
+      <Custom Action="SetOpenSetupPageTarget" After="InstallFinalize">
+        <![CDATA[NOT Installed]]>
+      </Custom>
+      <Custom Action="OpenSetupPage" After="SetOpenSetupPageTarget">
+        <![CDATA[NOT Installed]]>
+      </Custom>
+    </InstallExecuteSequence>
+
+  </Product>
+</Wix>

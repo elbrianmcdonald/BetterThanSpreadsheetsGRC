@@ -67,12 +67,25 @@
                         <label for="activeCertificateId" class="form-label">Active Certificate</label>
                         <select class="form-select" asp-for="ActiveCertificateId" id="activeCertificateId">
                             <option value="">No certificate selected</option>
-                            @* Certificate options will be populated by the controller *@
+                            @if (ViewBag.AvailableCertificates != null)
+                            {
+                                @foreach (var cert in ViewBag.AvailableCertificates)
+                                {
+                                    <option value="@cert.Value" selected="@(cert.Value == Model.ActiveCertificateId)">@cert.Text</option>
+                                }
+                            }
                         </select>
                         <div class="form-text">
                             Select the SSL certificate to use for HTTPS connections. 
                             Only valid, non-expired certificates are shown.
                         </div>
+                        @if (ViewBag.AvailableCertificates == null || !((IEnumerable<dynamic>)ViewBag.AvailableCertificates).Any())
+                        {
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                No valid certificates available. <a asp-action="Upload" class="alert-link">Upload a certificate</a> first.
+                            </div>
+                        }
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
@@ -139,9 +152,6 @@
     
     <script>
         $(document).ready(function() {
-            // Load available certificates
-            loadCertificates();
-            
             // Form validation and warnings
             $('#enableHttpsRedirection, #requireHttps').change(function() {
                 var activeCert = $('#activeCertificateId').val();
@@ -152,12 +162,6 @@
                 }
             });
         });
-
-        function loadCertificates() {
-            // This would be populated by the controller with certificate options
-            // For now, showing placeholder behavior
-            console.log('Loading available certificates...');
-        }
 
         function testHttpsConnection() {
             var httpsPort = $('#httpsPort').val() || 443;

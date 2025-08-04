@@ -1,0 +1,188 @@
+@model CyberRiskApp.Models.ThreatEnvironment
+
+@{
+    ViewData["Title"] = "Create Environment";
+    var threatModel = ViewBag.ThreatModel as CyberRiskApp.Models.ThreatModel;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@threatModel?.Id">@threatModel?.Name</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Environments" asp-route-id="@threatModel?.Id">Environments</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Create</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-plus me-2"></i>Create Environment
+                    </h2>
+                    <p class="text-muted">Add a new threat environment to @threatModel?.Name</p>
+                </div>
+                <div>
+                    <a asp-action="Environments" asp-route-id="@threatModel?.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Environments
+                    </a>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-building me-2"></i>Environment Details
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="CreateEnvironment" method="post">
+                                @Html.AntiForgeryToken()
+                                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                                
+                                <input type="hidden" asp-for="ThreatModelId" value="@threatModel?.Id" />
+                                <input type="hidden" asp-for="IsEnabled" value="true" />
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Name" class="form-label">Environment Name</label>
+                                        <input asp-for="Name" class="form-control" placeholder="e.g., Production Network" />
+                                        <span asp-validation-for="Name" class="text-danger"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="EnvironmentType" class="form-label">Environment Type</label>
+                                        <select asp-for="EnvironmentType" class="form-select" asp-items="ViewBag.EnvironmentTypes">
+                                            <option value="">Select environment type...</option>
+                                        </select>
+                                        <span asp-validation-for="EnvironmentType" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Description" class="form-label">Description</label>
+                                    <textarea asp-for="Description" class="form-control" rows="3" 
+                                              placeholder="Describe this environment and its purpose..."></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="AccessType" class="form-label">Access Type</label>
+                                        <select asp-for="AccessType" class="form-select" asp-items="ViewBag.AccessTypes">
+                                            <option value="">Select access type...</option>
+                                        </select>
+                                        <span asp-validation-for="AccessType" class="text-danger"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Priority" class="form-label">Priority Level (1-10)</label>
+                                        <input asp-for="Priority" type="range" class="form-range" min="1" max="10" value="5" 
+                                               oninput="this.nextElementSibling.value = this.value">
+                                        <output>5</output>
+                                        <span asp-validation-for="Priority" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input asp-for="IsSegmented" class="form-check-input" type="checkbox">
+                                        <label asp-for="IsSegmented" class="form-check-label">
+                                            Network Segmentation Enabled
+                                        </label>
+                                    </div>
+                                    <small class="text-muted">Indicates if this environment has network segmentation controls in place</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="NetworkDetails" class="form-label">Network Details</label>
+                                    <textarea asp-for="NetworkDetails" class="form-control" rows="3" 
+                                              placeholder="Network architecture, VLANs, subnets, IP ranges..."></textarea>
+                                    <span asp-validation-for="NetworkDetails" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="SecurityControls" class="form-label">Security Controls</label>
+                                    <textarea asp-for="SecurityControls" class="form-control" rows="3" 
+                                              placeholder="Firewalls, IDS/IPS, monitoring systems, access controls..."></textarea>
+                                    <span asp-validation-for="SecurityControls" class="text-danger"></span>
+                                </div>
+
+
+                                <div class="d-flex justify-content-between">
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-save me-2"></i>Create Environment
+                                    </button>
+                                    <a asp-action="Environments" asp-route-id="@threatModel?.Id" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+    $(document).ready(function() {
+        // Priority slider update
+        $('input[type="range"]').on('input', function() {
+            $(this).next('output').text($(this).val());
+        });
+        
+        // Environment type icon preview
+        $('#EnvironmentType').change(function() {
+            const type = $(this).val();
+            const iconMap = {
+                'CrownJewels': 'fa-crown',
+                'Azure': 'fa-cloud',
+                'Corporate': 'fa-building',
+                'Remote': 'fa-laptop-house',
+                'Plant': 'fa-industry',
+                'OT': 'fa-cogs'
+            };
+            
+            if (type && iconMap[type]) {
+                if (!$('.environment-icon').length) {
+                    $(this).after('<div class="environment-icon mt-2"><i class="fas ' + iconMap[type] + ' fa-2x text-primary"></i></div>');
+                } else {
+                    $('.environment-icon i').attr('class', 'fas ' + iconMap[type] + ' fa-2x text-primary');
+                }
+            } else {
+                $('.environment-icon').remove();
+            }
+        });
+    });
+    </script>
+}
+
+@section Styles {
+<style>
+.form-range::-webkit-slider-thumb {
+    background: #28a745;
+}
+
+.form-range::-moz-range-thumb {
+    background: #28a745;
+}
+
+.environment-icon {
+    text-align: center;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.card-header {
+    border-bottom: none;
+}
+</style>
+}

@@ -1,0 +1,193 @@
+@model CyberRiskApp.Models.AttackScenario
+
+@{
+    ViewData["Title"] = "Create Attack Scenario";
+    var threatModel = ViewBag.ThreatModel as CyberRiskApp.Models.ThreatModel;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Threat Modeling</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Details" asp-route-id="@threatModel?.Id">@threatModel?.Name</a></li>
+                            <li class="breadcrumb-item"><a asp-action="Scenarios" asp-route-id="@threatModel?.Id">Scenarios</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Create</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-chess me-2"></i>Create Attack Scenario
+                    </h2>
+                    <p class="text-muted">Define a new attack scenario for @threatModel?.Name</p>
+                </div>
+                <div>
+                    <a asp-action="Scenarios" asp-route-id="@threatModel?.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Scenarios
+                    </a>
+                </div>
+            </div>
+
+            <form asp-action="CreateScenario" method="post" id="scenarioForm">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                
+                <!-- Hidden fields -->
+                <input type="hidden" asp-for="ThreatModelId" value="@threatModel?.Id" />
+                <input type="hidden" asp-for="Status" value="@CyberRiskApp.Models.ScenarioStatus.Draft" />
+
+                <div class="row">
+                    <!-- Main Form -->
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Scenario Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="Name" class="form-label">Scenario Name</label>
+                                    <input asp-for="Name" class="form-control" placeholder="e.g., Phishing Attack on Finance Department" />
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Description" class="form-label">Scenario Description</label>
+                                    <textarea asp-for="Description" class="form-control" rows="4" 
+                                              placeholder="Describe the attack scenario, including the attacker's motivation, capabilities, and approach..."></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="InitialAccess" class="form-label">Initial Access Method</label>
+                                        <textarea asp-for="InitialAccess" class="form-control" rows="2" 
+                                                  placeholder="How does the attacker gain initial access?"></textarea>
+                                        <span asp-validation-for="InitialAccess" class="text-danger"></span>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label asp-for="Objective" class="form-label">Attack Objective</label>
+                                        <textarea asp-for="Objective" class="form-control" rows="2" 
+                                                  placeholder="What is the attacker trying to achieve?"></textarea>
+                                        <span asp-validation-for="Objective" class="text-danger"></span>
+                                    </div>
+                                </div>
+
+
+                                <div class="mb-3">
+                                    <label asp-for="EstimatedDurationHours" class="form-label">Estimated Duration (Hours)</label>
+                                    <input asp-for="EstimatedDurationHours" type="number" class="form-control" 
+                                           placeholder="How long might this attack take?" />
+                                    <span asp-validation-for="EstimatedDurationHours" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Complexity" class="form-label">Attack Complexity</label>
+                                    <select asp-for="Complexity" class="form-select" asp-items="ViewBag.AttackComplexities">
+                                        <option value="">Select complexity...</option>
+                                    </select>
+                                    <span asp-validation-for="Complexity" class="text-danger"></span>
+                                </div>
+
+                                <!-- Helpful Tips -->
+                                <div class="alert alert-light border mt-4">
+                                    <h6 class="mb-2"><i class="fas fa-lightbulb me-2"></i>Tips for Creating Attack Scenarios</h6>
+                                    <ul class="small mb-0">
+                                        <li>Be specific about the attack vector and techniques used</li>
+                                        <li>Consider the attacker's skill level and resources</li>
+                                        <li>Think about detection opportunities at each stage</li>
+                                        <li>Document potential business impact beyond technical damage</li>
+                                        <li>Consider both preventive and detective controls</li>
+                                    </ul>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Controls and Mitigations -->
+                        <div class="card mt-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Controls & Mitigations</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="ExistingControls" class="form-label">Existing Security Controls</label>
+                                    <textarea asp-for="ExistingControls" class="form-control" rows="3" 
+                                              placeholder="List current security controls that might prevent or detect this attack..."></textarea>
+                                    <span asp-validation-for="ExistingControls" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="ControlGaps" class="form-label">Control Gaps</label>
+                                    <textarea asp-for="ControlGaps" class="form-control" rows="3" 
+                                              placeholder="Identify gaps in current security controls..."></textarea>
+                                    <span asp-validation-for="ControlGaps" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="RecommendedMitigations" class="form-label">Recommended Mitigations</label>
+                                    <textarea asp-for="RecommendedMitigations" class="form-control" rows="4" 
+                                              placeholder="Recommend specific mitigations to address this attack scenario..."></textarea>
+                                    <span asp-validation-for="RecommendedMitigations" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="card mt-4">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-save me-2"></i>Create Scenario
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success ms-2" onclick="saveAsDraft()">
+                                            <i class="fas fa-file me-2"></i>Save as Draft
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <a asp-action="Scenarios" asp-route-id="@threatModel?.Id" class="btn btn-secondary">
+                                            <i class="fas fa-times me-2"></i>Cancel
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+<script>
+$(document).ready(function() {
+    // Auto-resize textareas
+    $('textarea').on('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+});
+
+
+function saveAsDraft() {
+    $('#Status').val('0'); // Draft status
+    $('#scenarioForm').submit();
+}
+</script>
+}
+
+@section Styles {
+<style>
+
+textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+</style>
+}

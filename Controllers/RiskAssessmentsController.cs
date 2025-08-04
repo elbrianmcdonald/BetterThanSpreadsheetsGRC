@@ -21,6 +21,7 @@ namespace CyberRiskApp.Controllers
         private readonly IPdfExportService _pdfExportService;
         private readonly IRiskMatrixService _riskMatrixService; // ADDED: Risk matrix service
         private readonly CyberRiskContext _context; // ADDED: Context for control management
+        private readonly IThreatModelingService _threatModelingService; // ADDED: Threat modeling service
 
         public RiskAssessmentsController(
             IRiskAssessmentService assessmentService,
@@ -29,7 +30,8 @@ namespace CyberRiskApp.Controllers
             IFindingService findingService, // ADDED: Findings service
             IPdfExportService pdfExportService,
             IRiskMatrixService riskMatrixService, // ADDED: Risk matrix service
-            CyberRiskContext context) // ADDED: Context for control management
+            CyberRiskContext context, // ADDED: Context for control management
+            IThreatModelingService threatModelingService) // ADDED: Threat modeling service
         {
             _assessmentService = assessmentService;
             _riskService = riskService;
@@ -38,6 +40,7 @@ namespace CyberRiskApp.Controllers
             _pdfExportService = pdfExportService;
             _riskMatrixService = riskMatrixService; // ADDED: Risk matrix service
             _context = context; // ADDED: Context for control management
+            _threatModelingService = threatModelingService; // ADDED: Threat modeling service
         }
 
         // UPDATED: All users can view risk assessments
@@ -56,6 +59,22 @@ namespace CyberRiskApp.Controllers
             var assessment = await _assessmentService.GetAssessmentByIdAsync(id);
             if (assessment == null)
                 return NotFound();
+
+            // Load threat models and their attack scenarios for this assessment
+            var attackScenariosDict = new Dictionary<int, IEnumerable<AttackScenario>>();
+            if (assessment.LinkedThreatModels?.Any() == true)
+            {
+                foreach (var threatModel in assessment.LinkedThreatModels)
+                {
+                    // Load attack scenarios for each threat model
+                    var scenarios = await _threatModelingService.GetAttackScenariosByThreatModelIdAsync(threatModel.Id);
+                    attackScenariosDict[threatModel.Id] = scenarios ?? new List<AttackScenario>();
+                    
+                    // Debug logging
+                    Console.WriteLine($"Threat Model: {threatModel.Name} (ID: {threatModel.Id}) has {scenarios?.Count() ?? 0} scenarios");
+                }
+            }
+            ViewBag.AttackScenarios = attackScenariosDict;
 
             return View(assessment);
         }
@@ -138,6 +157,9 @@ namespace CyberRiskApp.Controllers
             // Load risk level settings
             model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
 
+            // Load available threat models
+            model.AvailableThreatModels = (await _threatModelingService.GetAllThreatModelsAsync()).ToList();
+
             return View(model);
         }
 
@@ -172,6 +194,9 @@ namespace CyberRiskApp.Controllers
 
             // Load risk level settings
             model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
+
+            // Load available threat models
+            model.AvailableThreatModels = (await _threatModelingService.GetAllThreatModelsAsync()).ToList();
 
             // Pass available matrices to the view
             ViewBag.AvailableMatrices = allMatrices.Where(m => m.IsActive).ToList();
@@ -249,19 +274,33 @@ namespace CyberRiskApp.Controllers
                             risk.CreatedAt = DateTime.UtcNow;
                             risk.UpdatedAt = DateTime.UtcNow;
                             
+                            // IMPORTANT: Inherit ALE from the FAIR assessment
+                            risk.ALE = createdAssessment.AnnualLossExpectancy ?? 0m;
+                            
+                            // Calculate risk level based on ALE using assessment's method
+                            var calculatedRiskLevel = createdAssessment.CalculateRiskLevel();
+                            var riskLevelEnum = calculatedRiskLevel switch
+                            {
+                                "Critical" => RiskLevel.Critical,
+                                "High" => RiskLevel.High,
+                                "Medium" => RiskLevel.Medium,
+                                "Low" => RiskLevel.Low,
+                                _ => RiskLevel.Medium
+                            };
+                            
+                            // Set risk levels based on calculated assessment level
+                            risk.RiskLevel = riskLevelEnum;
+                            
                             // Set default enum values if not provided (to avoid value '0' errors)
                             if (risk.Impact == 0) risk.Impact = ImpactLevel.Medium;
                             if (risk.Likelihood == 0) risk.Likelihood = LikelihoodLevel.Possible;
                             if (risk.Exposure == 0) risk.Exposure = ExposureLevel.ModeratelyExposed;
-                            if (risk.InherentRiskLevel == 0) risk.InherentRiskLevel = RiskLevel.Medium;
-                            if (risk.ResidualRiskLevel == 0) risk.ResidualRiskLevel = RiskLevel.Medium;
-                            if (risk.RiskLevel == 0) risk.RiskLevel = RiskLevel.Medium;
+                            if (risk.InherentRiskLevel == 0) risk.InherentRiskLevel = riskLevelEnum;
+                            if (risk.ResidualRiskLevel == 0) risk.ResidualRiskLevel = riskLevelEnum;
+                            if (risk.RiskLevel == 0) risk.RiskLevel = riskLevelEnum;
                             
-                            // Generate risk number - will be set by service if not provided
-                            if (string.IsNullOrEmpty(risk.RiskNumber))
-                            {
-                                risk.RiskNumber = $"RISK-{DateTime.Now:yyyyMMdd}-{createdAssessment.Id:000}-{risk.Title.Substring(0, Math.Min(3, risk.Title.Length)).ToUpper()}";
-                            }
+                            // Risk number will be auto-generated by RiskService if not provided
+                            // Leave RiskNumber empty to allow service to generate proper sequential number
                             
                             // Set default treatment if not provided
                             if (risk.Treatment == 0)
@@ -269,9 +308,23 @@ namespace CyberRiskApp.Controllers
                                 risk.Treatment = TreatmentStrategy.Mitigate;
                             }
                             
-                            _context.Risks.Add(risk);
+                            // Use RiskService to create risk with proper ID generation
+                            await _riskService.CreateRiskAsync(risk);
                         }
-                        await _context.SaveChangesAsync();
+                    }
+
+                    // Link selected threat models to the risk assessment
+                    if (model.SelectedThreatModelIds != null && model.SelectedThreatModelIds.Any())
+                    {
+                        foreach (var threatModelId in model.SelectedThreatModelIds)
+                        {
+                            var threatModel = await _threatModelingService.GetThreatModelByIdAsync(threatModelId);
+                            if (threatModel != null)
+                            {
+                                threatModel.RiskAssessmentId = createdAssessment.Id;
+                                await _threatModelingService.UpdateThreatModelAsync(threatModel);
+                            }
+                        }
                     }
 
                     TempData["Success"] = "FAIR risk assessment created successfully.";
@@ -283,8 +336,9 @@ namespace CyberRiskApp.Controllers
                 }
             }
 
-            // Reload risk level settings if validation fails
+            // Reload risk level settings and threat models if validation fails
             model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
+            model.AvailableThreatModels = (await _threatModelingService.GetAllThreatModelsAsync()).ToList();
             return View(model);
         }
 
@@ -401,6 +455,20 @@ namespace CyberRiskApp.Controllers
                         await _context.SaveChangesAsync();
                     }
 
+                    // Link selected threat models to the risk assessment
+                    if (model.SelectedThreatModelIds != null && model.SelectedThreatModelIds.Any())
+                    {
+                        foreach (var threatModelId in model.SelectedThreatModelIds)
+                        {
+                            var threatModel = await _threatModelingService.GetThreatModelByIdAsync(threatModelId);
+                            if (threatModel != null)
+                            {
+                                threatModel.RiskAssessmentId = createdAssessment.Id;
+                                await _threatModelingService.UpdateThreatModelAsync(threatModel);
+                            }
+                        }
+                    }
+
                     TempData["Success"] = "Qualitative risk assessment created successfully.";
                     return RedirectToAction(nameof(Details), new { id = createdAssessment.Id });
                 }
@@ -410,8 +478,15 @@ namespace CyberRiskApp.Controllers
                 }
             }
 
-            // Reload risk level settings if validation fails
+            // Reload risk level settings and threat models if validation fails
             model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
+            model.AvailableThreatModels = (await _threatModelingService.GetAllThreatModelsAsync()).ToList();
+            
+            // Also reload matrices for qualitative assessments
+            var allMatrices = await _riskMatrixService.GetAllMatricesAsync();
+            ViewBag.AvailableMatrices = allMatrices.Where(m => m.IsActive).ToList();
+            ViewBag.DefaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+            
             return View(model);
         }
 
@@ -421,6 +496,10 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
         public async Task<IActionResult> Create(FAIRAssessmentViewModel model)
         {
+            // Remove audit fields from model validation since they're set automatically
+            ModelState.Remove("Assessment.CreatedBy");
+            ModelState.Remove("Assessment.UpdatedBy");
+            
             if (ModelState.IsValid)
             {
                 try
@@ -682,7 +761,7 @@ namespace CyberRiskApp.Controllers
 
                 var risksCreated = 0;
 
-                // Create risks from identified risks in the assessment
+                // Create risks ONLY from manually identified risks in the assessment
                 if (assessment.Status == AssessmentStatus.Completed && assessment.IdentifiedRisks?.Any() == true)
                 {
                     var currentSettings = await _settingsService.GetActiveSettingsAsync();
@@ -698,47 +777,43 @@ namespace CyberRiskApp.Controllers
                             BusinessUnit = assessment.BusinessUnit ?? "Unknown",
                             ThreatScenario = assessment.ThreatScenario,
                             CIATriad = assessment.CIATriad ?? CIATriad.All,
-                            Owner = !string.IsNullOrEmpty(identifiedRisk.Owner) ? identifiedRisk.Owner : assessment.Assessor,
-                            ALE = Math.Max(assessment.AnnualLossExpectancy ?? 0, 0)
+                            Owner = !string.IsNullOrEmpty(identifiedRisk.Owner) ? identifiedRisk.Owner : 
+                                   (!string.IsNullOrEmpty(assessment.Assessor) ? assessment.Assessor : "Unknown"),
+                            // Inherit ALE from the assessment (especially important for FAIR assessments)
+                            ALE = assessment.AnnualLossExpectancy ?? 0m,
+                            RiskAssessmentId = assessment.Id,
+                            Status = RiskStatus.Open,
+                            OpenDate = DateTime.Today,
+                            NextReviewDate = DateTime.Today.AddMonths(3),
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            Impact = ImpactLevel.High,
+                            Likelihood = LikelihoodLevel.Possible,
+                            Exposure = ExposureLevel.HighlyExposed,
+                            Treatment = TreatmentStrategy.Mitigate
                         };
 
-                        // Set ALE with minimum value
-                        if (risk.ALE < 1000)
+                        // Use the assessment's risk level calculation method for consistency
+                        var calculatedRiskLevel = assessment.CalculateRiskLevel();
+                        risk.RiskLevel = calculatedRiskLevel switch
                         {
-                            risk.ALE = Math.Max((assessment.AnnualLossExpectancy ?? 0), 1000);
-                        }
+                            "Critical" => RiskLevel.Critical,
+                            "High" => RiskLevel.High,
+                            "Medium" => RiskLevel.Medium,
+                            "Low" => RiskLevel.Low,
+                            _ => RiskLevel.Medium // Fallback for "Unknown" or other values
+                        };
 
-                        // Calculate risk level from assessment results or identified risk level
-                        if (currentSettings != null)
-                        {
-                            risk.RiskLevel = assessment.AssessmentType == AssessmentType.FAIR
-                                ? risk.ALE >= currentSettings.FairCriticalThreshold ? RiskLevel.Critical :
-                                  risk.ALE >= currentSettings.FairHighThreshold ? RiskLevel.High :
-                                  risk.ALE >= currentSettings.FairMediumThreshold ? RiskLevel.Medium : RiskLevel.Low
-                                : assessment.QualitativeRiskScore >= currentSettings.QualitativeCriticalThreshold ? RiskLevel.Critical :
-                                  assessment.QualitativeRiskScore >= currentSettings.QualitativeHighThreshold ? RiskLevel.High :
-                                  assessment.QualitativeRiskScore >= currentSettings.QualitativeMediumThreshold ? RiskLevel.Medium : RiskLevel.Low;
-                        }
-                        else
-                        {
-                            // Fallback to default risk categorization
-                            risk.RiskLevel = risk.ALE >= 100000 ? RiskLevel.Critical :
-                                            risk.ALE >= 50000 ? RiskLevel.High :
-                                            risk.ALE >= 10000 ? RiskLevel.Medium : RiskLevel.Low;
-                        }
-
-                        // Set risk metadata
-                        risk.Status = RiskStatus.Open;
-                        risk.OpenDate = DateTime.Today;
-                        risk.NextReviewDate = DateTime.Today.AddMonths(3);
-                        risk.CreatedAt = DateTime.UtcNow;
-                        risk.UpdatedAt = DateTime.UtcNow;
-                        risk.RiskAssessmentId = assessment.Id;
+                        risk.InherentRiskLevel = risk.RiskLevel;
+                        risk.ResidualRiskLevel = risk.RiskLevel;
 
                         await _riskService.CreateRiskAsync(risk);
                         risksCreated++;
 
-                        Console.WriteLine($"Created risk '{risk.Title}' with owner: {risk.Owner}, ALE: ${risk.ALE}, Level: {risk.RiskLevel}");
+                        Console.WriteLine($"✅ Created identified risk '{risk.Title}' from {assessment.AssessmentType} assessment");
+                        Console.WriteLine($"   - Assessment ALE: ${assessment.AnnualLossExpectancy ?? 0:N0}");
+                        Console.WriteLine($"   - Risk ALE: ${risk.ALE:N0}");
+                        Console.WriteLine($"   - Risk Level: {risk.RiskLevel}");
                     }
                 }
 

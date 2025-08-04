@@ -143,32 +143,73 @@ namespace CyberRiskApp.Services
             return await CreateCertificateAsync(sslCertificate);
         }
 
-        public async Task<SSLSettings> GetSSLSettingsAsync()
+        public async Task<SSLSettings?> GetSSLSettingsAsync()
         {
-            var settings = await _context.SSLSettings
-                .Include(s => s.ActiveCertificate)
-                .FirstOrDefaultAsync();
+            try
+            {
+                return await _context.SSLSettings
+                    .Include(s => s.ActiveCertificate)
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to retrieve SSL settings from database");
+                return null;
+            }
+        }
 
+        public async Task<SSLSettings> GetOrCreateSSLSettingsAsync()
+        {
+            var settings = await GetSSLSettingsAsync();
+            
             if (settings == null)
             {
                 settings = new SSLSettings
                 {
+                    EnableHttpsRedirection = false,
+                    RequireHttps = false,
+                    HttpsPort = 443,
                     CreatedBy = "System",
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.SSLSettings.Add(settings);
                 await _context.SaveChangesAsync();
+                
+                // Reload with includes
+                settings = await GetSSLSettingsAsync();
             }
 
-            return settings;
+            return settings!;
         }
 
         public async Task<SSLSettings> UpdateSSLSettingsAsync(SSLSettings settings)
         {
-            settings.UpdatedAt = DateTime.UtcNow;
-            _context.SSLSettings.Update(settings);
-            await _context.SaveChangesAsync();
-            return settings;
+            // Use a fresh context query to avoid tracking conflicts
+            var existingSettings = await _context.SSLSettings
+                .FirstOrDefaultAsync();
+            
+            if (existingSettings != null)
+            {
+                // Update the existing tracked entity
+                existingSettings.EnableHttpsRedirection = settings.EnableHttpsRedirection;
+                existingSettings.RequireHttps = settings.RequireHttps;
+                existingSettings.HttpsPort = settings.HttpsPort;
+                existingSettings.ActiveCertificateId = settings.ActiveCertificateId;
+                existingSettings.UpdatedBy = settings.UpdatedBy;
+                existingSettings.UpdatedAt = DateTime.UtcNow;
+                
+                await _context.SaveChangesAsync();
+                return existingSettings;
+            }
+            else
+            {
+                // Create new settings record
+                settings.CreatedAt = DateTime.UtcNow;
+                settings.UpdatedAt = DateTime.UtcNow;
+                _context.SSLSettings.Add(settings);
+                await _context.SaveChangesAsync();
+                return settings;
+            }
         }
 
         public async Task<bool> SetActiveCertificateAsync(int certificateId, string updatedBy)
@@ -177,27 +218,53 @@ namespace CyberRiskApp.Services
             if (certificate == null || !certificate.IsValid)
                 return false;
 
-            var settings = await GetSSLSettingsAsync();
+            // Get settings without includes to avoid tracking conflicts
+            var settings = await _context.SSLSettings.FirstOrDefaultAsync();
             
             // Deactivate current certificate
-            if (settings.ActiveCertificateId.HasValue)
+            if (settings?.ActiveCertificateId.HasValue == true)
             {
                 var currentCert = await GetCertificateByIdAsync(settings.ActiveCertificateId.Value);
                 if (currentCert != null)
                 {
                     currentCert.IsActive = false;
-                    await UpdateCertificateAsync(currentCert);
+                    currentCert.UpdatedAt = DateTime.UtcNow;
+                    // Use Update to avoid tracking issues
+                    _context.Entry(currentCert).State = EntityState.Modified;
                 }
             }
 
             // Activate new certificate
             certificate.IsActive = true;
-            await UpdateCertificateAsync(certificate);
+            certificate.UpdatedAt = DateTime.UtcNow;
+            _context.Entry(certificate).State = EntityState.Modified;
 
-            settings.ActiveCertificateId = certificateId;
-            settings.UpdatedBy = updatedBy;
-            await UpdateSSLSettingsAsync(settings);
+            // Update settings
+            if (settings != null)
+            {
+                settings.ActiveCertificateId = certificateId;
+                settings.UpdatedBy = updatedBy;
+                settings.UpdatedAt = DateTime.UtcNow;
+                // settings is already tracked from the query above
+            }
+            else
+            {
+                // Create new settings if none exist
+                settings = new SSLSettings
+                {
+                    ActiveCertificateId = certificateId,
+                    EnableHttpsRedirection = false,
+                    RequireHttps = false,
+                    HttpsPort = 443,
+                    CreatedBy = updatedBy,
+                    UpdatedBy = updatedBy,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.SSLSettings.Add(settings);
+            }
 
+            await _context.SaveChangesAsync();
             return true;
         }
 
