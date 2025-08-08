@@ -1,0 +1,204 @@
+@model IEnumerable<CyberRiskApp.Models.AttackChain>
+
+@{
+    ViewData["Title"] = "Threat Model Templates";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>Threat Model Templates
+                    </h3>
+                    <div>
+                        <a asp-action="AssessmentThreatModels" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-shield-alt me-1"></i>Assessment Models
+                        </a>
+                        <a asp-action="FlowchartDesigner" class="btn btn-primary">
+                            <i class="fas fa-drafting-compass me-1"></i>Create New Template
+                        </a>
+                        <a asp-action="MitreDataManagement" class="btn btn-outline-info ms-2">
+                            <i class="fas fa-database me-1"></i>MITRE Data
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (Model.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Initial Threat Event</th>
+                                        <th>Final Loss Event</th>
+                                        <th>Status</th>
+                                        <th>LEF</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@Html.DisplayFor(modelItem => item.Name)</strong>
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <br><small class="text-muted">@item.Description</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.ThreatEvent != null)
+                                                {
+                                                    <span class="badge bg-warning text-dark">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>@item.ThreatEvent.Title
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.LossEvent != null)
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-dollar-sign me-1"></i>@item.LossEvent.Title
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @{
+                                                    var statusBadge = item.Status switch
+                                                    {
+                                                        CyberRiskApp.Models.AttackChainStatus.Draft => "bg-secondary",
+                                                        CyberRiskApp.Models.AttackChainStatus.UnderReview => "bg-warning text-dark",
+                                                        CyberRiskApp.Models.AttackChainStatus.Reviewed => "bg-info",
+                                                        CyberRiskApp.Models.AttackChainStatus.Approved => "bg-success",
+                                                        CyberRiskApp.Models.AttackChainStatus.Archived => "bg-dark",
+                                                        _ => "bg-secondary"
+                                                    };
+                                                }
+                                                <span class="badge @statusBadge">@item.Status</span>
+                                            </td>
+                                            <td>
+                                                @if (item.LossEvent != null && item.LossEvent.LefMostLikely > 0)
+                                                {
+                                                    <span class="fw-bold text-warning">
+                                                        @item.LossEvent.LefMostLikely.ToString("N3")/year
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Not calculated</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    @item.CreatedAt.ToString("MMM dd, yyyy")<br>
+                                                    by @item.CreatedBy
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a asp-action="FlowchartDesigner" asp-route-id="@item.Id" asp-route-readOnly="true" class="btn btn-outline-info" title="View Template">
+                                                        <i class="fas fa-eye me-1"></i> View
+                                                    </a>
+                                                    <a asp-action="FlowchartDesigner" asp-route-id="@item.Id" class="btn btn-outline-primary" title="Edit Template">
+                                                        <i class="fas fa-drafting-compass me-1"></i> Edit
+                                                    </a>
+                                                    @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                                    {
+                                                        <button type="button" class="btn btn-outline-danger" title="Delete Threat Model" 
+                                                                onclick="confirmDelete(@item.Id, '@Html.Raw(Html.Encode(item.Name).Replace("'", "\\'"))')">
+                                                            <i class="fas fa-trash"></i> Delete
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-project-diagram fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Threat Model Templates Found</h5>
+                            <p class="text-muted">Create your first threat model template using our simple form-based interface. Templates can be reused across multiple risk assessments.</p>
+                            <a asp-action="FlowchartDesigner" class="btn btn-primary btn-lg">
+                                <i class="fas fa-drafting-compass me-2"></i>Create Your First Template
+                            </a>
+                            <div class="mt-4">
+                                <p class="text-muted">Import MITRE ATT&CK data for enhanced threat modeling:</p>
+                                <a asp-action="MitreDataManagement" class="btn btn-outline-info ms-2">
+                                    <i class="fas fa-database me-1"></i>Import MITRE Data
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone! All associated data will be permanently deleted.
+                </div>
+                <p>Are you sure you want to delete the following threat model?</p>
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title" id="deleteThreatModelName"></h6>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Threat Model
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, name) {
+            // Set the form action
+            document.getElementById('deleteForm').action = '@Url.Action("Delete", "AttackChain")/' + id;
+            
+            // Set the threat model name in the modal
+            document.getElementById('deleteThreatModelName').textContent = name;
+            
+            // Show the modal
+            var modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+            modal.show();
+        }
+        
+        // Auto-refresh every 30 seconds to show updated calculations
+        setTimeout(function() {
+            window.location.reload();
+        }, 30000);
+    </script>
+}

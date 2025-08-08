@@ -1,0 +1,321 @@
+@model CyberRiskApp.Models.AttackChain
+
+@{
+    ViewData["Title"] = "Threat Model Details";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>@Model.Name
+                    </h3>
+                    <div>
+                        <a asp-action="FlowchartDesigner" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="fas fa-drafting-compass me-1"></i>Edit in Designer
+                        </a>
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                            <i class="fas fa-cog me-1"></i>Edit Properties
+                        </a>
+                        <a asp-action="Index" class="btn btn-outline-dark">
+                            <i class="fas fa-arrow-left me-1"></i>Back to List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-muted">Basic Information</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th style="width: 40%;">Status:</th>
+                                    <td>
+                                        @{
+                                            var statusBadge = Model.Status switch
+                                            {
+                                                CyberRiskApp.Models.AttackChainStatus.Draft => "bg-secondary",
+                                                CyberRiskApp.Models.AttackChainStatus.UnderReview => "bg-warning text-dark",
+                                                CyberRiskApp.Models.AttackChainStatus.Reviewed => "bg-info",
+                                                CyberRiskApp.Models.AttackChainStatus.Approved => "bg-success",
+                                                CyberRiskApp.Models.AttackChainStatus.Archived => "bg-dark",
+                                                _ => "bg-secondary"
+                                            };
+                                        }
+                                        <span class="badge @statusBadge">@Model.Status</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Description:</th>
+                                    <td>@(string.IsNullOrEmpty(Model.Description) ? "No description provided" : Model.Description)</td>
+                                </tr>
+                                <tr>
+                                    <th>Created By:</th>
+                                    <td>@Model.CreatedBy</td>
+                                </tr>
+                                <tr>
+                                    <th>Created At:</th>
+                                    <td>@Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                                </tr>
+                                <tr>
+                                    <th>Updated By:</th>
+                                    <td>@Model.UpdatedBy</td>
+                                </tr>
+                                <tr>
+                                    <th>Updated At:</th>
+                                    <td>@Model.UpdatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                                </tr>
+                                @if (!string.IsNullOrEmpty(Model.ReviewedBy))
+                                {
+                                    <tr>
+                                        <th>Reviewed By:</th>
+                                        <td>@Model.ReviewedBy</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Review Date:</th>
+                                        <td>@Model.ReviewedAt?.ToString("MMM dd, yyyy HH:mm")</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.ApprovedBy))
+                                {
+                                    <tr>
+                                        <th>Approved By:</th>
+                                        <td>@Model.ApprovedBy</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Approval Date:</th>
+                                        <td>@Model.ApprovedAt?.ToString("MMM dd, yyyy HH:mm")</td>
+                                    </tr>
+                                }
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5 class="text-muted">Risk Calculations</h5>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th style="width: 40%;">Chain Probability:</th>
+                                    <td>
+                                        @if (Model.ChainProbability > 0)
+                                        {
+                                            <span class="badge bg-warning text-dark">@Model.ChainProbability.ToString("P1")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not calculated</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>ALE Most Likely:</th>
+                                    <td>
+                                        @if (Model.ChainAleMostLikely > 0)
+                                        {
+                                            <span class="fw-bold text-danger">$@Model.ChainAleMostLikely.ToString("N0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not calculated</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>ALE Minimum:</th>
+                                    <td>
+                                        @if (Model.ChainAleMinimum > 0)
+                                        {
+                                            <span>$@Model.ChainAleMinimum.ToString("N0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not calculated</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>ALE Maximum:</th>
+                                    <td>
+                                        @if (Model.ChainAleMaximum > 0)
+                                        {
+                                            <span>$@Model.ChainAleMaximum.ToString("N0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not calculated</span>
+                                        }
+                                    </td>
+                                </tr>
+                                @if (!string.IsNullOrEmpty(Model.AssetCategory))
+                                {
+                                    <tr>
+                                        <th>Asset Category:</th>
+                                        <td>@Model.AssetCategory</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.AttackVector))
+                                {
+                                    <tr>
+                                        <th>Attack Vector:</th>
+                                        <td>@Model.AttackVector</td>
+                                    </tr>
+                                }
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5 class="text-muted">Attack Chain Components</h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="card border-warning">
+                                                <div class="card-header bg-warning text-dark">
+                                                    <i class="fas fa-exclamation-triangle me-2"></i>Initial Threat Event
+                                                </div>
+                                                <div class="card-body">
+                                                    @if (Model.ThreatEvent != null)
+                                                    {
+                                                        <h6>@Model.ThreatEvent.Title</h6>
+                                                        <p class="text-muted small">@Model.ThreatEvent.Description</p>
+                                                        <table class="table table-sm">
+                                                            <tr>
+                                                                <td>TEF Min:</td>
+                                                                <td>@Model.ThreatEvent.TefMinimum</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>TEF Most Likely:</td>
+                                                                <td>@Model.ThreatEvent.TefMostLikely</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>TEF Max:</td>
+                                                                <td>@Model.ThreatEvent.TefMaximum</td>
+                                                            </tr>
+                                                        </table>
+                                                    }
+                                                    else
+                                                    {
+                                                        <p class="text-muted">No threat event defined</p>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="card border-info">
+                                                <div class="card-header bg-info text-white">
+                                                    <i class="fas fa-shield-alt me-2"></i>Vulnerabilities
+                                                </div>
+                                                <div class="card-body">
+                                                    @if (Model.AttackChainSteps != null && Model.AttackChainSteps.Any())
+                                                    {
+                                                        <ul class="list-unstyled">
+                                                            @foreach (var step in Model.AttackChainSteps.OrderBy(s => s.StepOrder))
+                                                            {
+                                                                if (step.Vulnerability != null)
+                                                                {
+                                                                    <li class="mb-2">
+                                                                        <strong>Step @step.StepOrder: @step.Vulnerability.Title</strong>
+                                                                        <br />
+                                                                        <small class="text-muted">
+                                                                            Vuln: @step.Vulnerability.VulnMostLikely.ToString("P0")
+                                                                        </small>
+                                                                    </li>
+                                                                }
+                                                            }
+                                                        </ul>
+                                                    }
+                                                    else
+                                                    {
+                                                        <p class="text-muted">No vulnerabilities defined</p>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="card border-danger">
+                                                <div class="card-header bg-danger text-white">
+                                                    <i class="fas fa-dollar-sign me-2"></i>Final Loss Event
+                                                </div>
+                                                <div class="card-body">
+                                                    @if (Model.LossEvent != null)
+                                                    {
+                                                        <h6>@Model.LossEvent.Title</h6>
+                                                        <p class="text-muted small">@Model.LossEvent.Description</p>
+                                                        <table class="table table-sm">
+                                                            <tr>
+                                                                <td>Primary Loss:</td>
+                                                                <td>$@Model.LossEvent.PrimaryLossMostLikely?.ToString("N0")</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>Secondary Loss:</td>
+                                                                <td>$@Model.LossEvent.SecondaryLossMostLikely?.ToString("N0")</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>ALE:</td>
+                                                                <td class="fw-bold">$@Model.LossEvent.AleMostLikely.ToString("N0")</td>
+                                                            </tr>
+                                                        </table>
+                                                    }
+                                                    else
+                                                    {
+                                                        <p class="text-muted">No loss event defined</p>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    @if (Model.RiskAssessment != null)
+                    {
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <h5 class="text-muted">Linked Risk Assessment</h5>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-link me-2"></i>
+                                    This threat model is linked to risk assessment: 
+                                    <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.RiskAssessmentId" class="alert-link">
+                                        @Model.RiskAssessment.Title
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group" role="group">
+                        <a asp-action="FlowchartDesigner" asp-route-id="@Model.Id" class="btn btn-primary">
+                            <i class="fas fa-drafting-compass me-1"></i>Open in Designer
+                        </a>
+                        <a asp-action="CalculateRisk" asp-route-id="@Model.Id" class="btn btn-success">
+                            <i class="fas fa-calculator me-1"></i>Calculate Risk
+                        </a>
+                        @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                        {
+                            <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger" 
+                               onclick="return confirm('Are you sure you want to delete this threat model?');">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-refresh every 30 seconds to show updated calculations
+        setTimeout(function() {
+            window.location.reload();
+        }, 30000);
+    </script>
+}

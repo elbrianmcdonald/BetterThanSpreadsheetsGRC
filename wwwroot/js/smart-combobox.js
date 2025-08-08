@@ -3,6 +3,20 @@
  * Provides autocomplete functionality with ability to add new entries
  */
 
+// HTML encoding function to prevent XSS
+function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) {
+        return '';
+    }
+    return String(unsafe)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;');
+}
+
 // Initialize smart comboboxes when document is ready
 $(document).ready(function() {
     console.log('Smart combobox script loaded');
@@ -31,7 +45,13 @@ function convertToTextInputs() {
         // Create wrapper div for positioning the suggestions
         const $wrapper = $('<div class="position-relative"></div>');
         
-        const $input = $('<input type="text" class="form-control" name="' + name + '" value="' + currentValue + '" placeholder="' + placeholder + '"' + (required ? ' required' : '') + '>');
+        const $input = $('<input type="text" class="form-control">');
+        $input.attr('name', name);
+        $input.val(currentValue);
+        $input.attr('placeholder', placeholder);
+        if (required) {
+            $input.prop('required', true);
+        }
         
         // Create suggestions dropdown
         const $suggestions = $('<div class="smart-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: white; border: 1px solid #ddd; border-top: none; max-height: 200px; overflow-y: auto;"></div>');
@@ -141,7 +161,13 @@ function showSuggestions($input, $suggestions, results, query) {
         const description = item.description || '';
         
         const $item = $('<div class="suggestion-item p-2" style="cursor: pointer; border-bottom: 1px solid #eee;"></div>');
-        $item.html(`<strong>${value}</strong>${description ? `<br><small class="text-muted">${description}</small>` : ''}`);
+        const $strong = $('<strong></strong>').text(value);
+        $item.append($strong);
+        if (description) {
+            $item.append('<br>');
+            const $small = $('<small class="text-muted"></small>').text(description);
+            $item.append($small);
+        }
         
         $item.on('click', function() {
             $input.val(value);
@@ -170,7 +196,10 @@ function showSuggestions($input, $suggestions, results, query) {
         if (!exactMatch) {
             // Add "Create new" option
             const $addNewItem = $('<div class="suggestion-item p-2 bg-light" style="cursor: pointer; border-bottom: 1px solid #eee; border-top: 2px solid #007bff;"></div>');
-            $addNewItem.html(`<i class="fas fa-plus text-primary me-2"></i><strong>Add "${query}"</strong><br><small class="text-muted">Create new entry</small>`);
+            $addNewItem.append('<i class="fas fa-plus text-primary me-2"></i>');
+            const $addStrong = $('<strong></strong>').text(`Add "${query}"`);
+            $addNewItem.append($addStrong);
+            $addNewItem.append('<br><small class="text-muted">Create new entry</small>');
             
             $addNewItem.on('click', function() {
                 createNewEntry($input, category, query.trim());
@@ -259,20 +288,28 @@ function showMessage(message, type) {
     const icon = type === 'success' ? 'fa-check-circle' : 
                  type === 'info' ? 'fa-info-circle' : 'fa-exclamation-circle';
     
-    const alert = $(`
-        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
-             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
-            <i class="fas ${icon} me-2"></i>${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    `);
+    const $alert = $('<div class="alert alert-dismissible fade show position-fixed" role="alert">');
+    $alert.addClass(alertClass);
+    $alert.css({
+        'top': '20px',
+        'right': '20px', 
+        'z-index': '9999',
+        'min-width': '300px'
+    });
     
-    $('body').append(alert);
+    const $icon = $('<i></i>').addClass(`fas ${icon} me-2`);
+    $alert.append($icon);
+    $alert.append(document.createTextNode(message));
+    
+    const $button = $('<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>');
+    $alert.append($button);
+    
+    $('body').append($alert);
     
     // Auto-dismiss after 5 seconds (except for info messages which dismiss after 3 seconds)
     const timeout = type === 'info' ? 3000 : 5000;
     setTimeout(() => {
-        alert.alert('close');
+        $alert.alert('close');
     }, timeout);
 }
 
@@ -384,8 +421,8 @@ function initializeSmartComboboxes() {
                             if (!existingMatch) {
                                 console.log('Adding "Add new" option for:', params.term);
                                 results.unshift({
-                                    id: `__new__${params.term}`,
-                                    text: `➕ Add "${params.term}"`,
+                                    id: '__new__' + escapeHtml(params.term),
+                                    text: '➕ Add "' + escapeHtml(params.term) + '"',
                                     isNew: true,
                                     newValue: params.term
                                 });
@@ -511,24 +548,6 @@ async function trackUsage(category, value) {
     }
 }
 
-function showMessage(message, type) {
-    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
-    
-    const alert = $(`
-        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
-             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;" role="alert">
-            <i class="fas ${icon} me-2"></i>${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    `);
-    
-    $('body').append(alert);
-    
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-        alert.alert('close');
-    }, 5000);
-}
+// Duplicate function removed - using the first showMessage function
 
 

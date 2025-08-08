@@ -1,0 +1,1512 @@
+@model CyberRiskApp.Models.AttackChain
+
+@{
+    var readOnly = ViewData["ReadOnly"] as bool? ?? false;
+    var isAssessmentSpecific = ViewBag.IsAssessmentSpecific ?? false;
+    var riskAssessmentId = ViewBag.RiskAssessmentId ?? 0;
+    
+    string titleSuffix = isAssessmentSpecific ? "Assessment-Specific Threat Model" : "Threat Model Template";
+    ViewData["Title"] = readOnly ? $"View {titleSuffix}" : 
+                       (Model?.Id > 0 ? $"Edit {titleSuffix}" : $"{titleSuffix} Designer");
+    
+    // Get insurance settings from active risk level threshold
+    var insuranceSettings = ViewData["InsuranceSettings"] as dynamic;
+    var coverageLimit = insuranceSettings?.CoverageLimit ?? 1000000m;
+    var deductible = insuranceSettings?.Deductible ?? 25000m;
+    var coveragePercentage = insuranceSettings?.CoveragePercentage ?? 80m;
+    var enabledByDefault = insuranceSettings?.EnabledByDefault ?? false;
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Left Panel: Form -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header @(readOnly ? "bg-info" : (isAssessmentSpecific ? "bg-success" : "bg-primary")) text-white">
+                    <h5 class="mb-0">
+                        <i class="fas @(readOnly ? "fa-eye" : "fa-edit") me-2"></i>@(readOnly ? $"View {titleSuffix}" : $"Edit {titleSuffix}")
+                    </h5>
+                    @if (isAssessmentSpecific && riskAssessmentId > 0)
+                    {
+                        <small class="text-white-50">
+                            <i class="fas fa-link me-1"></i>Linked to Risk Assessment #@riskAssessmentId
+                        </small>
+                    }
+                </div>
+                <div class="card-body" style="max-height: 85vh; overflow-y: auto;">
+                    <form id="threatModelForm">
+                        <!-- Basic Info -->
+                        <div class="mb-3">
+                            <label for="modelName" class="form-label fw-bold">Model Name</label>
+                            <input type="text" class="form-control @(readOnly ? "bg-light" : "")" id="modelName" value="@Model?.Name" required @(readOnly ? "readonly" : "")>
+                        </div>
+                        <div class="mb-3">
+                            <label for="modelDescription" class="form-label fw-bold">Description</label>
+                            <textarea class="form-control @(readOnly ? "bg-light" : "")" id="modelDescription" rows="2" @(readOnly ? "readonly" : "")>@Model?.Description</textarea>
+                        </div>
+                        
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <div class="mb-3">
+                                <label for="modelStatus" class="form-label fw-bold">Status</label>
+                                <select class="form-select" id="modelStatus">
+                                    <option value="0" selected>Draft</option>
+                                    <option value="1">Under Review</option>
+                                    <option value="2">Reviewed</option>
+                                    <option value="3">Approved</option>
+                                    <option value="4">Archived</option>
+                                </select>
+                            </div>
+                        }
+
+                        <hr>
+
+                        <!-- Threat Event -->
+                        <div class="card mb-3 border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Threat Event
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" class="form-control form-control-sm" id="threatTitle" 
+                                           placeholder="e.g., Phishing Attack">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-control form-control-sm" id="threatDescription" rows="2"></textarea>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">MITRE Technique</label>
+                                    <select class="form-select form-select-sm" id="threatMitreTechnique">
+                                        <option value="">-- Select MITRE Technique --</option>
+                                        @if (ViewData["MitreTechniques"] != null)
+                                        {
+                                            @foreach (var technique in (IEnumerable<dynamic>)ViewData["MitreTechniques"])
+                                            {
+                                                <option value="@technique.Id">@technique.Display</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <label class="form-label">Threat Event Frequency (TEF)</label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label class="form-label small">Minimum</label>
+                                        <input type="number" class="form-control form-control-sm" id="tefMin" 
+                                               value="0.5" step="0.1" min="0" oninput="updateCalculations()">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small">Maximum</label>
+                                        <input type="number" class="form-control form-control-sm" id="tefMax" 
+                                               value="2" step="0.1" min="0" oninput="updateCalculations()">
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <label class="form-label small">Most Likely (Auto-calculated)</label>
+                                    <input type="number" class="form-control form-control-sm bg-light" id="tefMost" 
+                                           value="1.17" readonly style="background-color: #e9ecef;">
+                                    <small class="text-muted">Calculated using PERT formula: (Min + Max) / 2</small>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-6">
+                                        <label class="form-label">Threat Actor Type</label>
+                                        <select class="form-select form-select-sm" id="threatActorType">
+                                            <option value="">-- Select Actor Type --</option>
+                                            <option value="External">External</option>
+                                            <option value="Internal">Internal</option>
+                                            <option value="Partner">Partner</option>
+                                            <option value="Nation State">Nation State</option>
+                                            <option value="Criminal">Criminal</option>
+                                            <option value="Hacktivist">Hacktivist</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Threat Source</label>
+                                        <input type="text" class="form-control form-control-sm" id="threatSource" 
+                                               placeholder="e.g., Email, Web, USB">
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-6">
+                                        <label class="form-label">Protective Controls</label>
+                                        <div id="protective-controls-container">
+                                            <div class="input-group mb-2">
+                                                <select class="form-select form-select-sm smart-combobox protective-control" 
+                                                        data-category="7" data-can-add-new="true" 
+                                                        data-placeholder="Type to search for protective controls..."
+                                                        style="width: 100%;">
+                                                </select>
+                                                <button class="btn btn-outline-success btn-sm" type="button" onclick="addProtectiveControl()">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Detective Controls</label>
+                                        <div id="detective-controls-container">
+                                            <div class="input-group mb-2">
+                                                <select class="form-select form-select-sm smart-combobox detective-control" 
+                                                        data-category="8" data-can-add-new="true" 
+                                                        data-placeholder="Type to search for detective controls..."
+                                                        style="width: 100%;">
+                                                </select>
+                                                <button class="btn btn-outline-success btn-sm" type="button" onclick="addDetectiveControl()">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vulnerabilities -->
+                        <div class="card mb-3 border-info">
+                            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-shield-alt me-2"></i>Vulnerabilities</span>
+                                <button type="button" class="btn btn-sm btn-light" onclick="addVulnerability()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="card-body" id="vulnerabilities-container">
+                                <div class="vulnerability-item mb-3 p-3 border rounded" data-vuln-id="1">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <strong>Vulnerability 1</strong>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeVulnerability(this)">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                    <input type="text" class="form-control form-control-sm mb-2" 
+                                           placeholder="Vulnerability Title" data-field="title">
+                                    <textarea class="form-control form-control-sm mb-2" rows="2" 
+                                              placeholder="Description" data-field="description"></textarea>
+                                    
+                                    <div class="mb-2">
+                                        <label class="form-label">MITRE Technique</label>
+                                        <select class="form-select form-select-sm" data-field="mitreTechnique">
+                                            <option value="">-- Select MITRE Technique --</option>
+                                            @if (ViewData["MitreTechniques"] != null)
+                                            {
+                                                @foreach (var technique in (IEnumerable<dynamic>)ViewData["MitreTechniques"])
+                                                {
+                                                    <option value="@technique.Id">@technique.Display</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    
+                                    <label class="form-label">Vulnerability Probability (%)</label>
+                                    <div class="row mb-2">
+                                        <div class="col-6">
+                                            <label class="form-label small">Minimum</label>
+                                            <input type="number" class="form-control form-control-sm" 
+                                                   value="30" step="5" min="0" max="100" data-field="min" 
+                                                   oninput="updateVulnCalculation(this)">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small">Maximum</label>
+                                            <input type="number" class="form-control form-control-sm" 
+                                                   value="70" step="5" min="0" max="100" data-field="max"
+                                                   oninput="updateVulnCalculation(this)">
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small">Most Likely (Auto-calculated)</label>
+                                        <input type="number" class="form-control form-control-sm bg-light" 
+                                               value="50" data-field="most" readonly style="background-color: #e9ecef;">
+                                        <small class="text-muted">Calculated using PERT formula</small>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label class="form-label">Protective Controls</label>
+                                            <div class="vuln-protective-controls-container">
+                                                <div class="input-group mb-2">
+                                                    <select class="form-select form-select-sm smart-combobox vuln-protective-control" 
+                                                            data-category="7" data-can-add-new="true" 
+                                                            data-placeholder="Type to search for protective controls..."
+                                                            style="width: 100%;">
+                                                    </select>
+                                                    <button class="btn btn-outline-success btn-sm" type="button" onclick="addVulnProtectiveControl(this)">
+                                                        <i class="fas fa-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Detective Controls</label>
+                                            <div class="vuln-detective-controls-container">
+                                                <div class="input-group mb-2">
+                                                    <select class="form-select form-select-sm smart-combobox vuln-detective-control" 
+                                                            data-category="8" data-can-add-new="true" 
+                                                            data-placeholder="Type to search for detective controls..."
+                                                            style="width: 100%;">
+                                                    </select>
+                                                    <button class="btn btn-outline-success btn-sm" type="button" onclick="addVulnDetectiveControl(this)">
+                                                        <i class="fas fa-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-2">
+                                        <label class="form-label">Data Sources</label>
+                                        <input type="text" class="form-control form-control-sm" 
+                                               placeholder="Data sources for monitoring" data-field="dataSources">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loss Event -->
+                        <div class="card mb-3 border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <i class="fas fa-dollar-sign me-2"></i>Loss Event
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-2">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" class="form-control form-control-sm" id="lossTitle" 
+                                           placeholder="e.g., Data Breach">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-control form-control-sm" id="lossDescription" rows="2"></textarea>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <label class="form-label">MITRE Technique</label>
+                                    <select class="form-select form-select-sm" id="lossMitreTechnique">
+                                        <option value="">-- Select MITRE Technique --</option>
+                                        @if (ViewData["MitreTechniques"] != null)
+                                        {
+                                            @foreach (var technique in (IEnumerable<dynamic>)ViewData["MitreTechniques"])
+                                            {
+                                                <option value="@technique.Id">@technique.Display</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                
+                                
+                                <div class="alert alert-info">
+                                    <strong>Loss Event Frequency (LEF)</strong>
+                                    <br>
+                                    <small>Automatically calculated: TEF × (Product of all Vulnerability probabilities)</small>
+                                    <div class="row mt-2">
+                                        <div class="col-4">
+                                            <strong>Min:</strong> <span id="lefMinDisplay">-</span>/year
+                                        </div>
+                                        <div class="col-4">
+                                            <strong>Most Likely:</strong> <span id="lefMostDisplay">-</span>/year
+                                        </div>
+                                        <div class="col-4">
+                                            <strong>Max:</strong> <span id="lefMaxDisplay">-</span>/year
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-6">
+                                        <label class="form-label">Protective Controls</label>
+                                        <div id="loss-protective-controls-container">
+                                            <div class="input-group mb-2">
+                                                <select class="form-select form-select-sm smart-combobox loss-protective-control" 
+                                                        data-category="7" data-can-add-new="true" 
+                                                        data-placeholder="Type to search for protective controls..."
+                                                        style="width: 100%;">
+                                                </select>
+                                                <button class="btn btn-outline-success btn-sm" type="button" onclick="addLossProtectiveControl()">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label">Detective Controls</label>
+                                        <div id="loss-detective-controls-container">
+                                            <div class="input-group mb-2">
+                                                <select class="form-select form-select-sm smart-combobox loss-detective-control" 
+                                                        data-category="8" data-can-add-new="true" 
+                                                        data-placeholder="Type to search for detective controls..."
+                                                        style="width: 100%;">
+                                                </select>
+                                                <button class="btn btn-outline-success btn-sm" type="button" onclick="addLossDetectiveControl()">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loss Magnitude -->
+                        <div class="card mb-3 border-success">
+                            <div class="card-header bg-success text-white">
+                                <i class="fas fa-calculator me-2"></i>Loss Magnitude & ALE Calculation
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-primary">Primary Loss</h6>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Minimum ($)</label>
+                                            <input type="number" class="form-control form-control-sm" id="primaryLossMin" 
+                                                   value="50000" step="1000" min="0" oninput="updateALECalculations()">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Maximum ($)</label>
+                                            <input type="number" class="form-control form-control-sm" id="primaryLossMax" 
+                                                   value="200000" step="1000" min="0" oninput="updateALECalculations()">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Most Likely (Auto-calculated)</label>
+                                            <input type="number" class="form-control form-control-sm bg-light" id="primaryLossMost" 
+                                                   value="125000" readonly style="background-color: #e9ecef;">
+                                            <small class="text-muted">Calculated using PERT formula</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-warning">Secondary Loss (Optional)</h6>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Minimum ($)</label>
+                                            <input type="number" class="form-control form-control-sm" id="secondaryLossMin" 
+                                                   value="10000" step="1000" min="0" oninput="updateALECalculations()">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Maximum ($)</label>
+                                            <input type="number" class="form-control form-control-sm" id="secondaryLossMax" 
+                                                   value="50000" step="1000" min="0" oninput="updateALECalculations()">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small">Most Likely (Auto-calculated)</label>
+                                            <input type="number" class="form-control form-control-sm bg-light" id="secondaryLossMost" 
+                                                   value="30000" readonly style="background-color: #e9ecef;">
+                                            <small class="text-muted">Calculated using PERT formula</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Cyber Insurance -->
+                                <div class="card bg-light border-info mt-3">
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input type="checkbox" class="form-check-input" id="cyberInsuranceEnabled" 
+                                                   @(enabledByDefault ? "checked" : "") onchange="toggleCyberInsurance()">
+                                            <label class="form-check-label fw-bold" for="cyberInsuranceEnabled">
+                                                <i class="fas fa-shield-alt text-info me-1"></i>Apply Cyber Insurance Coverage
+                                            </label>
+                                        </div>
+                                        <div id="insuranceDetails" style="display: @(enabledByDefault ? "block" : "none");">
+                                            <div class="alert alert-info mb-2">
+                                                <small><i class="fas fa-info-circle me-1"></i><strong>Note:</strong> Insurance parameters are configured from the active Risk Level Threshold settings.</small>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <label class="form-label small">Coverage Limit ($) <small class="text-muted">[From Settings]</small></label>
+                                                    <input type="number" class="form-control form-control-sm bg-light" id="coverageLimit" 
+                                                           value="@coverageLimit" readonly>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small">Deductible ($) <small class="text-muted">[From Settings]</small></label>
+                                                    <input type="number" class="form-control form-control-sm bg-light" id="deductible" 
+                                                           value="@deductible" readonly>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small">Coverage % <small class="text-muted">[From Settings]</small></label>
+                                                    <input type="number" class="form-control form-control-sm bg-light" id="coveragePercent" 
+                                                           value="@coveragePercentage" readonly>
+                                                </div>
+                                            </div>
+                                            <small class="text-muted mt-1 d-block">
+                                                <i class="fas fa-calculator me-1"></i>Insurance covers: min(Coverage Limit, (Loss - Deductible) × Coverage %)
+                                                <br><i class="fas fa-cog me-1"></i>To modify these values, update the Risk Level Threshold settings.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- ALE Calculation Results -->
+                                <div class="card bg-dark text-white mt-3">
+                                    <div class="card-body">
+                                        <h6 class="text-center mb-3">
+                                            <i class="fas fa-calculator me-2"></i>Annual Loss Expectancy (ALE) Calculation
+                                        </h6>
+                                        
+                                        <!-- Mathematical Equations -->
+                                        <div class="card bg-secondary mb-3">
+                                            <div class="card-header">
+                                                <small class="fw-bold"><i class="fas fa-formula me-1"></i>FAIR Mathematical Equations</small>
+                                            </div>
+                                            <div class="card-body py-2">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <small class="d-block mb-1">
+                                                            <strong>1. Loss Event Frequency (LEF):</strong>
+                                                            <br><code class="text-info">LEF = TEF × ∏(Vulnerability Probabilities)</code>
+                                                        </small>
+                                                        <small class="d-block mb-1">
+                                                            <strong>2. Total Loss Magnitude:</strong>
+                                                            <br><code class="text-warning">Total Loss = Primary Loss + Secondary Loss</code>
+                                                        </small>
+                                                        <small class="d-block">
+                                                            <strong>3. PERT Most Likely:</strong>
+                                                            <br><code class="text-light">Most Likely = (Min + Max) / 2</code>
+                                                        </small>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <small class="d-block mb-1">
+                                                            <strong>4. Insurance Reduction:</strong>
+                                                            <br><code class="text-info">Coverage = min(Limit, (Loss - Deductible) × %)</code>
+                                                        </small>
+                                                        <small class="d-block mb-1">
+                                                            <strong>5. Net Loss:</strong>
+                                                            <br><code class="text-warning">Net Loss = Total Loss - Insurance Coverage</code>
+                                                        </small>
+                                                        <small class="d-block">
+                                                            <strong>6. Annual Loss Expectancy:</strong>
+                                                            <br><code class="text-success">ALE = LEF × Net Loss</code>
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Calculation Results -->
+                                        <div class="row text-center">
+                                            <div class="col-md-3">
+                                                <small class="text-muted d-block">
+                                                    <i class="fas fa-dollar-sign me-1"></i>Total Loss Magnitude
+                                                    <br><span class="text-info" style="font-size: 0.7rem;">(Primary + Secondary)</span>
+                                                </small>
+                                                <div class="mt-1">
+                                                    <div><strong class="text-info">Min: $<span id="totalLossMin">-</span></strong></div>
+                                                    <div><strong class="text-warning">Most: $<span id="totalLossMost">-</span></strong></div>
+                                                    <div><strong class="text-danger">Max: $<span id="totalLossMax">-</span></strong></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <small class="text-muted d-block">
+                                                    <i class="fas fa-shield-alt me-1"></i>Insurance Reduction
+                                                    <br><span class="text-info" style="font-size: 0.7rem;">min(Limit, (Loss-Deduct)×%)</span>
+                                                </small>
+                                                <div class="mt-1">
+                                                    <div><strong class="text-info">Min: $<span id="insuranceMin">0</span></strong></div>
+                                                    <div><strong class="text-warning">Most: $<span id="insuranceMost">0</span></strong></div>
+                                                    <div><strong class="text-danger">Max: $<span id="insuranceMax">0</span></strong></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <small class="text-muted d-block">
+                                                    <i class="fas fa-minus me-1"></i>Net Loss (After Insurance)
+                                                    <br><span class="text-info" style="font-size: 0.7rem;">(Total - Insurance)</span>
+                                                </small>
+                                                <div class="mt-1">
+                                                    <div><strong class="text-info">Min: $<span id="netLossMin">-</span></strong></div>
+                                                    <div><strong class="text-warning">Most: $<span id="netLossMost">-</span></strong></div>
+                                                    <div><strong class="text-danger">Max: $<span id="netLossMax">-</span></strong></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <small class="text-muted d-block">
+                                                    <i class="fas fa-chart-line me-1"></i>ALE (Final Result)
+                                                    <br><span class="text-success" style="font-size: 0.7rem;">(LEF × Net Loss)</span>
+                                                </small>
+                                                <div class="mt-1">
+                                                    <div><strong class="text-success">Min: $<span id="aleMin">-</span></strong></div>
+                                                    <div><strong class="text-success">Most: $<span id="aleMost">-</span></strong></div>
+                                                    <div><strong class="text-success">Max: $<span id="aleMax">-</span></strong></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Real-time Equation Display -->
+                                        <div class="mt-3 pt-2 border-top border-secondary">
+                                            <small class="text-center d-block">
+                                                <i class="fas fa-calculator me-1"></i><strong>Live Calculation:</strong>
+                                                <span class="text-info">ALE = </span>
+                                                <span class="text-warning" id="lefDisplayEquation">LEF</span>
+                                                <span class="text-info"> × </span>
+                                                <span class="text-success" id="netLossDisplayEquation">Net Loss</span>
+                                                <span class="text-info"> = </span>
+                                                <span class="text-light fw-bold" id="aleDisplayEquation">$0</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-grid gap-2">
+                            @if (!readOnly)
+                            {
+                                <button type="button" class="btn btn-primary" onclick="updateFlowchart()">
+                                    <i class="fas fa-sync me-2"></i>Update Flowchart
+                                </button>
+                                <button type="button" class="btn btn-success" onclick="saveModel()">
+                                    <i class="fas fa-save me-2"></i>Save Model
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-info" onclick="updateFlowchart()">
+                                    <i class="fas fa-sync me-2"></i>Update Visualization
+                                </button>
+                                <a asp-action="FlowchartDesigner" asp-route-id="@Model?.Id" class="btn btn-primary">
+                                    <i class="fas fa-drafting-compass me-2"></i>Edit This Template
+                                </a>
+                            }
+                            <a href="/AttackChain" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Templates
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Flowchart Visualization -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>Attack Chain Visualization
+                    </h5>
+                </div>
+                <div class="card-body bg-light" style="min-height: 85vh;">
+                    <div id="flowchart-container" style="position: relative; width: 100%; height: 100%;">
+                        <!-- Flowchart will be rendered here -->
+                        <div class="text-center text-muted p-5">
+                            <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                            <p>Fill out the form on the left and click "Update Flowchart" to generate the visualization</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<style>
+    .flowchart-node {
+        position: absolute;
+        min-width: 200px;
+        max-width: 250px;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: white;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .flowchart-node:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .node-threat {
+        border: 2px solid #ffc107;
+        background: #fff3cd;
+    }
+    
+    .node-vulnerability {
+        border: 2px solid #17a2b8;
+        background: #d1ecf1;
+    }
+    
+    .node-loss {
+        border: 2px solid #dc3545;
+        background: #f8d7da;
+    }
+    
+    .node-ale {
+        border: 2px solid #28a745;
+        background: #d4edda;
+        font-weight: bold;
+    }
+    
+    .flowchart-arrow {
+        position: absolute;
+        background: #666;
+        height: 2px;
+        transform-origin: left center;
+    }
+    
+    .arrow-head {
+        position: absolute;
+        right: -8px;
+        top: -4px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid #666;
+        border-top: 4px solid transparent;
+        border-bottom: 4px solid transparent;
+    }
+</style>
+
+<script>
+let vulnerabilityCounter = 1;
+let modelData = {
+    id: @(Model?.Id ?? 0),
+    name: '',
+    description: '',
+    status: 0,
+    threatEvent: null,
+    vulnerabilities: [],
+    lossEvent: null
+};
+
+// Assessment-specific threat model context
+const isAssessmentSpecific = @((ViewBag.IsAssessmentSpecific ?? false).ToString().ToLower());
+const assessmentThreatModelId = @(ViewBag.AssessmentThreatModelId ?? 0);
+const riskAssessmentId = @(ViewBag.RiskAssessmentId ?? 0);
+
+// PERT formula: (Min + 4×MostLikely + Max) / 6
+// Rearranged to solve for MostLikely: MostLikely = (6×Expected - Min - Max) / 4
+// For simplicity, we'll use: MostLikely = (Min + Max) / 2 (triangular distribution)
+function calculatePERT(min, max) {
+    // Simple triangular distribution - most likely is the midpoint
+    return (min + max) / 2;
+}
+
+function updateCalculations() {
+    // Update TEF Most Likely
+    const tefMin = parseFloat(document.getElementById('tefMin').value) || 0;
+    const tefMax = parseFloat(document.getElementById('tefMax').value) || 0;
+    const tefMost = calculatePERT(tefMin, tefMax);
+    document.getElementById('tefMost').value = tefMost.toFixed(2);
+    
+    // Update all vulnerability calculations
+    document.querySelectorAll('.vulnerability-item').forEach(updateVulnCalculationForItem);
+    
+    // Update flowchart and LEF if form is populated
+    if (document.getElementById('modelName').value) {
+        updateFlowchart();
+    }
+}
+
+function updateVulnCalculation(element) {
+    const vulnItem = element.closest('.vulnerability-item');
+    updateVulnCalculationForItem(vulnItem);
+    
+    // Update flowchart and LEF
+    if (document.getElementById('modelName').value) {
+        updateFlowchart();
+    }
+}
+
+function updateVulnCalculationForItem(vulnItem) {
+    const minInput = vulnItem.querySelector('[data-field="min"]');
+    const maxInput = vulnItem.querySelector('[data-field="max"]');
+    const mostInput = vulnItem.querySelector('[data-field="most"]');
+    
+    if (minInput && maxInput && mostInput) {
+        const min = parseFloat(minInput.value) || 0;
+        const max = parseFloat(maxInput.value) || 0;
+        const most = calculatePERT(min, max);
+        mostInput.value = most.toFixed(1);
+    }
+}
+
+function addVulnerability() {
+    vulnerabilityCounter++;
+    const container = document.getElementById('vulnerabilities-container');
+    const newVuln = document.createElement('div');
+    newVuln.className = 'vulnerability-item mb-3 p-3 border rounded';
+    newVuln.dataset.vulnId = vulnerabilityCounter;
+    
+    // Get MITRE techniques options from the first vulnerability's select
+    const firstSelect = container.querySelector('select[data-field="mitreTechnique"]');
+    const mitreOptions = firstSelect ? firstSelect.innerHTML : '<option value="">-- Select MITRE Technique --</option>';
+    
+    newVuln.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <strong>Vulnerability ${vulnerabilityCounter}</strong>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeVulnerability(this)">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <input type="text" class="form-control form-control-sm mb-2" 
+               placeholder="Vulnerability Title" data-field="title">
+        <textarea class="form-control form-control-sm mb-2" rows="2" 
+                  placeholder="Description" data-field="description"></textarea>
+        
+        <div class="mb-2">
+            <label class="form-label">MITRE Technique</label>
+            <select class="form-select form-select-sm" data-field="mitreTechnique">
+                ${mitreOptions}
+            </select>
+        </div>
+        
+        <label class="form-label">Vulnerability Probability (%)</label>
+        <div class="row mb-2">
+            <div class="col-6">
+                <label class="form-label small">Minimum</label>
+                <input type="number" class="form-control form-control-sm" 
+                       value="30" step="5" min="0" max="100" data-field="min"
+                       oninput="updateVulnCalculation(this)">
+            </div>
+            <div class="col-6">
+                <label class="form-label small">Maximum</label>
+                <input type="number" class="form-control form-control-sm" 
+                       value="70" step="5" min="0" max="100" data-field="max"
+                       oninput="updateVulnCalculation(this)">
+            </div>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small">Most Likely (Auto-calculated)</label>
+            <input type="number" class="form-control form-control-sm bg-light" 
+                   value="50" data-field="most" readonly style="background-color: #e9ecef;">
+            <small class="text-muted">Calculated using PERT formula</small>
+        </div>
+        
+        <div class="row">
+            <div class="col-6">
+                <label class="form-label">Protective Controls</label>
+                <div class="vuln-protective-controls-container">
+                    <div class="input-group mb-2">
+                        <select class="form-select form-select-sm smart-combobox vuln-protective-control" 
+                                data-category="7" data-can-add-new="true" 
+                                data-placeholder="Type to search for protective controls..."
+                                style="width: 100%;">
+                        </select>
+                        <button class="btn btn-outline-success btn-sm" type="button" onclick="addVulnProtectiveControl(this)">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <label class="form-label">Detective Controls</label>
+                <div class="vuln-detective-controls-container">
+                    <div class="input-group mb-2">
+                        <select class="form-select form-select-sm smart-combobox vuln-detective-control" 
+                                data-category="8" data-can-add-new="true" 
+                                data-placeholder="Type to search for detective controls..."
+                                style="width: 100%;">
+                        </select>
+                        <button class="btn btn-outline-success btn-sm" type="button" onclick="addVulnDetectiveControl(this)">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-2">
+            <label class="form-label">Data Sources</label>
+            <input type="text" class="form-control form-control-sm" 
+                   placeholder="Data sources for monitoring" data-field="dataSources">
+        </div>
+    `;
+    container.appendChild(newVuln);
+    
+    // Initialize smart comboboxes for the new vulnerability
+    if (window.initializeSmartComboboxes) {
+        window.initializeSmartComboboxes();
+    }
+}
+
+function removeVulnerability(button) {
+    button.closest('.vulnerability-item').remove();
+    updateFlowchart();
+}
+
+function collectFormData() {
+    // Basic info
+    modelData.name = document.getElementById('modelName').value;
+    modelData.description = document.getElementById('modelDescription').value;
+    
+    const statusSelect = document.getElementById('modelStatus');
+    if (statusSelect) {
+        modelData.status = parseInt(statusSelect.value);
+    }
+    
+    // Threat Event
+    const threatProtectiveControls = [];
+    document.querySelectorAll('.protective-control').forEach(select => {
+        if (select.value && select.value.trim() !== '') {
+            threatProtectiveControls.push(select.value);
+        }
+    });
+    
+    const threatDetectiveControls = [];
+    document.querySelectorAll('.detective-control').forEach(select => {
+        if (select.value && select.value.trim() !== '') {
+            threatDetectiveControls.push(select.value);
+        }
+    });
+    
+    modelData.threatEvent = {
+        title: document.getElementById('threatTitle').value || 'Threat Event',
+        description: document.getElementById('threatDescription').value,
+        tefMin: parseFloat(document.getElementById('tefMin').value) || 0.5,
+        tefMost: parseFloat(document.getElementById('tefMost').value) || 1,
+        tefMax: parseFloat(document.getElementById('tefMax').value) || 2,
+        protectiveControls: threatProtectiveControls,
+        detectiveControls: threatDetectiveControls
+    };
+    
+    // Vulnerabilities
+    modelData.vulnerabilities = [];
+    document.querySelectorAll('.vulnerability-item').forEach((item, index) => {
+        const title = item.querySelector('[data-field="title"]').value || `Vulnerability ${index + 1}`;
+        const description = item.querySelector('[data-field="description"]').value;
+        const min = parseFloat(item.querySelector('[data-field="min"]').value) || 30;
+        const most = parseFloat(item.querySelector('[data-field="most"]').value) || 50;
+        const max = parseFloat(item.querySelector('[data-field="max"]').value) || 70;
+        
+        // Collect protective controls for this vulnerability
+        const vulnProtectiveControls = [];
+        item.querySelectorAll('.vuln-protective-control').forEach(select => {
+            if (select.value && select.value.trim() !== '') {
+                vulnProtectiveControls.push(select.value);
+            }
+        });
+        
+        // Collect detective controls for this vulnerability
+        const vulnDetectiveControls = [];
+        item.querySelectorAll('.vuln-detective-control').forEach(select => {
+            if (select.value && select.value.trim() !== '') {
+                vulnDetectiveControls.push(select.value);
+            }
+        });
+        
+        modelData.vulnerabilities.push({
+            title: title,
+            description: description,
+            vulnMin: min / 100,
+            vulnMost: most / 100,
+            vulnMax: max / 100,
+            order: index + 1,
+            protectiveControls: vulnProtectiveControls,
+            detectiveControls: vulnDetectiveControls
+        });
+    });
+    
+    // Calculate LEF = TEF × (Product of all Vulnerability probabilities)
+    let vulnProductMin = 1.0;
+    let vulnProductMost = 1.0;
+    let vulnProductMax = 1.0;
+    
+    modelData.vulnerabilities.forEach(vuln => {
+        vulnProductMin *= vuln.vulnMin;
+        vulnProductMost *= vuln.vulnMost;
+        vulnProductMax *= vuln.vulnMax;
+    });
+    
+    const lefMin = modelData.threatEvent.tefMin * vulnProductMin;
+    const lefMost = modelData.threatEvent.tefMost * vulnProductMost;
+    const lefMax = modelData.threatEvent.tefMax * vulnProductMax;
+    
+    // Update LEF display
+    document.getElementById('lefMinDisplay').textContent = lefMin.toFixed(3);
+    document.getElementById('lefMostDisplay').textContent = lefMost.toFixed(3);
+    document.getElementById('lefMaxDisplay').textContent = lefMax.toFixed(3);
+    
+    // Update ALE calculations when LEF changes
+    updateALECalculations();
+    
+    // Loss Event
+    const lossProtectiveControls = [];
+    document.querySelectorAll('.loss-protective-control').forEach(select => {
+        if (select.value && select.value.trim() !== '') {
+            lossProtectiveControls.push(select.value);
+        }
+    });
+    
+    const lossDetectiveControls = [];
+    document.querySelectorAll('.loss-detective-control').forEach(select => {
+        if (select.value && select.value.trim() !== '') {
+            lossDetectiveControls.push(select.value);
+        }
+    });
+    
+    modelData.lossEvent = {
+        title: document.getElementById('lossTitle').value || 'Loss Event',
+        description: document.getElementById('lossDescription').value,
+        mitreTechnique: document.getElementById('lossMitreTechnique').value,
+        lefMin: lefMin,
+        lefMost: lefMost,
+        lefMax: lefMax,
+        protectiveControls: lossProtectiveControls,
+        detectiveControls: lossDetectiveControls
+    };
+    
+    return modelData;
+}
+
+function getALECalculation() {
+    // Get primary loss values
+    const primaryMin = parseFloat(document.getElementById('primaryLossMin').value) || 50000;
+    const primaryMax = parseFloat(document.getElementById('primaryLossMax').value) || 200000;
+    const primaryMost = calculatePERT(primaryMin, primaryMax);
+    
+    // Get secondary loss values
+    const secondaryMin = parseFloat(document.getElementById('secondaryLossMin').value) || 10000;
+    const secondaryMax = parseFloat(document.getElementById('secondaryLossMax').value) || 50000;
+    const secondaryMost = calculatePERT(secondaryMin, secondaryMax);
+    
+    // Calculate total loss
+    const totalMin = primaryMin + secondaryMin;
+    const totalMax = primaryMax + secondaryMax;
+    const totalMost = primaryMost + secondaryMost;
+    
+    // Get LEF values from model data
+    const lefMin = parseFloat(document.getElementById('lefMinDisplay').textContent) || 0;
+    const lefMost = parseFloat(document.getElementById('lefMostDisplay').textContent) || 0;
+    const lefMax = parseFloat(document.getElementById('lefMaxDisplay').textContent) || 0;
+    
+    // Calculate ALE = LEF × Loss
+    const aleMin = lefMin * totalMin;
+    const aleMost = lefMost * totalMost;
+    const aleMax = lefMax * totalMax;
+    
+    // Apply cyber insurance if enabled
+    const insuranceEnabled = document.getElementById('cyberInsuranceEnabled')?.checked || false;
+    let netMin = totalMin, netMost = totalMost, netMax = totalMax;
+    
+    if (insuranceEnabled) {
+        const coverageLimit = parseFloat(document.getElementById('coverageLimit')?.value) || 1000000;
+        const deductible = parseFloat(document.getElementById('deductible')?.value) || 25000;
+        const coveragePercentage = parseFloat(document.getElementById('coveragePercentage')?.value) || 80;
+        
+        // Calculate net loss after insurance
+        netMin = Math.max(0, totalMin - Math.min(coverageLimit, Math.max(0, totalMin - deductible) * coveragePercentage / 100));
+        netMost = Math.max(0, totalMost - Math.min(coverageLimit, Math.max(0, totalMost - deductible) * coveragePercentage / 100));
+        netMax = Math.max(0, totalMax - Math.min(coverageLimit, Math.max(0, totalMax - deductible) * coveragePercentage / 100));
+    }
+    
+    return {
+        aleMin: lefMin * netMin,
+        aleMost: lefMost * netMost,
+        aleMax: lefMax * netMax,
+        insuranceEnabled: insuranceEnabled
+    };
+}
+
+function updateFlowchart() {
+    collectFormData();
+    
+    const container = document.getElementById('flowchart-container');
+    container.innerHTML = '';
+    
+    let yPos = 50;
+    const xCenter = container.offsetWidth / 2;
+    const nodeWidth = 220;
+    const nodeHeight = 50; // Standard node height
+    const nodeSpacing = 100;
+    
+    // Create Threat Event node
+    const threatNode = createNode('threat', modelData.threatEvent.title, 
+                                  `TEF: ${modelData.threatEvent.tefMost}/year`, 
+                                  xCenter - nodeWidth/2, yPos);
+    container.appendChild(threatNode);
+    
+    yPos += nodeSpacing;
+    
+    // Create Vulnerability nodes
+    modelData.vulnerabilities.forEach((vuln, index) => {
+        const vulnNode = createNode('vulnerability', vuln.title, 
+                                    `Probability: ${(vuln.vulnMost * 100).toFixed(0)}%`, 
+                                    xCenter - nodeWidth/2, yPos);
+        container.appendChild(vulnNode);
+        
+        // Create arrow from previous node (from bottom edge of previous node to top edge of current node)
+        const fromY = yPos - nodeSpacing + nodeHeight;
+        const toY = yPos;
+        createArrow(container, xCenter, fromY, xCenter, toY);
+        
+        yPos += nodeSpacing;
+    });
+    
+    // Create Loss Event node
+    const lossNode = createNode('loss', modelData.lossEvent.title, 
+                                `LEF: ${modelData.lossEvent.lefMost.toFixed(3)}/year`, 
+                                xCenter - nodeWidth/2, yPos);
+    container.appendChild(lossNode);
+    
+    // Create arrow to loss event (from bottom edge of previous node to top edge of loss event)
+    const lossEventYPos = yPos;
+    if (modelData.vulnerabilities.length > 0) {
+        const fromY = yPos - nodeSpacing + nodeHeight;
+        createArrow(container, xCenter, fromY, xCenter, yPos);
+    } else {
+        // Arrow from threat event to loss event directly
+        const fromY = 50 + nodeHeight;
+        createArrow(container, xCenter, fromY, xCenter, yPos);
+    }
+    
+    yPos += nodeSpacing;
+    
+    // Create ALE node
+    const aleData = getALECalculation(); // Get current ALE calculation
+    const aleNode = createNode('ale', 'Annual Loss Expectancy (ALE)', 
+                              `$${aleData.aleMost.toLocaleString()}/year`, 
+                              xCenter - nodeWidth/2, yPos);
+    container.appendChild(aleNode);
+    
+    // Create arrow to ALE (from bottom edge of loss event to top edge of ALE)
+    const fromY = lossEventYPos + nodeHeight;
+    createArrow(container, xCenter, fromY, xCenter, yPos);
+}
+
+function createNode(type, title, subtitle, x, y) {
+    const node = document.createElement('div');
+    node.className = `flowchart-node node-${type}`;
+    node.style.left = x + 'px';
+    node.style.top = y + 'px';
+    node.innerHTML = `
+        <div class="text-center">
+            <strong>${title}</strong>
+            <br>
+            <small class="text-muted">${subtitle}</small>
+        </div>
+    `;
+    return node;
+}
+
+function createArrow(container, x1, y1, x2, y2) {
+    const arrow = document.createElement('div');
+    arrow.className = 'flowchart-arrow';
+    
+    const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    
+    arrow.style.width = length + 'px';
+    arrow.style.left = x1 + 'px';
+    arrow.style.top = y1 + 'px';
+    arrow.style.transform = `rotate(${angle}deg)`;
+    
+    const arrowHead = document.createElement('div');
+    arrowHead.className = 'arrow-head';
+    arrow.appendChild(arrowHead);
+    
+    container.appendChild(arrow);
+}
+
+function saveModel() {
+    collectFormData();
+    
+    if (!modelData.name) {
+        alert('Please enter a model name');
+        return;
+    }
+    
+    if (isAssessmentSpecific && assessmentThreatModelId > 0) {
+        // Save assessment-specific threat model
+        saveAssessmentThreatModel();
+    } else {
+        // Save regular attack chain template
+        saveAttackChainTemplate();
+    }
+}
+
+function saveAssessmentThreatModel() {
+    // Prepare form data for assessment-specific threat model
+    const formData = new FormData();
+    formData.append('threatModelId', assessmentThreatModelId);
+    formData.append('title', modelData.name);
+    formData.append('description', modelData.description);
+    
+    // Add threat event data as JSON
+    const threatEventData = {
+        title: modelData.threatEvent.title,
+        description: modelData.threatEvent.description,
+        tefMinimum: modelData.threatEvent.tefMin,
+        tefMostLikely: modelData.threatEvent.tefMost,
+        tefMaximum: modelData.threatEvent.tefMax
+    };
+    formData.append('threatEventData', JSON.stringify(threatEventData));
+    
+    // Add vulnerabilities data as JSON
+    const vulnerabilitiesData = modelData.vulnerabilities.map(vuln => ({
+        title: vuln.title,
+        description: vuln.description,
+        vulnMinimum: vuln.vulnMin * 100,
+        vulnMostLikely: vuln.vulnMost * 100,
+        vulnMaximum: vuln.vulnMax * 100
+    }));
+    formData.append('vulnerabilitiesData', JSON.stringify(vulnerabilitiesData));
+    
+    // Add loss event data as JSON
+    const lossEventData = {
+        title: modelData.lossEvent.title,
+        description: modelData.lossEvent.description,
+        mitreTechnique: modelData.lossEvent.mitreTechnique,
+        lefMinimum: modelData.lossEvent.lefMin,
+        lefMostLikely: modelData.lossEvent.lefMost,
+        lefMaximum: modelData.lossEvent.lefMax
+    };
+    formData.append('lossEventData', JSON.stringify(lossEventData));
+    
+    // Add antiforgery token
+    formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+    
+    // Send to assessment threat model endpoint
+    $.ajax({
+        url: '/AttackChain/SaveAssessmentThreatModel',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            // Navigate back to risk assessment details
+            window.location.href = `/RiskAssessments/Details/${riskAssessmentId}`;
+        },
+        error: function(xhr, status, error) {
+            console.error('Save error:', error);
+            alert('Error saving assessment threat model. Please try again.');
+        }
+    });
+}
+
+function saveAttackChainTemplate() {
+    // Prepare form data for regular template
+    const formData = new FormData();
+    formData.append('id', modelData.id);
+    formData.append('Name', modelData.name);
+    formData.append('Description', modelData.description);
+    formData.append('Status', modelData.status);
+    formData.append('AssetCategory', '');
+    formData.append('AttackVector', '');
+    
+    // Add threat event
+    formData.append('ThreatEventTitle', modelData.threatEvent.title);
+    formData.append('ThreatEventDescription', modelData.threatEvent.description);
+    formData.append('TefMinimum', modelData.threatEvent.tefMin);
+    formData.append('TefMostLikely', modelData.threatEvent.tefMost);
+    formData.append('TefMaximum', modelData.threatEvent.tefMax);
+    
+    // Add vulnerabilities
+    modelData.vulnerabilities.forEach(vuln => {
+        formData.append('VulnerabilityTitles[]', vuln.title);
+        formData.append('VulnerabilityDescriptions[]', vuln.description);
+        formData.append('VulnMinimums[]', vuln.vulnMin * 100);
+        formData.append('VulnMostLikelys[]', vuln.vulnMost * 100);
+        formData.append('VulnMaximums[]', vuln.vulnMax * 100);
+    });
+    
+    // Add loss event
+    formData.append('LossEventTitle', modelData.lossEvent.title);
+    formData.append('LossEventDescription', modelData.lossEvent.description);
+    formData.append('LossEventMitreTechnique', modelData.lossEvent.mitreTechnique);
+    formData.append('LefMinimum', modelData.lossEvent.lefMin);
+    formData.append('LefMostLikely', modelData.lossEvent.lefMost);
+    formData.append('LefMaximum', modelData.lossEvent.lefMax);
+    
+    // Add antiforgery token
+    formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+    
+    // Send to server
+    $.ajax({
+        url: '/AttackChain/Create',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            window.location.href = '/AttackChain';
+        },
+        error: function(xhr, status, error) {
+            console.error('Save error:', error);
+            alert('Error saving model. Please try again.');
+        }
+    });
+}
+
+function toggleCyberInsurance() {
+    const checkbox = document.getElementById('cyberInsuranceEnabled');
+    const details = document.getElementById('insuranceDetails');
+    
+    if (checkbox.checked) {
+        details.style.display = 'block';
+    } else {
+        details.style.display = 'none';
+    }
+    
+    updateALECalculations();
+}
+
+function updateALECalculations() {
+    // Calculate primary loss most likely values
+    const primaryMin = parseFloat(document.getElementById('primaryLossMin').value) || 0;
+    const primaryMax = parseFloat(document.getElementById('primaryLossMax').value) || 0;
+    const primaryMost = calculatePERT(primaryMin, primaryMax);
+    document.getElementById('primaryLossMost').value = primaryMost.toFixed(0);
+    
+    // Calculate secondary loss most likely values
+    const secondaryMin = parseFloat(document.getElementById('secondaryLossMin').value) || 0;
+    const secondaryMax = parseFloat(document.getElementById('secondaryLossMax').value) || 0;
+    const secondaryMost = calculatePERT(secondaryMin, secondaryMax);
+    document.getElementById('secondaryLossMost').value = secondaryMost.toFixed(0);
+    
+    // Calculate total loss magnitude
+    const totalMin = primaryMin + secondaryMin;
+    const totalMost = primaryMost + secondaryMost;
+    const totalMax = primaryMax + secondaryMax;
+    
+    document.getElementById('totalLossMin').textContent = totalMin.toLocaleString();
+    document.getElementById('totalLossMost').textContent = totalMost.toLocaleString();
+    document.getElementById('totalLossMax').textContent = totalMax.toLocaleString();
+    
+    // Calculate insurance reduction
+    let insuranceMin = 0, insuranceMost = 0, insuranceMax = 0;
+    
+    if (document.getElementById('cyberInsuranceEnabled').checked) {
+        const coverageLimit = parseFloat(document.getElementById('coverageLimit').value) || 0;
+        const deductible = parseFloat(document.getElementById('deductible').value) || 0;
+        const coveragePercent = parseFloat(document.getElementById('coveragePercent').value) || 0;
+        
+        // Calculate insurance coverage for each scenario
+        insuranceMin = Math.min(coverageLimit, Math.max(0, (totalMin - deductible) * coveragePercent / 100));
+        insuranceMost = Math.min(coverageLimit, Math.max(0, (totalMost - deductible) * coveragePercent / 100));
+        insuranceMax = Math.min(coverageLimit, Math.max(0, (totalMax - deductible) * coveragePercent / 100));
+    }
+    
+    document.getElementById('insuranceMin').textContent = insuranceMin.toLocaleString();
+    document.getElementById('insuranceMost').textContent = insuranceMost.toLocaleString();
+    document.getElementById('insuranceMax').textContent = insuranceMax.toLocaleString();
+    
+    // Calculate net loss after insurance
+    const netMin = Math.max(0, totalMin - insuranceMin);
+    const netMost = Math.max(0, totalMost - insuranceMost);
+    const netMax = Math.max(0, totalMax - insuranceMax);
+    
+    document.getElementById('netLossMin').textContent = netMin.toLocaleString();
+    document.getElementById('netLossMost').textContent = netMost.toLocaleString();
+    document.getElementById('netLossMax').textContent = netMax.toLocaleString();
+    
+    // Calculate ALE (LEF × Net Loss)
+    const lefMin = parseFloat(document.getElementById('lefMinDisplay').textContent) || 0;
+    const lefMost = parseFloat(document.getElementById('lefMostDisplay').textContent) || 0;
+    const lefMax = parseFloat(document.getElementById('lefMaxDisplay').textContent) || 0;
+    
+    const aleMin = lefMin * netMin;
+    const aleMost = lefMost * netMost;
+    const aleMax = lefMax * netMax;
+    
+    document.getElementById('aleMin').textContent = aleMin.toLocaleString();
+    document.getElementById('aleMost').textContent = aleMost.toLocaleString();
+    document.getElementById('aleMax').textContent = aleMax.toLocaleString();
+    
+    // Update real-time equation display
+    document.getElementById('lefDisplayEquation').textContent = `${lefMost.toFixed(3)}/year`;
+    document.getElementById('netLossDisplayEquation').textContent = `$${netMost.toLocaleString()}`;
+    document.getElementById('aleDisplayEquation').textContent = `$${aleMost.toLocaleString()}`;
+}
+
+function addProtectiveControl() {
+    const container = document.getElementById('protective-controls-container');
+    const newControl = document.createElement('div');
+    newControl.className = 'input-group mb-2';
+    newControl.innerHTML = `
+        <select class="form-select form-select-sm smart-combobox protective-control" 
+                data-category="7" data-can-add-new="true" 
+                data-placeholder="Type to search for protective controls..."
+                style="width: 100%;">
+        </select>
+        <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeProtectiveControl(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newControl);
+    
+    // Initialize the new smart combobox
+    if (window.initializeSmartComboboxes) {
+        window.initializeSmartComboboxes();
+    }
+}
+
+function removeProtectiveControl(button) {
+    const controlGroup = button.closest('.input-group');
+    if (controlGroup && controlGroup.parentElement.children.length > 1) {
+        controlGroup.remove();
+    }
+}
+
+function addDetectiveControl() {
+    const container = document.getElementById('detective-controls-container');
+    const newControl = document.createElement('div');
+    newControl.className = 'input-group mb-2';
+    newControl.innerHTML = `
+        <select class="form-select form-select-sm smart-combobox detective-control" 
+                data-category="8" data-can-add-new="true" 
+                data-placeholder="Type to search for detective controls..."
+                style="width: 100%;">
+        </select>
+        <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeDetectiveControl(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newControl);
+    
+    // Initialize the new smart combobox
+    if (window.initializeSmartComboboxes) {
+        window.initializeSmartComboboxes();
+    }
+}
+
+function removeDetectiveControl(button) {
+    const controlGroup = button.closest('.input-group');
+    if (controlGroup && controlGroup.parentElement.children.length > 1) {
+        controlGroup.remove();
+    }
+}
+
+// Vulnerability Controls Functions
+function addVulnProtectiveControl(button) {
+    const container = button.closest('.vuln-protective-controls-container');
+    const newControl = document.createElement('div');
+    newControl.className = 'input-group mb-2';
+    newControl.innerHTML = `
+        <select class="form-select form-select-sm smart-combobox vuln-protective-control" 
+                data-category="7" data-can-add-new="true" 
+                data-placeholder="Type to search for protective controls..."
+                style="width: 100%;">
+        </select>
+        <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeVulnProtectiveControl(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newControl);
+    
+    if (window.initializeSmartComboboxes) {
+        window.initializeSmartComboboxes();
+    }
+}
+
+function removeVulnProtectiveControl(button) {
+    const controlGroup = button.closest('.input-group');
+    if (controlGroup && controlGroup.parentElement.children.length > 1) {
+        controlGroup.remove();
+    }
+}
+
+function addVulnDetectiveControl(button) {
+    const container = button.closest('.vuln-detective-controls-container');
+    const newControl = document.createElement('div');
+    newControl.className = 'input-group mb-2';
+    newControl.innerHTML = `
+        <select class="form-select form-select-sm smart-combobox vuln-detective-control" 
+                data-category="8" data-can-add-new="true" 
+                data-placeholder="Type to search for detective controls..."
+                style="width: 100%;">
+        </select>
+        <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeVulnDetectiveControl(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newControl);
+    
+    if (window.initializeSmartComboboxes) {
+        window.initializeSmartComboboxes();
+    }
+}
+
+function removeVulnDetectiveControl(button) {
+    const controlGroup = button.closest('.input-group');
+    if (controlGroup && controlGroup.parentElement.children.length > 1) {
+        controlGroup.remove();
+    }
+}
+
+// Loss Event Controls Functions
+function addLossProtectiveControl() {
+    const container = document.getElementById('loss-protective-controls-container');
+    const newControl = document.createElement('div');
+    newControl.className = 'input-group mb-2';
+    newControl.innerHTML = `
+        <select class="form-select form-select-sm smart-combobox loss-protective-control" 
+                data-category="7" data-can-add-new="true" 
+                data-placeholder="Type to search for protective controls..."
+                style="width: 100%;">
+        </select>
+        <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeLossProtectiveControl(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newControl);
+    
+    if (window.initializeSmartComboboxes) {
+        window.initializeSmartComboboxes();
+    }
+}
+
+function removeLossProtectiveControl(button) {
+    const controlGroup = button.closest('.input-group');
+    if (controlGroup && controlGroup.parentElement.children.length > 1) {
+        controlGroup.remove();
+    }
+}
+
+function addLossDetectiveControl() {
+    const container = document.getElementById('loss-detective-controls-container');
+    const newControl = document.createElement('div');
+    newControl.className = 'input-group mb-2';
+    newControl.innerHTML = `
+        <select class="form-select form-select-sm smart-combobox loss-detective-control" 
+                data-category="8" data-can-add-new="true" 
+                data-placeholder="Type to search for detective controls..."
+                style="width: 100%;">
+        </select>
+        <button class="btn btn-outline-danger btn-sm" type="button" onclick="removeLossDetectiveControl(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newControl);
+    
+    if (window.initializeSmartComboboxes) {
+        window.initializeSmartComboboxes();
+    }
+}
+
+function removeLossDetectiveControl(button) {
+    const controlGroup = button.closest('.input-group');
+    if (controlGroup && controlGroup.parentElement.children.length > 1) {
+        controlGroup.remove();
+    }
+}
+
+// Initialize on page load
+$(document).ready(function() {
+    // Handle read-only mode
+    @if (readOnly)
+    {
+        <text>
+        // Make all form inputs readonly
+        $('#threatModelForm input, #threatModelForm textarea, #threatModelForm select').attr('readonly', true).addClass('bg-light');
+        $('#threatModelForm button[type="button"]:not(.btn-info)').prop('disabled', true);
+        
+        // Remove add/remove buttons for vulnerabilities
+        $('.btn:contains("+"), button[onclick*="add"], button[onclick*="remove"]').prop('disabled', true).addClass('d-none');
+        </text>
+    }
+    
+    // Initialize all calculations
+    updateCalculations();
+    updateALECalculations();
+    
+    // Initialize smart comboboxes for all controls
+    if (window.initializeSmartComboboxes) {
+        window.initializeSmartComboboxes();
+    }
+    
+    @if (Model?.Id > 0)
+    {
+        <text>
+        // Load existing model data
+        // TODO: Populate form with existing data
+        </text>
+    }
+});
+</script>
+}

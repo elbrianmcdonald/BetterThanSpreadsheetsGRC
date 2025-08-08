@@ -142,11 +142,10 @@
         Approved = 4
     }
 
-    // NEW: Assessment Type enum to distinguish between assessment methods
+    // Assessment Type enum - only qualitative assessments supported
     public enum AssessmentType
     {
-        FAIR = 1,           // Factor Analysis of Information Risk (Quantitative)
-        Qualitative = 2     // Likelihood x Impact x Exposure (Qualitative)
+        Qualitative = 1     // Likelihood x Impact x Exposure (Qualitative)
     }
 
     public enum Priority

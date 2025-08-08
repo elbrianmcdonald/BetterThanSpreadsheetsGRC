@@ -33,7 +33,7 @@
     {
         return assessmentType switch
         {
-            CyberRiskApp.Models.AssessmentType.FAIR => "primary",
+            // FAIR assessments removed
             CyberRiskApp.Models.AssessmentType.Qualitative => "success",
             _ => "secondary"
         };
@@ -43,7 +43,7 @@
     {
         return assessmentType switch
         {
-            CyberRiskApp.Models.AssessmentType.FAIR => "calculator",
+            // FAIR assessments removed
             CyberRiskApp.Models.AssessmentType.Qualitative => "chart-bar",
             _ => "question-circle"
         };
@@ -172,30 +172,8 @@
                         }
                     </p>
 
-                    <!-- Risk Score/ALE Display -->
-                    @if (assessment.AssessmentType == CyberRiskApp.Models.AssessmentType.FAIR && assessment.AnnualLossExpectancy.HasValue)
-                    {
-                        <div class="row mb-3">
-                            <div class="col-8">
-                                <div class="text-success ale-display">
-                                    @assessment.AnnualLossExpectancy?.ToString("C0")
-                                </div>
-                                <div class="text-muted">Annual Loss Expectancy</div>
-                            </div>
-                            <div class="col-4 text-end">
-                                @{
-                                    var riskLevel = "Low"; // Default value
-                                    if (assessment.AnnualLossExpectancy >= 100000) riskLevel = "Critical";
-                                    else if (assessment.AnnualLossExpectancy >= 50000) riskLevel = "High";
-                                    else if (assessment.AnnualLossExpectancy >= 10000) riskLevel = "Medium";
-                                }
-                                <span class="badge bg-@GetRiskLevelColor(riskLevel) risk-badge">
-                                    <i class="fas fa-@GetRiskLevelIcon(riskLevel) me-1"></i>@riskLevel
-                                </span>
-                            </div>
-                        </div>
-                    }
-                    else if (assessment.AssessmentType == CyberRiskApp.Models.AssessmentType.Qualitative && assessment.QualitativeRiskScore.HasValue)
+                    <!-- FAIR Risk Score/ALE Display removed (quantitative features deprecated) -->
+                    @if (assessment.AssessmentType == CyberRiskApp.Models.AssessmentType.Qualitative && assessment.QualitativeRiskScore.HasValue)
                     {
                         <div class="row mb-3">
                             <div class="col-4">

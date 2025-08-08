@@ -326,14 +326,8 @@ namespace CyberRiskApp.Services
             // Risk Analysis Section
             AddInfoSection(document, "Risk Analysis", boldFont);
             
-            if (assessment.AssessmentType == AssessmentType.FAIR)
-            {
-                AddFairAnalysis(document, assessment, boldFont, regularFont);
-            }
-            else
-            {
-                AddQualitativeAnalysis(document, assessment, boldFont, regularFont);
-            }
+            // Only qualitative analysis supported
+            AddQualitativeAnalysis(document, assessment, boldFont, regularFont);
 
             // Scenario Information
             if (!string.IsNullOrEmpty(assessment.Description) || !string.IsNullOrEmpty(assessment.ThreatScenario))
@@ -360,36 +354,7 @@ namespace CyberRiskApp.Services
                 AddTextBlock(document, "Controls in Place", assessment.TechnicalControlsInPlace, boldFont, regularFont);
             }
             
-            // Add Defense in Depth Controls if available
-            if (assessment.Controls != null && assessment.Controls.Any())
-            {
-                document.Add(new Paragraph().SetMarginBottom(15)); // Spacing
-                AddInfoSection(document, "Defense in Depth Controls", boldFont);
-                
-                var controlsTable = new Table(new float[] { 3, 2, 2 }).UseAllAvailableWidth();
-                controlsTable.SetMarginBottom(15);
-                
-                // Header row
-                controlsTable.AddHeaderCell(CreateHeaderCell("Control Name", boldFont));
-                controlsTable.AddHeaderCell(CreateHeaderCell("Control Type", boldFont));
-                controlsTable.AddHeaderCell(CreateHeaderCell("Effectiveness", boldFont));
-                
-                foreach (var control in assessment.Controls)
-                {
-                    controlsTable.AddCell(CreateDataCell(control.ControlName, regularFont));
-                    controlsTable.AddCell(CreateDataCell(control.ControlType.ToString(), regularFont));
-                    controlsTable.AddCell(CreateDataCell($"{control.ControlEffectiveness:N0}%", regularFont));
-                }
-                
-                document.Add(controlsTable);
-                
-                if (assessment.CalculatedVulnerability.HasValue)
-                {
-                    var vulnTable = CreateInfoTable();
-                    vulnTable.AddRow("Calculated Vulnerability:", assessment.CalculatedVulnerability.Value.ToString("P2"));
-                    document.Add(vulnTable);
-                }
-            }
+            // Defense in Depth Controls removed (FAIR quantitative features deprecated)
             
             // Add Qualitative Controls if available
             if (assessment.QualitativeControls != null && assessment.QualitativeControls.Any())
@@ -416,170 +381,7 @@ namespace CyberRiskApp.Services
             }
         }
 
-        private void AddFairAnalysis(Document document, RiskAssessment assessment, PdfFont boldFont, PdfFont regularFont)
-        {
-            // FAIR Metrics Table
-            var fairTable = CreateInfoTable();
-            fairTable.AddRow("Threat Community:", assessment.ThreatCommunity ?? "N/A");
-            fairTable.AddRow("Threat Action:", assessment.ThreatAction ?? "N/A");
-            fairTable.AddRow("Threat Event Frequency (Most Likely):", assessment.ThreatEventFrequency.ToString("N4") + " events/year");
-            fairTable.AddRow("TEF Minimum:", assessment.ThreatEventFrequencyMin.ToString("N4") + " events/year");
-            fairTable.AddRow("TEF Maximum:", assessment.ThreatEventFrequencyMax.ToString("N4") + " events/year");
-            fairTable.AddRow("TEF Confidence Level:", assessment.ThreatEventFrequencyConfidence.ToString("N0") + "%");
-            fairTable.AddRow("Contact Frequency:", assessment.ContactFrequency.ToString("P2"));
-            fairTable.AddRow("Action Success:", assessment.ActionSuccess.ToString("P2"));
-            
-            if (assessment.LossEventFrequency.HasValue)
-                fairTable.AddRow("Loss Event Frequency:", assessment.LossEventFrequency.Value.ToString("N4") + " events/year");
-            
-            if (assessment.PrimaryLossMagnitude.HasValue)
-                fairTable.AddRow("Primary Loss Magnitude:", assessment.PrimaryLossMagnitude.Value.ToString("C0"));
-            
-            if (assessment.AnnualLossExpectancy.HasValue)
-            {
-                var aleFormatted = assessment.AnnualLossExpectancy.Value.ToString("C0");
-                fairTable.AddRow("Annual Loss Expectancy:", aleFormatted);
-            }
-            
-            fairTable.AddRow("Deduct Cybersecurity Insurance:", assessment.DeductCybersecurityInsurance ? "Yes" : "No");
-            fairTable.AddRow("Distribution Type:", assessment.DistributionType);
-            fairTable.AddRow("Use PERT Distribution:", assessment.UsePerDistribution ? "Yes" : "No");
-            fairTable.AddRow("Loss Magnitude Confidence:", assessment.LossMagnitudeConfidence.ToString("N0") + "%");
-
-            document.Add(fairTable);
-            document.Add(new Paragraph().SetMarginBottom(20)); // Spacing
-
-            // Loss Magnitude Ranges
-            AddInfoSection(document, "Primary Loss Analysis", boldFont);
-            var lossTable = new Table(new float[] { 3, 2, 2, 2 }).UseAllAvailableWidth();
-            lossTable.SetMarginBottom(15);
-
-            // Header row
-            lossTable.AddHeaderCell(CreateHeaderCell("Loss Category", boldFont));
-            lossTable.AddHeaderCell(CreateHeaderCell("Minimum", boldFont));
-            lossTable.AddHeaderCell(CreateHeaderCell("Most Likely", boldFont));
-            lossTable.AddHeaderCell(CreateHeaderCell("Maximum", boldFont));
-
-            // Data rows
-            lossTable.AddCell(CreateDataCell("Productivity Loss", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ProductivityLossMin:N0}", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ProductivityLossMostLikely:N0}", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ProductivityLossMax:N0}", regularFont));
-
-            lossTable.AddCell(CreateDataCell("Response Costs", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ResponseCostsMin:N0}", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ResponseCostsMostLikely:N0}", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ResponseCostsMax:N0}", regularFont));
-
-            lossTable.AddCell(CreateDataCell("Replacement Costs", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ReplacementCostMin:N0}", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ReplacementCostMostLikely:N0}", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.ReplacementCostMax:N0}", regularFont));
-
-            lossTable.AddCell(CreateDataCell("Fines & Penalties", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.FinesMin:N0}", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.FinesMostLikely:N0}", regularFont));
-            lossTable.AddCell(CreateDataCell($"${assessment.FinesMax:N0}", regularFont));
-
-            document.Add(lossTable);
-
-            // Secondary Loss Analysis if included
-            if (assessment.IncludeSecondaryLoss)
-            {
-                document.Add(new Paragraph().SetMarginBottom(15)); // Spacing
-                AddInfoSection(document, "Secondary Loss Analysis", boldFont);
-                
-                var secondaryTable = CreateInfoTable();
-                secondaryTable.AddRow("Include Secondary Loss:", "Yes");
-                
-                if (assessment.SecondaryLossEventFrequency.HasValue)
-                    secondaryTable.AddRow("Secondary Loss Event Frequency:", assessment.SecondaryLossEventFrequency.Value.ToString("N4") + " events/year");
-                
-                if (assessment.SecondaryLossMagnitude.HasValue)
-                    secondaryTable.AddRow("Secondary Loss Magnitude:", assessment.SecondaryLossMagnitude.Value.ToString("C0"));
-                
-                document.Add(secondaryTable);
-                document.Add(new Paragraph().SetMarginBottom(10)); // Spacing
-                
-                var secondaryLossTable = new Table(new float[] { 3, 2, 2, 2 }).UseAllAvailableWidth();
-                secondaryLossTable.SetMarginBottom(15);
-
-                // Header row
-                secondaryLossTable.AddHeaderCell(CreateHeaderCell("Secondary Loss Category", boldFont));
-                secondaryLossTable.AddHeaderCell(CreateHeaderCell("Minimum", boldFont));
-                secondaryLossTable.AddHeaderCell(CreateHeaderCell("Most Likely", boldFont));
-                secondaryLossTable.AddHeaderCell(CreateHeaderCell("Maximum", boldFont));
-
-                // Secondary Loss Data rows
-                secondaryLossTable.AddCell(CreateDataCell("Secondary Response Cost", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.SecondaryResponseCostMin:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.SecondaryResponseCostMostLikely:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.SecondaryResponseCostMax:N0}", regularFont));
-
-                secondaryLossTable.AddCell(CreateDataCell("Secondary Productivity Loss", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.SecondaryProductivityLossMin:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.SecondaryProductivityLossMostLikely:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.SecondaryProductivityLossMax:N0}", regularFont));
-
-                secondaryLossTable.AddCell(CreateDataCell("Reputation Damage", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.ReputationDamageMin:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.ReputationDamageMostLikely:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.ReputationDamageMax:N0}", regularFont));
-
-                secondaryLossTable.AddCell(CreateDataCell("Competitive Advantage Loss", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.CompetitiveAdvantageLossMin:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.CompetitiveAdvantageLossMostLikely:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.CompetitiveAdvantageLossMax:N0}", regularFont));
-
-                secondaryLossTable.AddCell(CreateDataCell("External Stakeholder Loss", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.ExternalStakeholderLossMin:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.ExternalStakeholderLossMostLikely:N0}", regularFont));
-                secondaryLossTable.AddCell(CreateDataCell($"${assessment.ExternalStakeholderLossMax:N0}", regularFont));
-
-                document.Add(secondaryLossTable);
-            }
-
-            // Monte Carlo Simulation Results if available
-            if (assessment.SimulationIterations > 0 && assessment.ALE_50th.HasValue)
-            {
-                document.Add(new Paragraph().SetMarginBottom(15)); // Spacing
-                AddInfoSection(document, "Monte Carlo Simulation Results", boldFont);
-                
-                var simulationTable = CreateInfoTable();
-                simulationTable.AddRow("Simulation Iterations:", assessment.SimulationIterations.ToString("N0"));
-                
-                if (assessment.ALE_10th.HasValue)
-                    simulationTable.AddRow("ALE 10th Percentile:", assessment.ALE_10th.Value.ToString("C0"));
-                if (assessment.ALE_50th.HasValue)
-                    simulationTable.AddRow("ALE 50th Percentile (Median):", assessment.ALE_50th.Value.ToString("C0"));
-                if (assessment.ALE_90th.HasValue)
-                    simulationTable.AddRow("ALE 90th Percentile:", assessment.ALE_90th.Value.ToString("C0"));
-                if (assessment.ALE_95th.HasValue)
-                    simulationTable.AddRow("ALE 95th Percentile:", assessment.ALE_95th.Value.ToString("C0"));
-                
-                document.Add(simulationTable);
-                document.Add(new Paragraph().SetMarginBottom(10)); // Spacing
-                
-                // Primary Loss Percentiles
-                var primaryLossTable = CreateInfoTable();
-                if (assessment.PrimaryLoss_10th.HasValue)
-                    primaryLossTable.AddRow("Primary Loss 10th Percentile:", assessment.PrimaryLoss_10th.Value.ToString("C0"));
-                if (assessment.PrimaryLoss_50th.HasValue)
-                    primaryLossTable.AddRow("Primary Loss 50th Percentile:", assessment.PrimaryLoss_50th.Value.ToString("C0"));
-                if (assessment.PrimaryLoss_90th.HasValue)
-                    primaryLossTable.AddRow("Primary Loss 90th Percentile:", assessment.PrimaryLoss_90th.Value.ToString("C0"));
-                if (assessment.PrimaryLoss_95th.HasValue)
-                    primaryLossTable.AddRow("Primary Loss 95th Percentile:", assessment.PrimaryLoss_95th.Value.ToString("C0"));
-                
-                document.Add(primaryLossTable);
-            }
-
-            // Risk Level Calculation
-            var riskLevel = assessment.CalculateRiskLevel();
-            var riskLevelTable = CreateInfoTable();
-            riskLevelTable.AddRow("Calculated Risk Level:", GetRiskLevelBadge(riskLevel));
-            document.Add(riskLevelTable);
-        }
+        // AddFairAnalysis method removed (FAIR quantitative functionality deprecated)
 
         private void AddQualitativeAnalysis(Document document, RiskAssessment assessment, PdfFont boldFont, PdfFont regularFont)
         {

@@ -1,0 +1,357 @@
+@{
+    ViewData["Title"] = "MITRE ATT&CK Data Management";
+    var currentCount = ViewBag.CurrentTechniqueCount ?? 0;
+    var frameworkCounts = ViewBag.FrameworkCounts as Dictionary<CyberRiskApp.Models.MitreFrameworkType, int> ?? new Dictionary<CyberRiskApp.Models.MitreFrameworkType, int>();
+    var mitreVersion = ViewBag.MitreVersion ?? "Unknown";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">Attack Chains</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">MITRE Data Management</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-database me-2"></i>MITRE ATT&CK Framework Import
+                    </h2>
+                    <p class="text-muted">Import and manage MITRE ATT&CK techniques for threat modeling</p>
+                </div>
+                <div>
+                    <a asp-action="Index" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Attack Chains
+                    </a>
+                </div>
+            </div>
+
+            <!-- Status Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-0">Total Techniques</h5>
+                                    <h2 class="mb-0" id="currentCount">@currentCount</h2>
+                                </div>
+                                <i class="fas fa-shield-alt fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-0">Enterprise</h5>
+                                    <h2 class="mb-0" id="enterpriseCount">@(frameworkCounts.ContainsKey(CyberRiskApp.Models.MitreFrameworkType.Enterprise) ? frameworkCounts[CyberRiskApp.Models.MitreFrameworkType.Enterprise] : 0)</h2>
+                                </div>
+                                <i class="fas fa-building fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-0">ICS/OT</h5>
+                                    <h2 class="mb-0" id="icsCount">@(frameworkCounts.ContainsKey(CyberRiskApp.Models.MitreFrameworkType.ICS) ? frameworkCounts[CyberRiskApp.Models.MitreFrameworkType.ICS] : 0)</h2>
+                                </div>
+                                <i class="fas fa-industry fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="card-title mb-0">Version</h5>
+                                    <h6 class="mb-0" id="mitreVersion">@mitreVersion</h6>
+                                </div>
+                                <i class="fas fa-tag fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-download me-2"></i>Import MITRE ATT&CK Data
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>About MITRE ATT&CK:</strong> This will download and import the latest MITRE ATT&CK framework data directly from the official MITRE GitHub repository. The import process will:
+                                <ul class="mb-0 mt-2">
+                                    <li>Clear existing technique data for selected framework(s)</li>
+                                    <li>Download the latest framework data (Enterprise, ICS, or both)</li>
+                                    <li>Import all techniques, sub-techniques, and tactics</li>
+                                    <li>Establish parent-child relationships for sub-techniques</li>
+                                    <li>Enable technique selection in threat events and vulnerabilities</li>
+                                </ul>
+                            </div>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Warning:</strong> This operation will replace all existing MITRE technique data. Any existing threat events and vulnerabilities using MITRE techniques will be preserved, but unmapped techniques will be removed.
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="frameworkType" class="form-label">Framework to Import:</label>
+                                <select class="form-select" id="frameworkType" name="frameworkType">
+                                    <option value="">All Frameworks (Enterprise + ICS)</option>
+                                    <option value="1">Enterprise ATT&CK</option>
+                                    <option value="2">ICS ATT&CK</option>
+                                </select>
+                                <div class="form-text">
+                                    Select a specific framework or import all available frameworks
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <button type="button" class="btn btn-success btn-lg" id="importBtn" onclick="importMitreData()">
+                                        <i class="fas fa-download me-2"></i>Import MITRE ATT&CK Data
+                                    </button>
+                                    <button type="button" class="btn btn-info ms-2" onclick="refreshStatus()">
+                                        <i class="fas fa-sync-alt me-2"></i>Refresh Status
+                                    </button>
+                                </div>
+                                <div id="importStatus" style="display: none;">
+                                    <div class="spinner-border text-primary me-2" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <span class="text-primary">Importing data, please wait...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <!-- Import Information -->
+                    <div class="card">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-tasks me-2"></i>Import Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <small class="text-muted">Data Source URL:</small>
+                                <p class="small mb-0">
+                                    <a href="https://github.com/mitre/cti" target="_blank" class="text-decoration-none">
+                                        <i class="fab fa-github me-1"></i>
+                                        github.com/mitre/cti
+                                    </a>
+                                </p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted">Framework Coverage:</small>
+                                <ul class="small mb-0">
+                                    <li><strong>Enterprise:</strong> IT/Cloud techniques</li>
+                                    <li><strong>ICS:</strong> Industrial Control Systems</li>
+                                    <li>Sub-techniques and tactics</li>
+                                    <li>Platform Information</li>
+                                    <li>Data Sources</li>
+                                </ul>
+                            </div>
+
+                            <div class="mb-3">
+                                <small class="text-muted">Last Import:</small>
+                                <p class="small mb-0" id="lastImport">
+                                    @if (currentCount > 0)
+                                    {
+                                        <text>@DateTime.UtcNow.ToString("MMM dd, yyyy HH:mm UTC")</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Never</text>
+                                    }
+                                </p>
+                            </div>
+
+                            <div class="text-center">
+                                <a href="https://attack.mitre.org/" target="_blank" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-external-link-alt me-1"></i>
+                                    Visit MITRE ATT&CK
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Integration Info Card -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-link me-2"></i>Attack Chain Integration
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="small mb-2">
+                                Imported MITRE techniques will be available for:
+                            </p>
+                            <ul class="small mb-0">
+                                <li>Threat Event technique selection</li>
+                                <li>Attack Step Vulnerability mapping</li>
+                                <li>Loss Event technique references</li>
+                                <li>Smart comboboxes in forms</li>
+                                <li>Attack chain analysis and reporting</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Tips Card -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-lightbulb me-2"></i>Tips
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="small mb-0">
+                                <li>Import process may take 1-2 minutes</li>
+                                <li>Internet connection required</li>
+                                <li>Admin privileges required</li>
+                                <li>Existing attack chains are preserved</li>
+                                <li>Run import when framework updates are released</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function importMitreData() {
+    var frameworkType = $('#frameworkType').val();
+    var data = {};
+    
+    if (frameworkType && frameworkType !== '') {
+        data.FrameworkType = parseInt(frameworkType);
+    }
+    
+    // Show loading state
+    $('#importBtn').prop('disabled', true);
+    $('#importStatus').show();
+    
+    $.ajax({
+        url: '/api/mitre/import',
+        type: 'POST',
+        data: JSON.stringify(data),
+        contentType: 'application/json',
+        headers: {
+            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                toastr.success(response.message);
+                refreshStatus();
+                $('#lastImport').text(new Date().toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'UTC'
+                }) + ' UTC');
+            } else {
+                toastr.error('Import failed: ' + response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            var errorMessage = 'Import failed';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                errorMessage += ': ' + xhr.responseJSON.error;
+            }
+            toastr.error(errorMessage);
+        },
+        complete: function() {
+            $('#importBtn').prop('disabled', false);
+            $('#importStatus').hide();
+        }
+    });
+}
+
+function refreshStatus() {
+    $.get('/api/mitre/status')
+        .done(function(data) {
+            if (data.success) {
+                $('#currentCount').text(data.techniqueCount);
+                $('#enterpriseCount').text(data.enterpriseCount || 0);
+                $('#icsCount').text(data.icsCount || 0);
+                $('#mitreVersion').text(data.version || 'Unknown');
+                toastr.success('Status refreshed successfully!');
+            } else {
+                toastr.error('Error refreshing status: ' + data.error);
+            }
+        })
+        .fail(function() {
+            toastr.error('Error refreshing status');
+        });
+}
+
+// Auto-refresh status every 30 seconds during import
+let statusInterval;
+function startStatusMonitoring() {
+    statusInterval = setInterval(refreshStatus, 30000);
+}
+
+function stopStatusMonitoring() {
+    if (statusInterval) {
+        clearInterval(statusInterval);
+    }
+}
+
+$(document).ready(function() {
+    // Add CSRF token for AJAX requests
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            }
+        }
+    });
+});
+</script>
+}
+
+@section Styles {
+<style>
+.card-header {
+    border-bottom: none;
+}
+
+.alert ul {
+    padding-left: 1.2rem;
+}
+
+.spinner-border {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.opacity-75 {
+    opacity: 0.75;
+}
+</style>
+}

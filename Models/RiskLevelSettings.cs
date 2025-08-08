@@ -41,16 +41,38 @@ namespace CyberRiskApp.Models
         [Range(0, 16, ErrorMessage = "Must be between 0 and 16")]
         public decimal QualitativeMediumThreshold { get; set; } = 4; // 4.0+
 
-        // Risk Appetite Threshold (defines what's acceptable)
-        [Display(Name = "Risk Appetite Threshold")]
+        // Risk Appetite Thresholds (defines what's acceptable)
+        [Display(Name = "Qualitative Risk Appetite Threshold")]
         [Range(0, 16, ErrorMessage = "Must be between 0 and 16")]
-        public decimal RiskAppetiteThreshold { get; set; } = 6; // Risks above this level are above appetite
+        public decimal RiskAppetiteThreshold { get; set; } = 6; // Qualitative risks above this level are above appetite
 
-        // Cybersecurity Insurance Amount (for FAIR assessments)
-        [Display(Name = "Cybersecurity Insurance Amount")]
+        [Display(Name = "FAIR Risk Appetite Threshold")]
+        [Range(0, double.MaxValue, ErrorMessage = "Must be a positive number")]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal FairRiskAppetiteThreshold { get; set; } = 50000; // FAIR ALE above this amount is above appetite
+
+        // Cybersecurity Insurance Settings (for FAIR assessments)
+        [Display(Name = "Cybersecurity Insurance Amount (Legacy)")]
         [Range(0, double.MaxValue, ErrorMessage = "Must be a positive number")]
         [Column(TypeName = "decimal(18,2)")]
         public decimal CybersecurityInsuranceAmount { get; set; } = 0; // Amount to deduct from ALE when insurance is applied
+
+        [Display(Name = "Insurance Coverage Limit")]
+        [Range(0, double.MaxValue, ErrorMessage = "Must be a positive number")]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal InsuranceCoverageLimit { get; set; } = 1000000; // $1M default coverage limit
+
+        [Display(Name = "Insurance Deductible")]
+        [Range(0, double.MaxValue, ErrorMessage = "Must be a positive number")]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal InsuranceDeductible { get; set; } = 25000; // $25K default deductible
+
+        [Display(Name = "Insurance Coverage Percentage")]
+        [Range(0, 100, ErrorMessage = "Must be between 0 and 100")]
+        public decimal InsuranceCoveragePercentage { get; set; } = 80; // 80% default coverage
+
+        [Display(Name = "Insurance Enabled by Default")]
+        public bool InsuranceEnabledByDefault { get; set; } = false; // Whether insurance is enabled by default in threat models
 
         // Metadata
         [Display(Name = "Is Active")]
@@ -85,6 +107,30 @@ namespace CyberRiskApp.Models
             if (riskScore >= QualitativeHighThreshold) return "High";
             if (riskScore >= QualitativeMediumThreshold) return "Medium";
             return "Low";
+        }
+
+        // Helper method to check if FAIR assessment is within risk appetite
+        public bool IsFairWithinRiskAppetite(decimal ale)
+        {
+            return ale <= FairRiskAppetiteThreshold;
+        }
+
+        // Helper method to check if Qualitative assessment is within risk appetite
+        public bool IsQualitativeWithinRiskAppetite(decimal riskScore)
+        {
+            return riskScore <= RiskAppetiteThreshold;
+        }
+
+        // Helper method to get risk appetite status for FAIR assessments
+        public string GetFairRiskAppetiteStatus(decimal ale)
+        {
+            return IsFairWithinRiskAppetite(ale) ? "Within Appetite" : "Above Appetite";
+        }
+
+        // Helper method to get risk appetite status for Qualitative assessments
+        public string GetQualitativeRiskAppetiteStatus(decimal riskScore)
+        {
+            return IsQualitativeWithinRiskAppetite(riskScore) ? "Within Appetite" : "Above Appetite";
         }
 
         // Validation method

@@ -1,1051 +1,601 @@
-﻿@model CyberRiskApp.Models.RiskAssessment
+@model CyberRiskApp.Models.RiskAssessment
 @{
-    ViewData["Title"] = "Risk Assessment Details";
-}
-
-<style>
-    .kill-chain-card {
-        border: 1px solid #dee2e6;
-        transition: all 0.2s ease-in-out;
-        height: 100%;
-    }
-    
-    .kill-chain-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .kill-chain-card .card-header {
-        border-bottom: 1px solid #dee2e6;
-    }
-    
-    .threat-scenario {
-        border-left: 4px solid #6c757d;
-        padding-left: 15px;
-    }
-    
-    .threat-scenario:hover {
-        border-left-color: #0d6efd;
-    }
-
-    /* Attack Scenario Flow Visualization Styles */
-    .scenario-flow-container {
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        padding: 20px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-    }
-
-    .scenario-header {
-        border-bottom: 2px solid #e9ecef;
-        padding-bottom: 15px;
-    }
-
-    .kill-chain-flow {
-        min-height: 200px;
-        position: relative;
-        overflow-x: auto;
-        padding: 20px 0;
-    }
-
-    .flow-stage {
-        display: inline-block;
-        margin: 0 15px;
-        text-align: center;
-        position: relative;
-        vertical-align: top;
-    }
-
-    .flow-stage:not(:last-child)::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        right: -25px;
-        width: 20px;
-        height: 2px;
-        background: linear-gradient(to right, #6c757d, #007bff);
-        z-index: 1;
-    }
-
-    .flow-stage:not(:last-child)::before {
-        content: '▶';
-        position: absolute;
-        top: 50%;
-        right: -30px;
-        transform: translateY(-50%);
-        color: #007bff;
-        font-size: 12px;
-        z-index: 2;
-    }
-
-    .stage-header {
-        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-        color: white;
-        padding: 8px 16px;
-        border-radius: 6px 6px 0 0;
-        font-weight: bold;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0;
-        min-width: 150px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .stage-techniques {
-        background: white;
-        border: 2px solid #6c757d;
-        border-top: none;
-        border-radius: 0 0 6px 6px;
-        min-height: 120px;
-        min-width: 150px;
-        max-width: 200px;
-        width: 180px;
-        padding: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        overflow: hidden;
-        box-sizing: border-box;
-    }
-
-    .technique-box {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-        padding: 8px;
-        margin-bottom: 8px;
-        font-size: 11px;
-        line-height: 1.3;
-        position: relative;
-        transition: all 0.2s ease;
-        cursor: pointer;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
-        width: 100%;
-        box-sizing: border-box;
-    }
-
-    .technique-box:hover {
-        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-        border-color: #2196f3;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-    }
-
-    .technique-box:last-child {
-        margin-bottom: 0;
-    }
-
-    .technique-name {
-        font-weight: 600;
-        color: #495057;
-        margin-bottom: 3px;
-        display: block;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
-    }
-
-    .technique-description {
-        color: #6c757d;
-        font-size: 10px;
-        line-height: 1.2;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-        hyphens: auto;
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-line-clamp: 4;
-        -webkit-box-orient: vertical;
-    }
-
-    .mitre-technique {
-        border-left: 4px solid #4caf50;
-    }
-
-    .killchain-technique {
-        border-left: 4px solid #ff9800;
-    }
-
-    .empty-stage {
-        color: #6c757d;
-        font-style: italic;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 80px;
-        text-align: center;
-        font-size: 12px;
-    }
-
-    /* Stage Colors */
-    .stage-reconnaissance .stage-header { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
-    .stage-reconnaissance .stage-techniques { border-color: #17a2b8; }
-
-    .stage-weaponization .stage-header { background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); }
-    .stage-weaponization .stage-techniques { border-color: #ffc107; }
-
-    .stage-delivery .stage-header { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
-    .stage-delivery .stage-techniques { border-color: #dc3545; }
-
-    .stage-exploitation .stage-header { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); }
-    .stage-exploitation .stage-techniques { border-color: #007bff; }
-
-    .stage-installation .stage-header { background: linear-gradient(135deg, #6f42c1 0%, #59359a 100%); }
-    .stage-installation .stage-techniques { border-color: #6f42c1; }
-
-    .stage-commandandcontrol .stage-header { background: linear-gradient(135deg, #343a40 0%, #23272b 100%); }
-    .stage-commandandcontrol .stage-techniques { border-color: #343a40; }
-
-    .stage-actionsonobjectives .stage-header { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
-    .stage-actionsonobjectives .stage-techniques { border-color: #28a745; }
-
-    @@media (max-width: 768px) {
-        .kill-chain-flow {
-            white-space: nowrap;
-        }
-        
-        .flow-stage {
-            margin: 0 10px;
-        }
-        
-        .stage-techniques {
-            min-width: 120px;
-            max-width: 140px;
-            width: 130px;
-        }
-        
-        .technique-box {
-            font-size: 10px;
-            padding: 6px;
-        }
-        
-        .technique-name {
-            font-size: 10px;
-        }
-        
-        .technique-description {
-            font-size: 9px;
-            -webkit-line-clamp: 3;
-        }
-    }
-</style>
-
-@functions {
-    private string GetRiskLevelColor(string riskLevel)
-    {
-        return riskLevel switch
-        {
-            "Critical" => "danger",
-            "High" => "warning",
-            "Medium" => "info",
-            "Low" => "success",
-            _ => "secondary"
-        };
-    }
-
-    private string GetRiskLevelIcon(string riskLevel)
-    {
-        return riskLevel switch
-        {
-            "Critical" => "exclamation-triangle",
-            "High" => "exclamation-circle",
-            "Medium" => "exclamation",
-            "Low" => "check-circle",
-            _ => "question-circle"
-        };
-    }
-
-    private string GetStatusColor(CyberRiskApp.Models.AssessmentStatus status)
-    {
-        return status switch
-        {
-            CyberRiskApp.Models.AssessmentStatus.Completed => "success",
-            CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
-            CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
-            CyberRiskApp.Models.AssessmentStatus.Approved => "info",
-            _ => "secondary"
-        };
-    }
-
-    private string GetRiskStatusColor(CyberRiskApp.Models.RiskStatus status)
-    {
-        return status switch
-        {
-            CyberRiskApp.Models.RiskStatus.Open => "danger",
-            CyberRiskApp.Models.RiskStatus.UnderReview => "warning",
-            CyberRiskApp.Models.RiskStatus.Closed => "success",
-            CyberRiskApp.Models.RiskStatus.Accepted => "info",
-            _ => "secondary"
-        };
-    }
-
-    private string GetRiskLevelColorFromEnum(CyberRiskApp.Models.RiskLevel riskLevel)
-    {
-        return riskLevel switch
-        {
-            CyberRiskApp.Models.RiskLevel.Critical => "danger",
-            CyberRiskApp.Models.RiskLevel.High => "warning",
-            CyberRiskApp.Models.RiskLevel.Medium => "info",
-            CyberRiskApp.Models.RiskLevel.Low => "success",
-            _ => "secondary"
-        };
-    }
-
-    private string GetAssessmentTypeColor(CyberRiskApp.Models.AssessmentType assessmentType)
-    {
-        return assessmentType switch
-        {
-            CyberRiskApp.Models.AssessmentType.FAIR => "primary",
-            CyberRiskApp.Models.AssessmentType.Qualitative => "success",
-            _ => "secondary"
-        };
-    }
-
-    private string GetAssessmentTypeIcon(CyberRiskApp.Models.AssessmentType assessmentType)
-    {
-        return assessmentType switch
-        {
-            CyberRiskApp.Models.AssessmentType.FAIR => "calculator",
-            CyberRiskApp.Models.AssessmentType.Qualitative => "chart-bar",
-            _ => "question-circle"
-        };
-    }
-
-    private decimal GetExposureRating(CyberRiskApp.Models.ExposureLevel? exposureLevel)
-    {
-        return exposureLevel switch
-        {
-            CyberRiskApp.Models.ExposureLevel.SlightlyExposed => 0.2m,
-            CyberRiskApp.Models.ExposureLevel.Exposed => 0.4m,
-            CyberRiskApp.Models.ExposureLevel.ModeratelyExposed => 0.8m,
-            CyberRiskApp.Models.ExposureLevel.HighlyExposed => 1.0m,
-            _ => 0.0m
-        };
-    }
-
-    string GetScenarioStatusColor(CyberRiskApp.Models.ScenarioStatus status)
-    {
-        return status switch
-        {
-            CyberRiskApp.Models.ScenarioStatus.Draft => "secondary",
-            CyberRiskApp.Models.ScenarioStatus.UnderReview => "warning",
-            CyberRiskApp.Models.ScenarioStatus.Approved => "success", 
-            CyberRiskApp.Models.ScenarioStatus.Archived => "dark",
-            _ => "secondary"
-        };
-    }
+    ViewData["Title"] = $"Risk Assessment: {Model.Title}";
 }
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-12">
-            <!-- Header Section -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h2 class="mb-1">
-                        <i class="fas fa-@GetAssessmentTypeIcon(Model.AssessmentType) me-2"></i>
-                        @Model.Title
-                    </h2>
-                    <div class="mb-2">
-                        <span class="badge bg-@GetAssessmentTypeColor(Model.AssessmentType) me-2">
-                            @Model.AssessmentType Assessment
-                        </span>
-                        <span class="badge bg-@GetStatusColor(Model.Status) me-2">@Model.Status</span>
-                        <span class="badge bg-@GetRiskLevelColor(Model.CalculateRiskLevel()) fs-6">
-                            <i class="fas fa-@GetRiskLevelIcon(Model.CalculateRiskLevel()) me-1"></i>
-                            @Model.CalculateRiskLevel() Risk
-                        </span>
-                    </div>
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-server me-1"></i>@Model.Asset
-                        @if (!string.IsNullOrEmpty(Model.BusinessUnit))
-                        {
-                            <span class="ms-3"><i class="fas fa-building me-1"></i>@Model.BusinessUnit</span>
-                        }
-                        @if (!string.IsNullOrEmpty(Model.BusinessOwner))
-                        {
-                            <span class="ms-3"><i class="fas fa-user me-1"></i>@Model.BusinessOwner</span>
-                        }
-                    </p>
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4><i class="fas fa-shield-alt me-2 text-primary"></i>@Model.Title</h4>
+                    @if (User.CanUserPerformAssessments())
+                    {
+                        <div class="btn-group" role="group">
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                            <button class="btn btn-outline-primary btn-sm" onclick="generatePDF()">
+                                <i class="fas fa-file-pdf me-1"></i>Export PDF
+                            </button>
+                        </div>
+                    }
                 </div>
-                <div>
-                    <a asp-action="ExportToPdf" asp-route-id="@Model.Id" class="btn btn-outline-danger me-2">
-                        <i class="fas fa-file-pdf me-2"></i>Export PDF
-                    </a>
-                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary">
-                        <i class="fas fa-edit me-2"></i>Edit
-                    </a>
-                    <a asp-action="Index" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Back to List
-                    </a>
-                </div>
-            </div>
 
-            <!-- Risk Score/ALE Card -->
-            <div class="row mb-4">
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            @if (Model.AssessmentType == CyberRiskApp.Models.AssessmentType.FAIR)
+                <div class="card-body">
+                    <!-- Assessment Overview -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="info-group">
+                                <span class="label"><i class="fas fa-building me-1"></i>Asset:</span>
+                                <span class="value">@Model.Asset</span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(Model.BusinessUnit))
                             {
-                                <div class="mb-3">
-                                    <div class="display-6 fw-bold text-success">
-                                        @Model.AnnualLossExpectancy?.ToString("C0")
-                                    </div>
-                                    <div class="text-muted">Annual Loss Expectancy</div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <span class="badge bg-@GetRiskLevelColor(Model.CalculateRiskLevel()) fs-5">
-                                        @Model.CalculateRiskLevel() Risk
-                                    </span>
-                                </div>
-                                <div class="row text-center small">
-                                    <div class="col-6">
-                                        <div class="fw-bold text-info">@string.Format("{0:F2}", Model.LossEventFrequency)</div>
-                                        <div class="text-muted">LEF/Year</div>
-                                    </div>
+                                <div class="info-group">
+                                    <span class="label"><i class="fas fa-users me-1"></i>Business Unit:</span>
+                                    <span class="value">@Model.BusinessUnit</span>
                                 </div>
                             }
-                            else
+                            @if (!string.IsNullOrEmpty(Model.BusinessOwner))
                             {
-                                <div class="mb-3">
-                                    <div class="display-6 fw-bold text-success">
-                                        @Model.QualitativeRiskScore?.ToString("F1")
-                                    </div>
-                                    <div class="text-muted">Risk Score</div>
+                                <div class="info-group">
+                                    <span class="label"><i class="fas fa-user-tie me-1"></i>Business Owner:</span>
+                                    <span class="value">@Model.BusinessOwner</span>
                                 </div>
-
-                                <div class="mb-3">
-                                    <span class="badge bg-@GetRiskLevelColor(Model.CalculateRiskLevel()) fs-5">
-                                        @Model.CalculateRiskLevel() Risk
-                                    </span>
-                                </div>
-
-                                <div class="row text-center small">
-                                    <div class="col-4">
-                                        <div class="fw-bold text-warning">@((int?)Model.QualitativeLikelihood ?? 0)</div>
-                                        <div class="text-muted">Likelihood</div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="fw-bold text-danger">@((int?)Model.QualitativeImpact ?? 0)</div>
-                                        <div class="text-muted">Impact</div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="fw-bold text-info">@GetExposureRating(Model.QualitativeExposure).ToString("F1")</div>
-                                        <div class="text-muted">Exposure</div>
-                                    </div>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.TechnicalControlsInPlace))
+                            {
+                                <div class="info-group">
+                                    <span class="label"><i class="fas fa-shield-alt me-1"></i>Technical Controls:</span>
+                                    <span class="value">@Model.TechnicalControlsInPlace</span>
                                 </div>
                             }
                         </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0">Assessment Information</h6>
+                        <div class="col-md-6">
+                            <div class="info-group">
+                                <span class="label"><i class="fas fa-calendar me-1"></i>Date Completed:</span>
+                                <span class="value">@(Model.DateCompleted?.ToString("MMM dd, yyyy") ?? "In Progress")</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="label"><i class="fas fa-user me-1"></i>Assessor:</span>
+                                <span class="value">@Model.Assessor</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="label"><i class="fas fa-clipboard-check me-1"></i>Status:</span>
+                                <span class="badge bg-@(Model.Status switch
+                                {
+                                    CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+                                    CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
+                                    CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+                                    CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
+                                    _ => "secondary"
+                                })">@Model.Status</span>
+                            </div>
+                            <div class="info-group">
+                                <span class="label"><i class="fas fa-chart-line me-1"></i>Assessment Type:</span>
+                                <span class="badge bg-info">@Model.AssessmentType</span>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="row small">
-                                <div class="col-12 mb-2">
-                                    <strong>Assessor:</strong><br>
-                                    @Model.Assessor
-                                </div>
-                                <div class="col-12 mb-2">
-                                    <strong>Date Completed:</strong><br>
-                                    @Model.DateCompleted?.ToString("MMMM dd, yyyy")
-                                </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Description))
+                    {
+                        <div class="mb-4">
+                            <h6><i class="fas fa-info-circle me-1"></i>Description</h6>
+                            <p class="text-muted">@Model.Description</p>
+                        </div>
+                    }
+
+                    <!-- Legacy Threat Scenario Display (for older assessments) -->
+                    @if (!string.IsNullOrEmpty(Model.ThreatScenario))
+                    {
+                        <div class="mb-4">
+                            <h6><i class="fas fa-exclamation-triangle me-1"></i>Threat Scenario</h6>
+                            <p class="text-muted">@Model.ThreatScenario</p>
+                        </div>
+                    }
+
+                    <!-- Risk Analysis Results -->
+                    <div class="row">
+                        @if (Model.AssessmentType == CyberRiskApp.Models.AssessmentType.Qualitative)
+                        {
+                            <!-- NEW: Threat Scenario-based Qualitative Analysis Results -->
+                            @if (Model.ThreatScenarios?.Any() == true)
+                            {
                                 <div class="col-12">
-                                    <strong>Status:</strong><br>
-                                    <span class="badge bg-@GetStatusColor(Model.Status)">@Model.Status</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                                    <h5 class="section-title"><i class="fas fa-chart-bar me-2"></i>Qualitative Risk Analysis</h5>
+                                    
+                                    <!-- Overall Risk Summary -->
+                                    <div class="row g-3 mb-4">
+                                        <div class="col-lg-4 col-md-6">
+                                            <div class="metric-card bg-primary">
+                                                <div class="metric-value">@(Model.CalculateOverallQualitativeRiskScore()?.ToString("F1") ?? "N/A")</div>
+                                                <div class="metric-label">Average Risk Score</div>
+                                            </div>
+                                        </div>
 
-            <!-- Assessment Details -->
-            @if (Model.AssessmentType == CyberRiskApp.Models.AssessmentType.FAIR)
-            {
-                <!-- FAIR Analysis Details -->
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-4">
-                            <div class="card-header bg-warning bg-opacity-10">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-user-secret me-2"></i>Threat Analysis
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label fw-bold text-muted">Threat Scenario</label>
-                                        <div class="bg-light p-3 rounded">@Model.ThreatScenario</div>
-                                    </div>
-                                    <div class="col-6 mb-3">
-                                        <label class="form-label fw-bold text-muted">Threat Community</label>
-                                        <div>@Model.ThreatCommunity</div>
-                                    </div>
-                                    <div class="col-6 mb-3">
-                                        <label class="form-label fw-bold text-muted">Threat Action</label>
-                                        <div>@Model.ThreatAction</div>
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="form-label fw-bold text-muted">TEF</label>
-                                        <div class="fw-bold text-primary">@Model.ThreatEventFrequency</div>
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="form-label fw-bold text-muted">Contact %</label>
-                                        <div class="fw-bold text-warning">@Model.ContactFrequency%</div>
-                                    </div>
-                                    <div class="col-4">
-                                        <label class="form-label fw-bold text-muted">Success %</label>
-                                        <div class="fw-bold text-danger">@Model.ActionSuccess%</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                                        <div class="col-lg-4 col-md-6">
+                                            <div class="metric-card bg-@(Model.CalculateRiskLevel().ToLower() switch 
+                                            { 
+                                                "low" => "success",
+                                                "medium" => "warning", 
+                                                "high" => "danger",
+                                                "critical" => "dark",
+                                                _ => "secondary"
+                                            })">
+                                                <div class="metric-value">@Model.CalculateRiskLevel()</div>
+                                                <div class="metric-label">Overall Risk Level</div>
+                                            </div>
+                                        </div>
 
-                    <div class="col-md-6">
-                        <div class="card mb-4">
-                            <div class="card-header bg-danger bg-opacity-10">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-dollar-sign me-2"></i>Loss Magnitude
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row small">
-                                    <!-- Productivity Loss -->
-                                    <div class="col-12 mb-3">
-                                        <label class="fw-bold text-primary">Productivity Loss</label>
-                                        <div class="row">
-                                            <div class="col-4">Min: @Model.ProductivityLossMin.ToString("C0")</div>
-                                            <div class="col-4">ML: @Model.ProductivityLossMostLikely.ToString("C0")</div>
-                                            <div class="col-4">Max: @Model.ProductivityLossMax.ToString("C0")</div>
+                                        <div class="col-lg-4 col-md-6">
+                                            <div class="metric-card bg-info">
+                                                <div class="metric-value">@Model.ThreatScenarios.Count</div>
+                                                <div class="metric-label">Threat Scenarios</div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <!-- Response Costs -->
-                                    <div class="col-12 mb-3">
-                                        <label class="fw-bold text-info">Response Costs</label>
-                                        <div class="row">
-                                            <div class="col-4">Min: @Model.ResponseCostsMin.ToString("C0")</div>
-                                            <div class="col-4">ML: @Model.ResponseCostsMostLikely.ToString("C0")</div>
-                                            <div class="col-4">Max: @Model.ResponseCostsMax.ToString("C0")</div>
-                                        </div>
-                                    </div>
-                                    <!-- Replacement Costs -->
-                                    <div class="col-12 mb-3">
-                                        <label class="fw-bold text-warning">Replacement Costs</label>
-                                        <div class="row">
-                                            <div class="col-4">Min: @Model.ReplacementCostMin.ToString("C0")</div>
-                                            <div class="col-4">ML: @Model.ReplacementCostMostLikely.ToString("C0")</div>
-                                            <div class="col-4">Max: @Model.ReplacementCostMax.ToString("C0")</div>
-                                        </div>
-                                    </div>
-                                    <!-- Fines -->
-                                    <div class="col-12">
-                                        <label class="fw-bold text-danger">Fines/Penalties</label>
-                                        <div class="row">
-                                            <div class="col-4">Min: @Model.FinesMin.ToString("C0")</div>
-                                            <div class="col-4">ML: @Model.FinesMostLikely.ToString("C0")</div>
-                                            <div class="col-4">Max: @Model.FinesMax.ToString("C0")</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <!-- Qualitative Analysis Details -->
-                <div class="row">
-                    <div class="col-md-8">
-                        <div class="card mb-4">
-                            <div class="card-header bg-success bg-opacity-10">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-chart-bar me-2"></i>Qualitative Risk Factors
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-12 mb-4">
-                                        <label class="form-label fw-bold text-muted">Threat Scenario</label>
-                                        <div class="bg-light p-3 rounded">@Model.ThreatScenario</div>
-                                    </div>
-                                    @if (Model.Controls?.Any() == true)
+
+                                    <!-- Threat Scenarios Detail -->
+                                    @foreach (var scenario in Model.ThreatScenarios.OrderByDescending(ts => ts.QualitativeRiskScore))
                                     {
-                                        <div class="col-12 mb-4">
-                                            <label class="form-label fw-bold text-muted">Security Controls in Place</label>
-                                            <div class="bg-light p-3 rounded">
-                                                @foreach (var control in Model.Controls)
+                                        <div class="card mb-3 threat-scenario-card">
+                                            <div class="card-header">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1"><i class="fas fa-exclamation-triangle me-2"></i>Threat Scenario @(Model.ThreatScenarios.ToList().IndexOf(scenario) + 1)</h6>
+                                                        @if (!string.IsNullOrEmpty(scenario.Description))
+                                                        {
+                                                            <p class="text-muted mb-0 small">@scenario.Description</p>
+                                                        }
+                                                    </div>
+                                                    <div class="text-end">
+                                                        @if (scenario.QualitativeRiskScore.HasValue)
+                                                        {
+                                                            <span class="badge bg-@(scenario.CalculateRiskLevel().ToLower() switch 
+                                                            { 
+                                                                "low" => "success",
+                                                                "medium" => "warning", 
+                                                                "high" => "danger",
+                                                                "critical" => "dark",
+                                                                _ => "secondary"
+                                                            }) fs-6">
+                                                                @scenario.CalculateRiskLevel()
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row g-2 mb-3">
+                                                    @if (scenario.QualitativeLikelihood.HasValue)
+                                                    {
+                                                        <div class="col-lg-2 col-md-4">
+                                                            <div class="small-metric-card bg-info">
+                                                                <div class="small-metric-value">@scenario.QualitativeLikelihood</div>
+                                                                <div class="small-metric-label">Likelihood</div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    
+                                                    @if (scenario.QualitativeImpact.HasValue)
+                                                    {
+                                                        <div class="col-lg-2 col-md-4">
+                                                            <div class="small-metric-card bg-warning">
+                                                                <div class="small-metric-value">@scenario.QualitativeImpact</div>
+                                                                <div class="small-metric-label">Impact</div>
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                    @if (scenario.QualitativeExposure.HasValue)
+                                                    {
+                                                        <div class="col-lg-2 col-md-4">
+                                                            <div class="small-metric-card bg-secondary">
+                                                                <div class="small-metric-value">@scenario.QualitativeExposure.Value.ToString("F2")</div>
+                                                                <div class="small-metric-label">Exposure</div>
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                    @if (scenario.QualitativeRiskScore.HasValue)
+                                                    {
+                                                        <div class="col-lg-3 col-md-6">
+                                                            <div class="small-metric-card bg-primary">
+                                                                <div class="small-metric-value">@scenario.QualitativeRiskScore.Value.ToString("F1")</div>
+                                                                <div class="small-metric-label">Risk Score</div>
+                                                            </div>
+                                                        </div>
+                                                    }
+
+                                                    <div class="col-lg-3 col-md-6">
+                                                        <div class="small-metric-card bg-@(scenario.CalculateRiskLevel().ToLower() switch 
+                                                        { 
+                                                            "low" => "success",
+                                                            "medium" => "warning", 
+                                                            "high" => "danger",
+                                                            "critical" => "dark",
+                                                            _ => "secondary"
+                                                        })">
+                                                            <div class="small-metric-value">@scenario.CalculateRiskLevel()</div>
+                                                            <div class="small-metric-label">Risk Level</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Scenario Risks -->
+                                                @if (scenario.IdentifiedRisks?.Any() == true)
                                                 {
-                                                    <div class="mb-2">
-                                                        <strong>@control.ControlName</strong> (@control.ControlType) - 
-                                                        <span class="badge bg-@(control.ImplementationStatus == "Implemented" ? "success" : control.ImplementationStatus == "Planned" ? "warning" : "secondary")">
-                                                            @control.ImplementationStatus
-                                                        </span>
-                                                        @if (control.ImplementationStatus == "Implemented")
-                                                        {
-                                                            <span class="text-muted">(@control.ControlEffectiveness% effective)</span>
-                                                        }
-                                                        @if (!string.IsNullOrEmpty(control.ControlDescription))
-                                                        {
-                                                            <div class="small text-muted">@control.ControlDescription</div>
-                                                        }
+                                                    <h6><i class="fas fa-exclamation-circle me-1"></i>Identified Risks (@scenario.IdentifiedRisks.Count)</h6>
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-hover">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>Risk Title</th>
+                                                                    <th>Risk Level</th>
+                                                                    <th>Treatment</th>
+                                                                    <th>Status</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach (var risk in scenario.IdentifiedRisks.OrderByDescending(r => r.InherentRiskLevel))
+                                                                {
+                                                                    <tr>
+                                                                        <td>
+                                                                            <strong>@risk.Title</strong>
+                                                                            @if (!string.IsNullOrEmpty(risk.Description))
+                                                                            {
+                                                                                <br><small class="text-muted">@risk.Description</small>
+                                                                            }
+                                                                        </td>
+                                                                        <td>
+                                                                            <span class="badge bg-@(risk.InherentRiskLevel.ToString().ToLower() switch 
+                                                                            { 
+                                                                                "low" => "success",
+                                                                                "medium" => "warning", 
+                                                                                "high" => "danger",
+                                                                                "critical" => "dark",
+                                                                                _ => "secondary"
+                                                                            })">
+                                                                                @risk.InherentRiskLevel
+                                                                            </span>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span class="badge bg-light text-dark">@risk.Treatment</span>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span class="badge bg-@(risk.Status.ToString().ToLower() switch 
+                                                                            { 
+                                                                                "open" => "danger",
+                                                                                "closed" => "success",
+                                                                                "accepted" => "warning",
+                                                                                "underreview" => "info",
+                                                                                _ => "secondary"
+                                                                            })">
+                                                                                @risk.Status
+                                                                            </span>
+                                                                        </td>
+                                                                    </tr>
+                                                                }
+                                                            </tbody>
+                                                        </table>
                                                     </div>
                                                 }
                                             </div>
                                         </div>
                                     }
-                                    <div class="col-4">
-                                        <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
-                                            <div class="h3 mb-2 text-warning">@((int?)Model.QualitativeLikelihood ?? 0)</div>
-                                            <div class="fw-bold">Likelihood</div>
-                                            <div class="small text-muted">@Model.QualitativeLikelihood</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="text-center p-3 bg-danger bg-opacity-10 rounded">
-                                            <div class="h3 mb-2 text-danger">@((int?)Model.QualitativeImpact ?? 0)</div>
-                                            <div class="fw-bold">Impact</div>
-                                            <div class="small text-muted">@Model.QualitativeImpact</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="text-center p-3 bg-info bg-opacity-10 rounded">
-                                            <div class="h3 mb-2 text-info">@GetExposureRating(Model.QualitativeExposure)</div>
-                                            <div class="fw-bold">Exposure</div>
-                                            <div class="small text-muted">@Model.QualitativeExposure</div>
-                                        </div>
-                                    </div>
                                 </div>
-
-                                <div class="row mt-4">
-                                    <div class="col-12">
-                                        <div class="bg-success bg-opacity-10 p-3 rounded text-center">
-                                            <h5 class="mb-1">Risk Calculation</h5>
-                                            <div class="fw-bold">
-                                                (@((int?)Model.QualitativeLikelihood ?? 0) × @((int?)Model.QualitativeImpact ?? 0)) × @GetExposureRating(Model.QualitativeExposure) = @Model.QualitativeRiskScore?.ToString("F1")
+                            }
+                            else if (Model.QualitativeRiskScore.HasValue)
+                            {
+                                <!-- LEGACY: Assessment-level Qualitative Analysis Results -->
+                                <div class="col-12">
+                                    <h5 class="section-title"><i class="fas fa-chart-bar me-2"></i>Qualitative Risk Analysis (Legacy)</h5>
+                                    
+                                    <div class="row g-3 mb-4">
+                                        <div class="col-lg-2 col-md-4">
+                                            <div class="metric-card bg-info">
+                                                <div class="metric-value">@Model.QualitativeLikelihood</div>
+                                                <div class="metric-label">Likelihood</div>
                                             </div>
-                                            <div class="small text-muted">(Likelihood × Impact) × Exposure Rating</div>
+                                        </div>
+                                        
+                                        <div class="col-lg-2 col-md-4">
+                                            <div class="metric-card bg-warning">
+                                                <div class="metric-value">@Model.QualitativeImpact</div>
+                                                <div class="metric-label">Impact</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-2 col-md-4">
+                                            <div class="metric-card bg-secondary">
+                                                <div class="metric-value">@(Model.QualitativeExposure?.ToString("F2") ?? "N/A")</div>
+                                                <div class="metric-label">Exposure</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-3 col-md-6">
+                                            <div class="metric-card bg-primary">
+                                                <div class="metric-value">@Model.QualitativeRiskScore.Value.ToString("F1")</div>
+                                                <div class="metric-label">Risk Score</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-3 col-md-6">
+                                            <div class="metric-card bg-@(Model.CalculateRiskLevel().ToLower() switch 
+                                            { 
+                                                "low" => "success",
+                                                "medium" => "warning", 
+                                                "high" => "danger",
+                                                "critical" => "dark",
+                                                _ => "secondary"
+                                            })">
+                                                <div class="metric-value">@Model.CalculateRiskLevel()</div>
+                                                <div class="metric-label">Overall Risk Level</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
+                            }
+                        }
                     </div>
+                </div>
+            </div>
 
-                    <div class="col-md-4">
-                        <div class="card mb-4">
-                            <div class="card-header bg-info bg-opacity-10">
-                                <h6 class="mb-0">Risk Level Matrix</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="small">
-                                    <div class="mb-2">
-                                        <span class="badge bg-danger">Critical</span> 16.0
-                                    </div>
-                                    <div class="mb-2">
-                                        <span class="badge bg-warning">High</span> 10.0 - 15.9
-                                    </div>
-                                    <div class="mb-2">
-                                        <span class="badge bg-info">Medium</span> 4.0 - 9.9
-                                    </div>
-                                    <div class="mb-2">
-                                        <span class="badge bg-success">Low</span> 0.0 - 3.9
-                                    </div>
-                                </div>
-                            </div>
+            <!-- Identified Risks (Legacy - only show if not using threat scenarios) -->
+            @if (Model.IdentifiedRisks?.Any() == true && !(Model.ThreatScenarios?.Any() == true))
+            {
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-exclamation-circle me-2"></i>Identified Risks (@Model.IdentifiedRisks.Count)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Risk</th>
+                                        <th>Risk Level</th>
+                                        <th>Treatment</th>
+                                        <th>Status</th>
+                                        <th>Next Review</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var risk in Model.IdentifiedRisks.OrderByDescending(r => r.InherentRiskLevel))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div>
+                                                    <strong>@risk.Title</strong>
+                                                    @if (!string.IsNullOrEmpty(risk.Description))
+                                                    {
+                                                        <br><small class="text-muted">@risk.Description</small>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@(risk.InherentRiskLevel.ToString().ToLower() switch 
+                                                { 
+                                                    "low" => "success",
+                                                    "medium" => "warning", 
+                                                    "high" => "danger",
+                                                    "critical" => "dark",
+                                                    _ => "secondary"
+                                                })">
+                                                    @risk.InherentRiskLevel
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark">@risk.Treatment</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@(risk.Status.ToString().ToLower() switch 
+                                                { 
+                                                    "open" => "danger",
+                                                    "closed" => "success",
+                                                    "accepted" => "warning",
+                                                    "underreview" => "info",
+                                                    _ => "secondary"
+                                                })">
+                                                    @risk.Status
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if (risk.NextReviewDate.HasValue)
+                                                {
+                                                    @risk.NextReviewDate.Value.ToString("MMM dd, yyyy")
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Not set</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             }
 
-            <!-- Attack Scenarios Flow Visualization -->
-            @* Debug: LinkedThreatModels count: @(Model.LinkedThreatModels?.Count() ?? 0) *@
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="fas fa-info-circle me-1"></i>Assessment Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 mb-3">
+                            <div class="border-end">
+                                <h4 class="text-@(Model.CalculateRiskLevel().ToLower() switch 
+                                { 
+                                    "low" => "success",
+                                    "medium" => "warning", 
+                                    "high" => "danger",
+                                    "critical" => "dark",
+                                    _ => "secondary"
+                                })">@Model.CalculateRiskLevel()</h4>
+                                <small class="text-muted">Overall Risk</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            @if (Model.ThreatScenarios?.Any() == true)
+                            {
+                                <h4 class="text-info">@Model.ThreatScenarios.Count</h4>
+                                <small class="text-muted">Scenarios</small>
+                            }
+                            else
+                            {
+                                <h4 class="text-info">@Model.IdentifiedRisks.Count</h4>
+                                <small class="text-muted">Risks</small>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Summary (if applicable) -->
+            @if (Model.QualitativeControls?.Any() == true)
+            {
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6><i class="fas fa-shield-alt me-1"></i>Controls Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (Model.QualitativeControls?.Any() == true)
+                        {
+                            <div class="mb-2">
+                                <strong>Qualitative Controls:</strong> @Model.QualitativeControls.Count
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Threat Models (if applicable) -->
             @if (Model.LinkedThreatModels?.Any() == true)
             {
-                <div class="card mb-4">
-                    <div class="card-header bg-primary bg-opacity-10">
-                        <h5 class="mb-0">
-                            <i class="fas fa-chess me-2"></i>Attack Scenarios Flow (@Model.LinkedThreatModels.Count threat models)
-                        </h5>
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6><i class="fas fa-crosshairs me-1"></i>Linked Threat Models</h6>
                     </div>
                     <div class="card-body">
                         @foreach (var threatModel in Model.LinkedThreatModels)
                         {
-                            var attackScenariosDict = ViewBag.AttackScenarios as Dictionary<int, IEnumerable<CyberRiskApp.Models.AttackScenario>>;
-                            var attackScenarios = attackScenariosDict?.ContainsKey(threatModel.Id) == true 
-                                ? attackScenariosDict[threatModel.Id]
-                                : new List<CyberRiskApp.Models.AttackScenario>();
-
-                            <div class="threat-model-section mb-5">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <div>
-                                        <h6 class="mb-1">
-                                            <i class="fas fa-crosshairs me-2 text-primary"></i>@threatModel.Name
-                                        </h6>
-                                        <p class="text-muted mb-0 small">@threatModel.Description</p>
-                                    </div>
-                                    <div>
-                                        <span class="badge bg-info me-2">@(attackScenarios?.Count() ?? 0) scenarios</span>
-                                        <a asp-controller="ThreatModeling" asp-action="Details" asp-route-id="@threatModel.Id" 
-                                           class="btn btn-outline-primary btn-sm">
-                                            <i class="fas fa-eye me-1"></i>View Full Model
-                                        </a>
-                                        @* Debug info *@
-                                        @if (attackScenarios?.Any() == true)
-                                        {
-                                            <small class="text-muted d-block">Scenarios: @string.Join(", ", attackScenarios.Select(s => $"{s.Name} (ID: {s.Id})"))</small>
-                                        }
-                                    </div>
-                                </div>
-
-                                @if (attackScenarios?.Any() == true)
-                                {
-                                    @foreach (var scenario in attackScenarios.OrderByDescending(s => s.UpdatedAt))
-                                    {
-                                        <div class="scenario-flow-container mb-4" data-scenario-id="@scenario.Id">
-                                            <div class="scenario-header mb-3">
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <h6 class="mb-0">
-                                                        <span class="badge bg-@GetScenarioStatusColor(scenario.Status) me-2">@scenario.Status</span>
-                                                        @scenario.Name
-                                                    </h6>
-                                                    <div class="btn-group btn-group-sm">
-                                                        <a href="@Url.Action("ScenarioBuilder", "ThreatModeling", new { id = threatModel.Id, scenarioId = scenario.Id })" 
-                                                           class="btn btn-outline-primary btn-sm" title="Edit Scenario">
-                                                            <i class="fas fa-edit"></i> Edit
-                                                        </a>
-                                                        <a href="@Url.Action("ScenarioDetails", "ThreatModeling", new { id = scenario.Id })" 
-                                                           class="btn btn-outline-info btn-sm" title="View Details">
-                                                            <i class="fas fa-eye"></i> Details
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                                @if (!string.IsNullOrEmpty(scenario.Description))
-                                                {
-                                                    <p class="text-muted mt-2 mb-0 small">@scenario.Description</p>
-                                                }
-                                            </div>
-                                            
-                                            <!-- Kill Chain Flow Visualization -->
-                                            <div class="kill-chain-flow" id="flow-@scenario.Id">
-                                                <div class="text-center">
-                                                    <i class="fas fa-spinner fa-spin"></i> Loading attack flow...
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        @if (!attackScenarios.Last().Equals(scenario))
-                                        {
-                                            <hr class="my-3">
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    <div class="text-center text-muted py-4">
-                                        <i class="fas fa-info-circle fa-2x mb-2"></i>
-                                        <p class="mb-0">No attack scenarios defined for this threat model</p>
-                                        <a asp-controller="ThreatModeling" asp-action="CreateScenario" asp-route-id="@threatModel.Id" 
-                                           class="btn btn-outline-success btn-sm mt-2">
-                                            <i class="fas fa-plus me-1"></i>Create Attack Scenario
-                                        </a>
-                                    </div>
-                                }
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-link me-2 text-muted"></i>
+                                <span>@threatModel.Name</span>
                             </div>
-                            
-                            @if (!Model.LinkedThreatModels.Last().Equals(threatModel))
-                            {
-                                <hr class="my-4">
-                            }
                         }
                     </div>
                 </div>
             }
-
-            <!-- Identified Risks -->
-            @if (Model.IdentifiedRisks?.Any() == true)
-            {
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-exclamation-triangle me-2"></i>Identified Risks (@Model.IdentifiedRisks.Count)
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            @foreach (var risk in Model.IdentifiedRisks)
-                            {
-                                <div class="col-md-6 col-lg-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <h6 class="card-title">@risk.Title</h6>
-                                            <div class="mb-2">
-                                                <span class="badge bg-@GetRiskLevelColorFromEnum(risk.RiskLevel)">@risk.RiskLevel</span>
-                                                <span class="badge bg-@GetRiskStatusColor(risk.Status)">@risk.Status</span>
-                                            </div>
-                                            <p class="card-text small">@risk.Description</p>
-                                            <div class="small text-muted">
-                                                <div>ALE: @risk.ALE.ToString("C0")</div>
-                                                <div>Owner: @risk.Owner</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            }
         </div>
     </div>
 </div>
 
-<!-- Technique Details Modal -->
-<div class="modal fade" id="techniqueDetailsModal" tabindex="-1" aria-labelledby="techniqueDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="techniqueDetailsModalLabel">
-                    <i class="fas fa-info-circle me-2"></i>Technique Details
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="techniqueDetailsContent">
-                <!-- Content will be loaded dynamically -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+    .info-group {
+        margin-bottom: 0.5rem;
+    }
+    
+    .info-group .label {
+        display: inline-block;
+        width: 140px;
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .info-group .value {
+        font-weight: 500;
+    }
+    
+    .section-title {
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        color: #495057;
+    }
+    
+    .metric-card {
+        background: linear-gradient(135deg, var(--bs-primary), var(--bs-primary));
+        color: white;
+        padding: 1.5rem;
+        border-radius: 0.375rem;
+        text-align: center;
+        height: 100%;
+    }
+    
+    .metric-card.bg-info { background: linear-gradient(135deg, var(--bs-info), var(--bs-info)); }
+    .metric-card.bg-warning { background: linear-gradient(135deg, var(--bs-warning), var(--bs-warning)); }
+    .metric-card.bg-success { background: linear-gradient(135deg, var(--bs-success), var(--bs-success)); }
+    .metric-card.bg-danger { background: linear-gradient(135deg, var(--bs-danger), var(--bs-danger)); }
+    .metric-card.bg-secondary { background: linear-gradient(135deg, var(--bs-secondary), var(--bs-secondary)); }
+    .metric-card.bg-dark { background: linear-gradient(135deg, var(--bs-dark), var(--bs-dark)); }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        opacity: 0.8;
+        margin-top: 0.5rem;
+    }
+
+    .small-metric-card {
+        background: linear-gradient(135deg, var(--bs-primary), var(--bs-primary));
+        color: white;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        text-align: center;
+        height: 100%;
+    }
+    
+    .small-metric-card.bg-info { background: linear-gradient(135deg, var(--bs-info), var(--bs-info)); }
+    .small-metric-card.bg-warning { background: linear-gradient(135deg, var(--bs-warning), var(--bs-warning)); }
+    .small-metric-card.bg-success { background: linear-gradient(135deg, var(--bs-success), var(--bs-success)); }
+    .small-metric-card.bg-danger { background: linear-gradient(135deg, var(--bs-danger), var(--bs-danger)); }
+    .small-metric-card.bg-secondary { background: linear-gradient(135deg, var(--bs-secondary), var(--bs-secondary)); }
+    .small-metric-card.bg-dark { background: linear-gradient(135deg, var(--bs-dark), var(--bs-dark)); }
+    
+    .small-metric-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+    
+    .small-metric-label {
+        font-size: 0.75rem;
+        opacity: 0.8;
+        margin-top: 0.25rem;
+    }
+
+    .threat-scenario-card {
+        border-left: 4px solid var(--bs-primary);
+    }
+    
+    .threat-scenario-card .card-header {
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
+        border-bottom: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+    }
+</style>
 
 @section Scripts {
-<script>
-// Load attack scenario flows when page loads
-$(document).ready(function() {
-    $('.scenario-flow-container').each(function() {
-        const scenarioId = $(this).data('scenario-id');
-        loadScenarioFlow(scenarioId);
-    });
-});
-
-function loadScenarioFlow(scenarioId) {
-    const flowContainer = $('#flow-' + scenarioId);
-    
-    console.log('Loading scenario flow for scenario ID:', scenarioId);
-    
-    // Fetch scenario steps from API
-    fetch(`/api/threatmodeling/GetAttackScenarioSteps/${scenarioId}`)
-        .then(response => {
-            console.log('API response status:', response.status);
-            return response.json();
-        })
-        .then(steps => {
-            console.log('Loaded steps for scenario', scenarioId, ':', steps);
-            renderFlowVisualization(flowContainer, steps);
-        })
-        .catch(error => {
-            console.error('Error loading scenario flow:', error);
-            flowContainer.html('<div class="text-center text-muted"><i class="fas fa-exclamation-triangle"></i> Error loading attack flow</div>');
-        });
-}
-
-function renderFlowVisualization(container, steps) {
-    if (!steps || steps.length === 0) {
-        container.html('<div class="text-center text-muted"><i class="fas fa-info-circle"></i> No techniques defined for this scenario</div>');
-        return;
-    }
-    
-    // Group steps by kill chain phase
-    const phases = [
-        { key: 'Reconnaissance', name: 'Reconnaissance', steps: [] },
-        { key: 'Weaponization', name: 'Weaponization', steps: [] },
-        { key: 'Delivery', name: 'Delivery', steps: [] },
-        { key: 'Exploitation', name: 'Exploitation', steps: [] },
-        { key: 'Installation', name: 'Installation', steps: [] },
-        { key: 'CommandAndControl', name: 'Command & Control', steps: [] },
-        { key: 'ActionsOnObjectives', name: 'Actions on Objectives', steps: [] }
-    ];
-    
-    // Organize steps by phase
-    steps.forEach(step => {
-        if (step.killChainActivity && step.killChainActivity.phase) {
-            const phaseKey = step.killChainActivity.phase;
-            const phase = phases.find(p => p.key === phaseKey);
-            if (phase) {
-                phase.steps.push(step);
-            }
-        } else if (step.mitreTechnique) {
-            // For MITRE techniques without kill chain mapping, try to infer phase or put in general category
-            phases[0].steps.push(step); // Default to reconnaissance for unmapped MITRE techniques
+    <script>
+        function generatePDF() {
+            // Simple implementation - redirect to PDF export endpoint
+            window.location.href = '/RiskAssessments/ExportToPDF/@Model.Id';
         }
-    });
-    
-    // Build HTML
-    let html = '<div class="d-flex justify-content-start align-items-start" style="white-space: nowrap;">';
-    
-    phases.forEach((phase, index) => {
-        const phaseClass = 'stage-' + phase.key.toLowerCase();
-        
-        html += `
-            <div class="flow-stage ${phaseClass}">
-                <div class="stage-header">${phase.name}</div>
-                <div class="stage-techniques">`;
-        
-        if (phase.steps.length === 0) {
-            html += '<div class="empty-stage">No techniques</div>';
-        } else {
-            phase.steps.forEach(step => {
-                const isKillChain = step.killChainActivity != null;
-                const techniqueClass = isKillChain ? 'killchain-technique' : 'mitre-technique';
-                
-                let techniqueName, techniqueDesc;
-                
-                if (isKillChain) {
-                    techniqueName = step.killChainActivity.name || 'Custom Technique';
-                    techniqueDesc = step.killChainActivity.description || step.description || '';
-                } else if (step.mitreTechnique) {
-                    techniqueName = step.mitreTechnique.name || step.mitreTechnique.techniqueId || 'MITRE Technique';
-                    techniqueDesc = step.mitreTechnique.description || step.description || '';
-                } else {
-                    techniqueName = 'Technique';
-                    techniqueDesc = step.description || '';
-                }
-                
-                // Truncate description if too long
-                if (techniqueDesc.length > 80) {
-                    techniqueDesc = techniqueDesc.substring(0, 80) + '...';
-                }
-                
-                html += `
-                    <div class="technique-box ${techniqueClass}" title="${techniqueDesc}" onclick="showTechniqueDetails(${JSON.stringify(step).replace(/"/g, '&quot;')})">
-                        <span class="technique-name">${techniqueName}</span>
-                        <div class="technique-description">${techniqueDesc}</div>
-                    </div>`;
-            });
-        }
-        
-        html += '</div></div>';
-    });
-    
-    html += '</div>';
-    
-    container.html(html);
-}
-
-function showTechniqueDetails(step) {
-    const modalTitle = document.getElementById('techniqueDetailsModalLabel');
-    const modalContent = document.getElementById('techniqueDetailsContent');
-    
-    let techniqueType = '';
-    let techniqueName = '';
-    let techniqueId = '';
-    let description = '';
-    let additionalInfo = '';
-    
-    if (step.killChainActivity) {
-        // Kill Chain Activity
-        techniqueType = 'Kill Chain Activity';
-        techniqueName = step.killChainActivity.name;
-        techniqueId = `KC-${step.killChainActivity.id}`;
-        description = step.killChainActivity.description;
-        
-        additionalInfo = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6><i class="fas fa-layer-group me-2"></i>Phase</h6>
-                    <p class="text-muted">${step.killChainActivity.phase.replace(/([A-Z])/g, ' $1').trim()}</p>
-                </div>
-                <div class="col-md-6">
-                    <h6><i class="fas fa-chart-line me-2"></i>Complexity</h6>
-                    <p class="text-muted">${step.killChainActivity.complexity}</p>
-                </div>
-            </div>
-            ${step.killChainActivity.environmentType ? `
-            <div class="mb-3">
-                <h6><i class="fas fa-server me-2"></i>Environment Type</h6>
-                <p class="text-muted">${step.killChainActivity.environmentType}</p>
-            </div>` : ''}
-        `;
-    } else if (step.mitreTechnique) {
-        // MITRE ATT&CK Technique
-        techniqueType = 'MITRE ATT&CK Technique';
-        techniqueName = step.mitreTechnique.name;
-        techniqueId = step.mitreTechnique.techniqueId;
-        description = step.mitreTechnique.description;
-        
-        additionalInfo = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6><i class="fas fa-bullseye me-2"></i>Tactic</h6>
-                    <p class="text-muted">${step.mitreTechnique.tactic}</p>
-                </div>
-                <div class="col-md-6">
-                    <h6><i class="fas fa-hashtag me-2"></i>Technique ID</h6>
-                    <p class="text-muted">${step.mitreTechnique.techniqueId}</p>
-                </div>
-            </div>
-        `;
-    } else {
-        // Generic technique
-        techniqueType = 'Custom Technique';
-        techniqueName = step.name || 'Unnamed Technique';
-        description = step.description || 'No description available.';
-    }
-    
-    // Update modal title
-    modalTitle.innerHTML = `<i class="fas fa-info-circle me-2"></i>${techniqueName}`;
-    
-    // Update modal content
-    modalContent.innerHTML = `
-        <div class="technique-details">
-            <div class="mb-3">
-                <span class="badge bg-${step.killChainActivity ? 'warning' : 'success'} mb-2">${techniqueType}</span>
-                ${techniqueId ? `<span class="badge bg-secondary mb-2 ms-2">${techniqueId}</span>` : ''}
-            </div>
-            
-            <div class="mb-3">
-                <h6><i class="fas fa-align-left me-2"></i>Description</h6>
-                <p class="text-muted">${description}</p>
-            </div>
-            
-            ${additionalInfo}
-            
-            ${step.detectionMethods ? `
-            <div class="mb-3">
-                <h6><i class="fas fa-search me-2"></i>Detection Methods</h6>
-                <p class="text-muted">${step.detectionMethods}</p>
-            </div>` : ''}
-            
-            <div class="mb-3">
-                <h6><i class="fas fa-list-ol me-2"></i>Step Information</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <small class="text-muted">Step Number:</small>
-                        <p class="text-muted mb-1">#${step.stepNumber}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <small class="text-muted">Kill Chain Phase:</small>
-                        <p class="text-muted mb-1">${step.killChainPhase?.replace(/([A-Z])/g, ' $1').trim() || 'Not specified'}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('techniqueDetailsModal'));
-    modal.show();
-}
-</script>
+    </script>
 }

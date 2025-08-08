@@ -52,7 +52,7 @@ namespace CyberRiskApp.Controllers
             {
                 viewModel.FunctionScores = await _maturityService.GetMaturityScoresByFunctionAsync(id);
                 viewModel.GapsByFunction = controlAssessments
-                    .Where(ca => ca.CurrentMaturityLevel < ca.TargetMaturityLevel)
+                    .Where(ca => ca.CurrentMaturityLevel < ca.TargetMaturityLevel && ca.Control != null)
                     .GroupBy(ca => ca.Control.Function)
                     .ToDictionary(g => g.Key, g => g.ToList());
             }
@@ -60,7 +60,7 @@ namespace CyberRiskApp.Controllers
             {
                 viewModel.DomainScores = await _maturityService.GetMaturityScoresByDomainAsync(id);
                 viewModel.GapsByDomain = controlAssessments
-                    .Where(ca => ca.CurrentMaturityLevel < ca.TargetMaturityLevel)
+                    .Where(ca => ca.CurrentMaturityLevel < ca.TargetMaturityLevel && ca.Control != null)
                     .GroupBy(ca => ca.Control.Function) // Function field stores Domain for C2M2
                     .ToDictionary(g => g.Key, g => g.ToList());
             }

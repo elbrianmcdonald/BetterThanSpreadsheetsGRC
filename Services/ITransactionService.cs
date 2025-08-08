@@ -20,6 +20,7 @@ namespace CyberRiskApp.Services
         
         public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> operation)
         {
+            // Use the same pattern as MaturityService
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -36,6 +37,7 @@ namespace CyberRiskApp.Services
         
         public async Task ExecuteInTransactionAsync(Func<Task> operation)
         {
+            // Use the same pattern as MaturityService
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {

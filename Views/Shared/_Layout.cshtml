@@ -85,11 +85,13 @@
                                             <i class="fas fa-chart-bar me-1"></i>Risk Assessments
                                         </a>
                                     </li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <a class="dropdown-item" asp-controller="ThreatModeling" asp-action="Index">
-                                            <i class="fas fa-crosshairs me-1"></i>Threat Modeling
+                                        <a class="dropdown-item" asp-controller="AttackChain" asp-action="Index">
+                                            <i class="fas fa-file-alt me-1"></i>Templates
                                         </a>
                                     </li>
+                                    <li><hr class="dropdown-divider"></li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Requests" asp-action="CreateAcceptance">
                                             <i class="fas fa-handshake me-1"></i>Request Risk Acceptance
@@ -198,6 +200,11 @@
                                         <li>
                                             <a class="dropdown-item" asp-controller="ReferenceDataManagement" asp-action="Index">
                                                 <i class="fas fa-database me-1"></i>Reference Data Management
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="AttackChain" asp-action="MitreDataManagement">
+                                                <i class="fas fa-shield-alt me-1"></i>MITRE Data Management
                                             </a>
                                         </li>
                                         <li>

@@ -10,18 +10,16 @@ namespace CyberRiskApp.Services
         private readonly CyberRiskContext _context;
         private readonly IRiskLevelSettingsService _settingsService;
         private readonly IRiskService _riskService;
-        private readonly IMonteCarloSimulationService _monteCarloService;
         private readonly ILogger<RiskAssessmentService> _logger;
         private readonly IAuditService _auditService;
 
         public RiskAssessmentService(CyberRiskContext context, IRiskLevelSettingsService settingsService, 
-            IRiskService riskService, IMonteCarloSimulationService monteCarloService, ILogger<RiskAssessmentService> logger,
+            IRiskService riskService, ILogger<RiskAssessmentService> logger,
             IAuditService auditService)
         {
             _context = context;
             _settingsService = settingsService;
             _riskService = riskService;
-            _monteCarloService = monteCarloService;
             _logger = logger;
             _auditService = auditService;
         }
@@ -32,7 +30,6 @@ namespace CyberRiskApp.Services
             {
                 return await _context.RiskAssessments
                     .Include(a => a.IdentifiedRisks)
-                    .Include(a => a.Controls)
                     .OrderByDescending(a => a.DateCompleted)
                     .ToListAsync();
             }
@@ -46,12 +43,17 @@ namespace CyberRiskApp.Services
         {
             try
             {
-                return await _context.RiskAssessments
+                var assessment = await _context.RiskAssessments
                     .Include(a => a.IdentifiedRisks)
-                    .Include(a => a.Controls)
                     .Include(a => a.QualitativeControls)
                     .Include(a => a.LinkedThreatModels)
+                    .Include(a => a.ThreatModels)
+                        .ThenInclude(tm => tm.TemplateAttackChain)
+                    .Include(a => a.ThreatScenarios)
+                        .ThenInclude(ts => ts.IdentifiedRisks)
                     .FirstOrDefaultAsync(a => a.Id == id);
+
+                return assessment;
             }
             catch
             {
@@ -63,12 +65,8 @@ namespace CyberRiskApp.Services
         {
             try
             {
-                // Calculate results based on assessment type
-                if (assessment.AssessmentType == AssessmentType.FAIR)
-                {
-                    assessment = CalculateFAIRResults(assessment);
-                }
-                else if (assessment.AssessmentType == AssessmentType.Qualitative)
+                // Only qualitative assessments supported - calculate results
+                if (assessment.AssessmentType == AssessmentType.Qualitative)
                 {
                     assessment = CalculateQualitativeResults(assessment);
                 }
@@ -108,12 +106,8 @@ namespace CyberRiskApp.Services
                     // Update the existing tracked entity with values from the incoming assessment
                     _context.Entry(existingEntity).CurrentValues.SetValues(assessment);
                     
-                    // Recalculate results based on assessment type
-                    if (existingEntity.AssessmentType == AssessmentType.FAIR)
-                    {
-                        existingEntity = CalculateFAIRResults(existingEntity);
-                    }
-                    else if (existingEntity.AssessmentType == AssessmentType.Qualitative)
+                    // Only qualitative assessments supported - calculate results
+                    if (existingEntity.AssessmentType == AssessmentType.Qualitative)
                     {
                         existingEntity = CalculateQualitativeResults(existingEntity);
                     }
@@ -127,12 +121,8 @@ namespace CyberRiskApp.Services
                 else
                 {
                     // No existing tracked entity, proceed normally
-                    // Recalculate results based on assessment type
-                    if (assessment.AssessmentType == AssessmentType.FAIR)
-                    {
-                        assessment = CalculateFAIRResults(assessment);
-                    }
-                    else if (assessment.AssessmentType == AssessmentType.Qualitative)
+                    // Only qualitative assessments supported - calculate results
+                    if (assessment.AssessmentType == AssessmentType.Qualitative)
                     {
                         assessment = CalculateQualitativeResults(assessment);
                     }
@@ -165,180 +155,106 @@ namespace CyberRiskApp.Services
         {
             try
             {
-                var assessment = await _context.RiskAssessments.FindAsync(id);
-                if (assessment == null)
-                    return false;
+                // Use the execution strategy to handle the transaction properly with PostgreSQL retry strategy
+                var strategy = _context.Database.CreateExecutionStrategy();
+                
+                return await strategy.ExecuteAsync(async () =>
+                {
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
+                    {
+                        // First check if the assessment exists
+                        var assessment = await _context.RiskAssessments
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(a => a.Id == id);
 
-                _context.RiskAssessments.Remove(assessment);
-                await _context.SaveChangesAsync();
-                return true;
+                        if (assessment == null)
+                            return false;
+
+                        // Use ExecuteSqlRaw for more reliable deletion with proper constraint handling
+                        // Delete in the correct order to avoid foreign key constraint violations
+
+                        // 1. Update Risks to remove references to ThreatScenarios and RiskAssessment
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "UPDATE \"Risks\" SET \"ThreatScenarioId\" = NULL WHERE \"ThreatScenarioId\" IN (SELECT \"Id\" FROM \"ThreatScenarios\" WHERE \"RiskAssessmentId\" = {0})", 
+                            id);
+
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "UPDATE \"Risks\" SET \"RiskAssessmentId\" = NULL WHERE \"RiskAssessmentId\" = {0}", 
+                            id);
+
+                        // 2. Delete QualitativeControls
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM \"QualitativeControls\" WHERE \"RiskAssessmentId\" = {0}", 
+                            id);
+
+                        // 3. Delete RiskAssessmentThreatModels
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM \"RiskAssessmentThreatModels\" WHERE \"RiskAssessmentId\" = {0}", 
+                            id);
+
+                        // 4. Update ThreatModels to remove RiskAssessmentId reference
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "UPDATE \"ThreatModels\" SET \"RiskAssessmentId\" = NULL WHERE \"RiskAssessmentId\" = {0}", 
+                            id);
+
+                        // 5. Update LossEvents and ThreatEvents to remove ThreatScenarioId references
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "UPDATE \"LossEvents\" SET \"ThreatScenarioId\" = NULL WHERE \"ThreatScenarioId\" IN (SELECT \"Id\" FROM \"ThreatScenarios\" WHERE \"RiskAssessmentId\" = {0})", 
+                            id);
+
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "UPDATE \"ThreatEvents\" SET \"ThreatScenarioId\" = NULL WHERE \"ThreatScenarioId\" IN (SELECT \"Id\" FROM \"ThreatScenarios\" WHERE \"RiskAssessmentId\" = {0})", 
+                            id);
+
+                        // 6. Delete ThreatScenarios (should cascade to any remaining related entities)
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM \"ThreatScenarios\" WHERE \"RiskAssessmentId\" = {0}", 
+                            id);
+
+                        // 7. Finally delete the RiskAssessment
+                        await _context.Database.ExecuteSqlRawAsync(
+                            "DELETE FROM \"RiskAssessments\" WHERE \"Id\" = {0}", 
+                            id);
+
+                        await transaction.CommitAsync();
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+                        System.Diagnostics.Debug.WriteLine($"Error in transaction: {ex.Message}");
+                        if (ex.InnerException != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                        }
+                        throw; // Re-throw to be handled by execution strategy
+                    }
+                });
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"Error deleting risk assessment: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 return false;
             }
         }
 
 
-        // Enhanced FAIR Calculation Method with Monte Carlo Simulation
+        // FAIR features removed - method disabled
         public RiskAssessment CalculateFAIRResults(RiskAssessment assessment)
         {
-            // Load controls if not already loaded
-            if (assessment.Controls == null || !assessment.Controls.Any())
-            {
-                assessment.Controls = _context.RiskAssessmentControls
-                    .Where(c => c.RiskAssessmentId == assessment.Id)
-                    .ToList();
-            }
-
-            // Calculate Defense in Depth Vulnerability
-            decimal calculatedVulnerability = CalculateDefenseInDepthVulnerability(assessment.Controls);
-            assessment.CalculatedVulnerability = calculatedVulnerability;
-
-            // Prepare Monte Carlo input
-            var monteCarloInput = new MonteCarloInput
-            {
-                Iterations = assessment.SimulationIterations,
-                DistributionType = assessment.DistributionType,
-                
-                // TEF Distribution
-                TefMin = assessment.ThreatEventFrequencyMin,
-                TefMostLikely = assessment.ThreatEventFrequency,
-                TefMax = assessment.ThreatEventFrequencyMax,
-                TefConfidence = assessment.ThreatEventFrequencyConfidence,
-                
-                // Vulnerability from Defense in Depth
-                CalculatedVulnerability = calculatedVulnerability,
-                
-                // Primary Loss Distributions
-                ProductivityLossMin = assessment.ProductivityLossMin,
-                ProductivityLossMostLikely = assessment.ProductivityLossMostLikely,
-                ProductivityLossMax = assessment.ProductivityLossMax,
-                
-                ResponseCostsMin = assessment.ResponseCostsMin,
-                ResponseCostsMostLikely = assessment.ResponseCostsMostLikely,
-                ResponseCostsMax = assessment.ResponseCostsMax,
-                
-                ReplacementCostMin = assessment.ReplacementCostMin,
-                ReplacementCostMostLikely = assessment.ReplacementCostMostLikely,
-                ReplacementCostMax = assessment.ReplacementCostMax,
-                
-                FinesMin = assessment.FinesMin,
-                FinesMostLikely = assessment.FinesMostLikely,
-                FinesMax = assessment.FinesMax,
-                
-                LossConfidence = assessment.LossMagnitudeConfidence,
-                
-                // Secondary Loss Distributions
-                IncludeSecondaryLoss = HasSecondaryLoss(assessment),
-                SecondaryLossEventFrequency = assessment.SecondaryLossEventFrequency,
-                
-                SecondaryResponseCostMin = assessment.SecondaryResponseCostMin,
-                SecondaryResponseCostMostLikely = assessment.SecondaryResponseCostMostLikely,
-                SecondaryResponseCostMax = assessment.SecondaryResponseCostMax,
-                
-                SecondaryProductivityLossMin = assessment.SecondaryProductivityLossMin,
-                SecondaryProductivityLossMostLikely = assessment.SecondaryProductivityLossMostLikely,
-                SecondaryProductivityLossMax = assessment.SecondaryProductivityLossMax,
-                
-                ReputationDamageMin = assessment.ReputationDamageMin,
-                ReputationDamageMostLikely = assessment.ReputationDamageMostLikely,
-                ReputationDamageMax = assessment.ReputationDamageMax,
-                
-                CompetitiveAdvantageLossMin = assessment.CompetitiveAdvantageLossMin,
-                CompetitiveAdvantageLossMostLikely = assessment.CompetitiveAdvantageLossMostLikely,
-                CompetitiveAdvantageLossMax = assessment.CompetitiveAdvantageLossMax,
-                
-                ExternalStakeholderLossMin = assessment.ExternalStakeholderLossMin,
-                ExternalStakeholderLossMostLikely = assessment.ExternalStakeholderLossMostLikely,
-                ExternalStakeholderLossMax = assessment.ExternalStakeholderLossMax,
-                
-                // Insurance
-                DeductInsurance = assessment.DeductCybersecurityInsurance
-            };
-
-            // Get insurance amount if deducting
-            if (assessment.DeductCybersecurityInsurance)
-            {
-                var settings = _settingsService.GetSettingsByIdAsync(1).Result; // Assuming default settings ID is 1
-                monteCarloInput.InsuranceAmount = settings?.CybersecurityInsuranceAmount ?? 0;
-            }
-
-            // Run Monte Carlo simulation
-            var simulationResult = _monteCarloService.RunSimulation(monteCarloInput);
-
-            // Update assessment with simulation results
-            assessment.ALE_10th = simulationResult.ALE_10th;
-            assessment.ALE_50th = simulationResult.ALE_50th;
-            assessment.ALE_90th = simulationResult.ALE_90th;
-            assessment.ALE_95th = simulationResult.ALE_95th;
-            
-            assessment.PrimaryLoss_10th = simulationResult.PrimaryLoss_10th;
-            assessment.PrimaryLoss_50th = simulationResult.PrimaryLoss_50th;
-            assessment.PrimaryLoss_90th = simulationResult.PrimaryLoss_90th;
-            assessment.PrimaryLoss_95th = simulationResult.PrimaryLoss_95th;
-
-            // Also calculate traditional single-point estimates for backward compatibility
-            var singlePointVulnerability = calculatedVulnerability;
-            assessment.LossEventFrequency = assessment.ThreatEventFrequency * singlePointVulnerability;
-
-            // Calculate Primary Loss Magnitude (most likely)
-            assessment.PrimaryLossMagnitude = assessment.ProductivityLossMostLikely + assessment.ResponseCostsMostLikely;
-            if (assessment.ReplacementCostMostLikely > 1000)
-                assessment.PrimaryLossMagnitude += assessment.ReplacementCostMostLikely;
-            if (assessment.FinesMostLikely > 1000)
-                assessment.PrimaryLossMagnitude += assessment.FinesMostLikely;
-
-            // Calculate Secondary Loss Magnitude if applicable
-            if (HasSecondaryLoss(assessment))
-            {
-                assessment.SecondaryLossMagnitude = assessment.SecondaryResponseCostMostLikely +
-                    assessment.SecondaryProductivityLossMostLikely +
-                    assessment.ReputationDamageMostLikely +
-                    assessment.CompetitiveAdvantageLossMostLikely +
-                    assessment.ExternalStakeholderLossMostLikely;
-            }
-
-            // Use median (50th percentile) as the primary ALE
-            assessment.AnnualLossExpectancy = simulationResult.ALE_50th;
-
-            // Set qualitative fields to null for FAIR assessments
-            assessment.QualitativeRiskScore = null;
-            assessment.QualitativeLikelihood = null;
-            assessment.QualitativeImpact = null;
-            assessment.QualitativeExposure = null;
-
+            // FAIR quantitative assessments are no longer supported
+            // Return assessment unchanged
             return assessment;
         }
 
-        private decimal CalculateDefenseInDepthVulnerability(ICollection<RiskAssessmentControl> controls)
-        {
-            // If no controls or no implemented controls, vulnerability is 100%
-            var implementedControls = controls?.Where(c => c.ImplementationStatus == "Implemented").ToList();
-            if (implementedControls == null || !implementedControls.Any())
-                return 1.0m;
+        // FAIR control calculation methods removed
 
-            // Calculate combined control effectiveness
-            // Each control reduces the remaining vulnerability
-            decimal remainingVulnerability = 1.0m;
-            
-            foreach (var control in implementedControls)
-            {
-                decimal controlEffectiveness = control.ControlEffectiveness / 100m;
-                remainingVulnerability *= (1 - controlEffectiveness);
-            }
-
-            return remainingVulnerability;
-        }
-
-        private bool HasSecondaryLoss(RiskAssessment assessment)
-        {
-            return assessment.SecondaryResponseCostMostLikely > 0 ||
-                   assessment.SecondaryProductivityLossMostLikely > 0 ||
-                   assessment.ReputationDamageMostLikely > 0 ||
-                   assessment.CompetitiveAdvantageLossMostLikely > 0 ||
-                   assessment.ExternalStakeholderLossMostLikely > 0;
-        }
+        // FAIR secondary loss calculation removed
 
         private RiskAssessment CalculateQualitativeResults(RiskAssessment assessment)
         {
@@ -346,41 +262,14 @@ namespace CyberRiskApp.Services
             {
                 var likelihoodScore = (int)assessment.QualitativeLikelihood.Value;
                 var impactScore = (int)assessment.QualitativeImpact.Value;
-                var exposureRating = GetExposureRating(assessment.QualitativeExposure.Value);
+                var exposureRating = assessment.QualitativeExposure.Value; // Direct decimal value
 
                 // Calculate: (Likelihood × Impact) × Exposure Rating
                 assessment.QualitativeRiskScore = (likelihoodScore * impactScore) * exposureRating;
-
-                // Calculate Loss Event Frequency for qualitative (using threat analysis if available)
-                if (assessment.ThreatEventFrequency > 0 && assessment.ContactFrequency > 0 && assessment.ActionSuccess > 0)
-                {
-                    var vulnerabilityCalc = (assessment.ContactFrequency / 100) * (assessment.ActionSuccess / 100);
-                    assessment.LossEventFrequency = assessment.ThreatEventFrequency * vulnerabilityCalc;
-                }
-                else
-                {
-                    // Set default values if threat analysis is not completed
-                    assessment.LossEventFrequency = 0;
-                }
-
-                // Set other FAIR fields to zero for qualitative assessments
-                assessment.AnnualLossExpectancy = 0;
-                assessment.PrimaryLossMagnitude = 0;
             }
 
             return assessment;
         }
 
-        private decimal GetExposureRating(ExposureLevel exposureLevel)
-        {
-            return exposureLevel switch
-            {
-                ExposureLevel.SlightlyExposed => 0.2m,      // 0.2
-                ExposureLevel.Exposed => 0.4m,             // 0.4
-                ExposureLevel.ModeratelyExposed => 0.8m,    // 0.8
-                ExposureLevel.HighlyExposed => 1.0m,        // 1.0
-                _ => 0.2m
-            };
-        }
     }
 }

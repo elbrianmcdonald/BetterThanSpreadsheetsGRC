@@ -1,4 +1,5 @@
 @model CyberRiskApp.Models.RiskMatrix
+@using CyberRiskApp.Models
 @{
     ViewData["Title"] = "Risk Matrix Preview";
     var levels = ViewBag.Levels as IEnumerable<CyberRiskApp.Models.RiskMatrixLevel>;
@@ -143,8 +144,8 @@
             </div>
             <div class="card-body">
                 @{
-                    var likelihoodLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue) ?? Enumerable.Empty<CyberRiskApp.Models.RiskMatrixLevel>();
-                    var impactLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Impact).OrderByDescending(l => l.LevelValue) ?? Enumerable.Empty<CyberRiskApp.Models.RiskMatrixLevel>();
+                    var likelihoodLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue).ToList() ?? new List<CyberRiskApp.Models.RiskMatrixLevel>();
+                    var impactLevels = levels?.Where(l => l.LevelType == RiskMatrixLevelType.Impact).OrderByDescending(l => l.LevelValue).ToList() ?? new List<CyberRiskApp.Models.RiskMatrixLevel>();
                 }
                 
                 <div class="risk-heatmap-container">
@@ -356,7 +357,7 @@
 
         .impact-labels {
             display: flex;
-            flex-direction: column-reverse;
+            flex-direction: column;
             gap: 8px;
             margin-top: 10px;
         }
@@ -377,12 +378,12 @@
         .heatmap-cells {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 8px;
         }
 
         .heatmap-row {
             display: flex;
-            gap: 2px;
+            gap: 8px;
         }
 
         .heatmap-cell {
@@ -452,7 +453,7 @@
 
         .x-axis-labels {
             display: flex;
-            gap: 2px;
+            gap: 8px;
             margin-top: 10px;
             margin-left: 80px;
         }

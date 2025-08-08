@@ -174,60 +174,85 @@ namespace CyberRiskApp.Services
             var matrix = await GetMatrixByIdAsync(matrixId);
             if (matrix == null) return;
 
-            // Remove existing cells
+            // Get the actual level configurations for this matrix
+            var levels = await GetLevelsByMatrixIdAsync(matrixId);
+            var impactLevels = levels.Where(l => l.LevelType == RiskMatrixLevelType.Impact).OrderBy(l => l.LevelValue).ToList();
+            var likelihoodLevels = levels.Where(l => l.LevelType == RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue).ToList();
+            var exposureLevels = levels.Where(l => l.LevelType == RiskMatrixLevelType.Exposure).OrderBy(l => l.LevelValue).ToList();
+
+            // Remove existing cells - ensure we save changes to clear them first
             var existingCells = await GetCellsByMatrixIdAsync(matrixId);
-            _context.RiskMatrixCells.RemoveRange(existingCells);
+            if (existingCells.Any())
+            {
+                _context.RiskMatrixCells.RemoveRange(existingCells);
+                await _context.SaveChangesAsync(); // Save the deletion first
+            }
 
             var cells = new List<RiskMatrixCell>();
 
             if (matrix.MatrixType == RiskMatrixType.ImpactLikelihood)
             {
                 // Generate 2D matrix (Impact × Likelihood)
-                for (int impact = 1; impact <= matrix.MatrixSize; impact++)
+                int impactIndex = 1;
+                foreach (var impactLevel in impactLevels)
                 {
-                    for (int likelihood = 1; likelihood <= matrix.MatrixSize; likelihood++)
+                    int likelihoodIndex = 1;
+                    foreach (var likelihoodLevel in likelihoodLevels)
                     {
-                        var riskScore = impact * likelihood;
+                        // Use actual configured level values for calculation but sequential numbers for storage
+                        var riskScore = impactLevel.LevelValue * likelihoodLevel.LevelValue;
                         var riskLevel = CalculateRiskLevelFromScore(riskScore, matrix.MatrixSize);
 
                         cells.Add(new RiskMatrixCell
                         {
                             RiskMatrixId = matrixId,
-                            ImpactLevel = impact,
-                            LikelihoodLevel = likelihood,
+                            ImpactLevel = impactIndex, // Use sequential index to avoid duplicates
+                            LikelihoodLevel = likelihoodIndex,
                             ExposureLevel = null,
                             RiskScore = riskScore,
                             ResultingRiskLevel = riskLevel,
                             CellColor = GetRiskLevelColor(riskLevel)
                         });
+                        
+                        likelihoodIndex++;
                     }
+                    impactIndex++;
                 }
             }
             else
             {
-                // Generate 3D matrix (Impact × Likelihood × Exposure)
-                for (int impact = 1; impact <= matrix.MatrixSize; impact++)
+                // Generate 3D matrix (Likelihood × Impact) × Exposure
+                int impactIndex = 1;
+                foreach (var impactLevel in impactLevels)
                 {
-                    for (int likelihood = 1; likelihood <= matrix.MatrixSize; likelihood++)
+                    int likelihoodIndex = 1;
+                    foreach (var likelihoodLevel in likelihoodLevels)
                     {
-                        for (int exposure = 1; exposure <= matrix.MatrixSize; exposure++)
+                        int exposureIndex = 1;
+                        foreach (var exposureLevel in exposureLevels)
                         {
-                            var exposureMultiplier = GetExposureMultiplier(exposure);
-                            var riskScore = (impact * likelihood) * exposureMultiplier;
+                            // Correct calculation: (Likelihood × Impact) × Exposure
+                            var baseRiskScore = likelihoodLevel.LevelValue * impactLevel.LevelValue;
+                            var exposureMultiplier = exposureLevel.Multiplier ?? exposureLevel.LevelValue;
+                            var riskScore = baseRiskScore * exposureMultiplier;
                             var riskLevel = CalculateRiskLevelFromScore(riskScore, matrix.MatrixSize);
 
                             cells.Add(new RiskMatrixCell
                             {
                                 RiskMatrixId = matrixId,
-                                ImpactLevel = impact,
-                                LikelihoodLevel = likelihood,
-                                ExposureLevel = exposure,
+                                ImpactLevel = impactIndex,
+                                LikelihoodLevel = likelihoodIndex,
+                                ExposureLevel = exposureIndex,
                                 RiskScore = riskScore,
                                 ResultingRiskLevel = riskLevel,
                                 CellColor = GetRiskLevelColor(riskLevel)
                             });
+                            
+                            exposureIndex++;
                         }
+                        likelihoodIndex++;
                     }
+                    impactIndex++;
                 }
             }
 
@@ -367,13 +392,13 @@ namespace CyberRiskApp.Services
             await Create3x3Levels(simple3x3.Id);
             await GenerateMatrixCellsAsync(simple3x3.Id);
 
-            // Create a 4x4 matrix
+            // Create a 4x4 matrix with exposure
             var standard4x4 = new RiskMatrix
             {
-                Name = "Standard 4×4 Impact × Likelihood",
-                Description = "Balanced risk matrix for most use cases",
+                Name = "Standard 4×4 Impact × Likelihood × Exposure",
+                Description = "Balanced 4x4 risk matrix with exposure factor",
                 MatrixSize = 4,
-                MatrixType = RiskMatrixType.ImpactLikelihood,
+                MatrixType = RiskMatrixType.ImpactLikelihoodExposure,
                 IsDefault = false,
                 IsActive = true,
                 CreatedBy = "System",
@@ -384,7 +409,7 @@ namespace CyberRiskApp.Services
             _context.RiskMatrices.Add(standard4x4);
             await _context.SaveChangesAsync();
 
-            await Create4x4Levels(standard4x4.Id);
+            await Create4x4LevelsWithExposure(standard4x4.Id);
             await GenerateMatrixCellsAsync(standard4x4.Id);
         }
 
@@ -422,6 +447,33 @@ namespace CyberRiskApp.Services
                 new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Likelihood, LevelValue = 2, LevelName = "Unlikely", Description = "Low probability", ColorCode = "#20c997" },
                 new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Likelihood, LevelValue = 3, LevelName = "Likely", Description = "High probability", ColorCode = "#fd7e14" },
                 new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Likelihood, LevelValue = 4, LevelName = "Very Likely", Description = "Very high probability", ColorCode = "#dc3545" }
+            };
+
+            _context.RiskMatrixLevels.AddRange(levels);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task Create4x4LevelsWithExposure(int matrixId)
+        {
+            var levels = new[]
+            {
+                // Impact levels (1-4)
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Impact, LevelValue = 1, LevelName = "Very Low", Description = "Minimal impact", ColorCode = "#28a745" },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Impact, LevelValue = 2, LevelName = "Low", Description = "Minor impact", ColorCode = "#20c997" },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Impact, LevelValue = 3, LevelName = "High", Description = "Major impact", ColorCode = "#fd7e14" },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Impact, LevelValue = 4, LevelName = "Very High", Description = "Severe impact", ColorCode = "#dc3545" },
+                
+                // Likelihood levels (1-4)
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Likelihood, LevelValue = 1, LevelName = "Very Unlikely", Description = "Very low probability", ColorCode = "#28a745" },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Likelihood, LevelValue = 2, LevelName = "Unlikely", Description = "Low probability", ColorCode = "#20c997" },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Likelihood, LevelValue = 3, LevelName = "Likely", Description = "High probability", ColorCode = "#fd7e14" },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Likelihood, LevelValue = 4, LevelName = "Very Likely", Description = "Very high probability", ColorCode = "#dc3545" },
+
+                // Exposure levels (1-4)
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Exposure, LevelValue = 1, LevelName = "Slightly Exposed", Description = "Minimal exposure", ColorCode = "#28a745", Multiplier = 0.25m },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Exposure, LevelValue = 2, LevelName = "Exposed", Description = "Limited exposure", ColorCode = "#20c997", Multiplier = 0.5m },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Exposure, LevelValue = 3, LevelName = "Highly Exposed", Description = "High exposure", ColorCode = "#fd7e14", Multiplier = 0.75m },
+                new RiskMatrixLevel { RiskMatrixId = matrixId, LevelType = RiskMatrixLevelType.Exposure, LevelValue = 4, LevelName = "Extremely Exposed", Description = "Maximum exposure", ColorCode = "#dc3545", Multiplier = 1.0m }
             };
 
             _context.RiskMatrixLevels.AddRange(levels);

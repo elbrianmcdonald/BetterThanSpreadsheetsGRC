@@ -12,7 +12,7 @@ namespace CyberRiskApp.Services
         Task<bool> CloseRiskAsync(int id, string remediationDetails, string closedBy);
 
         // Dashboard and summary methods
-        Task<decimal> GetTotalALEAsync();
+        // ALE functionality removed - using qualitative risk assessment only
         Task<Dictionary<string, int>> GetRiskSummaryAsync();
         Task<IEnumerable<Risk>> GetHighValueRisksAsync();
 

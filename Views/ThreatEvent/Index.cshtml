@@ -1,0 +1,146 @@
+@model IEnumerable<CyberRiskApp.Models.ThreatEvent>
+
+@{
+    ViewData["Title"] = "Threat Events";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Threat Events
+                    </h3>
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Create New Threat Event
+                    </a>
+                </div>
+                <div class="card-body">
+                    @if (Model.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Description</th>
+                                        <th>MITRE Technique</th>
+                                        <th>TEF (Frequency/Year)</th>
+                                        <th>Next Step</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@Html.DisplayFor(modelItem => item.Title)</strong>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">@item.Description</small>
+                                            </td>
+                                            <td>
+                                                @if (item.MitreTechnique != null)
+                                                {
+                                                    <span class="badge bg-primary">
+                                                        @item.MitreTechnique.TechniqueId
+                                                    </span>
+                                                    <br><small>@item.MitreTechnique.Name</small>
+                                                }
+                                                else if (!string.IsNullOrEmpty(item.CustomTechnique))
+                                                {
+                                                    <span class="badge bg-secondary">Custom</span>
+                                                    <br><small>@item.CustomTechnique</small>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="small">
+                                                    <strong>Most Likely:</strong> @item.TefMostLikely.ToString("F2")<br>
+                                                    <span class="text-muted">
+                                                        Range: @item.TefMinimum.ToString("F2") - @item.TefMaximum.ToString("F2")
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @if (item.NextVulnerability != null)
+                                                {
+                                                    <a asp-controller="AttackStepVulnerability" asp-action="Details" asp-route-id="@item.NextVulnerabilityId" class="text-decoration-none">
+                                                        <i class="fas fa-arrow-right me-1"></i>@item.NextVulnerability.Title
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">No next step</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    @item.CreatedAt.ToString("MMM dd, yyyy")<br>
+                                                    by @item.CreatedBy
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-outline-danger" title="Delete">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Threat Events Found</h5>
+                            <p class="text-muted">Create threat events to define the initial attack vectors with TEF frequency values.</p>
+                            <a asp-action="Create" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Create Threat Event
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>About Threat Events
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">
+                    <strong>Threat Events</strong> represent the initial attack vectors in your attack chains. They define:
+                </p>
+                <ul class="mb-0">
+                    <li><strong>TEF (Threat Event Frequency):</strong> How often this threat event occurs per year</li>
+                    <li><strong>MITRE ATT&CK Techniques:</strong> Links to standardized attack techniques</li>
+                    <li><strong>Controls:</strong> Preventative and detective controls that protect against this threat</li>
+                    <li><strong>Data Sources:</strong> Where you can detect this threat event</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

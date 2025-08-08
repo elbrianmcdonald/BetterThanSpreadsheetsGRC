@@ -14,17 +14,20 @@ namespace CyberRiskApp.Controllers
     {
         private readonly IRiskService _riskService;
         private readonly IExportService _exportService;
+        private readonly IRiskLevelSettingsService _riskLevelSettingsService;
 
-        public RisksController(IRiskService riskService, IExportService exportService)
+        public RisksController(IRiskService riskService, IExportService exportService, IRiskLevelSettingsService riskLevelSettingsService)
         {
             _riskService = riskService;
             _exportService = exportService;
+            _riskLevelSettingsService = riskLevelSettingsService;
         }
 
         // GET: Risks
         public async Task<IActionResult> Index(RiskFilterViewModel? filter)
         {
             var allRisks = await _riskService.GetAllRisksAsync();
+            var riskLevelSettings = await _riskLevelSettingsService.GetActiveSettingsAsync();
             
             // Apply filters
             var filteredRisks = allRisks.AsEnumerable();
@@ -149,7 +152,10 @@ namespace CyberRiskApp.Controllers
                 RiskOwnerOptions = new SelectList(allRisks.Where(r => !string.IsNullOrEmpty(r.Owner))
                     .Select(r => r.Owner).Distinct().OrderBy(x => x)),
                 AssetOptions = new SelectList(allRisks.Where(r => !string.IsNullOrEmpty(r.Asset))
-                    .Select(r => r.Asset).Distinct().OrderBy(x => x))
+                    .Select(r => r.Asset).Distinct().OrderBy(x => x)),
+
+                // Risk level settings for heatmap calculation
+                RiskLevelSettings = riskLevelSettings
             };
 
             return View(viewModel);

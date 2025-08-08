@@ -102,6 +102,10 @@ namespace CyberRiskApp.Services
                         trackedEntity.QualitativeMediumThreshold = settings.QualitativeMediumThreshold;
                         trackedEntity.RiskAppetiteThreshold = settings.RiskAppetiteThreshold;
                         trackedEntity.CybersecurityInsuranceAmount = settings.CybersecurityInsuranceAmount;
+                        trackedEntity.InsuranceCoverageLimit = settings.InsuranceCoverageLimit;
+                        trackedEntity.InsuranceDeductible = settings.InsuranceDeductible;
+                        trackedEntity.InsuranceCoveragePercentage = settings.InsuranceCoveragePercentage;
+                        trackedEntity.InsuranceEnabledByDefault = settings.InsuranceEnabledByDefault;
                         trackedEntity.LastModifiedBy = settings.LastModifiedBy;
                         trackedEntity.LastModifiedDate = settings.LastModifiedDate;
                         trackedEntity.IsActive = settings.IsActive;
@@ -191,7 +195,7 @@ namespace CyberRiskApp.Services
 
             return assessmentType switch
             {
-                AssessmentType.FAIR => settings.GetFairRiskLevel(value),
+                // FAIR assessments removed
                 AssessmentType.Qualitative => settings.GetQualitativeRiskLevel(value),
                 _ => "Unknown"
             };
@@ -228,7 +232,14 @@ namespace CyberRiskApp.Services
                     medium = settings.QualitativeMediumThreshold
                 },
                 riskAppetite = settings.RiskAppetiteThreshold,
-                cybersecurityInsurance = settings.CybersecurityInsuranceAmount
+                cybersecurityInsurance = settings.CybersecurityInsuranceAmount,
+                insurance = new
+                {
+                    coverageLimit = settings.InsuranceCoverageLimit,
+                    deductible = settings.InsuranceDeductible,
+                    coveragePercentage = settings.InsuranceCoveragePercentage,
+                    enabledByDefault = settings.InsuranceEnabledByDefault
+                }
             };
         }
 
@@ -248,8 +259,8 @@ namespace CyberRiskApp.Services
                 return riskScore > settings.RiskAppetiteThreshold;
             }
             
-            // For FAIR assessments, convert ALE to risk level then compare
-            if (assessmentType == AssessmentType.FAIR)
+            // FAIR assessments removed
+            if (false)
             {
                 var riskLevel = settings.GetFairRiskLevel(riskScore);
                 var riskLevelScore = riskLevel switch

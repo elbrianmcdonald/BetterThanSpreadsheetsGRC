@@ -15,6 +15,7 @@ namespace CyberRiskApp.Data
         public DbSet<Finding> Findings { get; set; }
         public DbSet<Risk> Risks { get; set; }
         public DbSet<RiskAssessment> RiskAssessments { get; set; }
+        public DbSet<ThreatScenario> ThreatScenarios { get; set; }
         public DbSet<AssessmentRequest> AssessmentRequests { get; set; }
         public DbSet<RiskAcceptanceRequest> RiskAcceptanceRequests { get; set; }
         public DbSet<FindingClosureRequest> FindingClosureRequests { get; set; }
@@ -44,8 +45,6 @@ namespace CyberRiskApp.Data
         // Technical Control to Compliance Control Mapping DbSet
         public DbSet<TechnicalControlComplianceMapping> TechnicalControlComplianceMappings { get; set; }
 
-        // FAIR Risk Assessment Controls DbSet
-        public DbSet<RiskAssessmentControl> RiskAssessmentControls { get; set; }
 
         // Qualitative Controls DbSet
         public DbSet<QualitativeControl> QualitativeControls { get; set; }
@@ -74,6 +73,9 @@ namespace CyberRiskApp.Data
         public DbSet<DomainAlias> DomainAliases { get; set; }
         public DbSet<DomainAccessLog> DomainAccessLogs { get; set; }
 
+        // Threat Environment DbSet
+        public DbSet<ThreatEnvironment> ThreatEnvironments { get; set; }
+
         // Threat Modeling DbSets
         public DbSet<ThreatModel> ThreatModels { get; set; }
         public DbSet<Attack> Attacks { get; set; }
@@ -83,6 +85,14 @@ namespace CyberRiskApp.Data
         public DbSet<AttackScenarioStep> AttackScenarioSteps { get; set; }
         public DbSet<AttackPath> AttackPaths { get; set; }
         public DbSet<ScenarioRecommendation> ScenarioRecommendations { get; set; }
+
+        // NEW: Enhanced Threat Modeling - Attack Chain DbSets
+        public DbSet<ThreatEvent> ThreatEvents { get; set; }
+        public DbSet<AttackStepVulnerability> AttackStepVulnerabilities { get; set; }
+        public DbSet<LossEvent> LossEvents { get; set; }
+        public DbSet<AttackChain> AttackChains { get; set; }
+        public DbSet<AttackChainStep> AttackChainSteps { get; set; }
+        public DbSet<RiskAssessmentThreatModel> RiskAssessmentThreatModels { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -142,6 +152,10 @@ namespace CyberRiskApp.Data
                 entity.Property(r => r.RiskAssessmentId)
                     .HasColumnName("RiskAssessmentId");
 
+                // Configure ThreatScenarioId foreign key explicitly  
+                entity.Property(r => r.ThreatScenarioId)
+                    .HasColumnName("ThreatScenarioId");
+
                 // Configure relationships with explicit foreign key names and optimal loading
                 entity.HasOne(r => r.LinkedFinding)
                     .WithMany(f => f.RelatedRisks)
@@ -157,9 +171,17 @@ namespace CyberRiskApp.Data
                     .OnDelete(DeleteBehavior.SetNull)
                     .IsRequired(false);
 
+                entity.HasOne(r => r.LinkedThreatScenario)
+                    .WithMany(ts => ts.IdentifiedRisks)
+                    .HasForeignKey(r => r.ThreatScenarioId)
+                    .HasConstraintName("FK_Risks_ThreatScenarios_ThreatScenarioId")
+                    .OnDelete(DeleteBehavior.SetNull)
+                    .IsRequired(false);
+
                 // Configure navigation properties for optimized queries
                 entity.Navigation(r => r.LinkedFinding).EnableLazyLoading(false);
                 entity.Navigation(r => r.LinkedAssessment).EnableLazyLoading(false);
+                entity.Navigation(r => r.LinkedThreatScenario).EnableLazyLoading(false);
             });
 
             // ADDED: Configure RiskAssessment entity to include Finding relationship
@@ -194,6 +216,29 @@ namespace CyberRiskApp.Data
                     .HasForeignKey(ra => ra.RiskMatrixId)
                     .HasConstraintName("FK_RiskAssessments_RiskMatrices_RiskMatrixId")
                     .OnDelete(DeleteBehavior.SetNull);
+
+                // Configure relationship with threat scenarios
+                entity.HasMany(ra => ra.ThreatScenarios)
+                    .WithOne(ts => ts.RiskAssessment)
+                    .HasForeignKey(ts => ts.RiskAssessmentId)
+                    .HasConstraintName("FK_ThreatScenarios_RiskAssessments_RiskAssessmentId")
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configure ThreatScenario entity relationships
+            modelBuilder.Entity<ThreatScenario>(entity =>
+            {
+                entity.ToTable("ThreatScenarios");
+                entity.HasKey(ts => ts.Id);
+
+                // Configure RiskAssessmentId foreign key
+                entity.Property(ts => ts.RiskAssessmentId)
+                    .HasColumnName("RiskAssessmentId");
+
+                // Configure RowVersion for PostgreSQL - make it nullable or provide default value
+                entity.Property(ts => ts.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea"); // PostgreSQL bytea literal
             });
 
             // RiskAcceptanceRequest -> Finding (Many-to-One) - Can be linked to a finding

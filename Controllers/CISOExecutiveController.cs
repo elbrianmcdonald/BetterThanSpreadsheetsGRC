@@ -15,14 +15,18 @@ namespace CyberRiskApp.Controllers
         private readonly IGovernanceService _governanceService;
         private readonly IRiskLevelSettingsService _riskLevelSettingsService;
         private readonly IRiskAssessmentService _riskAssessmentService;
+        private readonly IMaturityService _maturityService;
+        private readonly IUserService _userService;
 
-        public CISOExecutiveController(IFindingService findingService, IRiskService riskService, IGovernanceService governanceService, IRiskLevelSettingsService riskLevelSettingsService, IRiskAssessmentService riskAssessmentService)
+        public CISOExecutiveController(IFindingService findingService, IRiskService riskService, IGovernanceService governanceService, IRiskLevelSettingsService riskLevelSettingsService, IRiskAssessmentService riskAssessmentService, IMaturityService maturityService, IUserService userService)
         {
             _findingService = findingService;
             _riskService = riskService;
             _governanceService = governanceService;
             _riskLevelSettingsService = riskLevelSettingsService;
             _riskAssessmentService = riskAssessmentService;
+            _maturityService = maturityService;
+            _userService = userService;
         }
 
         public IActionResult Index()
@@ -35,133 +39,76 @@ namespace CyberRiskApp.Controllers
         {
             try
             {
-                // Get all findings and risks
+                // Core Data Gathering
                 var allFindings = await _findingService.GetAllFindingsAsync();
                 var allRisks = await _riskService.GetAllRisksAsync();
+                var allAssessments = await _riskAssessmentService.GetAllAssessmentsAsync();
+                var allMaturityAssessments = await _maturityService.GetAllAssessmentsAsync();
+                var allComplianceAssessments = await _governanceService.GetAllAssessmentsAsync();
+
                 var openFindings = allFindings.Where(f => f.Status != FindingStatus.Closed).ToList();
-                
-                // DEBUG: Comprehensive logging
-                Console.WriteLine("📊 ===== CISO DASHBOARD DATA DEBUG =====");
-                Console.WriteLine($"📊 Total findings retrieved: {allFindings.Count()}");
-                Console.WriteLine($"📊 Total risks retrieved: {allRisks.Count()}");
-                Console.WriteLine($"📊 Open findings: {openFindings.Count}");
-                
-                // Log risk details
                 var openRisks = allRisks.Where(r => r.Status == RiskStatus.Open).ToList();
-                Console.WriteLine($"📊 Open risks: {openRisks.Count}");
-                Console.WriteLine($"📊 Risk Status Distribution:");
-                foreach (var statusGroup in allRisks.GroupBy(r => r.Status))
-                {
-                    Console.WriteLine($"   - {statusGroup.Key}: {statusGroup.Count()} risks");
-                }
-                
-                // Log risk levels
-                Console.WriteLine($"📊 Risk Level Distribution:");
-                foreach (var levelGroup in openRisks.GroupBy(r => r.RiskLevel))
-                {
-                    Console.WriteLine($"   - {levelGroup.Key}: {levelGroup.Count()} risks");
-                }
-                
-                // Log top risks with ALE
-                Console.WriteLine($"📊 Top 5 Risks by ALE:");
-                foreach (var risk in openRisks.OrderByDescending(r => r.ALE).Take(5))
-                {
-                    Console.WriteLine($"   - {risk.Title ?? "No Title"} | ALE: ${risk.ALE:N0} | Level: {risk.RiskLevel} | Status: {risk.Status}");
-                }
-                
-                // Log finding risk ratings
-                Console.WriteLine($"📊 Finding Risk Ratings:");
-                foreach (var ratingGroup in openFindings.GroupBy(f => f.RiskRating))
-                {
-                    Console.WriteLine($"   - {ratingGroup.Key}: {ratingGroup.Count()} findings");
-                }
-                
-                var totalALE = await _riskService.GetTotalALEAsync();
-                Console.WriteLine($"📊 Total ALE (from service): ${totalALE:N0}");
-                Console.WriteLine($"📊 Total ALE (manual calc): ${openRisks.Sum(r => r.ALE):N0}");
-                Console.WriteLine("📊 ===== END DEBUG =====");
-                var overdueFindings = openFindings.Where(f => f.IsOverdue).ToList();
-                var criticalHighFindings = openFindings.Where(f =>
-                    f.RiskRating == RiskRating.Critical || f.RiskRating == RiskRating.High).ToList();
 
-                // Group risks by business unit for the heatmap
-                var businessUnitMetrics = openRisks
-                    .GroupBy(r => r.BusinessUnit)
-                    .Select(g => new
-                    {
-                        businessUnit = g.Key,
-                        totalRisks = g.Count(),
-                        criticalCount = g.Count(r => r.RiskLevel == RiskLevel.Critical),
-                        highCount = g.Count(r => r.RiskLevel == RiskLevel.High),
-                        mediumCount = g.Count(r => r.RiskLevel == RiskLevel.Medium),
-                        lowCount = g.Count(r => r.RiskLevel == RiskLevel.Low),
-                        totalALE = g.Sum(r => r.ALE),
-                        status = GetBusinessUnitRiskStatus(g.ToList())
-                    })
-                    .ToList();
+                // 1. EXECUTIVE SUMMARY METRICS
+                var executiveSummary = await GetExecutiveSummaryMetrics(allFindings, allRisks, allAssessments);
+
+                // 2. RISK POSTURE ANALYSIS
+                var riskPosture = GetRiskPostureAnalysis(openRisks, allRisks);
+
+                // 3. COMPLIANCE & GOVERNANCE METRICS
+                var complianceMetrics = await GetComplianceAndGovernanceMetrics(allComplianceAssessments, allFindings);
+
+                // 4. SECURITY MATURITY INSIGHTS
+                var maturityInsights = await GetSecurityMaturityInsights(allMaturityAssessments);
+
+                // 5. THREAT & VULNERABILITY LANDSCAPE
+                var threatLandscape = GetThreatAndVulnerabilityLandscape(allFindings, openRisks);
+
+                // 6. OPERATIONAL PERFORMANCE METRICS
+                var operationalMetrics = GetOperationalPerformanceMetrics(allFindings, allAssessments);
+
+                // 7. BUSINESS UNIT RISK ANALYSIS
+                var businessUnitAnalysis = GetBusinessUnitRiskAnalysis(openRisks, allFindings);
 
 
-                // Get top financial risks
-                var topFinancialRisks = allRisks
-                    .Where(r => r.Status == RiskStatus.Open)
-                    .OrderByDescending(r => r.ALE)
-                    .Take(5)
-                    .Select(r => new
-                    {
-                        riskDescription = r.Title ?? "Risk Assessment",
-                        asset = r.Asset ?? "Not specified",
-                        ale = r.ALE,
-                        status = r.Status.ToString()
-                    })
-                    .ToList();
-                    
-                // DEBUG: Log top financial risks
-                Console.WriteLine($"🔍 CISO Dashboard Debug - Top financial risks count: {topFinancialRisks.Count}");
-                foreach (var risk in topFinancialRisks)
-                {
-                    Console.WriteLine($"🔍 Top Financial Risk: {risk.riskDescription}, ALE: ${risk.ale}");
-                }
+                // 9. INCIDENT & BREACH METRICS (using findings as proxy)
+                var incidentMetrics = GetIncidentAndBreachMetrics(allFindings);
 
-                // Calculate SLA performance
-                var totalWithSLA = openFindings.Count(f => f.SlaDate.HasValue);
-                var onTimeItems = openFindings.Count(f => f.SlaDate.HasValue && !f.IsOverdue);
-                var slaPerformance = totalWithSLA > 0 ? (decimal)onTimeItems / totalWithSLA * 100 : 0;
+                // 10. INVESTMENT & ROI INDICATORS
+                var investmentMetrics = GetInvestmentAndROIIndicators(allRisks, allFindings);
 
-                // Set compliance percentage to 0 since we removed assessment selection
-                var compliancePercentage = 0m;
+                // 11. TOP FINANCIAL RISKS
+                var topFinancialRisks = await GetTopFinancialRisks(allRisks);
 
-                // Calculate risks above appetite
-                var risksAboveAppetite = await CalculateRisksAboveAppetite();
-                
-                // Get top 10 assets with most risks above appetite
+                // 12. TOP ASSETS WITH HIGH RISKS
                 var topAssetsWithHighRisks = await GetTopAssetsWithRisksAboveAppetite();
 
-                var dashboardData = new
+                // 13. STRATEGIC INDICATORS
+                var strategicIndicators = await GetStrategicRiskIndicators(allRisks, allFindings);
+
+                var comprehensiveDashboardData = new
                 {
-                    summary = new
-                    {
-                        totalCriticalHighFindings = criticalHighFindings.Count,
-                        totalALE = await _riskService.GetTotalALEAsync(),
-                        slaPerformance = Math.Round(slaPerformance, 1),
-                        compliancePercentage = compliancePercentage,
-                        overdueFindings = overdueFindings.Count,
-                        riskExposure = await _riskService.GetTotalALEAsync(),
-                        risksAboveAppetite = risksAboveAppetite.Count,
-                        riskAppetiteTrend = risksAboveAppetite.Trend
-                    },
-                    riskDistribution = new
-                    {
-                        critical = openRisks.Count(r => r.RiskLevel == RiskLevel.Critical),
-                        high = openRisks.Count(r => r.RiskLevel == RiskLevel.High),
-                        medium = openRisks.Count(r => r.RiskLevel == RiskLevel.Medium),
-                        low = openRisks.Count(r => r.RiskLevel == RiskLevel.Low)
-                    },
-                    businessUnitMetrics = businessUnitMetrics,
-                    topFinancialRisks = topFinancialRisks,
-                    topAssetsWithHighRisks = topAssetsWithHighRisks
+                    lastUpdated = DateTime.UtcNow,
+                    executiveSummary,
+                    riskPosture,
+                    complianceMetrics,
+                    maturityInsights,
+                    threatLandscape,
+                    operationalMetrics,
+                    businessUnitAnalysis,
+                    incidentMetrics,
+                    investmentMetrics,
+                    topFinancialRisks,
+                    topAssetsWithHighRisks,
+                    strategicIndicators,
+                    
+                    // Legacy compatibility (keeping existing fields for smooth transition)
+                    summary = executiveSummary,
+                    riskDistribution = riskPosture?.GetType().GetProperty("riskDistribution")?.GetValue(riskPosture),
+                    businessUnitMetrics = businessUnitAnalysis?.GetType().GetProperty("businessUnits")?.GetValue(businessUnitAnalysis),
                 };
 
-                return Json(dashboardData);
+                return Json(comprehensiveDashboardData);
             }
             catch (Exception ex)
             {
@@ -169,258 +116,6 @@ namespace CyberRiskApp.Controllers
             }
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireAdminRole)]
-        public async Task<IActionResult> CreateSampleFAIRAssessments()
-        {
-            try
-            {
-                var sampleAssessments = new[]
-                {
-                    new RiskAssessment
-                    {
-                        Title = "Email System Data Breach Assessment",
-                        Asset = "Email Infrastructure",
-                        BusinessUnit = "IT Department",
-                        BusinessOwner = "IT Manager",
-                        Description = "FAIR assessment of potential data breach through email system compromise",
-                        ThreatScenario = "External attacker compromises email server and accesses sensitive communications",
-                        CIATriad = CIATriad.Confidentiality,
-                        AssessmentType = AssessmentType.FAIR,
-                        Status = AssessmentStatus.Completed,
-                        DateCompleted = DateTime.Today,
-                        Assessor = "Risk Analyst",
-                        AnnualLossExpectancy = 320000m,
-                        ALE_50th = 320000m,
-                        ThreatEventFrequency = 0.5m,
-                        ContactFrequency = 80m,
-                        ActionSuccess = 25m,
-                        ProductivityLossMostLikely = 150000m,
-                        ResponseCostsMostLikely = 85000m,
-                        FinesMostLikely = 75000m,
-                        ReputationDamageMostLikely = 10000m,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    new RiskAssessment
-                    {
-                        Title = "Ransomware Attack on File Servers",
-                        Asset = "Corporate File Servers", 
-                        BusinessUnit = "Operations",
-                        BusinessOwner = "Operations Director",
-                        Description = "FAIR assessment of ransomware impact on business operations",
-                        ThreatScenario = "Ransomware encrypts critical business files leading to operational shutdown",
-                        CIATriad = CIATriad.Availability,
-                        AssessmentType = AssessmentType.FAIR,
-                        Status = AssessmentStatus.Completed,
-                        DateCompleted = DateTime.Today,
-                        Assessor = "Security Analyst",
-                        AnnualLossExpectancy = 680000m,
-                        ALE_50th = 680000m,
-                        ThreatEventFrequency = 0.3m,
-                        ContactFrequency = 90m,
-                        ActionSuccess = 35m,
-                        ProductivityLossMostLikely = 400000m,
-                        ResponseCostsMostLikely = 150000m,
-                        ReplacementCostMostLikely = 100000m,
-                        ReputationDamageMostLikely = 30000m,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    new RiskAssessment
-                    {
-                        Title = "Customer Database SQL Injection Attack",
-                        Asset = "Customer Database",
-                        BusinessUnit = "Customer Services",
-                        BusinessOwner = "Customer Services Manager", 
-                        Description = "FAIR assessment of SQL injection leading to customer data exposure",
-                        ThreatScenario = "Attacker exploits web application vulnerability to access customer PII",
-                        CIATriad = CIATriad.Confidentiality,
-                        AssessmentType = AssessmentType.FAIR,
-                        Status = AssessmentStatus.Completed,
-                        DateCompleted = DateTime.Today,
-                        Assessor = "Risk Analyst",
-                        AnnualLossExpectancy = 450000m,
-                        ALE_50th = 450000m,
-                        ThreatEventFrequency = 0.8m,
-                        ContactFrequency = 60m,
-                        ActionSuccess = 20m,
-                        ProductivityLossMostLikely = 80000m,
-                        ResponseCostsMostLikely = 120000m,
-                        FinesMostLikely = 200000m,
-                        ReputationDamageMostLikely = 50000m,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    }
-                };
-
-                var risksCreated = 0;
-                
-                foreach (var assessment in sampleAssessments)
-                {
-                    // Create the assessment (no automatic risks will be created)
-                    await _riskAssessmentService.CreateAssessmentAsync(assessment);
-                    
-                    // Manually create a sample identified risk for each assessment to demonstrate the proper business logic
-                    // This simulates what would happen when a user adds identified risks through the assessment form
-                    var identifiedRisk = new Risk
-                    {
-                        Title = $"Data Loss Risk - {assessment.Asset}",
-                        Description = $"Risk of data loss from {assessment.ThreatScenario}",
-                        Asset = assessment.Asset,
-                        BusinessUnit = assessment.BusinessUnit ?? "Unknown",
-                        ThreatScenario = assessment.ThreatScenario,
-                        CIATriad = assessment.CIATriad ?? CIATriad.All,
-                        Owner = assessment.Assessor,
-                        // Inherit ALE from the FAIR assessment
-                        ALE = assessment.AnnualLossExpectancy ?? 0m,
-                        RiskAssessmentId = assessment.Id,
-                        Status = RiskStatus.Open,
-                        OpenDate = DateTime.Today,
-                        NextReviewDate = DateTime.Today.AddMonths(3),
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        Impact = ImpactLevel.High,
-                        Likelihood = LikelihoodLevel.Possible,
-                        Exposure = ExposureLevel.HighlyExposed,
-                        Treatment = TreatmentStrategy.Mitigate
-                    };
-
-                    // Calculate risk level based on ALE (same logic as RiskAssessmentsController)
-                    var currentSettings = await _riskLevelSettingsService.GetActiveSettingsAsync();
-                    if (currentSettings != null)
-                    {
-                        identifiedRisk.RiskLevel = identifiedRisk.ALE >= currentSettings.FairCriticalThreshold ? RiskLevel.Critical :
-                                                 identifiedRisk.ALE >= currentSettings.FairHighThreshold ? RiskLevel.High :
-                                                 identifiedRisk.ALE >= currentSettings.FairMediumThreshold ? RiskLevel.Medium : RiskLevel.Low;
-                    }
-                    else
-                    {
-                        // Fallback to default FAIR thresholds
-                        identifiedRisk.RiskLevel = identifiedRisk.ALE >= 100000 ? RiskLevel.Critical :
-                                                 identifiedRisk.ALE >= 50000 ? RiskLevel.High :
-                                                 identifiedRisk.ALE >= 10000 ? RiskLevel.Medium : RiskLevel.Low;
-                    }
-                    
-                    identifiedRisk.InherentRiskLevel = identifiedRisk.RiskLevel;
-                    identifiedRisk.ResidualRiskLevel = identifiedRisk.RiskLevel;
-                    
-                    // Create the risk (this simulates what happens when assessment is completed with identified risks)
-                    await _riskService.CreateRiskAsync(identifiedRisk);
-                    risksCreated++;
-                    
-                    Console.WriteLine($"✅ Created identified risk '{identifiedRisk.Title}' from {assessment.AssessmentType} assessment with ALE: ${identifiedRisk.ALE:N0}, Level: {identifiedRisk.RiskLevel}");
-                }
-
-                var totalALE = sampleAssessments.Sum(a => a.AnnualLossExpectancy ?? 0);
-                return Json(new { 
-                    success = true, 
-                    message = $"Created {sampleAssessments.Length} FAIR assessments and {risksCreated} identified risks. Total ALE: ${totalALE:N0}", 
-                    assessments = sampleAssessments.Length,
-                    risks = risksCreated,
-                    totalALE = totalALE
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, error = ex.Message });
-            }
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireAdminRole)]
-        public async Task<IActionResult> CreateSampleRiskData()
-        {
-            try
-            {
-                // Create sample risks with ALE values for testing
-                var sampleRisks = new[]
-                {
-                    new Risk
-                    {
-                        RiskNumber = await GenerateNextRiskNumberAsync(),
-                        Title = "Data Breach - Customer Database",
-                        ThreatScenario = "External attacker gains access to customer database through SQL injection",
-                        CIATriad = CIATriad.Confidentiality,
-                        Description = "Unauthorized access to customer personal information could result in regulatory fines and reputation damage",
-                        BusinessUnit = "IT Department",
-                        Asset = "Customer Database",
-                        Owner = "IT Manager",
-                        Impact = ImpactLevel.High,
-                        Likelihood = LikelihoodLevel.Possible,
-                        Exposure = ExposureLevel.HighlyExposed,
-                        InherentRiskLevel = RiskLevel.High,
-                        Treatment = TreatmentStrategy.Mitigate,
-                        ResidualRiskLevel = RiskLevel.Medium,
-                        ALE = 250000m,
-                        RiskLevel = RiskLevel.High,
-                        Status = RiskStatus.Open,
-                        OpenDate = DateTime.Today.AddDays(-30),
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    new Risk
-                    {
-                        RiskNumber = await GenerateNextRiskNumberAsync(),
-                        Title = "Ransomware Attack",
-                        ThreatScenario = "Malicious email attachment deploys ransomware across network",
-                        CIATriad = CIATriad.Availability,
-                        Description = "Business operations disrupted due to encrypted files and systems",
-                        BusinessUnit = "Operations",
-                        Asset = "File Servers",
-                        Owner = "Operations Manager",
-                        Impact = ImpactLevel.Critical,
-                        Likelihood = LikelihoodLevel.Possible,
-                        Exposure = ExposureLevel.HighlyExposed,
-                        InherentRiskLevel = RiskLevel.Critical,
-                        Treatment = TreatmentStrategy.Mitigate,
-                        ResidualRiskLevel = RiskLevel.High,
-                        ALE = 500000m,
-                        RiskLevel = RiskLevel.Critical,
-                        Status = RiskStatus.Open,
-                        OpenDate = DateTime.Today.AddDays(-15),
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    new Risk
-                    {
-                        RiskNumber = await GenerateNextRiskNumberAsync(),
-                        Title = "Insider Threat - Data Theft",
-                        ThreatScenario = "Privileged user downloads sensitive data for personal gain",
-                        CIATriad = CIATriad.Confidentiality,
-                        Description = "Employee with elevated access steals intellectual property",
-                        BusinessUnit = "HR Department",
-                        Asset = "Document Management System",
-                        Owner = "HR Director",
-                        Impact = ImpactLevel.High,
-                        Likelihood = LikelihoodLevel.Unlikely,
-                        Exposure = ExposureLevel.Exposed,
-                        InherentRiskLevel = RiskLevel.Medium,
-                        Treatment = TreatmentStrategy.Mitigate,
-                        ResidualRiskLevel = RiskLevel.Low,
-                        ALE = 75000m,
-                        RiskLevel = RiskLevel.Medium,
-                        Status = RiskStatus.Open,
-                        OpenDate = DateTime.Today.AddDays(-45),
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    }
-                };
-
-                foreach (var risk in sampleRisks)
-                {
-                    await _riskService.CreateRiskAsync(risk);
-                }
-
-                return Json(new { success = true, message = $"Created {sampleRisks.Length} sample risks with ALE values", risks = sampleRisks.Length });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, error = ex.Message });
-            }
-        }
 
         private async Task<string> GenerateNextRiskNumberAsync()
         {
@@ -437,229 +132,9 @@ namespace CyberRiskApp.Controllers
             return $"RISK-{(maxNumber + 1):D4}";
         }
 
-        [HttpGet]
-        public async Task<IActionResult> DiagnoseRiskALE()
-        {
-            try
-            {
-                var risks = await _riskService.GetAllRisksAsync();
-                var assessments = await _riskAssessmentService.GetAllAssessmentsAsync();
-                
-                var riskDetails = risks.Select(r => new
-                {
-                    r.Id,
-                    r.RiskNumber,
-                    r.Title,
-                    r.ALE,
-                    r.RiskLevel,
-                    r.Status,
-                    r.RiskAssessmentId,
-                    AssessmentTitle = r.RiskAssessmentId.HasValue 
-                        ? assessments.FirstOrDefault(a => a.Id == r.RiskAssessmentId.Value)?.Title 
-                        : "No linked assessment",
-                    AssessmentALE = r.RiskAssessmentId.HasValue 
-                        ? assessments.FirstOrDefault(a => a.Id == r.RiskAssessmentId.Value)?.AnnualLossExpectancy 
-                        : null,
-                    AssessmentType = r.RiskAssessmentId.HasValue 
-                        ? assessments.FirstOrDefault(a => a.Id == r.RiskAssessmentId.Value)?.AssessmentType.ToString() 
-                        : "None",
-                    AssessmentStatus = r.RiskAssessmentId.HasValue 
-                        ? assessments.FirstOrDefault(a => a.Id == r.RiskAssessmentId.Value)?.Status.ToString() 
-                        : "None"
-                }).ToList();
-                
-                return Json(new 
-                { 
-                    totalRisks = risks.Count(),
-                    risksWithALE = risks.Count(r => r.ALE > 0),
-                    totalAssessments = assessments.Count(),
-                    completedFAIRAssessments = assessments.Count(a => a.Status == AssessmentStatus.Completed && a.AssessmentType == AssessmentType.FAIR),
-                    riskDetails = riskDetails
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { error = ex.Message, stackTrace = ex.StackTrace });
-            }
-        }
 
-        [HttpGet]
-        public async Task<IActionResult> DiagnoseSpecificAssessment(int id)
-        {
-            try
-            {
-                var assessment = await _riskAssessmentService.GetAssessmentByIdAsync(id);
-                if (assessment == null)
-                    return Json(new { error = "Assessment not found" });
-                
-                var risks = await _riskService.GetAllRisksAsync();
-                var linkedRisks = risks.Where(r => r.RiskAssessmentId == id).ToList();
-                
-                return Json(new 
-                {
-                    assessment = new
-                    {
-                        assessment.Id,
-                        assessment.Title,
-                        assessment.AssessmentType,
-                        assessment.AnnualLossExpectancy,
-                        assessment.Status,
-                        IdentifiedRisksCount = assessment.IdentifiedRisks?.Count ?? 0
-                    },
-                    linkedRisks = linkedRisks.Select(r => new
-                    {
-                        r.Id,
-                        r.RiskNumber,
-                        r.Title,
-                        r.ALE,
-                        r.RiskLevel,
-                        r.Status
-                    }).ToList(),
-                    diagnosis = $"Assessment ALE: ${assessment.AnnualLossExpectancy ?? 0:N0}, " +
-                               $"Linked Risks: {linkedRisks.Count}, " +
-                               $"Risks with ALE=0: {linkedRisks.Count(r => r.ALE == 0)}"
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { error = ex.Message });
-            }
-        }
 
-        [HttpGet]
-        [Authorize(Policy = PolicyConstants.RequireAdminRole)]
-        public async Task<IActionResult> FixIdentifiedRisksALE()
-        {
-            try
-            {
-                var risks = await _riskService.GetAllRisksAsync();
-                var assessments = await _riskAssessmentService.GetAllAssessmentsAsync();
-                var currentSettings = await _riskLevelSettingsService.GetActiveSettingsAsync();
-                var fixedCount = 0;
-                
-                // Find risks that are linked to FAIR assessments but have ALE = 0 or incorrect ALE
-                var risksToFix = risks.Where(r => r.RiskAssessmentId.HasValue).ToList();
-                var risksWithZeroALE = risksToFix.Where(r => r.ALE == 0).ToList();
-                
-                Console.WriteLine($"🔍 Found {risksToFix.Count} risks linked to assessments");
-                Console.WriteLine($"🔍 Found {risksWithZeroALE.Count} risks with ALE = 0 that are linked to assessments");
-                
-                foreach (var risk in risksToFix)
-                {
-                    var assessment = assessments.FirstOrDefault(a => a.Id == risk.RiskAssessmentId.Value);
-                    if (assessment != null && 
-                        assessment.AssessmentType == AssessmentType.FAIR && 
-                        assessment.AnnualLossExpectancy.HasValue &&
-                        assessment.AnnualLossExpectancy > 0)
-                    {
-                        // Check if the risk needs fixing (ALE doesn't match assessment ALE)
-                        if (risk.ALE != assessment.AnnualLossExpectancy.Value)
-                        {
-                            Console.WriteLine($"🔧 Fixing risk {risk.RiskNumber}: '{risk.Title}'");
-                            Console.WriteLine($"   - Current ALE: ${risk.ALE:N0}");
-                            Console.WriteLine($"   - Assessment ALE: ${assessment.AnnualLossExpectancy:N0}");
-                            Console.WriteLine($"   - Current Risk Level: {risk.RiskLevel}");
-                            
-                            // Update risk with correct ALE from assessment
-                            risk.ALE = assessment.AnnualLossExpectancy.Value;
-                        
-                            // Recalculate risk level based on ALE
-                            if (currentSettings != null)
-                            {
-                                risk.RiskLevel = risk.ALE >= currentSettings.FairCriticalThreshold ? RiskLevel.Critical :
-                                               risk.ALE >= currentSettings.FairHighThreshold ? RiskLevel.High :
-                                               risk.ALE >= currentSettings.FairMediumThreshold ? RiskLevel.Medium : RiskLevel.Low;
-                            }
-                            else
-                            {
-                                // Default thresholds
-                                risk.RiskLevel = risk.ALE >= 100000 ? RiskLevel.Critical :
-                                               risk.ALE >= 50000 ? RiskLevel.High :
-                                               risk.ALE >= 10000 ? RiskLevel.Medium : RiskLevel.Low;
-                            }
-                            
-                            risk.InherentRiskLevel = risk.RiskLevel;
-                            risk.ResidualRiskLevel = risk.RiskLevel;
-                            
-                            await _riskService.UpdateRiskAsync(risk);
-                            fixedCount++;
-                            
-                            Console.WriteLine($"   - New ALE: ${risk.ALE:N0}");
-                            Console.WriteLine($"   - New Risk Level: {risk.RiskLevel}");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"✅ Risk {risk.RiskNumber} already has correct ALE: ${risk.ALE:N0}");
-                        }
-                    }
-                }
-                
-                return Json(new { 
-                    success = true, 
-                    message = $"Fixed {fixedCount} identified risks to inherit ALE from their FAIR assessments",
-                    fixedCount = fixedCount
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, error = ex.Message });
-            }
-        }
 
-        [HttpGet]
-        public async Task<IActionResult> FixExistingRisks()
-        {
-            try
-            {
-                var risks = await _riskService.GetAllRisksAsync();
-                var assessments = await _riskAssessmentService.GetAllAssessmentsAsync();
-                var currentSettings = await _riskLevelSettingsService.GetActiveSettingsAsync();
-                var fixedCount = 0;
-                
-                foreach (var risk in risks.Where(r => r.RiskAssessmentId.HasValue))
-                {
-                    var assessment = assessments.FirstOrDefault(a => a.Id == risk.RiskAssessmentId.Value);
-                    if (assessment != null && assessment.AssessmentType == AssessmentType.FAIR && assessment.AnnualLossExpectancy.HasValue)
-                    {
-                        // Update risk with correct ALE
-                        risk.ALE = assessment.AnnualLossExpectancy.Value;
-                        
-                        // Recalculate risk level based on ALE
-                        if (currentSettings != null)
-                        {
-                            risk.RiskLevel = risk.ALE >= currentSettings.FairCriticalThreshold ? RiskLevel.Critical :
-                                           risk.ALE >= currentSettings.FairHighThreshold ? RiskLevel.High :
-                                           risk.ALE >= currentSettings.FairMediumThreshold ? RiskLevel.Medium : RiskLevel.Low;
-                        }
-                        else
-                        {
-                            // Default thresholds
-                            risk.RiskLevel = risk.ALE >= 100000 ? RiskLevel.Critical :
-                                           risk.ALE >= 50000 ? RiskLevel.High :
-                                           risk.ALE >= 10000 ? RiskLevel.Medium : RiskLevel.Low;
-                        }
-                        
-                        risk.InherentRiskLevel = risk.RiskLevel;
-                        risk.ResidualRiskLevel = risk.RiskLevel;
-                        
-                        await _riskService.UpdateRiskAsync(risk);
-                        fixedCount++;
-                        
-                        Console.WriteLine($"✅ Fixed Risk {risk.RiskNumber}: ALE=${risk.ALE:N0}, Level={risk.RiskLevel}");
-                    }
-                }
-                
-                return Json(new { 
-                    success = true, 
-                    message = $"Fixed {fixedCount} risks with proper ALE values from their assessments",
-                    fixedCount = fixedCount
-                });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, error = ex.Message });
-            }
-        }
 
         [HttpGet]
         public async Task<IActionResult> GetDatabaseStatus()
@@ -674,13 +149,13 @@ namespace CyberRiskApp.Controllers
                 {
                     TotalRisks = risks.Count(),
                     OpenRisks = risks.Count(r => r.Status == RiskStatus.Open),
-                    RisksWithALE = risks.Count(r => r.ALE > 0),
-                    TotalALE = risks.Where(r => r.Status == RiskStatus.Open).Sum(r => r.ALE),
+                    RisksWithQualitativeScoring = risks.Count(r => GetQualitativeRiskScore(r) > 0),
+                    TotalRiskScore = risks.Where(r => r.Status == RiskStatus.Open).Sum(r => GetQualitativeRiskScore(r)),
                     TotalFindings = findings.Count(),
                     OpenFindings = findings.Count(f => f.Status != FindingStatus.Closed),
                     TotalAssessments = assessments.Count(),
                     CompletedAssessments = assessments.Count(a => a.Status == AssessmentStatus.Completed),
-                    FAIRAssessments = assessments.Count(a => a.AssessmentType == AssessmentType.FAIR),
+                    QualitativeAssessments = assessments.Count(a => a.AssessmentType == AssessmentType.Qualitative),
                     RisksByLevel = risks.Where(r => r.Status == RiskStatus.Open)
                         .GroupBy(r => r.RiskLevel)
                         .ToDictionary(g => g.Key.ToString(), g => g.Count()),
@@ -746,12 +221,12 @@ namespace CyberRiskApp.Controllers
         {
             var criticalCount = risks.Count(r => r.RiskLevel == RiskLevel.Critical);
             var highCount = risks.Count(r => r.RiskLevel == RiskLevel.High);
-            var totalALE = risks.Sum(r => r.ALE);
+            var totalRiskScore = risks.Sum(r => GetQualitativeRiskScore(r));
 
             // Risk status based on risk levels and ALE
-            if (criticalCount > 0 || totalALE >= 500000) return "critical";
-            if (highCount > 3 || totalALE >= 200000) return "warning";
-            if (highCount > 0 || totalALE >= 50000) return "good";
+            if (criticalCount > 0 || totalRiskScore >= 200) return "critical";
+            if (highCount > 3 || totalRiskScore >= 100) return "warning";
+            if (highCount > 0 || totalRiskScore >= 50) return "good";
             return "excellent";
         }
 
@@ -769,26 +244,10 @@ namespace CyberRiskApp.Controllers
                 var currentAboveAppetite = 0;
                 foreach (var risk in openRisks)
                 {
-                    // Use ALE for FAIR assessment (convert to risk score equivalent)
+                    // FAIR ALE functionality removed
                     // Use qualitative risk level calculation for others
-                    decimal riskScore = 0;
-                    AssessmentType assessmentType = AssessmentType.Qualitative; // Default
-                    
-                    if (risk.ALE > 0)
-                    {
-                        // For FAIR assessments, use ALE directly
-                        assessmentType = AssessmentType.FAIR;
-                        riskScore = risk.ALE;
-                    }
-                    else
-                    {
-                        // For qualitative assessments, calculate risk score from Impact × Likelihood × Exposure
-                        var impactValue = GetRiskFactorValue(risk.Impact.ToString());
-                        var likelihoodValue = GetRiskFactorValue(risk.Likelihood.ToString());
-                        var exposureValue = GetRiskFactorValue(risk.Exposure.ToString());
-                        riskScore = impactValue * likelihoodValue * exposureValue;
-                        assessmentType = AssessmentType.Qualitative;
-                    }
+                    decimal riskScore = GetQualitativeRiskScore(risk);
+                    AssessmentType assessmentType = AssessmentType.Qualitative; // Only qualitative supported
                     
                     if (await _riskLevelSettingsService.IsRiskAboveAppetiteAsync(riskScore, assessmentType))
                     {
@@ -859,7 +318,7 @@ namespace CyberRiskApp.Controllers
                     var risks = assetGroup.Value;
                     
                     var risksAboveAppetite = 0;
-                    var totalALE = 0m;
+                    var totalRiskScore = 0m;
                     var criticalCount = 0;
                     var highCount = 0;
                     
@@ -869,25 +328,10 @@ namespace CyberRiskApp.Controllers
                         if (risk.RiskLevel == RiskLevel.Critical) criticalCount++;
                         if (risk.RiskLevel == RiskLevel.High) highCount++;
                         
-                        // Sum ALE
-                        totalALE += risk.ALE;
-                        
-                        // Check if risk is above appetite
-                        decimal riskScore = 0;
+                        // Calculate qualitative risk score
+                        decimal riskScore = GetQualitativeRiskScore(risk);
+                        totalRiskScore += riskScore;
                         AssessmentType assessmentType = AssessmentType.Qualitative;
-                        
-                        if (risk.ALE > 0)
-                        {
-                            assessmentType = AssessmentType.FAIR;
-                            riskScore = risk.ALE;
-                        }
-                        else
-                        {
-                            var impactValue = GetRiskFactorValue(risk.Impact.ToString());
-                            var likelihoodValue = GetRiskFactorValue(risk.Likelihood.ToString());
-                            var exposureValue = GetRiskFactorValue(risk.Exposure.ToString());
-                            riskScore = impactValue * likelihoodValue * exposureValue;
-                        }
                         
                         if (await _riskLevelSettingsService.IsRiskAboveAppetiteAsync(riskScore, assessmentType))
                         {
@@ -900,7 +344,7 @@ namespace CyberRiskApp.Controllers
                         asset = asset,
                         totalRisks = risks.Count,
                         risksAboveAppetite = risksAboveAppetite,
-                        totalALE = totalALE,
+                        totalRiskScore = totalRiskScore,
                         criticalCount = criticalCount,
                         highCount = highCount,
                         businessUnit = risks.FirstOrDefault()?.BusinessUnit ?? "Unknown"
@@ -910,7 +354,7 @@ namespace CyberRiskApp.Controllers
                 // Return top 10 assets with most risks above appetite
                 return topAssets
                     .OrderByDescending(a => ((dynamic)a).risksAboveAppetite)
-                    .ThenByDescending(a => ((dynamic)a).totalALE)
+                    .ThenByDescending(a => ((dynamic)a).totalRiskScore)
                     .Take(10)
                     .ToList();
             }
@@ -920,5 +364,663 @@ namespace CyberRiskApp.Controllers
                 return new List<object>();
             }
         }
+
+        #region Comprehensive CISO Dashboard Helper Methods
+
+        private async Task<object> GetExecutiveSummaryMetrics(IEnumerable<Finding> allFindings, IEnumerable<Risk> allRisks, IEnumerable<RiskAssessment> allAssessments)
+        {
+            var openFindings = allFindings.Where(f => f.Status != FindingStatus.Closed);
+            var openRisks = allRisks.Where(r => r.Status == RiskStatus.Open);
+            var criticalHighFindings = openFindings.Where(f => f.RiskRating == RiskRating.Critical || f.RiskRating == RiskRating.High);
+            var overdueFindings = openFindings.Where(f => f.IsOverdue);
+            
+            // Calculate risk velocity (risks identified in last 30 days)
+            var recentRisks = openRisks.Where(r => r.OpenDate >= DateTime.Today.AddDays(-30)).Count();
+            
+            // Calculate mean time to resolution
+            var closedFindings = allFindings.Where(f => f.Status == FindingStatus.Closed);
+            var avgResolutionTime = closedFindings.Any() ? 
+                closedFindings.Average(f => (f.UpdatedAt - f.CreatedAt).TotalDays) : 0;
+
+            // Risk appetite analysis
+            var risksAboveAppetite = await CalculateRisksAboveAppetite();
+            
+            return new
+            {
+                totalCriticalHighFindings = criticalHighFindings.Count(),
+                totalRiskScore = await CalculateTotalQualitativeRiskScore(),
+                overdueFindings = overdueFindings.Count(),
+                risksAboveAppetite = risksAboveAppetite.Count,
+                riskAppetiteTrend = risksAboveAppetite.Trend,
+                riskVelocity = recentRisks,
+                avgResolutionTimeDays = Math.Round(avgResolutionTime, 1),
+                totalOpenRisks = openRisks.Count(),
+                totalAssessments = allAssessments.Count(),
+                assessmentCompletionRate = allAssessments.Any() ? 
+                    Math.Round((decimal)allAssessments.Count(a => a.Status == AssessmentStatus.Completed) / allAssessments.Count() * 100, 1) : 0,
+                securityPosture = GetOverallSecurityPosture(openRisks, criticalHighFindings)
+            };
+        }
+
+        private object GetRiskPostureAnalysis(IEnumerable<Risk> openRisks, IEnumerable<Risk> allRisks)
+        {
+            var risksByLevel = openRisks.GroupBy(r => r.RiskLevel).ToDictionary(g => g.Key.ToString(), g => g.Count());
+            var risksByTreatment = openRisks.GroupBy(r => r.Treatment).ToDictionary(g => g.Key.ToString(), g => g.Count());
+            var risksByCIA = openRisks.GroupBy(r => r.CIATriad).ToDictionary(g => g.Key.ToString(), g => g.Count());
+
+            // Risk trending (comparing current vs previous 30 days)
+            var current30Days = openRisks.Where(r => r.OpenDate >= DateTime.Today.AddDays(-30));
+            var previous30Days = allRisks.Where(r => r.OpenDate >= DateTime.Today.AddDays(-60) && r.OpenDate < DateTime.Today.AddDays(-30));
+            
+            var riskTrend = current30Days.Count() > previous30Days.Count() ? "increasing" : 
+                           current30Days.Count() < previous30Days.Count() ? "decreasing" : "stable";
+
+            return new
+            {
+                riskDistribution = new
+                {
+                    critical = risksByLevel.GetValueOrDefault("Critical", 0),
+                    high = risksByLevel.GetValueOrDefault("High", 0),
+                    medium = risksByLevel.GetValueOrDefault("Medium", 0),
+                    low = risksByLevel.GetValueOrDefault("Low", 0)
+                },
+                treatmentStrategy = risksByTreatment,
+                ciaImpactDistribution = risksByCIA,
+                riskTrend = riskTrend,
+                totalRiskScore = openRisks.Sum(r => GetQualitativeRiskScore(r)),
+                avgRiskScore = openRisks.Any() ? openRisks.Average(r => (int)r.Impact * (int)r.Likelihood) : 0,
+                riskDiversification = GetRiskDiversificationScore(openRisks)
+            };
+        }
+
+        private async Task<object> GetComplianceAndGovernanceMetrics(IEnumerable<ComplianceAssessment> complianceAssessments, IEnumerable<Finding> allFindings)
+        {
+            var activeAssessments = complianceAssessments.Where(a => a.Status == AssessmentStatus.Completed);
+            var complianceFindings = allFindings.Where(f => f.Domain.Contains("Compliance", StringComparison.OrdinalIgnoreCase));
+
+            // Calculate overall compliance percentage
+            var totalControls = activeAssessments.SelectMany(a => a.ControlAssessments).Count();
+            var compliantControls = activeAssessments.SelectMany(a => a.ControlAssessments)
+                .Count(c => c.Status == ComplianceStatus.FullyCompliant);
+            
+            var overallComplianceRate = totalControls > 0 ? (decimal)compliantControls / totalControls * 100 : 0;
+
+            // Framework compliance breakdown
+            var frameworkCompliance = activeAssessments.GroupBy(a => a.Framework.Name)
+                .Select(g => new
+                {
+                    framework = g.Key,
+                    complianceRate = g.SelectMany(a => a.ControlAssessments).Any() ?
+                        Math.Round((decimal)g.SelectMany(a => a.ControlAssessments).Count(c => c.Status == ComplianceStatus.FullyCompliant) /
+                        g.SelectMany(a => a.ControlAssessments).Count() * 100, 1) : 0,
+                    totalControls = g.SelectMany(a => a.ControlAssessments).Count(),
+                    gapsCount = g.SelectMany(a => a.ControlAssessments).Count(c => c.Status == ComplianceStatus.NonCompliant)
+                }).ToList();
+
+            return new
+            {
+                overallComplianceRate = Math.Round(overallComplianceRate, 1),
+                frameworkCompliance = frameworkCompliance,
+                complianceGaps = complianceFindings.Count(f => f.RiskRating == RiskRating.Critical || f.RiskRating == RiskRating.High),
+                auditReadiness = GetAuditReadinessScore(activeAssessments),
+                governanceEffectiveness = GetGovernanceEffectivenessScore(allFindings, complianceAssessments),
+                regulatoryRiskScore = GetRegulatoryRiskScore(complianceFindings)
+            };
+        }
+
+        private async Task<object> GetSecurityMaturityInsights(IEnumerable<MaturityAssessment> maturityAssessments)
+        {
+            var activeMaturityAssessments = maturityAssessments.Where(a => a.Status == AssessmentStatus.Completed);
+            
+            if (!activeMaturityAssessments.Any())
+            {
+                return new { 
+                    overallMaturityLevel = "Not Assessed",
+                    maturityScore = 0,
+                    maturityTrend = "unknown",
+                    domainMaturityBreakdown = new List<object>(),
+                    maturityGaps = 0,
+                    improvementOpportunities = new List<object>()
+                };
+            }
+
+            // Calculate overall maturity score
+            var allControlAssessments = activeMaturityAssessments.SelectMany(a => a.ControlAssessments);
+            var avgCurrentMaturity = allControlAssessments.Any() ? 
+                allControlAssessments.Average(c => (int)c.CurrentMaturityLevel) : 0;
+            var avgTargetMaturity = allControlAssessments.Any() ? 
+                allControlAssessments.Average(c => (int)c.TargetMaturityLevel) : 0;
+
+            // Domain-level maturity breakdown
+            var domainMaturity = allControlAssessments
+                .Where(c => !string.IsNullOrEmpty(c.Control?.Function))
+                .GroupBy(c => c.Control.Function)
+                .Select(g => new
+                {
+                    domain = g.Key,
+                    currentMaturity = Math.Round(g.Average(c => (int)c.CurrentMaturityLevel), 1),
+                    targetMaturity = Math.Round(g.Average(c => (int)c.TargetMaturityLevel), 1),
+                    gapAnalysis = Math.Round(g.Average(c => (int)c.TargetMaturityLevel - (int)c.CurrentMaturityLevel), 1),
+                    controlsCount = g.Count()
+                }).ToList();
+
+            var maturityGaps = allControlAssessments.Count(c => c.CurrentMaturityLevel < c.TargetMaturityLevel);
+
+            return new
+            {
+                overallMaturityLevel = GetMaturityLevelLabel(avgCurrentMaturity),
+                maturityScore = Math.Round(avgCurrentMaturity / 4 * 100, 1), // Convert to percentage (assuming max level 4)
+                maturityTrend = avgCurrentMaturity > 2.5 ? "improving" : avgCurrentMaturity < 2 ? "needs_attention" : "stable",
+                domainMaturityBreakdown = domainMaturity,
+                maturityGaps = maturityGaps,
+                avgMaturityGap = Math.Round(avgTargetMaturity - avgCurrentMaturity, 1),
+                improvementOpportunities = GetTopMaturityImprovementOpportunities(allControlAssessments.ToList())
+            };
+        }
+
+        private object GetThreatAndVulnerabilityLandscape(IEnumerable<Finding> allFindings, IEnumerable<Risk> openRisks)
+        {
+            var threatCategories = openRisks
+                .Where(r => !string.IsNullOrEmpty(r.ThreatScenario))
+                .GroupBy(r => GetThreatCategory(r.ThreatScenario))
+                .Select(g => new { category = g.Key, count = g.Count(), avgRiskScore = g.Average(r => GetQualitativeRiskScore(r)) })
+                .OrderByDescending(x => x.count)
+                .ToList();
+
+            var vulnerabilityFindings = allFindings.Where(f => f.Status != FindingStatus.Closed);
+            var criticalVulns = vulnerabilityFindings.Count(f => f.RiskRating == RiskRating.Critical);
+            var highVulns = vulnerabilityFindings.Count(f => f.RiskRating == RiskRating.High);
+
+            return new
+            {
+                threatCategories = threatCategories,
+                vulnerabilityMetrics = new
+                {
+                    totalActiveVulnerabilities = vulnerabilityFindings.Count(),
+                    criticalVulnerabilities = criticalVulns,
+                    highVulnerabilities = highVulns,
+                    vulnerabilityTrend = GetVulnerabilityTrend(allFindings),
+                    meanTimeToRemediation = GetMeanTimeToRemediation(allFindings),
+                    vulnerabilityBacklog = vulnerabilityFindings.Count(f => f.IsOverdue)
+                },
+                threatIntelligence = new
+                {
+                    emergingThreats = GetEmergingThreatCount(openRisks),
+                    industrySpecificThreats = GetIndustrySpecificThreats(openRisks),
+                    attackVectorAnalysis = GetAttackVectorAnalysis(openRisks)
+                }
+            };
+        }
+
+        private object GetOperationalPerformanceMetrics(IEnumerable<Finding> allFindings, IEnumerable<RiskAssessment> allAssessments)
+        {
+            var openFindings = allFindings.Where(f => f.Status != FindingStatus.Closed);
+            var completedAssessments = allAssessments.Where(a => a.Status == AssessmentStatus.Completed);
+
+            // SLA Performance
+            var totalWithSLA = openFindings.Count(f => f.SlaDate.HasValue);
+            var onTimeItems = openFindings.Count(f => f.SlaDate.HasValue && !f.IsOverdue);
+            var slaPerformance = totalWithSLA > 0 ? (decimal)onTimeItems / totalWithSLA * 100 : 0;
+
+            // Assessment metrics
+            var assessmentMetrics = new
+            {
+                totalAssessments = allAssessments.Count(),
+                completedAssessments = completedAssessments.Count(),
+                completionRate = allAssessments.Any() ? 
+                    Math.Round((decimal)completedAssessments.Count() / allAssessments.Count() * 100, 1) : 0,
+                avgAssessmentDuration = GetAverageAssessmentDuration(completedAssessments),
+                assessmentsThisMonth = allAssessments.Count(a => a.CreatedAt >= DateTime.Today.AddDays(-30))
+            };
+
+            return new
+            {
+                slaPerformance = Math.Round(slaPerformance, 1),
+                assessmentMetrics = assessmentMetrics,
+                operationalEfficiency = new
+                {
+                    findingResolutionRate = GetFindingResolutionRate(allFindings),
+                    riskMitigationRate = GetRiskMitigationRate(allFindings),
+                    teamProductivity = GetTeamProductivityScore(allFindings, allAssessments),
+                    processMaturity = GetProcessMaturityScore(allFindings, allAssessments)
+                }
+            };
+        }
+
+        private object GetBusinessUnitRiskAnalysis(IEnumerable<Risk> openRisks, IEnumerable<Finding> allFindings)
+        {
+            var businessUnitMetrics = openRisks
+                .GroupBy(r => r.BusinessUnit ?? "Unknown")
+                .Select(g => new
+                {
+                    businessUnit = g.Key,
+                    totalRisks = g.Count(),
+                    criticalCount = g.Count(r => r.RiskLevel == RiskLevel.Critical),
+                    highCount = g.Count(r => r.RiskLevel == RiskLevel.High),
+                    mediumCount = g.Count(r => r.RiskLevel == RiskLevel.Medium),
+                    lowCount = g.Count(r => r.RiskLevel == RiskLevel.Low),
+                    totalRiskScore = g.Sum(r => GetQualitativeRiskScore(r)),
+                    avgRiskScore = g.Average(r => (int)r.Impact * (int)r.Likelihood),
+                    riskDensity = g.Count() / Math.Max(1, GetBusinessUnitSize(g.Key)), // Risks per employee (estimate)
+                    status = GetBusinessUnitRiskStatus(g.ToList()),
+                    riskTrend = GetBusinessUnitRiskTrend(g.Key, openRisks),
+                    topRiskCategory = GetTopRiskCategory(g.ToList())
+                })
+                .OrderByDescending(x => x.totalRiskScore)
+                .ToList();
+
+            return new
+            {
+                businessUnits = businessUnitMetrics,
+                riskConcentration = GetRiskConcentrationAnalysis(businessUnitMetrics),
+                crossFunctionalRisks = GetCrossFunctionalRisks(openRisks),
+                businessImpactAssessment = GetBusinessImpactAssessment(businessUnitMetrics)
+            };
+        }
+
+
+        private object GetIncidentAndBreachMetrics(IEnumerable<Finding> allFindings)
+        {
+            // Using findings as proxy for incidents
+            var criticalFindings = allFindings.Where(f => f.RiskRating == RiskRating.Critical);
+            var recentCriticalFindings = criticalFindings.Where(f => f.CreatedAt >= DateTime.Today.AddDays(-30));
+            
+            return new
+            {
+                totalCriticalIncidents = criticalFindings.Count(),
+                recentCriticalIncidents = recentCriticalFindings.Count(),
+                incidentTrend = recentCriticalFindings.Count() > criticalFindings.Count() / 12 ? "increasing" : "stable",
+                avgIncidentResolutionTime = GetAverageIncidentResolutionTime(criticalFindings),
+                breachRiskIndicators = new
+                {
+                    highRiskExposures = criticalFindings.Count(f => f.Details.ToLower().Contains("data") || 
+                                                                  f.Details.ToLower().Contains("breach") ||
+                                                                  f.Details.ToLower().Contains("exposure")),
+                    dataRelatedRisks = criticalFindings.Count(f => f.Details.ToLower().Contains("data") || 
+                                                                f.Details.ToLower().Contains("personal") ||
+                                                                f.Details.ToLower().Contains("customer")),
+                    complianceBreaches = criticalFindings.Count(f => f.Domain.Contains("Compliance", StringComparison.OrdinalIgnoreCase))
+                },
+                incidentResponseReadiness = GetIncidentResponseReadiness(allFindings)
+            };
+        }
+
+        private object GetInvestmentAndROIIndicators(IEnumerable<Risk> allRisks, IEnumerable<Finding> allFindings)
+        {
+            var totalRiskScore = allRisks.Where(r => r.Status == RiskStatus.Open).Sum(r => GetQualitativeRiskScore(r));
+            var mitigatedRisks = allRisks.Where(r => r.Status == RiskStatus.Closed);
+            var totalRiskMitigated = mitigatedRisks.Sum(r => GetQualitativeRiskScore(r));
+            
+            return new
+            {
+                totalRiskScore = totalRiskScore,
+                mitigatedRiskValue = totalRiskMitigated,
+                riskMitigationEffectiveness = mitigatedRisks.Any() ? Math.Round(totalRiskMitigated / Math.Max(1, totalRiskScore) * 100, 1) : 0,
+                investmentPriorities = new[]
+                {
+                    new { category = "Security Awareness Training", estimatedCost = 50000, priority = "High" },
+                    new { category = "Endpoint Detection & Response", estimatedCost = 150000, priority = "High" },
+                    new { category = "Identity & Access Management", estimatedCost = 100000, priority = "Medium" },
+                    new { category = "Network Segmentation", estimatedCost = 200000, priority = "Medium" },
+                    new { category = "Backup & Recovery Enhancement", estimatedCost = 75000, priority = "Low" }
+                }
+            };
+        }
+
+        private async Task<List<object>> GetTopFinancialRisks(IEnumerable<Risk> allRisks)
+        {
+            var openRisks = allRisks.Where(r => r.Status == RiskStatus.Open);
+            
+            return openRisks
+                .OrderByDescending(r => GetQualitativeRiskScore(r))
+                .Take(10)
+                .Select(r => new
+                {
+                    riskDescription = r.Title ?? r.Description ?? "Unknown Risk",
+                    asset = r.Asset ?? "Unknown Asset",
+                    riskScore = GetQualitativeRiskScore(r),
+                    status = r.Status.ToString()
+                })
+                .ToList<object>();
+        }
+
+        private async Task<object> GetStrategicRiskIndicators(IEnumerable<Risk> allRisks, IEnumerable<Finding> allFindings)
+        {
+            var openRisks = allRisks.Where(r => r.Status == RiskStatus.Open).ToList();
+            
+            return new
+            {
+                strategicMetrics = new
+                {
+                    riskConcentrationIndex = GetRiskConcentrationIndex(openRisks),
+                    reputationalRiskScore = GetReputationalRiskScore(openRisks, allFindings),
+                    businessContinuityRisks = GetBusinessContinuityRisks(openRisks),
+                    regulatoryRiskExposure = GetRegulatoryRiskExposure(openRisks)
+                }
+            };
+        }
+
+        #region Helper Method Implementations
+
+        private string GetOverallSecurityPosture(IEnumerable<Risk> openRisks, IEnumerable<Finding> criticalHighFindings)
+        {
+            var criticalRisks = openRisks.Count(r => r.RiskLevel == RiskLevel.Critical);
+            var totalFindings = criticalHighFindings.Count();
+            
+            if (criticalRisks > 5 || totalFindings > 20) return "Critical";
+            if (criticalRisks > 2 || totalFindings > 10) return "High Risk";
+            if (criticalRisks > 0 || totalFindings > 5) return "Moderate Risk";
+            return "Low Risk";
+        }
+
+        private double GetRiskDiversificationScore(IEnumerable<Risk> risks)
+        {
+            var categoryGroups = risks.GroupBy(r => GetThreatCategory(r.ThreatScenario ?? "")).Count();
+            return categoryGroups > 5 ? 0.8 : categoryGroups > 3 ? 0.6 : categoryGroups > 1 ? 0.4 : 0.2;
+        }
+
+        private string GetThreatCategory(string threatScenario)
+        {
+            var scenario = threatScenario.ToLower();
+            if (scenario.Contains("malware") || scenario.Contains("ransomware")) return "Malware";
+            if (scenario.Contains("phishing") || scenario.Contains("social")) return "Social Engineering";
+            if (scenario.Contains("breach") || scenario.Contains("unauthorized")) return "Data Breach";
+            if (scenario.Contains("insider") || scenario.Contains("employee")) return "Insider Threat";
+            if (scenario.Contains("ddos") || scenario.Contains("attack")) return "Cyber Attack";
+            return "Other";
+        }
+
+        private double GetAuditReadinessScore(IEnumerable<ComplianceAssessment> assessments)
+        {
+            var totalControls = assessments.SelectMany(a => a.ControlAssessments).Count();
+            var compliantControls = assessments.SelectMany(a => a.ControlAssessments)
+                .Count(c => c.Status == ComplianceStatus.FullyCompliant || c.Status == ComplianceStatus.MajorlyCompliant);
+            return totalControls > 0 ? Math.Round((double)compliantControls / totalControls, 2) : 0;
+        }
+
+        private double GetGovernanceEffectivenessScore(IEnumerable<Finding> findings, IEnumerable<ComplianceAssessment> assessments)
+        {
+            var recentFindings = findings.Where(f => f.CreatedAt >= DateTime.Today.AddDays(-90)).Count();
+            var totalAssessments = assessments.Count();
+            
+            // Simple scoring: fewer recent findings + more assessments = better governance
+            var baseScore = Math.Max(0, 1 - (recentFindings / Math.Max(1, totalAssessments * 10.0)));
+            return Math.Round(baseScore, 2);
+        }
+
+        private double GetRegulatoryRiskScore(IEnumerable<Finding> complianceFindings)
+        {
+            var criticalCompliance = complianceFindings.Count(f => f.RiskRating == RiskRating.Critical);
+            var highCompliance = complianceFindings.Count(f => f.RiskRating == RiskRating.High);
+            
+            // Higher score means higher regulatory risk
+            return Math.Min(1.0, (criticalCompliance * 0.3 + highCompliance * 0.1));
+        }
+
+        private string GetMaturityLevelLabel(double avgMaturity)
+        {
+            if (avgMaturity >= 3.5) return "Advanced";
+            if (avgMaturity >= 2.5) return "Intermediate";
+            if (avgMaturity >= 1.5) return "Basic";
+            return "Initial";
+        }
+
+        private List<object> GetTopMaturityImprovementOpportunities(List<MaturityControlAssessment> controlAssessments)
+        {
+            return controlAssessments
+                .Where(c => c.TargetMaturityLevel > c.CurrentMaturityLevel)
+                .OrderByDescending(c => (int)c.TargetMaturityLevel - (int)c.CurrentMaturityLevel)
+                .Take(5)
+                .Select(c => new
+                {
+                    control = c.Control?.Title ?? "Unknown Control",
+                    currentLevel = c.CurrentMaturityLevel.ToString(),
+                    targetLevel = c.TargetMaturityLevel.ToString(),
+                    gap = (int)c.TargetMaturityLevel - (int)c.CurrentMaturityLevel,
+                    domain = c.Control?.Function ?? "Unknown"
+                }).ToList<object>();
+        }
+
+        private int GetBusinessUnitSize(string businessUnit)
+        {
+            // This would ideally come from HR system - using estimates for now
+            var sizeMap = new Dictionary<string, int>
+            {
+                { "IT Department", 50 },
+                { "Operations", 100 },
+                { "Finance", 25 },
+                { "HR", 15 },
+                { "Sales", 75 },
+                { "Marketing", 30 }
+            };
+            return sizeMap.GetValueOrDefault(businessUnit, 50);
+        }
+
+        private string GetVulnerabilityTrend(IEnumerable<Finding> findings)
+        {
+            var last30Days = findings.Count(f => f.CreatedAt >= DateTime.Today.AddDays(-30));
+            var previous30Days = findings.Count(f => f.CreatedAt >= DateTime.Today.AddDays(-60) && f.CreatedAt < DateTime.Today.AddDays(-30));
+            
+            return last30Days > previous30Days ? "increasing" : last30Days < previous30Days ? "decreasing" : "stable";
+        }
+
+        private double GetMeanTimeToRemediation(IEnumerable<Finding> findings)
+        {
+            var closedFindings = findings.Where(f => f.Status == FindingStatus.Closed);
+            return closedFindings.Any() ? closedFindings.Average(f => (f.UpdatedAt - f.CreatedAt).TotalDays) : 0;
+        }
+
+        private int GetEmergingThreatCount(IEnumerable<Risk> risks)
+        {
+            return risks.Count(r => r.OpenDate >= DateTime.Today.AddDays(-60) && 
+                                  (r.RiskLevel == RiskLevel.Critical || r.RiskLevel == RiskLevel.High));
+        }
+
+        private List<string> GetIndustrySpecificThreats(IEnumerable<Risk> risks)
+        {
+            // This would be customized based on industry
+            return new List<string> { "Financial Fraud", "Data Breach", "Ransomware", "Supply Chain Attack" };
+        }
+
+        private object GetAttackVectorAnalysis(IEnumerable<Risk> risks)
+        {
+            return risks.GroupBy(r => GetThreatCategory(r.ThreatScenario ?? ""))
+                       .ToDictionary(g => g.Key, g => g.Count());
+        }
+
+        private double GetAverageAssessmentDuration(IEnumerable<RiskAssessment> assessments)
+        {
+            var completedAssessments = assessments.Where(a => a.DateCompleted.HasValue);
+            return completedAssessments.Any() ? 
+                completedAssessments.Average(a => (a.DateCompleted.Value - a.CreatedAt).TotalDays) : 0;
+        }
+
+        private double GetFindingResolutionRate(IEnumerable<Finding> findings)
+        {
+            var total = findings.Count();
+            var closed = findings.Count(f => f.Status == FindingStatus.Closed);
+            return total > 0 ? Math.Round((double)closed / total * 100, 1) : 0;
+        }
+
+        private double GetRiskMitigationRate(IEnumerable<Finding> findings)
+        {
+            // Using findings closure as proxy for risk mitigation
+            return GetFindingResolutionRate(findings);
+        }
+
+        private double GetTeamProductivityScore(IEnumerable<Finding> findings, IEnumerable<RiskAssessment> assessments)
+        {
+            var recentFindings = findings.Count(f => f.CreatedAt >= DateTime.Today.AddDays(-30));
+            var recentAssessments = assessments.Count(a => a.CreatedAt >= DateTime.Today.AddDays(-30));
+            
+            // Higher score for more activity (simple metric)
+            return Math.Min(1.0, (recentFindings + recentAssessments) / 20.0);
+        }
+
+        private double GetProcessMaturityScore(IEnumerable<Finding> findings, IEnumerable<RiskAssessment> assessments)
+        {
+            var avgResolutionTime = GetMeanTimeToRemediation(findings);
+            var assessmentCompletionRate = assessments.Any() ? 
+                (double)assessments.Count(a => a.Status == AssessmentStatus.Completed) / assessments.Count() : 0;
+            
+            // Combine metrics for overall process maturity
+            var timeScore = avgResolutionTime > 0 ? Math.Max(0, 1 - (avgResolutionTime / 90)) : 0.5;
+            return Math.Round((timeScore + assessmentCompletionRate) / 2, 2);
+        }
+
+        private string GetBusinessUnitRiskTrend(string businessUnit, IEnumerable<Risk> allRisks)
+        {
+            var unitRisks = allRisks.Where(r => r.BusinessUnit == businessUnit);
+            var recent = unitRisks.Count(r => r.OpenDate >= DateTime.Today.AddDays(-30));
+            var previous = unitRisks.Count(r => r.OpenDate >= DateTime.Today.AddDays(-60) && r.OpenDate < DateTime.Today.AddDays(-30));
+            
+            return recent > previous ? "increasing" : recent < previous ? "decreasing" : "stable";
+        }
+
+        private string GetTopRiskCategory(List<Risk> risks)
+        {
+            return risks.GroupBy(r => GetThreatCategory(r.ThreatScenario ?? ""))
+                       .OrderByDescending(g => g.Count())
+                       .FirstOrDefault()?.Key ?? "Unknown";
+        }
+
+        private object GetRiskConcentrationAnalysis(object businessUnitMetrics)
+        {
+            // Simplified analysis - in reality would do more sophisticated concentration risk calculation
+            return new { concentrationRisk = "Moderate", diversificationScore = 0.7 };
+        }
+
+        private List<object> GetCrossFunctionalRisks(IEnumerable<Risk> risks)
+        {
+            return risks.Where(r => r.Description?.ToLower().Contains("cross") == true ||
+                               r.Description?.ToLower().Contains("multiple") == true)
+                       .Take(5)
+                       .Select(r => new { title = r.Title, impactedUnits = "Multiple", riskLevel = r.RiskLevel.ToString() })
+                       .ToList<object>();
+        }
+
+        private object GetBusinessImpactAssessment(object businessUnitMetrics)
+        {
+            return new { overallImpactScore = 0.65, criticalBusinessFunctions = 3, recoveryTimeObjective = "4 hours" };
+        }
+
+        private double GetRiskConcentrationIndex(IEnumerable<Risk> risks)
+        {
+            // Herfindahl-Hirschman Index for risk concentration
+            var businessUnitRisks = risks.GroupBy(r => r.BusinessUnit ?? "Unknown")
+                                         .Select(g => (double)g.Count() / risks.Count())
+                                         .ToList();
+            
+            return businessUnitRisks.Sum(share => share * share);
+        }
+
+        private object GetSystemicRiskIndicators(IEnumerable<Risk> risks)
+        {
+            var interconnectedRisks = risks.Count(r => r.Description?.ToLower().Contains("system") == true ||
+                                                      r.Description?.ToLower().Contains("network") == true);
+            
+            return new
+            {
+                interconnectedRisks = interconnectedRisks,
+                cascadingRiskPotential = interconnectedRisks > 5 ? "High" : interconnectedRisks > 2 ? "Medium" : "Low",
+                systemDependencyRisk = risks.Count(r => r.Asset?.ToLower().Contains("critical") == true)
+            };
+        }
+
+        private object GetBusinessContinuityRisks(IEnumerable<Risk> risks)
+        {
+            var continuityRisks = risks.Where(r => r.CIATriad == CIATriad.Availability ||
+                                                  r.Description?.ToLower().Contains("availability") == true ||
+                                                  r.Description?.ToLower().Contains("downtime") == true);
+            
+            return new
+            {
+                totalContinuityRisks = continuityRisks.Count(),
+                criticalServiceRisks = continuityRisks.Count(r => r.RiskLevel == RiskLevel.Critical),
+                estimatedDowntimeRisk = continuityRisks.Sum(r => GetQualitativeRiskScore(r)),
+                recoveryRiskScore = continuityRisks.Any() ? "Needs Assessment" : "Low"
+            };
+        }
+
+        private double GetReputationalRiskScore(IEnumerable<Risk> risks, IEnumerable<Finding> findings)
+        {
+            var reputationKeywords = new[] { "breach", "exposure", "leak", "public", "media", "customer" };
+            var reputationalRisks = risks.Count(r => reputationKeywords.Any(k => 
+                (r.Description?.ToLower().Contains(k) == true) || 
+                (r.ThreatScenario?.ToLower().Contains(k) == true)));
+            
+            return Math.Min(1.0, reputationalRisks / Math.Max(1.0, risks.Count()) * 5);
+        }
+
+        private decimal GetRegulatoryRiskExposure(IEnumerable<Risk> risks)
+        {
+            var regulatoryRisks = risks.Where(r => r.Description?.ToLower().Contains("gdpr") == true ||
+                                                  r.Description?.ToLower().Contains("hipaa") == true ||
+                                                  r.Description?.ToLower().Contains("sox") == true ||
+                                                  r.Description?.ToLower().Contains("compliance") == true);
+            
+            return regulatoryRisks.Sum(r => GetQualitativeRiskScore(r));
+        }
+
+        private async Task<object> GetRiskAppetiteAlignment(IEnumerable<Risk> risks)
+        {
+            var risksAboveAppetite = await CalculateRisksAboveAppetite();
+            var totalRisks = risks.Count();
+            
+            return new
+            {
+                alignmentScore = totalRisks > 0 ? Math.Round((1 - (double)risksAboveAppetite.Count / totalRisks) * 100, 1) : 100,
+                risksAboveAppetite = risksAboveAppetite.Count,
+                appetiteBreaches = risksAboveAppetite.Count,
+                recommendedActions = risksAboveAppetite.Count > 0 ? "Immediate Risk Review Required" : "Within Appetite"
+            };
+        }
+
+        private double GetAverageIncidentResolutionTime(IEnumerable<Finding> incidents)
+        {
+            var resolvedIncidents = incidents.Where(i => i.Status == FindingStatus.Closed);
+            return resolvedIncidents.Any() ? 
+                resolvedIncidents.Average(i => (i.UpdatedAt - i.CreatedAt).TotalHours) : 0;
+        }
+
+        private async Task<decimal> CalculateTotalQualitativeRiskScore()
+        {
+            try
+            {
+                var openRisks = await _riskService.GetAllRisksAsync();
+                var activeRisks = openRisks.Where(r => r.Status == RiskStatus.Open);
+                
+                return activeRisks.Sum(risk => GetQualitativeRiskScore(risk));
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private decimal GetQualitativeRiskScore(Risk risk)
+        {
+            // Calculate qualitative risk score based on Impact × Likelihood × Exposure
+            var impactScore = (int)risk.Impact;
+            var likelihoodScore = (int)risk.Likelihood;  
+            var exposureScore = (int)risk.Exposure;
+            
+            // Qualitative risk score: Impact × Likelihood × Exposure (max = 4×4×4 = 64 per risk)
+            return impactScore * likelihoodScore * exposureScore;
+        }
+
+        private double GetIncidentResponseReadiness(IEnumerable<Finding> findings)
+        {
+            var criticalFindings = findings.Where(f => f.RiskRating == RiskRating.Critical);
+            var avgResponseTime = GetAverageIncidentResolutionTime(criticalFindings);
+            
+            // Lower response time = higher readiness (inverse relationship)
+            return avgResponseTime > 0 ? Math.Max(0, 1 - (avgResponseTime / (24 * 7))) : 0.5; // 7 days as baseline
+        }
+
+
+        #endregion
+
+        #endregion
     }
 }

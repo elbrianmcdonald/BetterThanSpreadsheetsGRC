@@ -1,0 +1,1933 @@
+@model CyberRiskApp.Models.AttackChain
+
+@{
+    ViewData["Title"] = Model?.Id > 0 ? "Edit Threat Model" : "Threat Model Builder";
+    var mitreOptions = ViewData["MitreTechniques"] as IEnumerable<dynamic> ?? new List<dynamic>();
+    var environments = ViewData["Environments"] as IEnumerable<dynamic> ?? new List<dynamic>();
+    var riskAssessments = ViewData["RiskAssessments"] as IEnumerable<dynamic> ?? new List<dynamic>();
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a asp-action="Index">My Threat Models</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">@ViewData["Title"]</li>
+                        </ol>
+                    </nav>
+                    <h2 class="text-primary mb-0">
+                        <i class="fas fa-project-diagram me-2"></i>@ViewData["Title"]
+                        @if (Model != null)
+                        {
+                            var statusBadge = Model.Status switch
+                            {
+                                CyberRiskApp.Models.AttackChainStatus.Draft => "bg-secondary",
+                                CyberRiskApp.Models.AttackChainStatus.UnderReview => "bg-warning text-dark",
+                                CyberRiskApp.Models.AttackChainStatus.Reviewed => "bg-info",
+                                CyberRiskApp.Models.AttackChainStatus.Approved => "bg-success",
+                                CyberRiskApp.Models.AttackChainStatus.Archived => "bg-dark",
+                                _ => "bg-secondary"
+                            };
+                            <span class="badge @statusBadge ms-2">@Model.Status</span>
+                        }
+                    </h2>
+                    <p class="text-muted">
+                        Build attack chains using drag-and-drop flowchart interface
+                        @if (Model?.Status == CyberRiskApp.Models.AttackChainStatus.Approved)
+                        {
+                            <span class="text-success fw-bold ms-2">
+                                <i class="fas fa-check-circle me-1"></i>This threat model is approved for FAIR assessments
+                            </span>
+                        }
+                    </p>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-success me-2" onclick="saveAttackChain()">
+                        <i class="fas fa-save me-1"></i>Save Model
+                    </button>
+                    <button type="button" class="btn btn-outline-warning me-2" onclick="saveAttackChainDebug()">
+                        <i class="fas fa-bug me-1"></i>Debug Save
+                    </button>
+                    <button type="button" class="btn btn-outline-info me-2" onclick="saveBasicModel()">
+                        <i class="fas fa-save me-1"></i>Basic Save
+                    </button>
+                    <button type="button" class="btn btn-info me-2" onclick="calculateRisk()">
+                        <i class="fas fa-calculator me-1"></i>Calculate Risk
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Toolbox -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-toolbox me-2"></i>Component Toolbox
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Basic Info Section -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">Model Information</h6>
+                        <div class="mb-2">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" id="modelTitle" placeholder="Attack Chain Title" value="@(Model?.Name ?? "")">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="modelDescription" rows="2" placeholder="Description">@(Model?.Description ?? "")</textarea>
+                        </div>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <div class="mb-2">
+                                <label class="form-label">
+                                    <i class="fas fa-shield-alt me-1"></i>Status
+                                    <small class="text-muted">(Admin Only)</small>
+                                </label>
+                                <select class="form-select" id="modelStatus" onchange="updateModelStatus()">
+                                    @{
+                                        var currentStatus = (int)(Model?.Status ?? CyberRiskApp.Models.AttackChainStatus.Draft);
+                                        var statuses = new Dictionary<int, string>
+                                        {
+                                            { 0, "Draft" },
+                                            { 1, "Under Review" },
+                                            { 2, "Reviewed" },
+                                            { 3, "Approved" },
+                                            { 4, "Archived" }
+                                        };
+                                    }
+                                    @foreach (var status in statuses)
+                                    {
+                                        @Html.Raw($"<option value=\"{status.Key}\"{(currentStatus == status.Key ? " selected" : "")}>{status.Value}</option>")
+                                    }
+                                </select>
+                                <small class="form-text text-muted">Change status to approve threat models for use in FAIR assessments</small>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Attack Chain Guide -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">How to Build</h6>
+                        <div class="alert alert-info p-2 small">
+                            <div><strong>Attack Chain Flow:</strong></div>
+                            <div>1. Start with a <strong>Threat Event</strong></div>
+                            <div>2. Add <strong>Vulnerabilities</strong> (attack steps)</div>
+                            <div>3. End with a <strong>Loss Event</strong></div>
+                            <div class="mt-2">
+                                <small class="text-muted">Each card will have an "Add Next" button to continue the chain</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="mb-4">
+                        <h6 class="text-muted">Current Model Stats</h6>
+                        <div class="stats-panel">
+                            <div class="stat-item d-flex justify-content-between">
+                                <span>Threat Events:</span>
+                                <span id="threatEventCount">0</span>
+                            </div>
+                            <div class="stat-item d-flex justify-content-between">
+                                <span>Vulnerabilities:</span>
+                                <span id="vulnerabilityCount">0</span>
+                            </div>
+                            <div class="stat-item d-flex justify-content-between">
+                                <span>Loss Events:</span>
+                                <span id="lossEventCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attack Chain Builder -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-project-diagram me-2"></i>Attack Chain Builder
+                        </h5>
+                        <div>
+                            <button type="button" class="btn btn-light btn-sm me-2" onclick="addThreatEvent()">
+                                <i class="fas fa-plus me-1"></i>Start with Threat Event
+                            </button>
+                            <button type="button" class="btn btn-warning btn-sm me-2" onclick="addVulnerabilityToChain()">
+                                <i class="fas fa-bug me-1"></i>Add Vulnerability
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm me-2" onclick="clearChain()">
+                                <i class="fas fa-trash me-1"></i>Clear Chain
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm me-2" onclick="testModal()">
+                                <i class="fas fa-cog me-1"></i>Test Modal
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="testJavaScript()">
+                                <i class="fas fa-code me-1"></i>Test JS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="attackChainContainer" class="attack-chain-container">
+                        <div class="text-center text-muted py-5" id="emptyState">
+                            <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                            <h5>Build Your Attack Chain</h5>
+                            <p>Click "Start with Threat Event" to begin building your attack chain</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Anti-forgery token -->
+@Html.AntiForgeryToken()
+
+<!-- Component Property Modal -->
+<div class="modal fade" id="componentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="componentModalTitle">Component Properties</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="componentModalBody">
+                <!-- Dynamic content based on component type -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-info btn-sm me-2" onclick="testJavaScript()">Test JS</button>
+                <button type="button" class="btn btn-warning btn-sm me-2" onclick="testSaveFunction()">Test Save</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveComponentProperties()">Save Properties</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<!-- Toastr for notifications -->
+<!-- Toastr removed - using silent operations instead -->
+
+<script>
+// Global variables
+let componentCounter = 0;
+let selectedComponent = null;
+let attackChainData = {
+    id: @(Model?.Id ?? 0),
+    title: '@(Model?.Name ?? "")',
+    description: '@(Model?.Description ?? "")',
+    status: @((int)(Model?.Status ?? CyberRiskApp.Models.AttackChainStatus.Draft)),
+    components: []
+};
+
+// MITRE techniques data
+const mitreOptions = @Html.Raw(Json.Serialize(mitreOptions));
+console.log('MITRE Options loaded:', mitreOptions);
+console.log('MITRE Options count:', mitreOptions ? mitreOptions.length : 0);
+if (mitreOptions && mitreOptions.length > 0) {
+    console.log('First MITRE option:', mitreOptions[0]);
+}
+
+// Simple test functions
+function testJavaScript() {
+    alert('JavaScript is working!');
+    console.log('JavaScript test function called');
+}
+
+function testSaveFunction() {
+    alert('Test save function called!');
+    console.log('Test save function working');
+    console.log('Selected component:', selectedComponent);
+}
+
+// Toastr removed - using console logging for all notifications
+
+$(document).ready(function() {
+    console.log('Card-based attack chain builder ready');
+    console.log('jQuery version:', $.fn.jquery);
+    console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
+    
+    // Test modal elements exist
+    const modalElement = document.getElementById('componentModal');
+    const modalTitle = document.getElementById('componentModalTitle');
+    const modalBody = document.getElementById('componentModalBody');
+    
+    console.log('Modal element exists:', !!modalElement);
+    console.log('Modal title element exists:', !!modalTitle);
+    console.log('Modal body element exists:', !!modalBody);
+    
+    if (attackChainData.id > 0) {
+        loadExistingAttackChain();
+    } else {
+        updateStats();
+    }
+});
+
+// Card-based attack chain functions
+function addThreatEvent() {
+    if (attackChainData.components.length > 0) {
+        console.warning('Attack chain already started. Clear the chain to start over.');
+        return;
+    }
+    
+    componentCounter++;
+    const componentId = `component_${componentCounter}`;
+    
+    const component = {
+        id: componentId,
+        type: 'threat-event',
+        order: 1,
+        title: '',
+        description: '',
+        properties: {
+            // MITRE technique
+            mitreTechniqueId: null,
+            // Security controls
+            preventativeControls: '',
+            detectiveControls: '',
+            dataSources: '',
+            // TEF distribution
+            tefMinimum: 0,
+            tefMostLikely: 0,
+            tefMaximum: 0
+        }
+    };
+    
+    attackChainData.components.push(component);
+    renderAttackChain();
+    updateStats();
+    
+    // Auto-save if model has a title
+    if (attackChainData.title && attackChainData.title.trim() !== '') {
+        console.log('Auto-saving after adding threat event...');
+        autoSaveAttackChain();
+    }
+    
+    // Auto-open properties dialog
+    setTimeout(() => editComponent(componentId), 100);
+}
+
+function addVulnerabilityToChain() {
+    console.log('addVulnerabilityToChain called from top toolbar');
+    
+    // Find the last component to add vulnerability after
+    if (attackChainData.components.length === 0) {
+        console.warning('Please add a threat event first');
+        return;
+    }
+    
+    // Find the last non-loss-event component
+    let afterComponent = null;
+    for (let i = attackChainData.components.length - 1; i >= 0; i--) {
+        if (attackChainData.components[i].type !== 'loss-event') {
+            afterComponent = attackChainData.components[i];
+            break;
+        }
+    }
+    
+    if (!afterComponent) {
+        console.warning('Cannot add vulnerability - no suitable component found');
+        return;
+    }
+    
+    console.log('Adding vulnerability after component:', afterComponent.id);
+    // Use the existing addVulnerability function
+    addVulnerability(afterComponent.id);
+}
+
+function addVulnerability(afterComponentId) {
+    console.log('=== ADD VULNERABILITY START ===');
+    console.log('Adding vulnerability after component:', afterComponentId);
+    console.log('Current components BEFORE adding:', JSON.stringify(attackChainData.components, null, 2));
+    console.log('Current componentCounter:', componentCounter);
+    
+    componentCounter++;
+    const componentId = `component_${componentCounter}`;
+    console.log('New component ID will be:', componentId);
+    
+    // Find the component to insert after
+    const afterComponent = attackChainData.components.find(c => c.id === afterComponentId);
+    if (!afterComponent) {
+        console.error('After component not found:', afterComponentId);
+        console.error('Cannot add vulnerability - component not found');
+        return;
+    }
+    
+    console.log('Found after component:', JSON.stringify(afterComponent, null, 2));
+    
+    // New order is right after the specified component
+    const newOrder = afterComponent.order + 1;
+    console.log('After component order:', afterComponent.order, 'New order will be:', newOrder);
+    
+    // Update orders of components that come after this one
+    console.log('Updating orders of existing components...');
+    attackChainData.components.forEach(c => {
+        if (c.order >= newOrder) {
+            console.log(`Updating component ${c.id} order from ${c.order} to ${c.order + 1}`);
+            c.order++;
+        }
+    });
+    
+    const component = {
+        id: componentId,
+        type: 'vulnerability',
+        order: newOrder,
+        title: 'New Vulnerability',
+        description: 'Click Edit to configure this vulnerability',
+        properties: {
+            // MITRE technique
+            mitreTechniqueId: null,
+            // Security controls
+            preventativeControls: '',
+            detectiveControls: '',
+            dataSources: '',
+            // Vulnerability likelihood distribution
+            vulnMinimum: 0.3,
+            vulnMostLikely: 0.5,
+            vulnMaximum: 0.7,
+            stepOrder: 1
+        }
+    };
+    
+    console.log('New vulnerability component object:', JSON.stringify(component, null, 2));
+    
+    console.log('Adding component to array...');
+    attackChainData.components.push(component);
+    console.log('Component added. Array length now:', attackChainData.components.length);
+    
+    console.log('Sorting components by order...');
+    attackChainData.components.sort((a, b) => a.order - b.order);
+    console.log('Components AFTER adding and sorting:', JSON.stringify(attackChainData.components, null, 2));
+    
+    console.log('Calling renderAttackChain()...');
+    renderAttackChain();
+    
+    console.log('Calling updateStats()...');
+    updateStats();
+    
+    // Auto-save if model has a title
+    if (attackChainData.title && attackChainData.title.trim() !== '') {
+        console.log('Auto-saving after adding vulnerability...');
+        autoSaveAttackChain();
+    }
+    
+    // Auto-open properties dialog
+    console.log('Setting timeout to edit component...');
+    setTimeout(() => {
+        console.log('Timeout executed, calling editComponent...');
+        editComponent(componentId);
+    }, 100);
+    
+    console.log('=== ADD VULNERABILITY END ===');
+}
+
+function addLossEvent(afterComponentId) {
+    console.log('addLossEvent called after component:', afterComponentId);
+    componentCounter++;
+    const componentId = `component_${componentCounter}`;
+    
+    // Find the component to insert after
+    const afterComponent = attackChainData.components.find(c => c.id === afterComponentId);
+    if (!afterComponent) {
+        console.error('After component not found:', afterComponentId);
+        console.error('Cannot add loss event - component not found');
+        return;
+    }
+    
+    // New order is right after the specified component
+    const newOrder = afterComponent.order + 1;
+    console.log('After component order:', afterComponent.order, 'New order:', newOrder);
+    
+    // Update orders of components that come after this one
+    attackChainData.components.forEach(c => {
+        if (c.order >= newOrder) {
+            c.order++;
+            console.log('Updated order for component', c.id, 'to', c.order);
+        }
+    });
+    
+    const component = {
+        id: componentId,
+        type: 'loss-event',
+        order: newOrder,
+        title: '',
+        description: '',
+        properties: {
+            // MITRE technique
+            mitreTechniqueId: null,
+            // Security controls
+            preventativeControls: '',
+            detectiveControls: '',
+            dataSources: '',
+            // Loss categorization
+            lossType: '',
+            businessImpactCategory: '',
+            // Primary loss distribution
+            primaryLossMinimum: 0,
+            primaryLossMostLikely: 0,
+            primaryLossMaximum: 0,
+            // Secondary loss distribution
+            secondaryLossMinimum: 0,
+            secondaryLossMostLikely: 0,
+            secondaryLossMaximum: 0,
+            // LEF (auto-calculated)
+            lefMinimum: 0,
+            lefMostLikely: 0,
+            lefMaximum: 0,
+            aleMostLikely: 0
+        }
+    };
+    
+    attackChainData.components.push(component);
+    attackChainData.components.sort((a, b) => a.order - b.order);
+    
+    renderAttackChain();
+    updateStats();
+    
+    // Auto-save if model has a title
+    if (attackChainData.title && attackChainData.title.trim() !== '') {
+        console.log('Auto-saving after adding loss event...');
+        autoSaveAttackChain();
+    }
+    
+    // Auto-open properties dialog
+    setTimeout(() => editComponent(componentId), 100);
+}
+
+function renderAttackChain() {
+    console.log('=== RENDER ATTACK CHAIN START ===');
+    console.log('Components to render:', attackChainData.components.length);
+    console.log('Full components array:', JSON.stringify(attackChainData.components, null, 2));
+    
+    const container = document.getElementById('attackChainContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    console.log('Container element found:', !!container);
+    console.log('Empty state element found:', !!emptyState);
+    console.log('Container HTML content preview:', container ? container.innerHTML.substring(0, 200) : 'N/A');
+    
+    if (!container) {
+        console.error('Attack chain container not found');
+        return;
+    }
+    
+    if (attackChainData.components.length === 0) {
+        console.log('No components found, showing empty state');
+        if (emptyState) {
+            emptyState.style.display = 'block';
+        }
+        container.innerHTML = `
+            <div class="text-center text-muted py-5" id="emptyState">
+                <i class="fas fa-project-diagram fa-3x mb-3"></i>
+                <h5>Build Your Attack Chain</h5>
+                <p>Click "Start with Threat Event" to begin building your attack chain</p>
+            </div>
+        `;
+        return;
+    }
+    
+    console.log('Components found, rendering attack chain...');
+    if (emptyState) {
+        console.log('Hiding empty state...');
+        emptyState.style.display = 'none';
+    }
+    
+    // Sort components by order
+    const sortedComponents = [...attackChainData.components].sort((a, b) => a.order - b.order);
+    console.log('Sorted components for rendering:', sortedComponents);
+    
+    let html = '<div class="attack-chain-flow d-flex align-items-center flex-wrap">';
+    console.log('Starting HTML generation...');
+    
+    sortedComponents.forEach((component, index) => {
+        console.log(`=== RENDERING COMPONENT ${index + 1}/${sortedComponents.length} ===`);
+        console.log('Component details:', JSON.stringify(component, null, 2));
+        
+        const cardHTML = getCardHTML(component);
+        console.log('Generated card HTML length:', cardHTML.length);
+        console.log('Card HTML preview:', cardHTML.substring(0, 200) + '...');
+        
+        html += cardHTML;
+        
+        // Add arrow between components (except after the last one)
+        if (index < sortedComponents.length - 1) {
+            console.log('Adding arrow after component', index);
+            html += '<div class="chain-arrow mx-3"><i class="fas fa-arrow-right text-primary fa-2x"></i></div>';
+        }
+    });
+    
+    html += '</div>';
+    
+    console.log('Final HTML length:', html.length);
+    console.log('Final HTML preview:', html.substring(0, 500) + '...');
+    console.log('Setting container innerHTML...');
+    
+    container.innerHTML = html;
+    
+    console.log('Container innerHTML set successfully');
+    console.log('Container children count:', container.children.length);
+    
+    // Verify cards were added to DOM
+    const cardElements = container.querySelectorAll('.attack-chain-card');
+    console.log('Card elements found in DOM:', cardElements.length);
+    cardElements.forEach((card, index) => {
+        console.log(`Card ${index + 1} ID:`, card.id);
+    });
+    
+    console.log('=== RENDER ATTACK CHAIN END ===');
+}
+
+function getCardHTML(component) {
+    console.log('=== GET CARD HTML START ===');
+    console.log('Component passed to getCardHTML:', JSON.stringify(component, null, 2));
+    
+    const icons = {
+        'threat-event': 'fas fa-exclamation-triangle',
+        'vulnerability': 'fas fa-bug',
+        'loss-event': 'fas fa-dollar-sign'
+    };
+    
+    const colors = {
+        'threat-event': 'danger',
+        'vulnerability': 'warning',
+        'loss-event': 'success'
+    };
+    
+    const titles = {
+        'threat-event': 'Threat Event',
+        'vulnerability': 'Vulnerability',
+        'loss-event': 'Loss Event'
+    };
+
+    const canAddVulnerability = component.type !== 'loss-event';
+    const canAddLossEvent = component.type !== 'threat-event';
+    
+    console.log(`Generating card for type: ${component.type}`);
+    console.log(`Component title: "${component.title}"`);
+    console.log(`Component description: "${component.description}"`);
+    console.log(`Component ID: "${component.id}"`);
+    console.log(`Icon: ${icons[component.type]}`);
+    console.log(`Color: ${colors[component.type]}`);
+    console.log(`Default title: ${titles[component.type]}`);
+    console.log('Component properties:', component.properties);
+    
+    console.log('Getting component-specific HTML...');
+    const specificHTML = getComponentSpecificHTML(component.type, component);
+    console.log('Component-specific HTML length:', specificHTML.length);
+    console.log('Component-specific HTML:', specificHTML);
+    
+    const cardHTML = `
+        <div class="attack-chain-card card border-${colors[component.type]} mb-3" id="${component.id}" style="min-width: 300px; max-width: 350px;">
+            <div class="card-header bg-${colors[component.type]} text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="${icons[component.type]} me-2"></i>
+                        <span class="fw-bold">${component.title || titles[component.type]}</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline-light" onclick="deleteComponent('${component.id}')" title="Delete">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="component-description text-muted small mb-2">
+                    ${component.description || 'Click "Edit" to configure this component'}
+                </div>
+                ${specificHTML}
+                
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary btn-sm me-2" onclick="editComponent('${component.id}')">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </button>
+                    
+                    ${canAddVulnerability ? `
+                        <button class="btn btn-outline-warning btn-sm me-2" onclick="addVulnerability('${component.id}')" title="Add vulnerability after this step">
+                            <i class="fas fa-plus me-1"></i>Add Vulnerability
+                        </button>
+                    ` : ''}
+                    
+                    ${canAddLossEvent ? `
+                        <button class="btn btn-outline-success btn-sm" onclick="addLossEvent('${component.id}')" title="Add loss event after this step">
+                            <i class="fas fa-plus me-1"></i>Add Loss Event
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    console.log('Generated card HTML length:', cardHTML.length);
+    console.log('Generated card HTML preview:', cardHTML.substring(0, 300) + '...');
+    console.log('=== GET CARD HTML END ===');
+    
+    return cardHTML;
+}
+
+function getComponentSpecificHTML(type, component) {
+    console.log('getComponentSpecificHTML called for type:', type, 'with component:', component);
+    
+    switch (type) {
+        case 'threat-event':
+            const tef = component.properties?.tefMostLikely || 0;
+            const mitreTechniqueId = component.properties?.mitreTechniqueId;
+            console.log('Threat event TEF value:', tef, 'from properties:', component.properties);
+            
+            // Find MITRE technique name
+            let mitreTechniqueName = 'Not specified';
+            if (mitreTechniqueId && mitreOptions && mitreOptions.length > 0) {
+                const technique = mitreOptions.find(m => (m.id || m.Id) == mitreTechniqueId);
+                if (technique) {
+                    mitreTechniqueName = technique.display || technique.Display || 
+                                       `${technique.techniqueId || technique.TechniqueId} - ${technique.name || technique.Name}`;
+                }
+            }
+            
+            return `
+                <div class="mt-2">
+                    <div class="mb-2">
+                        <strong>MITRE Technique:</strong><br>
+                        <small class="text-muted">${mitreTechniqueName}</small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="badge bg-info">TEF: ${tef.toFixed(3)}/year</small>
+                        ${component.properties?.tefMinimum && component.properties?.tefMaximum ? 
+                            `<small class="text-muted">Range: ${component.properties.tefMinimum.toFixed(3)} - ${component.properties.tefMaximum.toFixed(3)}</small>` : ''}
+                    </div>
+                </div>`;
+            
+        case 'vulnerability':
+            const likelihood = component.properties?.vulnMostLikely || 0;
+            const vulnMitreTechniqueId = component.properties?.mitreTechniqueId;
+            console.log('Vulnerability likelihood value:', likelihood, 'from properties:', component.properties);
+            
+            // Find MITRE technique name for vulnerability
+            let vulnMitreTechniqueName = 'Not specified';
+            if (vulnMitreTechniqueId && mitreOptions && mitreOptions.length > 0) {
+                const technique = mitreOptions.find(m => (m.id || m.Id) == vulnMitreTechniqueId);
+                if (technique) {
+                    vulnMitreTechniqueName = technique.display || technique.Display || 
+                                           `${technique.techniqueId || technique.TechniqueId} - ${technique.name || technique.Name}`;
+                }
+            }
+            
+            return `
+                <div class="mt-2">
+                    <div class="mb-2">
+                        <strong>MITRE Technique:</strong><br>
+                        <small class="text-muted">${vulnMitreTechniqueName}</small>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar" style="width: ${likelihood * 100}%"></div>
+                    </div>
+                    <small>Likelihood: ${(likelihood * 100).toFixed(1)}%</small>
+                </div>`;
+            
+        case 'loss-event':
+            const lef = component.properties?.lefMostLikely || 0;
+            const lefMin = component.properties?.lefMinimum || 0;
+            const lefMax = component.properties?.lefMaximum || 0;
+            console.log('Loss event LEF values:', { lef, lefMin, lefMax }, 'from properties:', component.properties);
+            
+            // Find MITRE technique name for loss event
+            const lossMitreTechniqueId = component.properties?.mitreTechniqueId;
+            let lossMitreTechniqueName = 'Not specified';
+            if (lossMitreTechniqueId && mitreOptions && mitreOptions.length > 0) {
+                const technique = mitreOptions.find(m => (m.id || m.Id) == lossMitreTechniqueId);
+                if (technique) {
+                    lossMitreTechniqueName = technique.display || technique.Display || 
+                                           `${technique.techniqueId || technique.TechniqueId} - ${technique.name || technique.Name}`;
+                }
+            }
+            
+            return `
+                <div class="mt-2">
+                    <div class="mb-2">
+                        <strong>MITRE Technique:</strong><br>
+                        <small class="text-muted">${lossMitreTechniqueName}</small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="badge bg-success">LEF: ${lef.toFixed(6)}/year</small>
+                        ${lefMin && lefMax ? 
+                            `<small class="text-muted">Range: ${lefMin.toFixed(6)} - ${lefMax.toFixed(6)}</small>` : ''}
+                    </div>
+                </div>`;
+            
+        default:
+            return '';
+    }
+}
+
+function editComponent(componentId) {
+    console.log('editComponent called with ID:', componentId);
+    console.log('Available components:', attackChainData.components);
+    
+    const component = attackChainData.components.find(c => c.id === componentId);
+    if (!component) {
+        console.error('Component not found:', componentId);
+        console.error('Component not found');
+        return;
+    }
+    
+    console.log('Found component:', component);
+    selectedComponent = component;
+    
+    // Set modal title
+    const titles = {
+        'threat-event': 'Threat Event Properties',
+        'vulnerability': 'Vulnerability Properties', 
+        'loss-event': 'Loss Event Properties'
+    };
+    
+    const modalTitle = document.getElementById('componentModalTitle');
+    const modalBody = document.getElementById('componentModalBody');
+    
+    if (!modalTitle || !modalBody) {
+        console.error('Modal elements not found');
+        console.error('Modal elements not found');
+        return;
+    }
+    
+    modalTitle.textContent = titles[component.type];
+    
+    // Generate modal content based on component type
+    try {
+        const modalHTML = getModalContentHTML(component);
+        console.log('Generated modal HTML length:', modalHTML.length);
+        modalBody.innerHTML = modalHTML;
+    } catch (error) {
+        console.error('Error generating modal HTML:', error);
+        console.error('Error generating modal content');
+        return;
+    }
+    
+    // Show modal
+    try {
+        const modalElement = document.getElementById('componentModal');
+        if (!modalElement) {
+            console.error('Modal element not found');
+            console.error('Modal element not found');
+            return;
+        }
+        
+        // Try Bootstrap 5 first
+        if (typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+            console.log('Modal shown using bootstrap.Modal');
+        } 
+        // Fallback to jQuery if Bootstrap is not available
+        else if (typeof $ !== 'undefined') {
+            $(modalElement).modal('show');
+            console.log('Modal shown using jQuery modal');
+        }
+        // Last resort - show the modal by adding the CSS classes manually
+        else {
+            if (modalElement) {
+                modalElement.style.display = 'block';
+                modalElement.classList.add('show');
+                document.body.classList.add('modal-open');
+            } else {
+                console.error('Modal element not found for manual display');
+                return;
+            }
+            
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade show';
+            backdrop.id = 'modal-backdrop-manual';
+            document.body.appendChild(backdrop);
+            
+            console.log('Modal shown manually');
+        }
+    } catch (error) {
+        console.error('Error showing modal:', error);
+        console.error('Error showing modal: ' + error.message);
+    }
+}
+
+function getModalContentHTML(component) {
+    console.log('getModalContentHTML called for component type:', component.type);
+    console.log('MITRE options available:', mitreOptions ? mitreOptions.length : 'undefined');
+    
+    const baseHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label">Title</label>
+                <input type="text" class="form-control" id="prop_title" value="${component.title || ''}">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">MITRE Technique</label>
+                <select class="form-select" id="prop_mitreTechniqueId">
+                    <option value="">Select MITRE Technique</option>
+                    ${mitreOptions && mitreOptions.length > 0 ? mitreOptions.map(opt => {
+                        // Handle both uppercase and lowercase property names
+                        const id = opt.Id || opt.id;
+                        const display = opt.Display || opt.display || `${opt.techniqueId || opt.TechniqueId} - ${opt.name || opt.Name}`;
+                        return `<option value="${id}" ${component.properties?.mitreTechniqueId == id ? 'selected' : ''}>${display}</option>`;
+                    }).join('') : '<option value="">No MITRE techniques available</option>'}
+                </select>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" id="prop_description" rows="3">${component.description || ''}</textarea>
+            </div>
+        </div>
+    `;
+    
+    try {
+        const specificHTML = getComponentSpecificModalHTML(component);
+        console.log('Specific HTML generated for', component.type, 'length:', specificHTML.length);
+        return baseHTML + specificHTML;
+    } catch (error) {
+        console.error('Error in getComponentSpecificModalHTML:', error);
+        return baseHTML + '<div class="alert alert-warning">Error loading component-specific properties</div>';
+    }
+}
+
+function getComponentSpecificModalHTML(component) {
+    switch (component.type) {
+        case 'threat-event':
+            return `
+                <!-- Security Controls -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Preventative Controls</label>
+                        <textarea class="form-control" id="prop_preventativeControls" rows="3" placeholder="Enter each control on a new line:&#10;• Firewall rules&#10;• Access controls&#10;• Encryption">${component.properties?.preventativeControls || ''}</textarea>
+                        <small class="form-text text-muted">Controls that prevent this threat from occurring (one per line)</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Detective Controls</label>
+                        <textarea class="form-control" id="prop_detectiveControls" rows="3" placeholder="Enter each control on a new line:&#10;• SIEM monitoring&#10;• IDS/IPS&#10;• Log analysis">${component.properties?.detectiveControls || ''}</textarea>
+                        <small class="form-text text-muted">Controls that detect when this threat occurs (one per line)</small>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Data Sources</label>
+                        <textarea class="form-control" id="prop_dataSources" rows="2" placeholder="Enter each data source on a new line:&#10;• Network logs&#10;• Authentication logs&#10;• Application logs">${component.properties?.dataSources || ''}</textarea>
+                        <small class="form-text text-muted">Data sources used to detect and monitor this threat (one per line)</small>
+                    </div>
+                </div>
+
+                <!-- TEF Distribution -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="text-primary">Threat Event Frequency (TEF) Distribution</h6>
+                        <small class="text-muted">Frequency of successful threat events per year</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Minimum per Year</label>
+                        <input type="number" class="form-control" id="prop_tefMinimum" step="0.001" min="0" value="${component.properties?.tefMinimum || 0}" onchange="calculateTEFMostLikely()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Most Likely per Year</label>
+                        <input type="number" class="form-control" id="prop_tefMostLikely" step="0.001" min="0" value="${component.properties?.tefMostLikely || 0}" readonly style="background-color: #f8f9fa;">
+                        <small class="form-text text-muted">Auto-calculated</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Maximum per Year</label>
+                        <input type="number" class="form-control" id="prop_tefMaximum" step="0.001" min="0" value="${component.properties?.tefMaximum || 0}" onchange="calculateTEFMostLikely()">
+                    </div>
+                </div>
+            `;
+        case 'vulnerability':
+            return `
+                <!-- Security Controls -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Preventative Controls</label>
+                        <textarea class="form-control" id="prop_preventativeControls" rows="3" placeholder="Enter each control on a new line:&#10;• Patch management&#10;• Input validation&#10;• Security configuration">${component.properties?.preventativeControls || ''}</textarea>
+                        <small class="form-text text-muted">Controls that prevent this vulnerability from being exploited (one per line)</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Detective Controls</label>
+                        <textarea class="form-control" id="prop_detectiveControls" rows="3" placeholder="Enter each control on a new line:&#10;• Vulnerability scanning&#10;• Behavior monitoring&#10;• Anomaly detection">${component.properties?.detectiveControls || ''}</textarea>
+                        <small class="form-text text-muted">Controls that detect when this vulnerability is exploited (one per line)</small>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Data Sources</label>
+                        <textarea class="form-control" id="prop_dataSources" rows="2" placeholder="Enter each data source on a new line:&#10;• System logs&#10;• Security tools&#10;• Performance metrics">${component.properties?.dataSources || ''}</textarea>
+                        <small class="form-text text-muted">Data sources used to detect and monitor exploitation of this vulnerability (one per line)</small>
+                    </div>
+                </div>
+
+                <!-- Vulnerability Distribution -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="text-primary">Vulnerability Likelihood Distribution</h6>
+                        <small class="text-muted">Likelihood of successful exploitation (0-100%)</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Minimum (%)</label>
+                        <input type="number" class="form-control" id="prop_vulnMinimum" step="1" min="0" max="100" value="${(component.properties?.vulnMinimum || 0) * 100}" onchange="calculateVulnMostLikely()">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Most Likely (%)</label>
+                        <input type="number" class="form-control" id="prop_vulnMostLikely" step="1" min="0" max="100" value="${(component.properties?.vulnMostLikely || 0) * 100}" readonly style="background-color: #f8f9fa;">
+                        <small class="form-text text-muted">Auto-calculated</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Maximum (%)</label>
+                        <input type="number" class="form-control" id="prop_vulnMaximum" step="1" min="0" max="100" value="${(component.properties?.vulnMaximum || 0) * 100}" onchange="calculateVulnMostLikely()">
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Step Order</label>
+                        <input type="number" class="form-control" id="prop_stepOrder" min="1" value="${component.properties?.stepOrder || 1}">
+                        <small class="form-text text-muted">Order of this vulnerability in the attack chain</small>
+                    </div>
+                </div>
+            `;
+        case 'loss-event':
+            return `
+                <!-- Security Controls -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Preventative Controls</label>
+                        <textarea class="form-control" id="prop_preventativeControls" rows="3" placeholder="Enter each control on a new line:&#10;• Backup systems&#10;• Business continuity plan&#10;• Insurance coverage">${component.properties?.preventativeControls || ''}</textarea>
+                        <small class="form-text text-muted">Controls that prevent this type of loss (one per line)</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Detective Controls</label>
+                        <textarea class="form-control" id="prop_detectiveControls" rows="3" placeholder="Enter each control on a new line:&#10;• Loss monitoring&#10;• Financial tracking&#10;• Impact assessment">${component.properties?.detectiveControls || ''}</textarea>
+                        <small class="form-text text-muted">Controls that detect when this loss occurs (one per line)</small>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Data Sources</label>
+                        <textarea class="form-control" id="prop_dataSources" rows="2" placeholder="Enter each data source on a new line:&#10;• Financial systems&#10;• Business metrics&#10;• Customer feedback">${component.properties?.dataSources || ''}</textarea>
+                        <small class="form-text text-muted">Data sources used to detect and monitor this type of loss (one per line)</small>
+                    </div>
+                </div>
+
+                <!-- LEF Display (Auto-calculated from TEF and vulnerabilities) -->
+                <div class="row mt-4 p-3" style="background-color: #e8f5e8; border-radius: 8px; border: 2px solid #28a745;">
+                    <div class="col-12">
+                        <h5 class="text-success mb-3">
+                            <i class="fas fa-calculator me-2"></i>Loss Event Frequency (LEF)
+                        </h5>
+                        <p class="text-muted mb-3">
+                            <strong>Auto-calculated:</strong> TEF × Vulnerability Likelihoods = LEF (events per year)
+                        </p>
+                        <small class="text-muted d-block mb-3">
+                            This represents how often this loss event occurs based on the threat frequency and vulnerability exploitation likelihood in the attack chain.
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">LEF Minimum</label>
+                        <input type="number" class="form-control" id="display_lefMinimum" readonly style="background-color: #ffffff; font-weight: bold;" value="${component.properties?.lefMinimum || 0}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">LEF Most Likely</label>
+                        <input type="number" class="form-control" id="display_lefMostLikely" readonly style="background-color: #ffffff; font-weight: bold;" value="${component.properties?.lefMostLikely || 0}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">LEF Maximum</label>
+                        <input type="number" class="form-control" id="display_lefMaximum" readonly style="background-color: #ffffff; font-weight: bold;" value="${component.properties?.lefMaximum || 0}">
+                    </div>
+                </div>
+            `;
+        default:
+            return '';
+    }
+}
+
+function saveComponentProperties() {
+    // Immediate feedback to show function was called
+    alert('Save button clicked! Function called successfully.');
+    console.log('=== SAVE BUTTON CLICKED ===');
+    
+    try {
+        console.log('saveComponentProperties called');
+        console.log('Window location:', window.location.href);
+        console.log('Selected component at start:', selectedComponent);
+        
+        if (!selectedComponent) {
+            console.error('No selectedComponent');
+            console.error('No component selected for saving');
+            return;
+        }
+    
+    console.log('Saving properties for component:', selectedComponent);
+    
+    // Check if required elements exist
+    const titleElement = document.getElementById('prop_title');
+    const descriptionElement = document.getElementById('prop_description');
+    const mitreTechniqueSelect = document.getElementById('prop_mitreTechnique');
+    
+    if (!titleElement || !descriptionElement) {
+        console.error('Required form elements not found');
+        console.error('Form elements not found');
+        return;
+    }
+    
+    // Update basic properties
+    const oldTitle = selectedComponent.title;
+    const oldDescription = selectedComponent.description;
+    
+    selectedComponent.title = titleElement.value;
+    selectedComponent.description = descriptionElement.value;
+    
+    console.log('Updated title from:', oldTitle, 'to:', selectedComponent.title);
+    console.log('Updated description from:', oldDescription, 'to:', selectedComponent.description);
+    
+    if (!selectedComponent.properties) {
+        selectedComponent.properties = {};
+    }
+    
+    if (mitreTechniqueSelect && mitreTechniqueSelect.value) {
+        selectedComponent.properties.mitreTechniqueId = parseInt(mitreTechniqueSelect.value);
+        console.log('Updated MITRE technique ID to:', selectedComponent.properties.mitreTechniqueId);
+    }
+    
+    // Update component-specific properties
+    switch (selectedComponent.type) {
+        case 'threat-event':
+            console.log('Saving threat-event specific properties');
+            
+            // MITRE technique
+            selectedComponent.properties.mitreTechniqueId = parseInt(document.getElementById('prop_mitreTechniqueId').value) || null;
+            
+            // Security controls
+            selectedComponent.properties.preventativeControls = document.getElementById('prop_preventativeControls').value || '';
+            selectedComponent.properties.detectiveControls = document.getElementById('prop_detectiveControls').value || '';
+            selectedComponent.properties.dataSources = document.getElementById('prop_dataSources').value || '';
+            
+            // TEF Distribution
+            selectedComponent.properties.tefMinimum = parseFloat(document.getElementById('prop_tefMinimum').value) || 0;
+            selectedComponent.properties.tefMostLikely = parseFloat(document.getElementById('prop_tefMostLikely').value) || 0;
+            selectedComponent.properties.tefMaximum = parseFloat(document.getElementById('prop_tefMaximum').value) || 0;
+            
+            console.log('Threat event properties saved:', selectedComponent.properties);
+            
+            // Recalculate LEF for all subsequent loss events since TEF changed
+            recalculateAllLEF();
+            break;
+        case 'vulnerability':
+            console.log('Saving vulnerability specific properties');
+            
+            // MITRE technique
+            selectedComponent.properties.mitreTechniqueId = parseInt(document.getElementById('prop_mitreTechniqueId').value) || null;
+            
+            // Security controls
+            selectedComponent.properties.preventativeControls = document.getElementById('prop_preventativeControls').value || '';
+            selectedComponent.properties.detectiveControls = document.getElementById('prop_detectiveControls').value || '';
+            selectedComponent.properties.dataSources = document.getElementById('prop_dataSources').value || '';
+            
+            // Vulnerability likelihood distribution (convert percentages to decimals)
+            selectedComponent.properties.vulnMinimum = (parseFloat(document.getElementById('prop_vulnMinimum').value) || 0) / 100;
+            selectedComponent.properties.vulnMostLikely = (parseFloat(document.getElementById('prop_vulnMostLikely').value) || 0) / 100;
+            selectedComponent.properties.vulnMaximum = (parseFloat(document.getElementById('prop_vulnMaximum').value) || 0) / 100;
+            selectedComponent.properties.stepOrder = parseInt(document.getElementById('prop_stepOrder').value) || 1;
+            
+            console.log('Vulnerability properties saved:', selectedComponent.properties);
+            
+            // Recalculate LEF for all subsequent loss events since vulnerability likelihood changed
+            recalculateAllLEF();
+            break;
+        case 'loss-event':
+            console.log('Saving loss-event specific properties');
+            
+            // MITRE technique
+            selectedComponent.properties.mitreTechniqueId = parseInt(document.getElementById('prop_mitreTechniqueId').value) || null;
+            
+            // Security controls
+            selectedComponent.properties.preventativeControls = document.getElementById('prop_preventativeControls').value || '';
+            selectedComponent.properties.detectiveControls = document.getElementById('prop_detectiveControls').value || '';
+            selectedComponent.properties.dataSources = document.getElementById('prop_dataSources').value || '';
+            
+            // Calculate LEF automatically from attack chain
+            calculateLEF();
+            
+            console.log('Loss event properties saved:', selectedComponent.properties);
+            break;
+    }
+    
+    // Make sure the component is updated in the main data array
+    const componentIndex = attackChainData.components.findIndex(c => c.id === selectedComponent.id);
+    if (componentIndex >= 0) {
+        attackChainData.components[componentIndex] = selectedComponent;
+        console.log('Updated component in main array at index:', componentIndex);
+    } else {
+        console.error('Component not found in main array:', selectedComponent.id);
+        console.error('Error: Component not found in main data');
+        return;
+    }
+    
+    console.log('Component properties saved successfully:', selectedComponent);
+    console.log('Updated components array:', attackChainData.components);
+    // Removed toastr notification - silently save properties
+    
+    // Update visual component
+    console.log('Updating visual component...');
+    updateComponentVisual(selectedComponent);
+    
+    // Update stats
+    console.log('Updating stats...');
+    updateStats();
+    
+    // Auto-save the model if it has a title
+    if (attackChainData.title && attackChainData.title.trim() !== '') {
+        console.log('Auto-saving model after component update...');
+        autoSaveAttackChain();
+    }
+    
+    // Close modal
+    console.log('Closing modal...');
+    try {
+        const modalElement = document.getElementById('componentModal');
+        
+        if (!modalElement) {
+            console.error('Modal element not found');
+            return;
+        }
+        
+        // Try Bootstrap 5 first
+        if (typeof bootstrap !== 'undefined') {
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            } else {
+                // If no instance exists, create one and hide it
+                const modal = new bootstrap.Modal(modalElement);
+                modal.hide();
+            }
+        }
+        // Fallback to jQuery
+        else if (typeof $ !== 'undefined') {
+            $(modalElement).modal('hide');
+        }
+        // Manual close
+        else {
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show');
+            document.body.classList.remove('modal-open');
+            
+            // Remove backdrop
+            const backdrop = document.getElementById('modal-backdrop-manual');
+            if (backdrop) {
+                backdrop.remove();
+            }
+        }
+    } catch (error) {
+        console.error('Error closing modal:', error);
+    }
+} catch (error) {
+    console.error('CRITICAL ERROR in saveComponentProperties:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Critical error saving properties: ' + error.message);
+    alert('Error saving properties: ' + error.message + '\nCheck console for details.');
+}
+}
+
+function closeModal() {
+    try {
+        const modalElement = document.getElementById('componentModal');
+        
+        if (!modalElement) {
+            console.error('Modal element not found in closeModal');
+            return;
+        }
+        
+        // Try Bootstrap 5 first
+        if (typeof bootstrap !== 'undefined') {
+            const modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (modalInstance) {
+                modalInstance.hide();
+            } else {
+                // If no instance exists, just hide manually
+                modalElement.style.display = 'none';
+                modalElement.classList.remove('show');
+                document.body.classList.remove('modal-open');
+                
+                // Remove backdrop
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => backdrop.remove());
+            }
+        }
+        // Fallback to jQuery
+        else if (typeof $ !== 'undefined') {
+            $(modalElement).modal('hide');
+        }
+        // Manual close
+        else {
+            modalElement.style.display = 'none';
+            modalElement.classList.remove('show');
+            document.body.classList.remove('modal-open');
+            
+            // Remove backdrop
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
+        }
+    } catch (error) {
+        console.error('Error closing modal:', error);
+    }
+}
+
+function testModal() {
+    console.log('Testing modal functionality...');
+    
+    // Create a test component
+    const testComponent = {
+        id: 'test_component',
+        type: 'threat-event',
+        title: 'Test Threat Event',
+        description: 'This is a test',
+        properties: {
+            tefMinimum: 1,
+            tefMostLikely: 2,
+            tefMaximum: 3
+        }
+    };
+    
+    // Try to edit it
+    selectedComponent = testComponent;
+    
+    const modalTitle = document.getElementById('componentModalTitle');
+    const modalBody = document.getElementById('componentModalBody');
+    
+    if (modalTitle && modalBody) {
+        modalTitle.textContent = 'Test Modal';
+        modalBody.innerHTML = `
+            <div class="alert alert-info">
+                <strong>Modal Test</strong><br>
+                If you can see this, the modal is working properly!
+            </div>
+            <div class="form-group">
+                <label>Test Input:</label>
+                <input type="text" class="form-control" value="Test value" />
+            </div>
+        `;
+        
+        // Show the modal
+        const modalElement = document.getElementById('componentModal');
+        if (!modalElement) {
+            console.error('Modal element not found in testModalOpen');
+            alert('Modal element not found! Check console for details.');
+            return;
+        }
+        
+        if (typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+            console.log('Test modal shown with Bootstrap');
+        } else {
+            modalElement.style.display = 'block';
+            modalElement.classList.add('show');
+            document.body.classList.add('modal-open');
+            console.log('Test modal shown manually');
+        }
+        
+        console.success('Test modal should now be visible');
+    } else {
+        console.error('Modal elements not found');
+        console.error('Modal elements not found');
+    }
+}
+
+function clearChain() {
+    if (attackChainData.components.length === 0) {
+        console.info('Chain is already empty');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to clear the entire attack chain?')) {
+        attackChainData.components = [];
+        componentCounter = 0;
+        renderAttackChain();
+        updateStats();
+        console.success('Attack chain cleared');
+    }
+}
+
+function updateComponentVisual(component) {
+    // In card-based system, just re-render the entire chain
+    renderAttackChain();
+}
+
+function selectComponent(componentId) {
+    // Remove previous selection
+    document.querySelectorAll('.attack-chain-card').forEach(c => c.classList.remove('selected'));
+    
+    // Add selection to current component
+    const componentDiv = document.getElementById(componentId);
+    if (componentDiv) {
+        componentDiv.classList.add('selected');
+        selectedComponent = attackChainData.components.find(c => c.id === componentId);
+    }
+}
+
+function deleteComponent(componentId) {
+    if (confirm('Are you sure you want to delete this component?')) {
+        const component = attackChainData.components.find(c => c.id === componentId);
+        
+        // Remove from data model
+        attackChainData.components = attackChainData.components.filter(c => c.id !== componentId);
+        
+        // Re-order remaining components
+        attackChainData.components.forEach((c, index) => {
+            c.order = index + 1;
+        });
+        
+        // Re-render and update stats
+        renderAttackChain();
+        updateStats();
+        
+        console.success(`${component.type.replace('-', ' ')} deleted`);
+    }
+}
+
+function updateStats() {
+    const threatEvents = attackChainData.components.filter(c => c.type === 'threat-event').length;
+    const vulnerabilities = attackChainData.components.filter(c => c.type === 'vulnerability').length;
+    const lossEvents = attackChainData.components.filter(c => c.type === 'loss-event').length;
+    
+    document.getElementById('threatEventCount').textContent = threatEvents;
+    document.getElementById('vulnerabilityCount').textContent = vulnerabilities;
+    document.getElementById('lossEventCount').textContent = lossEvents;
+}
+
+function calculateAttackChainALE() {
+    console.log('Calculating attack chain ALE...');
+    
+    // Sort components by order to process in sequence
+    const sortedComponents = [...attackChainData.components].sort((a, b) => a.order - b.order);
+    
+    let totalALE = 0;
+    
+    // Find threat events to start calculation from
+    const threatEvents = sortedComponents.filter(c => c.type === 'threat-event');
+    
+    threatEvents.forEach(threatEvent => {
+        console.log('Processing threat event:', threatEvent.title);
+        
+        // Get TEF (Threat Event Frequency)
+        const tef = threatEvent.properties?.tefMostLikely || 0;
+        console.log('TEF:', tef);
+        
+        if (tef === 0) {
+            console.log('Skipping threat event with 0 TEF');
+            return;
+        }
+        
+        // Start with TEF and multiply by vulnerability likelihoods in sequence
+        let cumulativeProbability = tef;
+        
+        // Find vulnerabilities that come after this threat event
+        const subsequentComponents = sortedComponents.filter(c => c.order > threatEvent.order);
+        
+        // Process vulnerabilities in order
+        subsequentComponents.forEach(component => {
+            if (component.type === 'vulnerability') {
+                const vulnLikelihood = component.properties?.vulnMostLikely || 0;
+                console.log('Vulnerability likelihood:', vulnLikelihood);
+                cumulativeProbability *= vulnLikelihood;
+            } else if (component.type === 'loss-event') {
+                // Calculate ALE for this loss event
+                const primaryLoss = component.properties?.primaryLossMostLikely || 0;
+                const secondaryLoss = component.properties?.secondaryLossMostLikely || 0;
+                const totalLoss = primaryLoss + secondaryLoss;
+                
+                const ale = cumulativeProbability * totalLoss;
+                console.log('Loss event ALE calculation:', {
+                    cumulativeProbability,
+                    primaryLoss,
+                    secondaryLoss,
+                    totalLoss,
+                    ale
+                });
+                
+                totalALE += ale;
+                
+                // Update the loss event component with calculated ALE
+                component.properties = component.properties || {};
+                component.properties.aleMostLikely = ale;
+            }
+        });
+    });
+    
+    console.log('Total calculated ALE:', totalALE);
+    return totalALE;
+}
+
+function updateFormFields() {
+    document.getElementById('modelTitle').value = attackChainData.title;
+    document.getElementById('modelDescription').value = attackChainData.description;
+}
+
+
+function updateModelStatus() {
+    const statusSelect = document.getElementById('modelStatus');
+    if (statusSelect) {
+        attackChainData.status = parseInt(statusSelect.value);
+        console.log('Model status updated to:', attackChainData.status);
+        
+        // Show notification for status change
+        const statusNames = {
+            0: 'Draft',
+            1: 'Under Review', 
+            2: 'Reviewed',
+            3: 'Approved',
+            4: 'Archived'
+        };
+        
+        const statusName = statusNames[attackChainData.status] || 'Unknown';
+        console.info(`Status changed to: ${statusName}`);
+        
+        // Auto-save if model already exists
+        if (attackChainData.id > 0 && attackChainData.title && attackChainData.title.trim() !== '') {
+            console.log('Auto-saving after status change...');
+            autoSaveAttackChain();
+        }
+    }
+}
+
+function saveAttackChain() {
+    // Collect form data
+    attackChainData.title = document.getElementById('modelTitle').value;
+    attackChainData.description = document.getElementById('modelDescription').value;
+    
+    // Collect status if admin (will be ignored on server side for non-admins)
+    const statusSelect = document.getElementById('modelStatus');
+    if (statusSelect) {
+        attackChainData.status = parseInt(statusSelect.value);
+    }
+    
+    if (!attackChainData.title) {
+        console.error('Please enter a title for the threat model');
+        return;
+    }
+    
+    // Show loading
+    console.info('Saving threat model...');
+    
+    // Create form data with components as JSON string
+    var formData = new FormData();
+    formData.append('id', attackChainData.id || 0);
+    formData.append('title', attackChainData.title);
+    formData.append('description', attackChainData.description || '');
+    formData.append('status', attackChainData.status || 0);
+    
+    // Include components as JSON string
+    if (attackChainData.components && attackChainData.components.length > 0) {
+        formData.append('componentsJson', JSON.stringify(attackChainData.components));
+    }
+    
+    console.log('Sending save request with form data and components');
+    
+    $.ajax({
+        url: '/AttackChain/SaveWithComponents',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            console.log('Save response:', response);
+            if (response.success) {
+                console.success('Threat model saved successfully!');
+                attackChainData.id = response.id;
+                // Update URL without reload
+                window.history.replaceState({}, '', '/AttackChain/FlowchartBuilder/' + response.id);
+            } else {
+                console.error('Error saving threat model: ' + response.error);
+                console.error('Save error details:', response);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', xhr, status, error);
+            console.error('Response Text:', xhr.responseText);
+            console.error('Error saving threat model: ' + error);
+            
+            // Try debug save if main save fails
+            console.log('Attempting debug save...');
+            saveAttackChainDebug();
+        }
+    });
+}
+
+function saveAttackChainDebug() {
+    console.log('Using debug save endpoint...');
+    
+    $.ajax({
+        url: '/AttackChain/SaveFlowchartModelDebug',
+        type: 'POST',
+        data: JSON.stringify(attackChainData),
+        contentType: 'application/json',
+        success: function(response) {
+            console.log('Debug save response:', response);
+            if (response.success) {
+                console.success('Threat model saved successfully! (debug mode)');
+                attackChainData.id = response.id;
+                // Update URL without reload
+                window.history.replaceState({}, '', '/AttackChain/FlowchartBuilder/' + response.id);
+            } else {
+                console.error('Error saving threat model (debug): ' + response.error);
+                console.error('Debug save error details:', response);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Debug AJAX Error:', xhr, status, error);
+            console.error('Debug Response Text:', xhr.responseText);
+            console.error('Error saving threat model (debug): ' + error);
+        }
+    });
+}
+
+function saveBasicModel() {
+    console.log('Using basic save endpoint...');
+    
+    // Get basic data only
+    const basicData = {
+        id: attackChainData.id,
+        title: document.getElementById('modelTitle').value,
+        description: document.getElementById('modelDescription').value
+    };
+    
+    console.log('Basic save data:', basicData);
+    
+    if (!basicData.title) {
+        console.error('Please enter a title for the threat model');
+        return;
+    }
+    
+    $.ajax({
+        url: '/AttackChain/SaveBasicModel',
+        type: 'POST',
+        data: JSON.stringify(basicData),
+        contentType: 'application/json',
+        success: function(response) {
+            console.log('Basic save response:', response);
+            if (response.success) {
+                console.success('Basic threat model saved successfully!');
+                attackChainData.id = response.id;
+                // Update URL without reload
+                window.history.replaceState({}, '', '/AttackChain/FlowchartBuilder/' + response.id);
+            } else {
+                console.error('Error saving basic model: ' + response.error);
+                console.error('Basic save error details:', response);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Basic save AJAX Error:', xhr, status, error);
+            console.error('Basic save Response Text:', xhr.responseText);
+            console.error('Error saving basic model: ' + error);
+        }
+    });
+}
+
+function autoSaveAttackChain() {
+    // Don't show loading message for auto-save
+    console.log('Auto-saving attack chain...');
+    
+    // Collect current form data before auto-saving
+    attackChainData.title = document.getElementById('modelTitle').value || attackChainData.title;
+    attackChainData.description = document.getElementById('modelDescription').value || attackChainData.description;
+    
+    // Collect status if admin
+    const statusSelect = document.getElementById('modelStatus');
+    if (statusSelect) {
+        attackChainData.status = parseInt(statusSelect.value);
+    }
+    
+    // Create form data with components
+    var formData = new FormData();
+    formData.append('id', attackChainData.id || 0);
+    formData.append('title', attackChainData.title || '');
+    formData.append('description', attackChainData.description || '');
+    formData.append('status', attackChainData.status || 0);
+    
+    // Include components as JSON string
+    if (attackChainData.components && attackChainData.components.length > 0) {
+        formData.append('componentsJson', JSON.stringify(attackChainData.components));
+    }
+    
+    // Send to server with components
+    $.ajax({
+        url: '/AttackChain/SaveWithComponents',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                attackChainData.id = response.id;
+                // Update URL without reload
+                window.history.replaceState({}, '', '/AttackChain/FlowchartBuilder/' + response.id);
+                console.log('Auto-save successful, model ID:', response.id);
+            } else {
+                console.error('Auto-save failed:', response.error);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Auto-save error:', error);
+        }
+    });
+}
+
+function calculateRisk() {
+    if (attackChainData.id === 0) {
+        console.warning('Please save the model first before calculating risk');
+        return;
+    }
+    
+    console.info('Calculating risk...');
+    
+    $.ajax({
+        url: '/AttackChain/CalculateRisk/' + attackChainData.id,
+        type: 'POST',
+        headers: {
+            'X-RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+        },
+        success: function(response) {
+            console.success('Risk calculations updated successfully!');
+            // Refresh the model data
+            loadExistingAttackChain();
+        },
+        error: function() {
+            console.error('Error calculating risk');
+        }
+    });
+}
+
+// Auto-calculation functions for FAIR methodology
+function calculateTEFMostLikely() {
+    const minElement = document.getElementById('prop_tefMinimum');
+    const maxElement = document.getElementById('prop_tefMaximum');
+    const mostLikelyElement = document.getElementById('prop_tefMostLikely');
+    
+    if (minElement && maxElement && mostLikelyElement) {
+        const min = parseFloat(minElement.value) || 0;
+        const max = parseFloat(maxElement.value) || 0;
+        
+        // PERT formula: (min + 4*mostLikely + max) / 6, solved for mostLikely
+        // For simplicity, use: (min + max) / 2
+        const mostLikely = (min + max) / 2;
+        mostLikelyElement.value = mostLikely.toFixed(3);
+    }
+}
+
+function calculateVulnMostLikely() {
+    const minElement = document.getElementById('prop_vulnMinimum');
+    const maxElement = document.getElementById('prop_vulnMaximum');
+    const mostLikelyElement = document.getElementById('prop_vulnMostLikely');
+    
+    if (minElement && maxElement && mostLikelyElement) {
+        const min = parseFloat(minElement.value) || 0;
+        const max = parseFloat(maxElement.value) || 0;
+        
+        // Calculate most likely as average of min and max
+        const mostLikely = (min + max) / 2;
+        mostLikelyElement.value = mostLikely.toFixed(1);
+    }
+}
+
+function calculateLEF() {
+    console.log('calculateLEF called - calculating Loss Event Frequency');
+    
+    // Get all components in order to calculate cumulative probability
+    const sortedComponents = [...attackChainData.components].sort((a, b) => a.order - b.order);
+    
+    // Find the threat event that leads to this loss event
+    const currentLossEvent = selectedComponent;
+    if (!currentLossEvent || currentLossEvent.type !== 'loss-event') {
+        console.log('Not calculating LEF - not a loss event');
+        return;
+    }
+    
+    // Find threat events that come before this loss event
+    const precedingComponents = sortedComponents.filter(c => c.order < currentLossEvent.order);
+    const threatEvent = precedingComponents.find(c => c.type === 'threat-event');
+    
+    if (!threatEvent) {
+        console.log('No threat event found - cannot calculate LEF');
+        return;
+    }
+    
+    // Start with TEF
+    const tefMin = threatEvent.properties?.tefMinimum || 0;
+    const tefMostLikely = threatEvent.properties?.tefMostLikely || 0;
+    const tefMax = threatEvent.properties?.tefMaximum || 0;
+    
+    // Multiply by vulnerability likelihoods
+    let lefMin = tefMin;
+    let lefMostLikely = tefMostLikely;
+    let lefMax = tefMax;
+    
+    const vulnerabilities = precedingComponents.filter(c => c.type === 'vulnerability');
+    vulnerabilities.forEach(vuln => {
+        const vulnMin = vuln.properties?.vulnMinimum || 0;
+        const vulnMostLikely = vuln.properties?.vulnMostLikely || 0;
+        const vulnMax = vuln.properties?.vulnMaximum || 0;
+        
+        lefMin *= vulnMin;
+        lefMostLikely *= vulnMostLikely;
+        lefMax *= vulnMax;
+    });
+    
+    console.log('Calculated LEF:', { lefMin, lefMostLikely, lefMax });
+    
+    // Update the display fields
+    const lefMinElement = document.getElementById('display_lefMinimum');
+    const lefMostLikelyElement = document.getElementById('display_lefMostLikely');
+    const lefMaxElement = document.getElementById('display_lefMaximum');
+    
+    if (lefMinElement) lefMinElement.value = lefMin.toFixed(6);
+    if (lefMostLikelyElement) lefMostLikelyElement.value = lefMostLikely.toFixed(6);
+    if (lefMaxElement) lefMaxElement.value = lefMax.toFixed(6);
+    
+    // Store in component properties
+    if (!currentLossEvent.properties) currentLossEvent.properties = {};
+    currentLossEvent.properties.lefMinimum = lefMin;
+    currentLossEvent.properties.lefMostLikely = lefMostLikely;
+    currentLossEvent.properties.lefMaximum = lefMax;
+}
+
+function recalculateAllLEF() {
+    console.log('recalculateAllLEF called - updating all loss events');
+    
+    // Get all components in order
+    const sortedComponents = [...attackChainData.components].sort((a, b) => a.order - b.order);
+    const lossEvents = sortedComponents.filter(c => c.type === 'loss-event');
+    
+    // For each loss event, calculate its LEF based on preceding threat events and vulnerabilities
+    lossEvents.forEach(lossEvent => {
+        console.log('Recalculating LEF for loss event:', lossEvent.title);
+        
+        // Find threat events that come before this loss event
+        const precedingComponents = sortedComponents.filter(c => c.order < lossEvent.order);
+        const threatEvent = precedingComponents.find(c => c.type === 'threat-event');
+        
+        if (!threatEvent) {
+            console.log('No threat event found for loss event:', lossEvent.title);
+            return;
+        }
+        
+        // Start with TEF
+        const tefMin = threatEvent.properties?.tefMinimum || 0;
+        const tefMostLikely = threatEvent.properties?.tefMostLikely || 0;
+        const tefMax = threatEvent.properties?.tefMaximum || 0;
+        
+        // Multiply by vulnerability likelihoods in sequence
+        let lefMin = tefMin;
+        let lefMostLikely = tefMostLikely;
+        let lefMax = tefMax;
+        
+        const vulnerabilities = precedingComponents.filter(c => c.type === 'vulnerability');
+        vulnerabilities.forEach(vuln => {
+            const vulnMin = vuln.properties?.vulnMinimum || 0;
+            const vulnMostLikely = vuln.properties?.vulnMostLikely || 0;
+            const vulnMax = vuln.properties?.vulnMaximum || 0;
+            
+            lefMin *= vulnMin;
+            lefMostLikely *= vulnMostLikely;
+            lefMax *= vulnMax;
+        });
+        
+        console.log('Calculated LEF for', lossEvent.title, ':', { lefMin, lefMostLikely, lefMax });
+        
+        // Store in component properties
+        if (!lossEvent.properties) lossEvent.properties = {};
+        lossEvent.properties.lefMinimum = lefMin;
+        lossEvent.properties.lefMostLikely = lefMostLikely;
+        lossEvent.properties.lefMaximum = lefMax;
+        
+        // Update the component in the main array
+        const componentIndex = attackChainData.components.findIndex(c => c.id === lossEvent.id);
+        if (componentIndex >= 0) {
+            attackChainData.components[componentIndex] = lossEvent;
+        }
+    });
+    
+    console.log('All LEF calculations updated');
+}
+
+function loadExistingAttackChain() {
+    // This would load an existing attack chain and populate the canvas
+    // Implementation would depend on the data structure returned from the server
+}
+
+
+</script>
+}
+
+@section Styles {
+<style>
+.attack-chain-container {
+    min-height: 400px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.attack-chain-flow {
+    overflow-x: auto;
+    padding: 20px 0;
+}
+
+.attack-chain-card {
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+}
+
+.attack-chain-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.attack-chain-card.selected {
+    box-shadow: 0 0 0 3px rgba(13,110,253,0.25);
+}
+
+.chain-arrow {
+    flex-shrink: 0;
+    animation: pulse 2s infinite;
+}
+
+@@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.stats-panel .stat-item {
+    padding: 4px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.stats-panel .stat-item:last-child {
+    border-bottom: none;
+}
+
+.progress {
+    height: 10px !important;
+}
+
+.badge {
+    font-size: 10px;
+}
+</style>
+}

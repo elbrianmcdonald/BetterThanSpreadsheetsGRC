@@ -47,7 +47,7 @@ namespace CyberRiskApp.Controllers
                 var model = new DashboardViewModel
                 {
                     TotalRisks = allRisks.Count(),
-                    TotalALE = await _riskService.GetTotalALEAsync(),
+                    TotalALE = 0, // ALE functionality removed - using qualitative risk assessment
                     OpenFindings = (await _findingService.GetOpenFindingsAsync()).Count(),
                     HighRiskFindings = allFindings.Count(f => f.RiskRating == RiskRating.High),
                     PendingRequests = pendingRequests.Count(),
@@ -130,7 +130,7 @@ namespace CyberRiskApp.Controllers
                     openFindings = allFindings.Count(f => f.Status == FindingStatus.Open),
                     highRiskFindings = allFindings.Count(f => f.RiskRating == RiskRating.High),
                     totalRisks = allRisks.Count(),
-                    totalALE = await _riskService.GetTotalALEAsync(),
+                    totalALE = 0, // ALE functionality removed - using qualitative risk assessment
                     pendingRequests = (await _requestService.GetPendingAssessmentRequestsAsync()).Count()
                 };
 

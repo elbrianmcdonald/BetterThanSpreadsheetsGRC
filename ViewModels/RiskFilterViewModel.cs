@@ -47,5 +47,8 @@ namespace CyberRiskApp.ViewModels
         public SelectList? OrganizationOptions { get; set; }
         public SelectList? RiskOwnerOptions { get; set; }
         public SelectList? AssetOptions { get; set; }
+
+        // Risk level settings for heatmap calculation
+        public RiskLevelSettings? RiskLevelSettings { get; set; }
     }
 }

@@ -132,6 +132,74 @@ END $$;";
                 return View("Index");
             }
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FixForeignKeyConstraints()
+        {
+            try
+            {
+                // Fix the foreign key constraint issue that's preventing saves
+                var sql = @"
+DO $$ 
+BEGIN
+    -- Drop the incorrect FK constraint if it exists
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'FK_Risks_ThreatScenarios_RiskAssessmentId' 
+        AND table_name = 'Risks'
+    ) THEN
+        ALTER TABLE ""Risks"" DROP CONSTRAINT ""FK_Risks_ThreatScenarios_RiskAssessmentId"";
+        RAISE NOTICE 'Dropped problematic constraint FK_Risks_ThreatScenarios_RiskAssessmentId';
+    END IF;
+
+    -- Drop the QualitativeControls constraint if it exists
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'FK_QualitativeControls_ThreatScenarios_RiskAssessmentId' 
+        AND table_name = 'QualitativeControls'
+    ) THEN
+        ALTER TABLE ""QualitativeControls"" DROP CONSTRAINT ""FK_QualitativeControls_ThreatScenarios_RiskAssessmentId"";
+        RAISE NOTICE 'Dropped problematic constraint FK_QualitativeControls_ThreatScenarios_RiskAssessmentId';
+    END IF;
+
+    -- Create the correct FK constraint for Risks.ThreatScenarioId if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'FK_Risks_ThreatScenarios_ThreatScenarioId' 
+        AND table_name = 'Risks'
+    ) THEN
+        ALTER TABLE ""Risks"" ADD CONSTRAINT ""FK_Risks_ThreatScenarios_ThreatScenarioId"" 
+        FOREIGN KEY (""ThreatScenarioId"") REFERENCES ""ThreatScenarios"" (""Id"") ON DELETE SET NULL;
+        RAISE NOTICE 'Added correct constraint FK_Risks_ThreatScenarios_ThreatScenarioId';
+    END IF;
+
+    -- Create index if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_indexes 
+        WHERE indexname = 'IX_Risks_ThreatScenarioId'
+    ) THEN
+        CREATE INDEX ""IX_Risks_ThreatScenarioId"" ON ""Risks"" (""ThreatScenarioId"");
+        RAISE NOTICE 'Created index IX_Risks_ThreatScenarioId';
+    END IF;
+
+    -- Mark the problematic migration as applied
+    INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"")
+    VALUES ('20250808125237_AddThreatScenarioIdToRisk', '8.0.18')
+    ON CONFLICT (""MigrationId"") DO NOTHING;
+    
+END $$;";
+
+                await _context.Database.ExecuteSqlRawAsync(sql);
+                ViewBag.Success = "Foreign key constraints have been fixed successfully!";
+                return View("Index");
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Error = $"Error fixing constraints: {ex.Message}";
+                return View("Index");
+            }
+        }
     }
     
     public class DatabaseColumnInfo

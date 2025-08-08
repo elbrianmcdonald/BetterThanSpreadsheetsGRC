@@ -1,6 +1,12 @@
 @model CyberRiskApp.Models.RiskMatrix
 @{
     ViewData["Title"] = "Configure Risk Matrix";
+    
+    // Organize levels by type for easy access
+    var levels = ViewBag.Levels as IEnumerable<CyberRiskApp.Models.RiskMatrixLevel> ?? new List<CyberRiskApp.Models.RiskMatrixLevel>();
+    var impactLevels = levels.Where(l => l.LevelType == CyberRiskApp.Models.RiskMatrixLevelType.Impact).OrderBy(l => l.LevelValue).ToList();
+    var likelihoodLevels = levels.Where(l => l.LevelType == CyberRiskApp.Models.RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue).ToList();
+    var exposureLevels = levels.Where(l => l.LevelType == CyberRiskApp.Models.RiskMatrixLevelType.Exposure).OrderBy(l => l.LevelValue).ToList();
 }
 
 <div class="container-fluid py-4">
@@ -66,21 +72,33 @@
             </h5>
         </div>
         <div class="card-body">
-            <div class="row">
-                <!-- Impact Levels -->
+            <form id="levelsForm">
+                @Html.AntiForgeryToken()
+                <div class="row">
+                    <!-- Impact Levels -->
                 <div class="col-md-4">
                     <h6 class="text-primary"><i class="fas fa-exclamation-triangle me-2"></i>Impact Levels</h6>
                     <div id="impactLevels">
                         @for (int i = 1; i <= Model.MatrixSize; i++)
                         {
+                            var existingLevel = impactLevels.FirstOrDefault(l => Math.Round(l.LevelValue) == i);
+                            var levelName = existingLevel?.LevelName ?? $"Level {i}";
+                            var levelScore = existingLevel?.LevelValue ?? i;
+                            var levelColor = existingLevel?.ColorCode ?? GetDefaultColor(i, Model.MatrixSize);
+                            
                             <div class="mb-3 level-config" data-level-type="Impact" data-level-value="@i">
                                 <label class="form-label fw-bold">Level @i</label>
                                 <div class="row">
-                                    <div class="col-8">
-                                        <input type="text" class="form-control level-name" placeholder="Enter level name" value="Level @i" />
+                                    <div class="col-4">
+                                        <input type="text" class="form-control level-name" placeholder="Enter level name" value="@levelName" />
                                     </div>
                                     <div class="col-4">
-                                        <input type="color" class="form-control form-control-color level-color" value="#@(GetDefaultColor(i, Model.MatrixSize))" />
+                                        <input type="number" class="form-control level-score" placeholder="Score" value="@levelScore" step="0.1" min="0" />
+                                        <small class="text-muted">Score/Value</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <input type="color" class="form-control form-control-color level-color" value="#@levelColor" />
+                                        <small class="text-muted">Color</small>
                                     </div>
                                 </div>
                             </div>
@@ -94,14 +112,24 @@
                     <div id="likelihoodLevels">
                         @for (int i = 1; i <= Model.MatrixSize; i++)
                         {
+                            var existingLevel = likelihoodLevels.FirstOrDefault(l => Math.Round(l.LevelValue) == i);
+                            var levelName = existingLevel?.LevelName ?? $"Level {i}";
+                            var levelScore = existingLevel?.LevelValue ?? i;
+                            var levelColor = existingLevel?.ColorCode ?? GetDefaultColor(i, Model.MatrixSize);
+                            
                             <div class="mb-3 level-config" data-level-type="Likelihood" data-level-value="@i">
                                 <label class="form-label fw-bold">Level @i</label>
                                 <div class="row">
-                                    <div class="col-8">
-                                        <input type="text" class="form-control level-name" placeholder="Enter level name" value="Level @i" />
+                                    <div class="col-4">
+                                        <input type="text" class="form-control level-name" placeholder="Enter level name" value="@levelName" />
                                     </div>
                                     <div class="col-4">
-                                        <input type="color" class="form-control form-control-color level-color" value="#@(GetDefaultColor(i, Model.MatrixSize))" />
+                                        <input type="number" class="form-control level-score" placeholder="Score" value="@levelScore" step="0.1" min="0" />
+                                        <small class="text-muted">Score/Value</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <input type="color" class="form-control form-control-color level-color" value="#@levelColor" />
+                                        <small class="text-muted">Color</small>
                                     </div>
                                 </div>
                             </div>
@@ -117,14 +145,24 @@
                         <div id="exposureLevels">
                             @for (int i = 1; i <= Model.MatrixSize; i++)
                             {
+                                var existingLevel = exposureLevels.FirstOrDefault(l => Math.Round(l.LevelValue) == i);
+                                var levelName = existingLevel?.LevelName ?? $"Level {i}";
+                                var levelScore = existingLevel?.Multiplier ?? existingLevel?.LevelValue ?? (i * 0.25m);
+                                var levelColor = existingLevel?.ColorCode ?? GetDefaultColor(i, Model.MatrixSize);
+                                
                                 <div class="mb-3 level-config" data-level-type="Exposure" data-level-value="@i">
                                     <label class="form-label fw-bold">Level @i</label>
                                     <div class="row">
-                                        <div class="col-8">
-                                            <input type="text" class="form-control level-name" placeholder="Enter level name" value="Level @i" />
+                                        <div class="col-4">
+                                            <input type="text" class="form-control level-name" placeholder="Enter level name" value="@levelName" />
                                         </div>
                                         <div class="col-4">
-                                            <input type="color" class="form-control form-control-color level-color" value="#@(GetDefaultColor(i, Model.MatrixSize))" />
+                                            <input type="number" class="form-control level-score" placeholder="Multiplier" value="@levelScore" step="0.1" min="0" />
+                                            <small class="text-muted">Multiplier</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <input type="color" class="form-control form-control-color level-color" value="#@levelColor" />
+                                            <small class="text-muted">Color</small>
                                         </div>
                                     </div>
                                 </div>
@@ -142,6 +180,7 @@
                     <i class="fas fa-undo me-2"></i>Reset to Defaults
                 </button>
             </div>
+            </form>
         </div>
     </div>
 
@@ -153,6 +192,25 @@
             </h5>
         </div>
         <div class="card-body">
+            @if (Model.MatrixType == CyberRiskApp.Models.RiskMatrixType.ImpactLikelihoodExposure)
+            {
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-shield-alt me-2 text-warning"></i>Exposure Level for Preview:
+                    </label>
+                    <select class="form-select" id="exposureSelector" style="max-width: 300px;">
+                        <option value="">Select Exposure Level...</option>
+                        @for (int i = 1; i <= Model.MatrixSize; i++)
+                        {
+                            var existingLevel = exposureLevels.FirstOrDefault(l => Math.Round(l.LevelValue) == i);
+                            var levelName = existingLevel?.LevelName ?? $"Level {i}";
+                            <option value="@i" selected="@(i == 1)">@levelName (Level @i)</option>
+                        }
+                    </select>
+                    <small class="text-muted">Select which exposure level to use for the matrix preview below.</small>
+                </div>
+            }
+            
             <div id="matrixPreview" class="table-responsive">
                 <div class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
@@ -181,52 +239,65 @@
             </h5>
         </div>
         <div class="card-body">
-            <p class="text-muted">Configure how risk scores map to risk levels (Low, Medium, High, Critical)</p>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Note:</strong> These thresholds are saved to the global Risk Level Settings and will affect all risk assessments across the system.
+            </div>
             
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-success">Low Risk</label>
-                        <div class="input-group">
-                            <span class="input-group-text">≤</span>
-                            <input type="number" class="form-control" id="lowThreshold" value="4" min="1" />
+            <form id="thresholdsForm">
+                @Html.AntiForgeryToken()
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-success">Medium Risk Threshold</label>
+                            <div class="input-group">
+                                <span class="input-group-text">≥</span>
+                                <input type="number" class="form-control" id="mediumThreshold" value="4" min="1" step="0.1" />
+                            </div>
+                            <small class="text-muted">Scores below this are Low risk</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-warning">High Risk Threshold</label>
+                            <div class="input-group">
+                                <span class="input-group-text">≥</span>
+                                <input type="number" class="form-control" id="highThreshold" value="10" min="2" step="0.1" />
+                            </div>
+                            <small class="text-muted">Below Medium, above this is High</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-danger">Critical Risk Threshold</label>
+                            <div class="input-group">
+                                <span class="input-group-text">≥</span>
+                                <input type="number" class="form-control" id="criticalThreshold" value="16" min="3" step="0.1" />
+                            </div>
+                            <small class="text-muted">Below High, above this is Critical</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-secondary">Risk Appetite Threshold</label>
+                            <div class="input-group">
+                                <span class="input-group-text">≤</span>
+                                <input type="number" class="form-control" id="riskAppetiteThreshold" value="6" min="1" step="0.1" />
+                            </div>
+                            <small class="text-muted">Above this level exceeds appetite</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-warning">Medium Risk</label>
-                        <div class="input-group">
-                            <span class="input-group-text">≤</span>
-                            <input type="number" class="form-control" id="mediumThreshold" value="9" min="2" />
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-danger">High Risk</label>
-                        <div class="input-group">
-                            <span class="input-group-text">≤</span>
-                            <input type="number" class="form-control" id="highThreshold" value="16" min="3" />
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark">Critical Risk</label>
-                        <div class="input-group">
-                            <span class="input-group-text">></span>
-                            <input type="number" class="form-control" id="criticalThreshold" value="16" readonly />
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="mt-4">
-                <button type="button" class="btn btn-warning" id="saveThresholds">
-                    <i class="fas fa-save me-2"></i>Save Risk Thresholds
-                </button>
-            </div>
+                <div class="mt-4">
+                    <button type="button" class="btn btn-warning" id="saveThresholds">
+                        <i class="fas fa-save me-2"></i>Save Risk Thresholds to Settings
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="loadCurrentThresholds">
+                        <i class="fas fa-sync me-2"></i>Load Current Settings
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -253,26 +324,77 @@
             document.getElementById('saveLevels').addEventListener('click', function() {
                 const levels = [];
                 
+                // Validate that we have level configurations to save
+                const levelConfigs = document.querySelectorAll('.level-config');
+                if (levelConfigs.length === 0) {
+                    showAlert('No levels found to save. Please configure levels first.', 'warning');
+                    return;
+                }
+                
                 document.querySelectorAll('.level-config').forEach(function(levelDiv) {
                     const levelType = levelDiv.getAttribute('data-level-type');
-                    const levelValue = parseInt(levelDiv.getAttribute('data-level-value'));
-                    const levelName = levelDiv.querySelector('.level-name').value;
-                    const levelColor = levelDiv.querySelector('.level-color').value;
+                    const originalLevelValue = parseInt(levelDiv.getAttribute('data-level-value'));
+                    const levelNameElement = levelDiv.querySelector('.level-name');
+                    const levelScoreElement = levelDiv.querySelector('.level-score');
+                    const levelColorElement = levelDiv.querySelector('.level-color');
+                    
+                    if (!levelNameElement || !levelScoreElement || !levelColorElement) {
+                        console.warn('Missing level input elements', levelDiv);
+                        return; // Skip this level
+                    }
+                    
+                    const levelName = levelNameElement.value;
+                    const levelScore = parseFloat(levelScoreElement.value) || originalLevelValue;
+                    const levelColor = levelColorElement.value;
+                    
+                    // Validate required fields
+                    if (!levelName || !levelName.trim()) {
+                        showAlert(`Level name is required for ${levelType} Level ${originalLevelValue}`, 'danger');
+                        return;
+                    }
+                    
+                    if (levelScore <= 0) {
+                        showAlert(`Level score must be greater than 0 for ${levelType} Level ${originalLevelValue}`, 'danger');
+                        return;
+                    }
+                    
+                    // Convert string level type to enum value
+                    let levelTypeEnum;
+                    switch(levelType) {
+                        case 'Impact': levelTypeEnum = 1; break;
+                        case 'Likelihood': levelTypeEnum = 2; break;
+                        case 'Exposure': levelTypeEnum = 3; break;
+                        default: levelTypeEnum = 1; // Default to Impact
+                    }
                     
                     levels.push({
-                        LevelType: levelType,
-                        LevelValue: levelValue,
-                        LevelName: levelName,
-                        ColorCode: levelColor,
-                        Multiplier: levelValue
+                        LevelType: levelTypeEnum,
+                        LevelValue: levelScore, // Use the configured score instead of original level
+                        LevelName: levelName.trim(),
+                        ColorCode: levelColor.startsWith('#') ? levelColor.substring(1) : levelColor, // Remove # if present
+                        Multiplier: levelScore, // For exposure, this will be the multiplier; for others, same as LevelValue
+                        RiskMatrixId: matrixId // Ensure this is set
                     });
                 });
+                
+                // Final validation
+                if (levels.length === 0) {
+                    showAlert('No valid levels to save. Please check your level configurations.', 'warning');
+                    return;
+                }
 
+                const tokenElement = document.querySelector('#levelsForm input[name="__RequestVerificationToken"]');
+                if (!tokenElement) {
+                    showAlert('Security token not found. Please refresh the page and try again.', 'danger');
+                    return;
+                }
+                const token = tokenElement.value;
+                
                 fetch(`/RiskMatrix/SaveLevels/${matrixId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        'RequestVerificationToken': token
                     },
                     body: JSON.stringify(levels)
                 })
@@ -314,34 +436,92 @@
             // Preview Matrix
             document.getElementById('previewMatrix').addEventListener('click', previewMatrix);
 
-            // Save Risk Thresholds
+            // Add event listener for exposure level selector (if it exists)
+            const exposureSelector = document.getElementById('exposureSelector');
+            if (exposureSelector) {
+                exposureSelector.addEventListener('change', function() {
+                    // Refresh the matrix preview when exposure level changes
+                    previewMatrix();
+                });
+            }
+
+            // Load Current Risk Level Settings
+            async function loadCurrentThresholds() {
+                try {
+                    const response = await fetch('/RiskLevelSettings/GetActiveSettings');
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const settings = await response.json();
+                    
+                    if (settings) {
+                        const mediumElement = document.getElementById('mediumThreshold');
+                        const highElement = document.getElementById('highThreshold');
+                        const criticalElement = document.getElementById('criticalThreshold');
+                        const appetiteElement = document.getElementById('riskAppetiteThreshold');
+                        
+                        if (mediumElement) mediumElement.value = settings.qualitativeMediumThreshold || 4;
+                        if (highElement) highElement.value = settings.qualitativeHighThreshold || 10;
+                        if (criticalElement) criticalElement.value = settings.qualitativeCriticalThreshold || 16;
+                        if (appetiteElement) appetiteElement.value = settings.riskAppetiteThreshold || 6;
+                        
+                        showAlert('Current risk level settings loaded successfully!', 'info');
+                    } else {
+                        showAlert('No risk level settings found. Using default values.', 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error loading current settings:', error);
+                    showAlert('Error loading current settings: ' + error.message, 'warning');
+                }
+            }
+
+            // Save Risk Thresholds to RiskLevelSettings
             document.getElementById('saveThresholds').addEventListener('click', function() {
-                const thresholds = {
-                    lowThreshold: parseInt(document.getElementById('lowThreshold').value),
-                    mediumThreshold: parseInt(document.getElementById('mediumThreshold').value),
-                    highThreshold: parseInt(document.getElementById('highThreshold').value)
+                const mediumElement = document.getElementById('mediumThreshold');
+                const highElement = document.getElementById('highThreshold');
+                const criticalElement = document.getElementById('criticalThreshold');
+                const appetiteElement = document.getElementById('riskAppetiteThreshold');
+                
+                if (!mediumElement || !highElement || !criticalElement || !appetiteElement) {
+                    showAlert('Error: Could not find all threshold input fields. Please refresh the page.', 'danger');
+                    return;
+                }
+                
+                const settings = {
+                    QualitativeMediumThreshold: parseFloat(mediumElement.value) || 4,
+                    QualitativeHighThreshold: parseFloat(highElement.value) || 10,
+                    QualitativeCriticalThreshold: parseFloat(criticalElement.value) || 16,
+                    RiskAppetiteThreshold: parseFloat(appetiteElement.value) || 6
                 };
 
-                fetch(`/RiskMatrix/SaveThresholds/${matrixId}`, {
+                const token = document.querySelector('#thresholdsForm input[name="__RequestVerificationToken"]').value;
+
+                fetch('/RiskLevelSettings/UpdateSettings', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                        'RequestVerificationToken': token
                     },
-                    body: JSON.stringify(thresholds)
+                    body: JSON.stringify(settings)
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showAlert('Risk thresholds saved successfully!', 'success');
+                        showAlert('Risk level settings saved successfully! All assessments will use the new thresholds.', 'success');
+                        // Refresh matrix preview with new thresholds
+                        previewMatrix();
                     } else {
-                        showAlert('Error saving thresholds: ' + data.message, 'danger');
+                        showAlert('Error saving settings: ' + data.message, 'danger');
                     }
                 })
                 .catch(error => {
-                    showAlert('Error saving thresholds: ' + error.message, 'danger');
+                    showAlert('Error saving settings: ' + error.message, 'danger');
                 });
             });
+
+            // Load Current Settings button
+            document.getElementById('loadCurrentThresholds').addEventListener('click', loadCurrentThresholds);
 
             // Reset Levels
             document.getElementById('resetLevels').addEventListener('click', function() {
@@ -353,9 +533,29 @@
             // Preview Matrix Function
             function previewMatrix() {
                 console.log('Starting matrix preview...');
+                const previewDiv = document.getElementById('matrixPreview');
+                
+                if (!previewDiv) {
+                    console.error('Matrix preview container not found');
+                    return;
+                }
+                
+                // Show loading indicator
+                previewDiv.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading matrix preview...</p>
+                    </div>
+                `;
+                
                 fetch(`/RiskMatrix/GetMatrixData/${matrixId}`)
                 .then(response => {
                     console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
                     return response.json();
                 })
                 .then(data => {
@@ -364,12 +564,12 @@
                         renderMatrixPreview(data.matrix, data.levels, data.cells);
                     } else {
                         console.error('API returned error:', data.message);
-                        document.getElementById('matrixPreview').innerHTML = `<div class="alert alert-warning">Error loading matrix data: ${data.message}</div>`;
+                        previewDiv.innerHTML = `<div class="alert alert-warning">Error loading matrix data: ${data.message || 'Unknown error'}</div>`;
                     }
                 })
                 .catch(error => {
                     console.error('Error loading matrix data:', error);
-                    document.getElementById('matrixPreview').innerHTML = `<div class="alert alert-danger">Error loading matrix data: ${error.message}</div>`;
+                    previewDiv.innerHTML = `<div class="alert alert-danger">Error loading matrix data: ${error.message}</div>`;
                 });
             }
 
@@ -404,79 +604,75 @@
                     return;
                 }
                 
-                // Create heatmap-style visualization
+                // Create simplified matrix table structure
                 let html = `
-                    <div class="risk-heatmap-container">
-                        <div class="heatmap-grid">
-                            <!-- Y-axis labels (Impact) -->
-                            <div class="y-axis-label">
-                                <div class="axis-title">Impact</div>
-                                <div class="impact-labels">`;
+                    <div class="matrix-container">
+                        <table class="risk-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th class="corner-cell">Impact \\ Likelihood</th>`;
                 
-                impactLevels.forEach(level => {
-                    html += `<div class="impact-label">${level.levelName}</div>`;
+                // Add likelihood headers
+                likelihoodLevels.forEach(level => {
+                    html += `<th class="likelihood-header">${level.levelName}</th>`;
                 });
                 
                 html += `
-                                </div>
-                            </div>
-                            
-                            <!-- Heatmap cells -->
-                            <div class="heatmap-cells">`;
+                                </tr>
+                            </thead>
+                            <tbody>`;
                 
+                // Get selected exposure level for 3D matrices
+                const selectedExposureLevel = is3D ? 
+                    (document.getElementById('exposureSelector')?.value ? 
+                        parseInt(document.getElementById('exposureSelector').value) : 1) : null;
+                
+                // Create table rows for each impact level
                 impactLevels.forEach(impactLevel => {
-                    html += '<div class="heatmap-row">';
+                    html += `<tr><td class="impact-header">${impactLevel.levelName}</td>`;
                     
                     likelihoodLevels.forEach(likelihoodLevel => {
                         const cell = cells.find(c => 
                             c.impactLevel === impactLevel.levelValue && 
                             c.likelihoodLevel === likelihoodLevel.levelValue && 
-                            (!is3D || c.exposureLevel === 1)
+                            (!is3D || c.exposureLevel === selectedExposureLevel)
                         );
                         
                         if (cell) {
                             const riskLevel = getRiskLevelFromScore(cell.riskScore);
-                            const cellClass = getHeatmapCellClass(riskLevel);
+                            const cellClass = getMatrixCellClass(riskLevel);
+                            const exposureText = is3D ? ` × Exposure Level ${selectedExposureLevel}` : '';
+                            const tooltip = `${impactLevel.levelName} Impact × ${likelihoodLevel.levelName} Likelihood${exposureText} = ${riskLevel} Risk (Score: ${cell.riskScore})`;
+                            
                             html += `
-                                <div class="heatmap-cell ${cellClass}" 
-                                     title="${impactLevel.levelName} Impact × ${likelihoodLevel.levelName} Likelihood = ${riskLevel} Risk (Score: ${cell.riskScore})"
-                                     data-impact="${impactLevel.levelValue}" 
-                                     data-likelihood="${likelihoodLevel.levelValue}"
-                                     data-score="${cell.riskScore}">
-                                    <div class="cell-content">
-                                        <div class="risk-count">${cell.riskScore}</div>
-                                        <div class="risk-level-text">${riskLevel}</div>
-                                    </div>
-                                </div>`;
+                                <td class="matrix-cell ${cellClass}" 
+                                    title="${tooltip}"
+                                    data-impact="${impactLevel.levelValue}" 
+                                    data-likelihood="${likelihoodLevel.levelValue}"
+                                    data-exposure="${selectedExposureLevel || ''}"
+                                    data-score="${cell.riskScore}">
+                                    <div class="cell-score">${cell.riskScore}</div>
+                                    <div class="cell-risk">${riskLevel}</div>
+                                </td>`;
                         } else {
                             html += `
-                                <div class="heatmap-cell cell-none" 
-                                     title="${impactLevel.levelName} Impact × ${likelihoodLevel.levelName} Likelihood = No Data">
-                                    <div class="cell-content">
-                                        <div class="risk-count">-</div>
-                                        <div class="risk-level-text">No Data</div>
-                                    </div>
-                                </div>`;
+                                <td class="matrix-cell matrix-none" 
+                                    title="${impactLevel.levelName} Impact × ${likelihoodLevel.levelName} Likelihood = No Data">
+                                    <div class="cell-score">-</div>
+                                    <div class="cell-risk">No Data</div>
+                                </td>`;
                         }
                     });
-                    html += '</div>';
+                    html += '</tr>';
                 });
                 
                 html += `
-                            </div>
-                        </div>
-                        
-                        <!-- X-axis labels (Likelihood) -->
-                        <div class="x-axis-labels">`;
+                            </tbody>
+                        </table>
+                    </div>`;
                 
-                likelihoodLevels.forEach(level => {
-                    html += `<div class="likelihood-label">${level.levelName}</div>`;
-                });
-                
+                // Add legend
                 html += `
-                        </div>
-                        <div class="x-axis-title">Likelihood</div>
-                    </div>
                     
                     <!-- Legend -->
                     <div class="heatmap-legend mt-3">
@@ -496,7 +692,8 @@
                     </div>`;
                 
                 if (is3D) {
-                    html += '<p class="text-muted mt-2"><small><i class="fas fa-info-circle me-1"></i>This preview shows the base 2D matrix. The 3D matrix includes exposure levels as multipliers.</small></p>';
+                    const exposureLevelName = levels.find(l => l.levelType === 'Exposure' && l.levelValue === selectedExposureLevel)?.levelName || `Level ${selectedExposureLevel}`;
+                    html += `<p class="text-muted mt-2"><small><i class="fas fa-info-circle me-1"></i>This preview shows the 3D matrix using exposure level: <strong>${exposureLevelName}</strong>. Use the selector above to view different exposure levels.</small></p>`;
                 }
                 
                 previewDiv.innerHTML = html;
@@ -504,14 +701,19 @@
 
             // Helper Functions
             function getRiskLevelFromScore(score) {
-                const low = parseInt(document.getElementById('lowThreshold').value);
-                const medium = parseInt(document.getElementById('mediumThreshold').value);
-                const high = parseInt(document.getElementById('highThreshold').value);
+                const mediumElement = document.getElementById('mediumThreshold');
+                const highElement = document.getElementById('highThreshold');
+                const criticalElement = document.getElementById('criticalThreshold');
                 
-                if (score <= low) return 'Low';
-                if (score <= medium) return 'Medium';
-                if (score <= high) return 'High';
-                return 'Critical';
+                // Use default values if elements don't exist or are null
+                const medium = mediumElement ? parseFloat(mediumElement.value) : 4;
+                const high = highElement ? parseFloat(highElement.value) : 10;
+                const critical = criticalElement ? parseFloat(criticalElement.value) : 16;
+                
+                if (score >= critical) return 'Critical';
+                if (score >= high) return 'High';
+                if (score >= medium) return 'Medium';
+                return 'Low';
             }
 
             function getRiskLevelColor(level) {
@@ -531,6 +733,16 @@
                     case 'Medium': return 'cell-medium';
                     case 'Low': return 'cell-low';
                     default: return 'cell-none';
+                }
+            }
+
+            function getMatrixCellClass(riskLevel) {
+                switch (riskLevel) {
+                    case 'Critical': return 'matrix-critical';
+                    case 'High': return 'matrix-high';
+                    case 'Medium': return 'matrix-medium';
+                    case 'Low': return 'matrix-low';
+                    default: return 'matrix-none';
                 }
             }
 
@@ -673,13 +885,15 @@
                 }, 5000);
             }
 
-            // Auto-update critical threshold
-            document.getElementById('highThreshold').addEventListener('change', function() {
-                document.getElementById('criticalThreshold').value = this.value;
+            // Load current settings and then preview matrix
+            loadCurrentThresholds().then(() => {
+                // Wait a bit for the DOM to update, then preview
+                setTimeout(previewMatrix, 100);
+            }).catch(() => {
+                // If loading settings fails, still try to preview with defaults
+                console.warn('Failed to load current settings, using defaults');
+                previewMatrix();
             });
-
-            // Initial matrix preview
-            previewMatrix();
         });
     </script>
 
@@ -696,7 +910,123 @@
             height: 38px;
         }
 
-        /* Risk Heatmap Styles */
+        /* Matrix Table Styles */
+        .matrix-container {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .risk-matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            table-layout: fixed;
+        }
+
+        .risk-matrix-table th,
+        .risk-matrix-table td {
+            border: 2px solid #ffffff;
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .corner-cell {
+            background: #6c757d;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85rem;
+            width: 80px;
+            max-width: 80px;
+            min-width: 80px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 4px 8px;
+        }
+
+        .likelihood-header {
+            background: #e9ecef;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #495057;
+            min-width: 100px;
+        }
+
+        .impact-header {
+            background: #e9ecef;
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #495057;
+            width: 80px;
+            max-width: 80px;
+            min-width: 80px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 4px 8px;
+        }
+
+        .matrix-cell {
+            width: 100px;
+            height: 70px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .matrix-cell:hover {
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .cell-score {
+            font-size: 1.4rem;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .cell-risk {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
+        }
+
+        /* Risk Level Colors for Table */
+        .matrix-critical {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+
+        .matrix-high {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
+        }
+
+        .matrix-medium {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+        }
+
+        .matrix-low {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+        }
+
+        .matrix-none {
+            background: linear-gradient(135deg, #6c757d, #545b62);
+            color: white;
+        }
+
+        /* Risk Heatmap Styles (Fallback) */
         .risk-heatmap-container {
             display: flex;
             flex-direction: column;
@@ -710,6 +1040,7 @@
             display: flex;
             align-items: flex-start;
             gap: 10px;
+            margin-bottom: 10px;
         }
 
         .y-axis-label {
@@ -717,6 +1048,7 @@
             flex-direction: column;
             align-items: center;
             margin-right: 10px;
+            justify-content: flex-start;
         }
 
         .axis-title {
@@ -725,14 +1057,18 @@
             font-weight: bold;
             font-size: 0.9rem;
             color: #495057;
-            margin-bottom: 20px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .impact-labels {
             display: flex;
             flex-direction: column-reverse;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 2px;
+            align-items: flex-end;
+            margin-top: 0px;
         }
 
         .impact-label {
@@ -746,17 +1082,20 @@
             min-width: 60px;
             text-align: right;
             padding-right: 5px;
+            margin: 1px 0;
         }
 
         .heatmap-cells {
             display: flex;
             flex-direction: column;
             gap: 2px;
+            align-items: flex-start;
         }
 
         .heatmap-row {
             display: flex;
             gap: 2px;
+            margin: 1px 0;
         }
 
         .heatmap-cell {
@@ -829,6 +1168,7 @@
             gap: 2px;
             margin-top: 10px;
             margin-left: 80px;
+            align-items: flex-start;
         }
 
         .likelihood-label {
@@ -885,6 +1225,19 @@
             .heatmap-cell {
                 width: 60px;
                 height: 45px;
+            }
+            
+            .impact-label {
+                height: 45px;
+                min-width: 40px;
+            }
+            
+            .axis-title {
+                height: 40px;
+            }
+            
+            .impact-labels {
+                margin-top: 0px;
             }
             
             .risk-count {

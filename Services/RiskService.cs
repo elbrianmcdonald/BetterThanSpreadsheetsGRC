@@ -143,19 +143,7 @@ namespace CyberRiskApp.Services
             }
         }
 
-        public async Task<decimal> GetTotalALEAsync()
-        {
-            try
-            {
-                return await _context.Risks
-                    .Where(r => r.Status == RiskStatus.Open)
-                    .SumAsync(r => r.ALE);
-            }
-            catch
-            {
-                return 0;
-            }
-        }
+        // GetTotalALEAsync method removed - ALE functionality deprecated in favor of qualitative risk assessment
 
         public async Task<Dictionary<string, int>> GetRiskSummaryAsync()
         {

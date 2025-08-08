@@ -260,5 +260,69 @@ namespace CyberRiskApp.Controllers
 
             return Json(sampleData);
         }
+
+        // GET: RiskLevelSettings/GetActiveSettings (API endpoint for AJAX)
+        [HttpGet]
+        public async Task<IActionResult> GetActiveSettings()
+        {
+            try
+            {
+                var settings = await _settingsService.GetActiveSettingsAsync();
+                if (settings == null)
+                {
+                    return NotFound();
+                }
+                
+                return Json(settings);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        // POST: RiskLevelSettings/UpdateSettings (API endpoint for AJAX)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateSettings([FromBody] RiskLevelSettingsUpdateModel model)
+        {
+            try
+            {
+                var currentSettings = await _settingsService.GetActiveSettingsAsync();
+                if (currentSettings == null)
+                {
+                    return Json(new { success = false, message = "No active settings found." });
+                }
+
+                // Update only the qualitative thresholds and risk appetite
+                currentSettings.QualitativeMediumThreshold = model.QualitativeMediumThreshold;
+                currentSettings.QualitativeHighThreshold = model.QualitativeHighThreshold;
+                currentSettings.QualitativeCriticalThreshold = model.QualitativeCriticalThreshold;
+                currentSettings.RiskAppetiteThreshold = model.RiskAppetiteThreshold;
+                currentSettings.LastModifiedBy = User.Identity?.Name ?? "System";
+                currentSettings.LastModifiedDate = DateTime.UtcNow;
+
+                await _settingsService.UpdateSettingsAsync(currentSettings);
+
+                return Json(new { success = true, message = "Risk level settings updated successfully!" });
+            }
+            catch (ArgumentException ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "An error occurred while updating settings: " + ex.Message });
+            }
+        }
+    }
+
+    // DTO for updating risk level settings via AJAX
+    public class RiskLevelSettingsUpdateModel
+    {
+        public decimal QualitativeMediumThreshold { get; set; }
+        public decimal QualitativeHighThreshold { get; set; }
+        public decimal QualitativeCriticalThreshold { get; set; }
+        public decimal RiskAppetiteThreshold { get; set; }
     }
 }

@@ -252,21 +252,51 @@ namespace CyberRiskApp.Controllers
 
         // POST: RiskMatrix/SaveLevels/5
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveLevels(int id, [FromBody] List<RiskMatrixLevel> levels)
         {
             try
             {
+                // Validate input
+                if (levels == null || !levels.Any())
+                {
+                    return Json(new { success = false, message = "No level data provided" });
+                }
+
+                // Verify matrix exists
+                var matrix = await _riskMatrixService.GetMatrixByIdAsync(id);
+                if (matrix == null)
+                {
+                    return Json(new { success = false, message = $"Risk matrix with ID {id} not found" });
+                }
+
+                // Validate and prepare levels
                 foreach (var level in levels)
                 {
                     level.RiskMatrixId = id;
+                    level.Id = 0; // Ensure new entity
+                    
+                    // Validate required fields
+                    if (string.IsNullOrWhiteSpace(level.LevelName))
+                    {
+                        return Json(new { success = false, message = "Level name is required for all levels" });
+                    }
+
+                    // Ensure multiplier has a value
+                    if (level.Multiplier == null)
+                    {
+                        level.Multiplier = level.LevelValue;
+                    }
                 }
                 
                 await _riskMatrixService.SaveLevelsAsync(id, levels);
-                return Json(new { success = true });
+                return Json(new { success = true, message = $"Successfully saved {levels.Count} levels" });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = ex.Message });
+                // Log the full exception for debugging
+                Console.WriteLine($"Error saving levels: {ex}");
+                return Json(new { success = false, message = $"Error saving levels: {ex.Message}" });
             }
         }
 

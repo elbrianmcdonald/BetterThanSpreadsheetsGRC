@@ -338,6 +338,173 @@ namespace CyberRiskApp.Controllers.Api
                     seededCount++;
                 }
 
+                // Protective Controls (for threat frequency reduction)
+                var protectiveControls = new[]
+                {
+                    ("Network Firewall", "Perimeter firewall blocking unauthorized network access"),
+                    ("Email Security Gateway", "Email filtering and anti-phishing protection"),
+                    ("Web Application Firewall", "Application-layer filtering and protection"),
+                    ("Access Controls", "User authentication and authorization systems"),
+                    ("Network Segmentation", "Isolated network zones and micro-segmentation"),
+                    ("Security Awareness Training", "Employee cybersecurity education programs"),
+                    ("Endpoint Protection", "Antivirus and endpoint detection/response"),
+                    ("Vulnerability Management", "Regular vulnerability scanning and patching"),
+                    ("Privileged Access Management", "Elevated access controls and monitoring"),
+                    ("Data Loss Prevention", "Outbound data monitoring and blocking"),
+                    ("Multi-Factor Authentication", "Additional authentication factor requirements"),
+                    ("VPN Access Controls", "Secure remote access restrictions"),
+                    ("Physical Security Controls", "Facility access controls and monitoring"),
+                    ("Supply Chain Security", "Third-party vendor security requirements"),
+                    ("Configuration Management", "Secure system configuration standards")
+                };
+
+                foreach (var (value, description) in protectiveControls)
+                {
+                    var model = new CreateReferenceDataViewModel
+                    {
+                        Category = ReferenceDataCategory.ProtectiveControl,
+                        Value = value,
+                        Description = description
+                    };
+                    await _referenceDataService.CreateAsync(model, userId);
+                    seededCount++;
+                }
+
+                // Detective Controls (for vulnerability reduction through detection)
+                var detectiveControls = new[]
+                {
+                    ("Security Information Event Management (SIEM)", "Centralized log analysis and correlation for fast attack detection"),
+                    ("Intrusion Detection System", "Network-based attack detection and alerting"),
+                    ("Host-Based Intrusion Detection", "Endpoint-based threat detection and response"),
+                    ("Security Operations Center (SOC)", "24/7 security monitoring and rapid incident response"),
+                    ("Network Traffic Analysis", "Real-time behavioral analysis of network communications"),
+                    ("User Behavior Analytics", "AI-driven anomalous user activity detection"),
+                    ("File Integrity Monitoring", "Real-time critical file and system change detection"),
+                    ("Database Activity Monitoring", "Real-time database access and query monitoring"),
+                    ("Endpoint Detection and Response (EDR)", "Advanced endpoint threat detection and response"),
+                    ("Threat Intelligence Feeds", "Real-time external threat indicator integration"),
+                    ("Deception Technology", "Honeypots and decoy systems for early attack detection"),
+                    ("Cloud Security Monitoring", "Multi-cloud environment threat detection"),
+                    ("Application Performance Monitoring", "Application security and attack detection"),
+                    ("Security Orchestration (SOAR)", "Automated threat detection and response coordination"),
+                    ("Continuous Security Assessment", "Ongoing vulnerability and threat detection")
+                };
+
+                foreach (var (value, description) in detectiveControls)
+                {
+                    var model = new CreateReferenceDataViewModel
+                    {
+                        Category = ReferenceDataCategory.DetectiveControl,
+                        Value = value,
+                        Description = description
+                    };
+                    await _referenceDataService.CreateAsync(model, userId);
+                    seededCount++;
+                }
+
+                // Response Controls (for loss magnitude reduction)
+                var responseControls = new[]
+                {
+                    ("Incident Response Plan", "Structured incident response procedures to minimize impact"),
+                    ("Data Backup and Recovery", "Regular backups and fast recovery capabilities"),
+                    ("Business Continuity Plan", "Procedures to maintain operations during incidents"),
+                    ("Disaster Recovery Plan", "IT system recovery and restoration procedures"),
+                    ("Cybersecurity Insurance", "Financial protection against cyber losses"),
+                    ("Communication Crisis Plan", "Stakeholder communication during security incidents"),
+                    ("Legal Response Team", "Legal expertise for breach notification and compliance"),
+                    ("Forensic Investigation Capability", "Digital forensics and evidence collection"),
+                    ("Public Relations Response", "Reputation management during security incidents"),
+                    ("Vendor/Supplier Notification", "Third-party communication and coordination"),
+                    ("Customer Notification System", "Rapid customer communication capabilities"),
+                    ("Regulatory Compliance Response", "Meeting regulatory notification requirements"),
+                    ("Data Loss Minimization", "Procedures to limit data exposure during breaches"),
+                    ("System Isolation Procedures", "Rapid containment of compromised systems"),
+                    ("Alternative Processing Capabilities", "Backup systems and workaround procedures")
+                };
+
+                foreach (var (value, description) in detectiveControls)
+                {
+                    var model = new CreateReferenceDataViewModel
+                    {
+                        Category = ReferenceDataCategory.DetectiveControl,
+                        Value = value,
+                        Description = description
+                    };
+                    await _referenceDataService.CreateAsync(model, userId);
+                    seededCount++;
+                }
+
+                foreach (var (value, description) in responseControls)
+                {
+                    var model = new CreateReferenceDataViewModel
+                    {
+                        Category = ReferenceDataCategory.ResponseControl,
+                        Value = value,
+                        Description = description
+                    };
+                    await _referenceDataService.CreateAsync(model, userId);
+                    seededCount++;
+                }
+
+                // Threat Communities
+                var threatCommunities = new[]
+                {
+                    ("External Hackers", "Malicious actors outside the organization"),
+                    ("Nation-State Actors", "Government-sponsored advanced persistent threats"),
+                    ("Cybercriminals", "Financially motivated threat actors"),
+                    ("Hacktivists", "Ideologically motivated threat actors"),
+                    ("Insider Threats", "Malicious or negligent employees and contractors"),
+                    ("Competitors", "Business competitors seeking advantage"),
+                    ("Organized Crime", "Criminal organizations conducting cyber operations"),
+                    ("Script Kiddies", "Inexperienced attackers using existing tools"),
+                    ("Terrorist Organizations", "Groups using cyber means for terrorist activities"),
+                    ("State-Sponsored Groups", "Government-backed cyber espionage groups")
+                };
+
+                foreach (var (value, description) in threatCommunities)
+                {
+                    var model = new CreateReferenceDataViewModel
+                    {
+                        Category = ReferenceDataCategory.ThreatCommunity,
+                        Value = value,
+                        Description = description
+                    };
+                    await _referenceDataService.CreateAsync(model, userId);
+                    seededCount++;
+                }
+
+                // Threat Actions
+                var threatActions = new[]
+                {
+                    ("Phishing", "Deceptive emails designed to steal credentials or install malware"),
+                    ("Malware Deployment", "Installation of malicious software on target systems"),
+                    ("Data Exfiltration", "Unauthorized extraction of sensitive information"),
+                    ("System Intrusion", "Unauthorized access to computer systems"),
+                    ("Denial of Service", "Attacks designed to disrupt system availability"),
+                    ("Credential Theft", "Stealing usernames, passwords, and authentication tokens"),
+                    ("Social Engineering", "Manipulating people to divulge information or perform actions"),
+                    ("SQL Injection", "Exploiting database vulnerabilities through malicious queries"),
+                    ("Ransomware", "Encrypting data and demanding payment for decryption"),
+                    ("Man-in-the-Middle", "Intercepting communications between two parties"),
+                    ("Zero-Day Exploits", "Attacks using previously unknown vulnerabilities"),
+                    ("Privilege Escalation", "Gaining higher level access than initially granted"),
+                    ("Lateral Movement", "Moving through network after initial compromise"),
+                    ("Data Manipulation", "Unauthorized modification of data integrity"),
+                    ("Website Defacement", "Unauthorized modification of web content")
+                };
+
+                foreach (var (value, description) in threatActions)
+                {
+                    var model = new CreateReferenceDataViewModel
+                    {
+                        Category = ReferenceDataCategory.ThreatAction,
+                        Value = value,
+                        Description = description
+                    };
+                    await _referenceDataService.CreateAsync(model, userId);
+                    seededCount++;
+                }
+
                 return Ok(new { message = $"Successfully seeded {seededCount} reference data entries" });
             }
             catch (Exception ex)

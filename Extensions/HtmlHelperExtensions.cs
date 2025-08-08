@@ -192,5 +192,43 @@ namespace CyberRiskApp.Extensions
                 required,
                 htmlAttributes);
         }
+
+        /// <summary>
+        /// Renders a smart combobox for protective control selection
+        /// </summary>
+        public static IHtmlContent ProtectiveControlComboboxFor<TModel, TProperty>(
+            this IHtmlHelper<TModel> htmlHelper,
+            Expression<Func<TModel, TProperty>> expression,
+            bool canAddNew = false,
+            bool required = false,
+            object? htmlAttributes = null)
+        {
+            return htmlHelper.SmartComboboxFor(
+                expression,
+                ReferenceDataCategory.ProtectiveControl,
+                canAddNew,
+                "Type to search for protective controls...",
+                required,
+                htmlAttributes);
+        }
+
+        /// <summary>
+        /// Renders a smart combobox for detective control selection
+        /// </summary>
+        public static IHtmlContent DetectiveControlComboboxFor<TModel, TProperty>(
+            this IHtmlHelper<TModel> htmlHelper,
+            Expression<Func<TModel, TProperty>> expression,
+            bool canAddNew = false,
+            bool required = false,
+            object? htmlAttributes = null)
+        {
+            return htmlHelper.SmartComboboxFor(
+                expression,
+                ReferenceDataCategory.DetectiveControl,
+                canAddNew,
+                "Type to search for detective controls...",
+                required,
+                htmlAttributes);
+        }
     }
 }

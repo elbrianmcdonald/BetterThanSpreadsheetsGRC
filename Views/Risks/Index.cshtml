@@ -26,76 +26,113 @@
             </h5>
         </div>
         <div class="card-body">
-            <div class="risk-heatmap-container">
-                <div class="heatmap-grid">
-                    <!-- Y-axis labels (Impact) -->
-                    <div class="y-axis-label">
-                        <div class="axis-title">Impact</div>
-                        <div class="impact-labels">
-                            <div class="impact-label">Critical</div>
-                            <div class="impact-label">High</div>
-                            <div class="impact-label">Medium</div>
-                            <div class="impact-label">Low</div>
+            <div class="risk-heatmap-wrapper">
+                <h6 class="text-center mb-3">Risk Matrix - Current Risk Distribution</h6>
+                
+                <!-- Main Heatmap Container -->
+                <div class="heatmap-container">
+                    <!-- Matrix and Labels Container -->
+                    <div class="matrix-main-container">
+                        <!-- Y-Axis Label -->
+                        <div class="y-axis-container">
+                            <div class="y-axis-title">IMPACT</div>
+                        </div>
+                        
+                        <!-- Y-Axis Labels and Grid -->
+                        <div class="matrix-wrapper">
+                        <!-- Impact Labels (Left side) -->
+                        <div class="impact-axis">
+                            <div class="impact-level">Critical (4)</div>
+                            <div class="impact-level">High (3)</div>
+                            <div class="impact-level">Medium (2)</div>
+                            <div class="impact-level">Low (1)</div>
+                        </div>
+                        
+                        <!-- Matrix Grid -->
+                        <div class="matrix-grid">
+                            @{
+                                var heatmapData = GetHeatmapData(Model.FilteredRisks);
+                                var impactLevels = new[] { 4, 3, 2, 1 }; // Critical to Low
+                                var likelihoodLevels = new[] { 1, 2, 3, 4 }; // Unlikely to Almost Certain
+                            }
+                            
+                            @foreach (var impact in impactLevels)
+                            {
+                                <div class="matrix-row">
+                                    @foreach (var likelihood in likelihoodLevels)
+                                    {
+                                        var cellKey = $"{impact}-{likelihood}";
+                                        var riskCount = heatmapData.ContainsKey(cellKey) ? heatmapData[cellKey].Count : 0;
+                                        var riskScore = impact * likelihood;
+                                        var riskLevel = GetHeatmapRiskLevel(impact, likelihood);
+                                        var cellClass = GetMatrixCellClass(riskScore);
+                                        
+                                        <div class="matrix-cell @cellClass" 
+                                             data-bs-toggle="tooltip"
+                                             data-bs-placement="top"
+                                             title="@GetImpactText(impact) × @GetLikelihoodText(likelihood)&#013;Risk Score: @riskScore&#013;@riskCount risk(s)"
+                                             data-impact="@impact" 
+                                             data-likelihood="@likelihood">
+                                            <div class="cell-score">@riskScore</div>
+                                            @if (riskCount > 0)
+                                            {
+                                                <div class="cell-count">
+                                                    <span class="badge bg-dark">@riskCount</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
-
-                    <!-- Heatmap cells -->
-                    <div class="heatmap-cells">
-                        @{
-                            var heatmapData = GetHeatmapData(Model.FilteredRisks);
-                        }
-                        
-                        @for (int impact = 4; impact >= 1; impact--) // Critical to Low
-                        {
-                            <div class="heatmap-row">
-                                @for (int likelihood = 1; likelihood <= 4; likelihood++) // Unlikely to Almost Certain
-                                {
-                                    var cellKey = $"{impact}-{likelihood}";
-                                    var riskCount = heatmapData.ContainsKey(cellKey) ? heatmapData[cellKey].Count : 0;
-                                    var riskLevel = GetHeatmapRiskLevel(impact, likelihood);
-                                    var cellClass = GetHeatmapCellClass(riskLevel);
-                                    
-                                    <div class="heatmap-cell @cellClass" 
-                                         title="@GetImpactText(impact) Impact × @GetLikelihoodText(likelihood) Likelihood: @riskCount risks"
-                                         data-impact="@impact" 
-                                         data-likelihood="@likelihood"
-                                         data-count="@riskCount">
-                                        <div class="cell-content">
-                                            <div class="risk-count">@riskCount</div>
-                                            <div class="risk-level-text">@riskLevel</div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
+                    </div>
+                    
+                    <!-- X-Axis Labels -->
+                    <div class="likelihood-axis">
+                        <div class="likelihood-level">Unlikely<br/>(1)</div>
+                        <div class="likelihood-level">Possible<br/>(2)</div>
+                        <div class="likelihood-level">Likely<br/>(3)</div>
+                        <div class="likelihood-level">Almost Certain<br/>(4)</div>
+                    </div>
+                    
+                    <!-- X-Axis Label -->
+                    <div class="x-axis-container">
+                        <div class="x-axis-title">LIKELIHOOD</div>
                     </div>
                 </div>
 
-                <!-- X-axis labels (Likelihood) -->
-                <div class="x-axis-labels">
-                    <div class="likelihood-label">Unlikely</div>
-                    <div class="likelihood-label">Possible</div>
-                    <div class="likelihood-label">Likely</div>
-                    <div class="likelihood-label">Almost Certain</div>
+                <!-- Risk Level Legend -->
+                <div class="risk-legend mt-4">
+                    <div class="legend-title">Risk Levels:</div>
+                    <div class="legend-items">
+                        @{
+                            var criticalMin = Model.RiskLevelSettings?.QualitativeCriticalThreshold ?? 12;
+                            var highMin = Model.RiskLevelSettings?.QualitativeHighThreshold ?? 8;
+                            var mediumMin = Model.RiskLevelSettings?.QualitativeMediumThreshold ?? 4;
+                            var criticalMax = 16;
+                            var highMax = criticalMin - 1;
+                            var mediumMax = highMin - 1;
+                            var lowMax = mediumMin - 1;
+                        }
+                        <div class="legend-item">
+                            <div class="legend-box critical"></div>
+                            <span>Critical (@criticalMin-@criticalMax)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-box high"></div>
+                            <span>High (@highMin-@highMax)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-box medium"></div>
+                            <span>Medium (@mediumMin-@mediumMax)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-box low"></div>
+                            <span>Low (1-@lowMax)</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="x-axis-title">Likelihood</div>
-            </div>
-
-            <!-- Legend -->
-            <div class="heatmap-legend mt-3">
-                <strong>Risk Level Legend:</strong>
-                <span class="legend-item">
-                    <span class="legend-color bg-success"></span> Low
-                </span>
-                <span class="legend-item">
-                    <span class="legend-color bg-info"></span> Medium
-                </span>
-                <span class="legend-item">
-                    <span class="legend-color bg-warning"></span> High
-                </span>
-                <span class="legend-item">
-                    <span class="legend-color bg-danger"></span> Critical
-                </span>
             </div>
         </div>
     </div>
@@ -172,7 +209,7 @@
                             </select>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <label class="form-label">Inherent Risk Level</label>
+                            <label class="form-label">Current Risk Level</label>
                             <select asp-for="InherentRiskLevel" asp-items="Model.InherentRiskLevelOptions" class="form-select">
                                 <option value="">All Levels</option>
                             </select>
@@ -186,7 +223,7 @@
                     </div>
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <label class="form-label">Residual Risk</label>
+                            <label class="form-label">Risk After Treatment</label>
                             <select asp-for="ResidualRisk" asp-items="Model.ResidualRiskOptions" class="form-select">
                                 <option value="">All Levels</option>
                             </select>
@@ -253,9 +290,9 @@
                                 <th>Impact</th>
                                 <th>Likelihood</th>
                                 <th>Exposure</th>
-                                <th>Inherent Risk</th>
+                                <th>Current Risk</th>
                                 <th>Treatment</th>
-                                <th>Residual Risk</th>
+                                <th>Risk After Treatment</th>
                                 <th>Date Opened</th>
                                 <th>Last Reviewed</th>
                                 <th>Status</th>
@@ -525,6 +562,19 @@
     {
         var riskScore = impact * likelihood;
         
+        // Use actual configured thresholds from risk level settings
+        if (Model.RiskLevelSettings != null)
+        {
+            if (riskScore >= Model.RiskLevelSettings.QualitativeCriticalThreshold)
+                return "Critical";
+            if (riskScore >= Model.RiskLevelSettings.QualitativeHighThreshold)
+                return "High";
+            if (riskScore >= Model.RiskLevelSettings.QualitativeMediumThreshold)
+                return "Medium";
+            return "Low";
+        }
+        
+        // Fallback to default thresholds if settings are not available
         return riskScore switch
         {
             >= 12 => "Critical",
@@ -543,6 +593,30 @@
             "Medium" => "cell-medium",
             "Low" => "cell-low",
             _ => "cell-none"
+        };
+    }
+    
+    private string GetMatrixCellClass(int riskScore)
+    {
+        // Use actual configured thresholds from risk level settings
+        if (Model.RiskLevelSettings != null)
+        {
+            if (riskScore >= Model.RiskLevelSettings.QualitativeCriticalThreshold)
+                return "risk-critical";
+            if (riskScore >= Model.RiskLevelSettings.QualitativeHighThreshold)
+                return "risk-high";
+            if (riskScore >= Model.RiskLevelSettings.QualitativeMediumThreshold)
+                return "risk-medium";
+            return "risk-low";
+        }
+        
+        // Fallback to default thresholds if settings are not available
+        return riskScore switch
+        {
+            >= 12 => "risk-critical",
+            >= 8 => "risk-high",
+            >= 4 => "risk-medium",
+            _ => "risk-low"
         };
     }
 
@@ -572,215 +646,279 @@
 }
 
 <style>
-    /* Risk Heatmap Styles */
-    .risk-heatmap-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+    /* New Risk Heatmap Styles */
+    .risk-heatmap-wrapper {
         padding: 20px;
-        background: #f8f9fa;
+        background: #ffffff;
         border-radius: 8px;
     }
 
-    .heatmap-grid {
+    .heatmap-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .matrix-main-container {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .matrix-wrapper {
         display: flex;
         align-items: flex-start;
         gap: 10px;
     }
 
-    .y-axis-label {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-right: 10px;
-    }
-
-    .axis-title {
-        writing-mode: vertical-lr;
-        text-orientation: mixed;
-        font-weight: bold;
-        font-size: 0.9rem;
-        color: #495057;
-        margin-bottom: 20px;
-    }
-
-    .impact-labels {
-        display: flex;
-        flex-direction: column-reverse;
-        gap: 8px;
-        margin-top: 10px;
-    }
-
-    .impact-label {
-        height: 70px;
-        display: flex;
-        align-items: center;
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: #495057;
-        writing-mode: horizontal-tb;
-        min-width: 60px;
-        text-align: right;
-        padding-right: 5px;
-    }
-
-    .heatmap-cells {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-
-    .heatmap-row {
-        display: flex;
-        gap: 2px;
-    }
-
-    .heatmap-cell {
-        width: 100px;
-        height: 70px;
-        border: 2px solid #fff;
-        border-radius: 6px;
+    /* Y-Axis Styling */
+    .y-axis-container {
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        position: relative;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-right: 15px;
+        height: 100%;
     }
 
-    .heatmap-cell:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        z-index: 10;
+    .y-axis-title {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        font-weight: 700;
+        font-size: 14px;
+        color: #495057;
+        letter-spacing: 2px;
+        text-transform: uppercase;
     }
 
-    .cell-content {
-        text-align: center;
-        color: white;
-        font-weight: bold;
+    /* Impact Axis Labels */
+    .impact-axis {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        min-width: 100px;
+        padding-right: 10px;
+        padding-top: 2px;
     }
 
-    .risk-count {
-        font-size: 1.5rem;
-        line-height: 1;
+    .impact-level {
+        height: 82px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        font-size: 13px;
+        font-weight: 600;
+        color: #495057;
         margin-bottom: 2px;
     }
 
-    .risk-level-text {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        opacity: 0.9;
+    .impact-level:last-child {
+        margin-bottom: 0;
     }
 
-    /* Risk level color coding */
-    .cell-critical {
-        background: linear-gradient(135deg, #dc3545, #c82333);
+    /* Matrix Grid */
+    .matrix-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        background: #dee2e6;
+        padding: 2px;
+        border-radius: 4px;
     }
 
-    .cell-high {
-        background: linear-gradient(135deg, #ffc107, #e0a800);
-        color: #212529 !important;
-    }
-
-    .cell-high .cell-content {
-        color: #212529 !important;
-    }
-
-    .cell-medium {
-        background: linear-gradient(135deg, #17a2b8, #138496);
-    }
-
-    .cell-low {
-        background: linear-gradient(135deg, #28a745, #1e7e34);
-    }
-
-    .cell-none {
-        background: linear-gradient(135deg, #6c757d, #545b62);
-    }
-
-    .x-axis-labels {
+    .matrix-row {
         display: flex;
         gap: 2px;
-        margin-top: 10px;
-        margin-left: 80px;
     }
 
-    .likelihood-label {
-        width: 100px;
+    .matrix-cell {
+        width: 80px;
+        height: 80px;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        border: 1px solid transparent;
+    }
+
+    .matrix-cell:hover {
+        transform: scale(1.08);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        z-index: 10;
+        border: 2px solid #0056b3;
+    }
+
+    .cell-score {
+        font-size: 24px;
+        font-weight: 700;
+        color: white;
+        line-height: 1;
+    }
+
+    .cell-count {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+    }
+
+    .cell-count .badge {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
+
+    /* Risk Level Colors */
+    .risk-critical {
+        background: #dc3545;
+    }
+
+    .risk-high {
+        background: #fd7e14;
+    }
+
+    .risk-medium {
+        background: #ffc107;
+        color: #212529 !important;
+    }
+
+    .risk-medium .cell-score {
+        color: #212529 !important;
+    }
+
+    .risk-low {
+        background: #28a745;
+    }
+
+    /* Likelihood Axis */
+    .likelihood-axis {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 328px;
+        margin-top: 10px;
+        padding: 0 2px;
+    }
+
+    .likelihood-level {
+        width: 80px;
         text-align: center;
-        font-size: 0.8rem;
-        font-weight: 500;
+        font-size: 12px;
+        font-weight: 600;
         color: #495057;
-        padding: 5px;
+        line-height: 1.2;
+    }
+
+    /* X-Axis Title */
+    .x-axis-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 10px;
     }
 
     .x-axis-title {
-        text-align: center;
-        font-weight: bold;
-        font-size: 0.9rem;
+        font-weight: 700;
+        font-size: 14px;
         color: #495057;
-        margin-top: 10px;
-        margin-left: 80px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
     }
 
-    /* Legend */
-    .heatmap-legend {
+    /* Risk Legend */
+    .risk-legend {
         display: flex;
         align-items: center;
+        justify-content: center;
+        gap: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+
+    .legend-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #495057;
+    }
+
+    .legend-items {
+        display: flex;
         gap: 20px;
         flex-wrap: wrap;
-        justify-content: center;
-        padding: 15px;
-        background: white;
-        border-radius: 6px;
-        border: 1px solid #dee2e6;
     }
 
     .legend-item {
         display: flex;
         align-items: center;
-        gap: 5px;
-        font-size: 0.85rem;
+        gap: 8px;
+        font-size: 13px;
+        color: #495057;
     }
 
-    .legend-color {
-        width: 20px;
-        height: 20px;
-        border-radius: 3px;
+    .legend-box {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
         border: 1px solid rgba(0,0,0,0.1);
     }
 
-    /* Responsive design */
+    .legend-box.critical {
+        background: #dc3545;
+    }
+
+    .legend-box.high {
+        background: #fd7e14;
+    }
+
+    .legend-box.medium {
+        background: #ffc107;
+    }
+
+    .legend-box.low {
+        background: #28a745;
+    }
+
+    /* Responsive Design */
     @@media (max-width: 768px) {
-        .risk-heatmap-container {
-            padding: 10px;
-        }
-        
-        .heatmap-cell {
+        .matrix-cell {
             width: 60px;
-            height: 45px;
+            height: 60px;
         }
         
-        .risk-count {
-            font-size: 1.1rem;
+        .cell-score {
+            font-size: 18px;
         }
         
-        .risk-level-text {
-            font-size: 0.6rem;
+        .impact-level {
+            height: 60px;
+            font-size: 11px;
+            min-width: 70px;
         }
         
-        .impact-label, .likelihood-label {
-            font-size: 0.7rem;
-        }
-        
-        .x-axis-labels, .x-axis-title {
-            margin-left: 50px;
-        }
-        
-        .likelihood-label {
+        .likelihood-level {
             width: 60px;
+            font-size: 10px;
+        }
+        
+        .y-axis-title, .x-axis-title {
+            font-size: 12px;
+        }
+        
+        .legend-items {
+            gap: 10px;
+        }
+        
+        .legend-item {
+            font-size: 11px;
+        }
+        
+        .legend-box {
+            width: 18px;
+            height: 18px;
         }
     }
 

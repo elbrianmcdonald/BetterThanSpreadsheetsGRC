@@ -22,7 +22,32 @@
                 </div>
             }
 
-            <div class="row">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-tools me-2"></i>Fix Foreign Key Constraints
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Fix the foreign key constraint issue that's preventing database saves:</p>
+                            <ul class="small">
+                                <li>Drop incorrect <code>FK_Risks_ThreatScenarios_RiskAssessmentId</code> constraint</li>
+                                <li>Add correct <code>FK_Risks_ThreatScenarios_ThreatScenarioId</code> constraint</li>
+                                <li>Create missing index <code>IX_Risks_ThreatScenarioId</code></li>
+                                <li>Mark problematic migration as applied</li>
+                            </ul>
+                            
+                            <form asp-action="FixForeignKeyConstraints" method="post">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to fix the foreign key constraints?')">
+                                    <i class="fas fa-tools me-2"></i>Fix Constraints
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header bg-warning text-dark">
@@ -51,7 +76,9 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
+            <div class="row">
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header bg-info text-white">

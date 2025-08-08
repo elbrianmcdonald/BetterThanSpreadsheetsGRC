@@ -1,0 +1,308 @@
+@model CyberRiskApp.Models.AttackChain
+
+@{
+    ViewData["Title"] = "Create Threat Model";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-plus-circle me-2"></i>Create New Threat Model
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        
+                        <!-- Basic Information -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Basic Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="Name" class="control-label"></label>
+                                            <input asp-for="Name" class="form-control" required />
+                                            <span asp-validation-for="Name" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="Status" class="control-label"></label>
+                                            <select asp-for="Status" class="form-control">
+                                                <option value="0">Draft</option>
+                                                @if (User.IsInRole("Admin"))
+                                                {
+                                                    <option value="1">Under Review</option>
+                                                    <option value="2">Reviewed</option>
+                                                    <option value="3">Approved</option>
+                                                    <option value="4">Archived</option>
+                                                }
+                                            </select>
+                                            <span asp-validation-for="Status" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label asp-for="Description" class="control-label"></label>
+                                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="AssetCategory" class="control-label"></label>
+                                            <input asp-for="AssetCategory" class="form-control" placeholder="e.g., Customer Data, Infrastructure" />
+                                            <span asp-validation-for="AssetCategory" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="AttackVector" class="control-label"></label>
+                                            <select asp-for="AttackVector" class="form-control">
+                                                <option value="">-- Select Attack Vector --</option>
+                                                <option value="Network">Network</option>
+                                                <option value="Physical">Physical</option>
+                                                <option value="Human">Human</option>
+                                                <option value="Supply Chain">Supply Chain</option>
+                                                <option value="Software">Software</option>
+                                            </select>
+                                            <span asp-validation-for="AttackVector" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Threat Event -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Initial Threat Event
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="ThreatEventTitle">Threat Event Title</label>
+                                    <input type="text" id="ThreatEventTitle" name="ThreatEventTitle" class="form-control" 
+                                           placeholder="e.g., Phishing Attack, Ransomware Infection" required />
+                                </div>
+                                <div class="form-group">
+                                    <label for="ThreatEventDescription">Description</label>
+                                    <textarea id="ThreatEventDescription" name="ThreatEventDescription" class="form-control" rows="2"></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="TefMinimum">TEF Minimum (events/year)</label>
+                                            <input type="number" id="TefMinimum" name="TefMinimum" class="form-control" 
+                                                   step="0.01" min="0" value="0.5" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="TefMostLikely">TEF Most Likely (events/year)</label>
+                                            <input type="number" id="TefMostLikely" name="TefMostLikely" class="form-control" 
+                                                   step="0.01" min="0" value="1" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="TefMaximum">TEF Maximum (events/year)</label>
+                                            <input type="number" id="TefMaximum" name="TefMaximum" class="form-control" 
+                                                   step="0.01" min="0" value="2" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vulnerabilities -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-shield-alt me-2"></i>Vulnerabilities
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="vulnerabilities-container">
+                                    <div class="vulnerability-item border rounded p-3 mb-2">
+                                        <div class="form-group">
+                                            <label>Vulnerability Title</label>
+                                            <input type="text" name="VulnerabilityTitles[]" class="form-control" 
+                                                   placeholder="e.g., Weak Email Filtering, Unpatched Systems" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Description</label>
+                                            <textarea name="VulnerabilityDescriptions[]" class="form-control" rows="2"></textarea>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label>Vulnerability Min (%)</label>
+                                                    <input type="number" name="VulnMinimums[]" class="form-control" 
+                                                           step="1" min="0" max="100" value="30" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label>Vulnerability Most Likely (%)</label>
+                                                    <input type="number" name="VulnMostLikelys[]" class="form-control" 
+                                                           step="1" min="0" max="100" value="50" />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label>Vulnerability Max (%)</label>
+                                                    <input type="number" name="VulnMaximums[]" class="form-control" 
+                                                           step="1" min="0" max="100" value="70" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-info" onclick="addVulnerability()">
+                                    <i class="fas fa-plus me-1"></i>Add Another Vulnerability
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Loss Event -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-dollar-sign me-2"></i>Final Loss Event
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="LossEventTitle">Loss Event Title</label>
+                                    <input type="text" id="LossEventTitle" name="LossEventTitle" class="form-control" 
+                                           placeholder="e.g., Data Breach, System Downtime" required />
+                                </div>
+                                <div class="form-group">
+                                    <label for="LossEventDescription">Description</label>
+                                    <textarea id="LossEventDescription" name="LossEventDescription" class="form-control" rows="2"></textarea>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="PrimaryLossMin">Primary Loss Min ($)</label>
+                                            <input type="number" id="PrimaryLossMin" name="PrimaryLossMin" class="form-control" 
+                                                   step="1000" min="0" value="50000" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="PrimaryLossMostLikely">Primary Loss Most Likely ($)</label>
+                                            <input type="number" id="PrimaryLossMostLikely" name="PrimaryLossMostLikely" class="form-control" 
+                                                   step="1000" min="0" value="100000" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="PrimaryLossMax">Primary Loss Max ($)</label>
+                                            <input type="number" id="PrimaryLossMax" name="PrimaryLossMax" class="form-control" 
+                                                   step="1000" min="0" value="200000" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="SecondaryLossMin">Secondary Loss Min ($)</label>
+                                            <input type="number" id="SecondaryLossMin" name="SecondaryLossMin" class="form-control" 
+                                                   step="1000" min="0" value="10000" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="SecondaryLossMostLikely">Secondary Loss Most Likely ($)</label>
+                                            <input type="number" id="SecondaryLossMostLikely" name="SecondaryLossMostLikely" class="form-control" 
+                                                   step="1000" min="0" value="25000" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="SecondaryLossMax">Secondary Loss Max ($)</label>
+                                            <input type="number" id="SecondaryLossMax" name="SecondaryLossMax" class="form-control" 
+                                                   step="1000" min="0" value="50000" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i>Create Threat Model
+                            </button>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        function addVulnerability() {
+            const container = document.getElementById('vulnerabilities-container');
+            const newVuln = document.createElement('div');
+            newVuln.className = 'vulnerability-item border rounded p-3 mb-2';
+            newVuln.innerHTML = `
+                <button type="button" class="btn btn-sm btn-danger float-end" onclick="removeVulnerability(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <div class="form-group">
+                    <label>Vulnerability Title</label>
+                    <input type="text" name="VulnerabilityTitles[]" class="form-control" 
+                           placeholder="e.g., Weak Email Filtering, Unpatched Systems" />
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="VulnerabilityDescriptions[]" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Vulnerability Min (%)</label>
+                            <input type="number" name="VulnMinimums[]" class="form-control" 
+                                   step="1" min="0" max="100" value="30" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Vulnerability Most Likely (%)</label>
+                            <input type="number" name="VulnMostLikelys[]" class="form-control" 
+                                   step="1" min="0" max="100" value="50" />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Vulnerability Max (%)</label>
+                            <input type="number" name="VulnMaximums[]" class="form-control" 
+                                   step="1" min="0" max="100" value="70" />
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(newVuln);
+        }
+        
+        function removeVulnerability(button) {
+            button.closest('.vulnerability-item').remove();
+        }
+    </script>
+}

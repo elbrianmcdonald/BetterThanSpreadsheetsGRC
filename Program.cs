@@ -123,10 +123,11 @@ builder.Services.AddScoped<IPdfExportService, PdfExportService>();
 builder.Services.AddScoped<IReferenceDataService, ReferenceDataService>();
 // Register Technical Control Mapping service
 builder.Services.AddScoped<ITechnicalControlMappingService, TechnicalControlMappingService>();
-// Register Monte Carlo Simulation service for FAIR calculations
-builder.Services.AddScoped<IMonteCarloSimulationService, MonteCarloSimulationService>();
+// Monte Carlo Simulation service removed (FAIR functionality deprecated)
 // Register Risk Matrix Management service
 builder.Services.AddScoped<IRiskMatrixService, RiskMatrixService>();
+// Register MITRE ATT&CK service for enhanced threat modeling
+builder.Services.AddScoped<IMitreAttackService, MitreAttackService>();
 // Register Strategy Planning service
 builder.Services.AddScoped<IStrategyPlanningService, StrategyPlanningService>();
 // Register SSL Management service
@@ -141,6 +142,8 @@ builder.Services.AddScoped<IThreatModelingService, ThreatModelingService>();
 builder.Services.AddScoped<IMitreImportService, MitreImportService>();
 // Register Backup service
 builder.Services.AddScoped<IBackupService, BackupService>();
+// Register Risk Assessment Threat Model service
+builder.Services.AddScoped<IRiskAssessmentThreatModelService, RiskAssessmentThreatModelService>();
 // Register HTTP Client Factory for external API calls
 builder.Services.AddHttpClient();
 
@@ -269,6 +272,31 @@ if (!app.Environment.IsDevelopment())
 
 // Use conditional HTTPS redirection based on SSL settings
 app.UseConditionalHttpsRedirection();
+
+// Add security headers including Content Security Policy
+app.Use(async (context, next) =>
+{
+    // Content Security Policy to help prevent XSS attacks
+    context.Response.Headers["Content-Security-Policy"] = 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://code.jquery.com; " +
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+        "img-src 'self' data: https:; " +
+        "connect-src 'self'; " +
+        "frame-ancestors 'none'; " +
+        "form-action 'self'; " +
+        "base-uri 'self';";
+    
+    // Additional security headers - use indexer to avoid duplicates
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    
+    await next();
+});
+
 app.UseStaticFiles();
 
 app.UseRouting();

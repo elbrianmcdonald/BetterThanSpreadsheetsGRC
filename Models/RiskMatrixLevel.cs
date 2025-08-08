@@ -18,7 +18,8 @@ namespace CyberRiskApp.Models
 
         [Required]
         [Display(Name = "Level Value")]
-        public int LevelValue { get; set; } // 1, 2, 3, 4, 5
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal LevelValue { get; set; } // Support decimals like 1.5, 2.0, etc
 
         [Required]
         [StringLength(50)]

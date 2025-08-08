@@ -1,0 +1,197 @@
+@model IEnumerable<CyberRiskApp.Models.LossEvent>
+
+@{
+    ViewData["Title"] = "Loss Events";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-dollar-sign me-2"></i>Loss Events
+                    </h3>
+                    <a asp-action="Create" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Create New Loss Event
+                    </a>
+                </div>
+                <div class="card-body">
+                    @if (Model.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Loss Type</th>
+                                        <th>LEF (Frequency/Year)</th>
+                                        <th>ALE (Annual Loss)</th>
+                                        <th>Primary Loss</th>
+                                        <th>Secondary Loss</th>
+                                        <th>Impact Category</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@Html.DisplayFor(modelItem => item.Title)</strong>
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <br><small class="text-muted">@item.Description</small>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(item.LossType))
+                                                {
+                                                    <span class="badge bg-info">@item.LossType</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.LefMostLikely > 0)
+                                                {
+                                                    <div class="small">
+                                                        <strong>@item.LefMostLikely.ToString("F3")</strong><br>
+                                                        <span class="text-muted">
+                                                            @item.LefMinimum.ToString("F3") - @item.LefMaximum.ToString("F3")
+                                                        </span>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-warning">
+                                                        <i class="fas fa-calculator me-1"></i>Not calculated
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.AleMostLikely > 0)
+                                                {
+                                                    <div class="small">
+                                                        <strong class="text-danger">$@item.AleMostLikely.ToString("N0")</strong><br>
+                                                        <span class="text-muted">
+                                                            $@item.AleMinimum.ToString("N0") - $@item.AleMaximum.ToString("N0")
+                                                        </span>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-warning">
+                                                        <i class="fas fa-calculator me-1"></i>Not calculated
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.PrimaryLossMostLikely.HasValue)
+                                                {
+                                                    <div class="small">
+                                                        <strong>$@item.PrimaryLossMostLikely.Value.ToString("N0")</strong><br>
+                                                        @if (item.PrimaryLossMinimum.HasValue && item.PrimaryLossMaximum.HasValue)
+                                                        {
+                                                            <span class="text-muted">
+                                                                $@item.PrimaryLossMinimum.Value.ToString("N0") - $@item.PrimaryLossMaximum.Value.ToString("N0")
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Not specified</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (item.SecondaryLossMostLikely.HasValue)
+                                                {
+                                                    <div class="small">
+                                                        <strong>$@item.SecondaryLossMostLikely.Value.ToString("N0")</strong><br>
+                                                        @if (item.SecondaryLossMinimum.HasValue && item.SecondaryLossMaximum.HasValue)
+                                                        {
+                                                            <span class="text-muted">
+                                                                $@item.SecondaryLossMinimum.Value.ToString("N0") - $@item.SecondaryLossMaximum.Value.ToString("N0")
+                                                            </span>
+                                                        }
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">None</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (!string.IsNullOrEmpty(item.BusinessImpactCategory))
+                                                {
+                                                    <span class="badge bg-secondary">@item.BusinessImpactCategory</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-outline-primary" title="View Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form asp-action="RecalculateALE" asp-route-id="@item.Id" method="post" style="display: inline;">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="btn btn-outline-success" title="Recalculate ALE">
+                                                            <i class="fas fa-calculator"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-dollar-sign fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Loss Events Found</h5>
+                            <p class="text-muted">Create loss events to define the financial and business impacts of successful attacks.</p>
+                            <a asp-action="Create" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Create Loss Event
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>About Loss Events
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Loss Events</strong> represent the final outcomes of successful attack chains. They include:
+                </p>
+                <ul class="mb-0">
+                    <li><strong>LEF (Loss Event Frequency):</strong> Calculated from TEF × vulnerability chain probabilities</li>
+                    <li><strong>ALE (Annual Loss Exposure):</strong> LEF × (Primary Loss + Secondary Loss)</li>
+                    <li><strong>Primary Loss:</strong> Direct financial impact (e.g., incident response, recovery costs)</li>
+                    <li><strong>Secondary Loss:</strong> Indirect impacts (e.g., reputation damage, lost business)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

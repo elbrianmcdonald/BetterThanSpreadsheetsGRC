@@ -1,0 +1,115 @@
+@model IEnumerable<CyberRiskApp.Models.RiskAssessmentThreatModel>
+
+@{
+    ViewData["Title"] = "Assessment-Specific Threat Models";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Assessment-Specific Threat Models
+                    </h3>
+                    <div>
+                        <a asp-action="Index" class="btn btn-outline-primary">
+                            <i class="fas fa-project-diagram me-1"></i>View Templates
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (Model.Any())
+                    {
+                        <div class="row">
+                            @foreach (var threatModel in Model)
+                            {
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card border-left-primary h-100">
+                                        <div class="card-header bg-light">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0 text-primary">@threatModel.Title</h6>
+                                                <span class="badge bg-@(threatModel.Status == CyberRiskApp.Models.AttackChainStatus.Approved ? "success" : threatModel.Status == CyberRiskApp.Models.AttackChainStatus.Draft ? "secondary" : "warning")">
+                                                    @threatModel.Status
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="text-muted small">@(threatModel.Description ?? "Assessment-specific threat model copy")</p>
+                                            
+                                            <!-- Risk Assessment Info -->
+                                            <div class="alert alert-info py-2">
+                                                <strong>Risk Assessment:</strong> @(threatModel.RiskAssessment?.Title ?? "Unknown")<br>
+                                                <small class="text-muted">Assessment ID: #@threatModel.RiskAssessmentId</small>
+                                            </div>
+                                            
+                                            <!-- Template Info -->
+                                            <div class="mb-3">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-copy me-1"></i>
+                                                    Based on template: <strong>@(threatModel.TemplateAttackChain?.Name ?? "Unknown Template")</strong>
+                                                </small>
+                                            </div>
+                                            
+                                            <!-- ALE Summary -->
+                                            <div class="row text-center mb-3">
+                                                <div class="col-4">
+                                                    <small class="text-muted d-block">ALE Min</small>
+                                                    <strong class="text-success">@threatModel.ALEMinimum.ToString("C0")</strong>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted d-block">ALE Most Likely</small>
+                                                    <strong class="text-warning">@threatModel.ALEMostLikely.ToString("C0")</strong>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted d-block">ALE Max</small>
+                                                    <strong class="text-danger">@threatModel.ALEMaximum.ToString("C0")</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer bg-transparent">
+                                            <div class="d-flex justify-content-between">
+                                                <div class="btn-group btn-group-sm">
+                                                    <a asp-action="EditAssessmentThreatModel" asp-route-threatModelId="@threatModel.Id" 
+                                                       class="btn btn-outline-primary" title="Edit this assessment-specific threat model">
+                                                        <i class="fas fa-edit me-1"></i>Edit
+                                                    </a>
+                                                    <a asp-action="EditAssessmentThreatModel" asp-route-threatModelId="@threatModel.Id" asp-route-readOnly="true"
+                                                       class="btn btn-outline-info" title="View threat model details">
+                                                        <i class="fas fa-eye me-1"></i>View
+                                                    </a>
+                                                </div>
+                                                <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@threatModel.RiskAssessmentId"
+                                                   class="btn btn-sm btn-outline-secondary" title="Go to Risk Assessment">
+                                                    <i class="fas fa-external-link-alt"></i>
+                                                </a>
+                                            </div>
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    Last modified: @(threatModel.UpdatedAt != default(DateTime) ? threatModel.UpdatedAt.ToString("MMM dd, yyyy HH:mm") : "Never")
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No Assessment-Specific Threat Models</h4>
+                            <p class="text-muted">
+                                Assessment-specific threat models are created when you customize templates during FAIR risk assessments.
+                            </p>
+                            <a asp-controller="RiskAssessments" asp-action="Index" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Create Risk Assessment
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

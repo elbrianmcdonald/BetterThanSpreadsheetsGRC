@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using CyberRiskApp.Services;
 using CyberRiskApp.Authorization;
 using CyberRiskApp.Models;
+using System.Text.RegularExpressions;
 
 namespace CyberRiskApp.Controllers
 {
@@ -95,6 +96,12 @@ namespace CyberRiskApp.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            if (!IsValidFileName(fileName))
+            {
+                TempData["Error"] = "Invalid backup file name.";
+                return RedirectToAction(nameof(Index));
+            }
+
             try
             {
                 // Show confirmation dialog via TempData
@@ -132,6 +139,12 @@ namespace CyberRiskApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmRestore(string fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                TempData["Error"] = "Invalid backup file name.";
+                return RedirectToAction(nameof(Index));
+            }
+
             try
             {
                 var result = await _backupService.RestoreDatabaseBackupAsync(fileName);
@@ -159,6 +172,12 @@ namespace CyberRiskApp.Controllers
         // GET: Backup/Download/{fileName}
         public async Task<IActionResult> Download(string fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                TempData["Error"] = "Invalid backup file name.";
+                return RedirectToAction(nameof(Index));
+            }
+
             try
             {
                 var backupInfo = await _backupService.GetBackupInfoAsync(fileName);
@@ -187,6 +206,12 @@ namespace CyberRiskApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(string fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                TempData["Error"] = "Invalid backup file name.";
+                return RedirectToAction(nameof(Index));
+            }
+
             try
             {
                 var success = await _backupService.DeleteBackupAsync(fileName);
@@ -213,6 +238,12 @@ namespace CyberRiskApp.Controllers
         // GET: Backup/Details/{fileName}
         public async Task<IActionResult> Details(string fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                TempData["Error"] = "Invalid backup file name.";
+                return RedirectToAction(nameof(Index));
+            }
+
             try
             {
                 var backupInfo = await _backupService.GetBackupInfoAsync(fileName);
@@ -273,7 +304,15 @@ namespace CyberRiskApp.Controllers
                     var backupsPath = Path.Combine(Directory.GetCurrentDirectory(), "Backups");
                     Directory.CreateDirectory(backupsPath);
                     
-                    var filePath = Path.Combine(backupsPath, backupFile.FileName);
+                    // Sanitize the filename to prevent path traversal
+                    var safeFileName = Path.GetFileName(backupFile.FileName);
+                    if (!IsValidFileName(safeFileName))
+                    {
+                        TempData["Error"] = "Invalid file name.";
+                        return RedirectToAction(nameof(Index));
+                    }
+                    
+                    var filePath = Path.Combine(backupsPath, safeFileName);
                     
                     using var fileStream = new FileStream(filePath, FileMode.Create);
                     await stream.CopyToAsync(fileStream);
@@ -296,6 +335,12 @@ namespace CyberRiskApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Validate(string fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                TempData["Error"] = "Invalid backup file name.";
+                return RedirectToAction(nameof(Index));
+            }
+
             try
             {
                 var result = await _backupService.ValidateBackupFileAsync(fileName);
@@ -342,6 +387,11 @@ namespace CyberRiskApp.Controllers
         [HttpGet]
         public async Task<IActionResult> GetBackupSize(string fileName)
         {
+            if (!IsValidFileName(fileName))
+            {
+                return Json(new { success = false, error = "Invalid file name" });
+            }
+
             try
             {
                 var size = await _backupService.GetBackupSizeAsync(fileName);
@@ -351,6 +401,32 @@ namespace CyberRiskApp.Controllers
             {
                 return Json(new { success = false, error = ex.Message });
             }
+        }
+
+        private bool IsValidFileName(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return false;
+
+            // Check for path traversal attempts
+            if (fileName.Contains("..") || fileName.Contains("/") || fileName.Contains("\\"))
+                return false;
+
+            // Check for absolute paths
+            if (Path.IsPathRooted(fileName))
+                return false;
+
+            // Ensure file has valid backup extension
+            if (!fileName.EndsWith(".sql", StringComparison.OrdinalIgnoreCase) && 
+                !fileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // Validate file name pattern (alphanumeric, underscore, hyphen, period only)
+            var validFileNamePattern = @"^[a-zA-Z0-9_\-\.]+$";
+            if (!Regex.IsMatch(fileName, validFileNamePattern))
+                return false;
+
+            return true;
         }
     }
 }

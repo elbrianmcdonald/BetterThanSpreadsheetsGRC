@@ -5,7 +5,7 @@ namespace CyberRiskApp.ViewModels
     public class FAIRAssessmentViewModel
     {
         public RiskAssessment Assessment { get; set; } = new RiskAssessment();
-        public List<RiskAssessmentControl> Controls { get; set; } = new List<RiskAssessmentControl>();
+        // FAIR Controls removed
         public List<QualitativeControl> QualitativeControls { get; set; } = new List<QualitativeControl>();
         
         private List<Risk> _identifiedRisks = new List<Risk>();
@@ -14,15 +14,17 @@ namespace CyberRiskApp.ViewModels
             get => _identifiedRisks; 
             set => _identifiedRisks = value?.Where(r => !string.IsNullOrEmpty(r.Title)).ToList() ?? new List<Risk>(); 
         }
+
+        // New threat scenario-based approach for qualitative assessments
+        public List<ThreatScenario> ThreatScenarios { get; set; } = new List<ThreatScenario>();
         
         public RiskLevelSettings? RiskLevelSettings { get; set; }
         
         // Threat model selection support
         public List<int> SelectedThreatModelIds { get; set; } = new List<int>();
-        public List<ThreatModel> AvailableThreatModels { get; set; } = new List<ThreatModel>();
+        public List<AttackChain> AvailableThreatModels { get; set; } = new List<AttackChain>();
         
-        // For display purposes
-        public decimal CalculatedVulnerabilityPercentage => (Assessment.CalculatedVulnerability ?? 1) * 100;
+        // FAIR quantitative features removed
         public decimal CombinedControlEffectiveness => CalculateCombinedControlEffectiveness();
         
         // Chart data for visualization
@@ -31,18 +33,13 @@ namespace CyberRiskApp.ViewModels
         
         private decimal CalculateCombinedControlEffectiveness()
         {
-            var implementedControls = Controls?.Where(c => c.ImplementationStatus == "Implemented").ToList();
-            if (implementedControls == null || !implementedControls.Any())
-                return 0;
-
-            decimal remainingVulnerability = 1.0m;
-            foreach (var control in implementedControls)
+            // FAIR quantitative controls removed - only qualitative controls remain
+            if (QualitativeControls?.Any() == true)
             {
-                decimal controlEffectiveness = control.ControlEffectiveness / 100m;
-                remainingVulnerability *= (1 - controlEffectiveness);
+                // QualitativeControl doesn't have Effectiveness field - return 0 for now
+                return 0;
             }
-            
-            return (1 - remainingVulnerability) * 100;
+            return 0;
         }
     }
 }

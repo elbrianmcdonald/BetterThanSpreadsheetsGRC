@@ -115,11 +115,17 @@ namespace CyberRiskApp.Models
         [Column("RiskAssessmentId")]
         public int? RiskAssessmentId { get; set; }
 
+        [Column("ThreatScenarioId")]
+        public int? ThreatScenarioId { get; set; }
+
         // Navigation properties
         [ForeignKey("FindingId")]
         public virtual Finding? LinkedFinding { get; set; }
 
         [ForeignKey("RiskAssessmentId")]
         public virtual RiskAssessment? LinkedAssessment { get; set; }
+
+        [ForeignKey("ThreatScenarioId")]
+        public virtual ThreatScenario? LinkedThreatScenario { get; set; }
     }
 }

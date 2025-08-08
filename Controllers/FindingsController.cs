@@ -314,6 +314,38 @@ namespace CyberRiskApp.Controllers
                 return Json(new List<object>());
             }
         }
+
+        // API: Get active findings for FAIR assessment
+        [HttpGet]
+        [Route("api/Findings/GetActiveFindings")]
+        public async Task<IActionResult> GetActiveFindings()
+        {
+            try
+            {
+                var findings = await _findingService.GetFindingsAsync();
+                var activeFindings = findings
+                    .Where(f => f.Status == FindingStatus.Open)
+                    .Select(f => new
+                    {
+                        id = f.Id,
+                        title = f.Title,
+                        description = f.Details,
+                        severity = f.RiskRating.ToString(),
+                        findingNumber = f.FindingNumber,
+                        domain = f.Domain,
+                        owner = f.Owner,
+                        asset = f.Asset
+                    })
+                    .ToList();
+
+                return Json(activeFindings);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving active findings");
+                return Json(new List<object>());
+            }
+        }
     }
 
     // View Model for the risk acceptance request workflow

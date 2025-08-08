@@ -143,7 +143,7 @@ namespace CyberRiskApp.Services
             return await _context.MaturityControlAssessments
                 .Include(ca => ca.Control)
                 .Include(ca => ca.Assessment)
-                .Where(ca => ca.MaturityAssessmentId == assessmentId)
+                .Where(ca => ca.MaturityAssessmentId == assessmentId && ca.Control != null)
                 .OrderBy(ca => ca.Control.Function)
                 .ThenBy(ca => ca.Control.ControlId)
                 .ToListAsync();
@@ -363,7 +363,7 @@ namespace CyberRiskApp.Services
         {
             var controlAssessments = await _context.MaturityControlAssessments
                 .Include(ca => ca.Control)
-                .Where(ca => ca.MaturityAssessmentId == assessmentId)
+                .Where(ca => ca.MaturityAssessmentId == assessmentId && ca.Control != null)
                 .ToListAsync();
 
             return controlAssessments
@@ -385,7 +385,7 @@ namespace CyberRiskApp.Services
         {
             var controlAssessments = await _context.MaturityControlAssessments
                 .Include(ca => ca.Control)
-                .Where(ca => ca.MaturityAssessmentId == assessmentId)
+                .Where(ca => ca.MaturityAssessmentId == assessmentId && ca.Control != null)
                 .ToListAsync();
 
             var objectiveScores = new Dictionary<string, Dictionary<string, int>>();
@@ -414,7 +414,7 @@ namespace CyberRiskApp.Services
         {
             var controlAssessments = await _context.MaturityControlAssessments
                 .Include(ca => ca.Control)
-                .Where(ca => ca.MaturityAssessmentId == assessmentId)
+                .Where(ca => ca.MaturityAssessmentId == assessmentId && ca.Control != null)
                 .ToListAsync();
 
             var gaps = new Dictionary<string, List<string>>();
@@ -491,7 +491,7 @@ namespace CyberRiskApp.Services
         {
             var controlAssessments = await _context.MaturityControlAssessments
                 .Include(ca => ca.Control)
-                .Where(ca => ca.MaturityAssessmentId == assessmentId)
+                .Where(ca => ca.MaturityAssessmentId == assessmentId && ca.Control != null)
                 .ToListAsync();
 
             if (!controlAssessments.Any())
@@ -518,6 +518,7 @@ namespace CyberRiskApp.Services
 
             // Group practices by MIL level (stored in Category field for C2M2)
             var practicesByMIL = domainPractices
+                .Where(p => p.Control != null)
                 .GroupBy(p => ExtractMILNumber(p.Control.Category))
                 .Where(g => g.Key > 0) // Exclude invalid MIL levels
                 .OrderBy(g => g.Key)
@@ -563,6 +564,7 @@ namespace CyberRiskApp.Services
 
             // Group practices by MIL level
             var practicesByMIL = objectivePractices
+                .Where(p => p.Control != null)
                 .GroupBy(p => ExtractMILNumber(p.Control.Category))
                 .Where(g => g.Key > 0)
                 .OrderBy(g => g.Key)
@@ -626,40 +628,44 @@ namespace CyberRiskApp.Services
         {
             if (!controlAssessments.Any()) return;
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            var executionStrategy = _context.Database.CreateExecutionStrategy();
+            await executionStrategy.ExecuteAsync(async () =>
             {
-                foreach (var controlAssessment in controlAssessments)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    // Check if assessment already exists
-                    var existing = await _context.MaturityControlAssessments
-                        .FirstOrDefaultAsync(ca => ca.MaturityAssessmentId == controlAssessment.MaturityAssessmentId 
-                                                 && ca.MaturityControlId == controlAssessment.MaturityControlId);
+                    foreach (var controlAssessment in controlAssessments)
+                    {
+                        // Check if assessment already exists
+                        var existing = await _context.MaturityControlAssessments
+                            .FirstOrDefaultAsync(ca => ca.MaturityAssessmentId == controlAssessment.MaturityAssessmentId 
+                                                     && ca.MaturityControlId == controlAssessment.MaturityControlId);
 
-                    if (existing != null)
-                    {
-                        // Update existing - FIXED property names
-                        existing.CurrentMaturityLevel = controlAssessment.CurrentMaturityLevel;
-                        existing.TargetMaturityLevel = controlAssessment.TargetMaturityLevel;
-                        // Priority is on the Control, not the assessment
-                        existing.AssessmentDate = controlAssessment.AssessmentDate;
-                        _context.MaturityControlAssessments.Update(existing);
+                        if (existing != null)
+                        {
+                            // Update existing - FIXED property names
+                            existing.CurrentMaturityLevel = controlAssessment.CurrentMaturityLevel;
+                            existing.TargetMaturityLevel = controlAssessment.TargetMaturityLevel;
+                            // Priority is on the Control, not the assessment
+                            existing.AssessmentDate = controlAssessment.AssessmentDate;
+                            _context.MaturityControlAssessments.Update(existing);
+                        }
+                        else
+                        {
+                            // Add new
+                            _context.MaturityControlAssessments.Add(controlAssessment);
+                        }
                     }
-                    else
-                    {
-                        // Add new
-                        _context.MaturityControlAssessments.Add(controlAssessment);
-                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
                 }
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
     }
 }

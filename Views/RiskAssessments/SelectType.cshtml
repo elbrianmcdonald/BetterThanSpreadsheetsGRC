@@ -23,51 +23,12 @@
                 </div>
                 <div class="card-body">
                     <p class="text-muted mb-4">
-                        Select the type of risk assessment you want to perform. Each type has different methodologies and requirements.
+                        Create a new qualitative risk assessment using our Risk Matrix methodology.
                     </p>
 
-                    <div class="row">
-                        <!-- FAIR Assessment Option -->
-                        <div class="col-md-6 mb-4">
-                            <div class="card h-100 border-success assessment-type-card" style="cursor: pointer;" onclick="window.location.href='@Url.Action("CreateFAIR")'">
-                                <div class="card-header bg-success bg-opacity-10 text-center">
-                                    <i class="fas fa-calculator fa-3x text-success mb-3"></i>
-                                    <h4 class="text-success">FAIR Assessment</h4>
-                                    <span class="badge bg-success">Quantitative</span>
-                                </div>
-                                <div class="card-body">
-                                    <h6 class="text-success mb-3">Factor Analysis of Information Risk</h6>
-                                    <ul class="list-unstyled">
-                                        <li class="mb-2">
-                                            <i class="fas fa-check text-success me-2"></i>
-                                            Quantitative risk analysis with Monte Carlo simulation
-                                        </li>
-                                        <li class="mb-2">
-                                            <i class="fas fa-check text-success me-2"></i>
-                                            Calculates Annual Loss Expectancy (ALE)
-                                        </li>
-                                        <li class="mb-2">
-                                            <i class="fas fa-check text-success me-2"></i>
-                                            Threat Event Frequency modeling
-                                        </li>
-                                        <li class="mb-2">
-                                            <i class="fas fa-check text-success me-2"></i>
-                                            Defense in Depth control effectiveness
-                                        </li>
-                                        <li class="mb-2">
-                                            <i class="fas fa-check text-success me-2"></i>
-                                            Primary and Secondary loss estimation
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div class="card-footer bg-success bg-opacity-10 text-center">
-                                    <strong class="text-success">Best for: Financial impact analysis, regulatory compliance</strong>
-                                </div>
-                            </div>
-                        </div>
-
+                    <div class="row justify-content-center">
                         <!-- Qualitative Assessment Option -->
-                        <div class="col-md-6 mb-4">
+                        <div class="col-md-8 mb-4">
                             <div class="card h-100 border-warning assessment-type-card" style="cursor: pointer;" onclick="window.location.href='@Url.Action("CreateQualitative")'">
                                 <div class="card-header bg-warning bg-opacity-10 text-center">
                                     <i class="fas fa-balance-scale fa-3x text-warning mb-3"></i>
@@ -108,11 +69,11 @@
 
                     <div class="alert alert-info mt-4">
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Need help choosing?</strong>
-                        <ul class="mb-0 mt-2">
-                            <li><strong>Choose FAIR</strong> when you need detailed financial impact analysis, have sufficient data for quantitative analysis, or need precise ALE calculations for business decisions.</li>
-                            <li><strong>Choose Qualitative</strong> when you need a quick risk assessment, have limited quantitative data, or are performing initial risk screening.</li>
-                        </ul>
+                        <strong>About Qualitative Assessment</strong>
+                        <p class="mb-0 mt-2">
+                            This assessment uses a Risk Matrix methodology with Likelihood × Impact × Exposure scoring. 
+                            It's ideal for quick risk evaluations, initial risk screening, and situations where quantitative data may be limited.
+                        </p>
                     </div>
                 </div>
             </div>

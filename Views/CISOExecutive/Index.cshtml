@@ -272,6 +272,150 @@
         letter-spacing: 0.5px;
     }
 
+    /* New Dashboard Components */
+    .metric-info {
+        background: var(--info-color);
+        background: linear-gradient(135deg, #7d8ca3 0%, #8e9aac 100%);
+    }
+
+    .metric-mini {
+        text-align: center;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .metric-mini-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-mini-label {
+        font-size: 0.75rem;
+        color: var(--dark-gray);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .threat-category-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: var(--light-gray);
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid var(--accent-color);
+    }
+
+    .threat-category-name {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .threat-category-count {
+        background: var(--accent-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .compliance-framework-item {
+        padding: 1rem;
+        background: var(--light-gray);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border-left: 4px solid;
+    }
+
+    .compliance-framework-item.high-compliance {
+        border-left-color: var(--success-color);
+    }
+
+    .compliance-framework-item.medium-compliance {
+        border-left-color: var(--warning-color);
+    }
+
+    .compliance-framework-item.low-compliance {
+        border-left-color: var(--danger-color);
+    }
+
+    .compliance-rate {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+
+    .compliance-framework-name {
+        font-size: 0.875rem;
+        color: var(--dark-gray);
+        margin-bottom: 0.5rem;
+    }
+
+    .compliance-gap-count {
+        font-size: 0.75rem;
+        color: var(--danger-color);
+    }
+
+    .investment-priority-item {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 1rem;
+        background: var(--light-gray);
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        border-left: 4px solid;
+    }
+
+    .investment-priority-item.high-priority {
+        border-left-color: var(--danger-color);
+    }
+
+    .investment-priority-item.medium-priority {
+        border-left-color: var(--warning-color);
+    }
+
+    .investment-priority-item.low-priority {
+        border-left-color: var(--success-color);
+    }
+
+    .maturity-domain-item {
+        padding: 0.75rem;
+        background: var(--light-gray);
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .maturity-score {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .maturity-progress {
+        width: 100%;
+        height: 8px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 4px;
+        margin: 0.5rem 0;
+        overflow: hidden;
+    }
+
+    .maturity-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--danger-color) 0%, var(--warning-color) 50%, var(--success-color) 100%);
+        transition: width 0.3s ease;
+    }
+
     .no-data-message {
         text-align: center;
         color: #95a5a6;
@@ -399,17 +543,8 @@
                             </button>
                             @if (User.IsInRole("Admin"))
                             {
-                                <button class="btn btn-outline-success ms-2" id="createFAIRAssessmentsButton" style="border-radius: 25px;">
-                                    <i class="fas fa-calculator me-2"></i>Create FAIR Assessments
-                                </button>
-                                <button class="btn btn-outline-primary ms-2" id="createSampleDataButton" style="border-radius: 25px;">
-                                    <i class="fas fa-plus me-2"></i>Create Sample Risk Data
-                                </button>
                                 <button class="btn btn-outline-info ms-2" id="checkDatabaseButton" style="border-radius: 25px;">
                                     <i class="fas fa-database me-2"></i>Check Database
-                                </button>
-                                <button class="btn btn-outline-warning ms-2" id="fixIdentifiedRisksButton" style="border-radius: 25px;">
-                                    <i class="fas fa-wrench me-2"></i>Fix Identified Risks ALE
                                 </button>
                             }
                         </div>
@@ -420,103 +555,55 @@
     </div>
 
 
-    <!-- Executive KPIs -->
+    <!-- Executive Summary KPIs -->
     <div class="row mb-5">
-        <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
+        <div class="col-lg-3 col-md-6 mb-4">
             <div class="executive-card metric-critical h-100">
                 <div class="kpi-container">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <i class="fas fa-exclamation-triangle kpi-icon"></i>
                             <div class="kpi-number" id="totalCriticalHighFindings">--</div>
-                            <div class="kpi-label">Critical & High Risk Findings</div>
-                        </div>
-                        <div class="text-end">
-                            <i class="fas fa-arrow-trend-up fa-lg opacity-75"></i>
+                            <div class="kpi-label">Critical & High Findings</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
-            <div class="executive-card metric-high h-100">
-                <div class="kpi-container">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <i class="fas fa-clock kpi-icon"></i>
-                            <div class="kpi-number" id="overdueFindings">--</div>
-                            <div class="kpi-label">Overdue Findings</div>
-                        </div>
-                        <div class="text-end">
-                            <i class="fas fa-hourglass-end fa-lg opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
+        <div class="col-lg-3 col-md-6 mb-4">
             <div class="executive-card metric-warning h-100">
                 <div class="kpi-container">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <i class="fas fa-exclamation-circle kpi-icon"></i>
-                            <div class="d-flex align-items-center">
-                                <span class="kpi-number me-2" id="risksAboveAppetite">--</span>
-                                <i class="fas fa-arrow-up" id="appetiteTrendIcon" style="display: none; font-size: 1.5rem;"></i>
-                            </div>
-                            <div class="kpi-label mb-3">Risks Above Appetite</div>
-                            <div class="risk-appetite-controls">
-                                <select class="form-select form-select-sm mb-2" id="appetiteTimeFrame" style="font-size: 0.8rem;">
-                                    <option value="2weeks">2 Weeks</option>
-                                    <option value="month" selected>Month</option>
-                                    <option value="quarter">Quarter</option>
-                                    <option value="year">Year</option>
-                                </select>
-                                <a href="/RiskLevelSettings" class="config-button" title="Configure Risk Appetite">
-                                    <i class="fas fa-cogs me-1"></i>Configure
-                                </a>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <i class="fas fa-chart-line fa-lg opacity-75"></i>
+                            <i class="fas fa-crosshairs kpi-icon"></i>
+                            <div class="kpi-number" id="risksAboveAppetite">--</div>
+                            <div class="kpi-label">Above Risk Appetite</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-lg-6 col-md-6 mb-4">
-            <div class="executive-card metric-medium h-100">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="executive-card metric-info h-100">
                 <div class="kpi-container">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <i class="fas fa-dollar-sign kpi-icon"></i>
-                            <div class="kpi-number" id="totalALE">--</div>
-                            <div class="kpi-label">Total Annual Loss Exposure</div>
-                        </div>
-                        <div class="text-end">
-                            <i class="fas fa-coins fa-lg opacity-75"></i>
+                            <i class="fas fa-chart-line kpi-icon"></i>
+                            <div class="kpi-number" id="riskVelocity">--</div>
+                            <div class="kpi-label">Risk Velocity (30d)</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Secondary KPIs -->
-    <div class="row mb-5">
-        <div class="col-lg-12">
+        <div class="col-lg-3 col-md-6 mb-4">
             <div class="executive-card metric-success h-100">
                 <div class="kpi-container">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-shield-check kpi-icon me-4"></i>
-                            <div>
-                                <div class="kpi-number" id="compliancePercentage">--</div>
-                                <div class="kpi-label">Overall Compliance Percentage</div>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <i class="fas fa-certificate fa-2x opacity-75"></i>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-shield-check kpi-icon"></i>
+                            <div class="kpi-number" id="overallComplianceRate">--</div>
+                            <div class="kpi-label">Compliance Rate</div>
                         </div>
                     </div>
                 </div>
@@ -524,13 +611,47 @@
         </div>
     </div>
 
-    <!-- Risk Distribution Charts and Business Unit Heatmap -->
+    <!-- Strategic Metrics Row -->
+    <div class="row mb-5">
+        <div class="col-lg-6 mb-4">
+            <div class="executive-card metric-good h-100">
+                <div class="kpi-container">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-bullseye kpi-icon"></i>
+                            <div class="kpi-number" id="maturityScore">--</div>
+                            <div class="kpi-label">Security Maturity Score</div>
+                            <small class="text-muted mt-1" id="maturityLevel">--</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="executive-card metric-info h-100">
+                <div class="kpi-container">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <i class="fas fa-clock kpi-icon"></i>
+                            <div class="kpi-number" id="avgResolutionTime">--</div>
+                            <div class="kpi-label">Avg Resolution Time</div>
+                            <small class="text-muted mt-1">days</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Strategic Dashboard Sections -->
+    
+    <!-- Charts Row -->
     <div class="row mb-5">
         <!-- Risk Distribution Chart -->
         <div class="col-lg-6 mb-4">
             <div class="chart-executive">
                 <h5>
-                    <i class="fas fa-chart-pie"></i>Risk Distribution
+                    <i class="fas fa-chart-pie"></i>Risk Distribution by Level
                 </h5>
                 <div class="chart-container">
                     <canvas id="riskDistributionChart"></canvas>
@@ -538,11 +659,29 @@
             </div>
         </div>
 
-        <!-- Business Unit Risk Heatmap -->
+        <!-- Security Maturity Assessment -->
         <div class="col-lg-6 mb-4">
             <div class="chart-executive">
                 <h5>
-                    <i class="fas fa-building"></i>Business Unit Risk Heatmap
+                    <i class="fas fa-bullseye"></i>Security Maturity Assessment
+                </h5>
+                <div class="maturity-overview" id="maturityOverview">
+                    <div class="no-data-message">
+                        <i class="fas fa-bullseye"></i>
+                        Loading maturity data...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Business Unit Analysis & Compliance -->
+    <div class="row mb-5">
+        <!-- Business Unit Risk Analysis -->
+        <div class="col-lg-8 mb-4">
+            <div class="chart-executive h-100">
+                <h5>
+                    <i class="fas fa-building"></i>Business Unit Risk Analysis
                 </h5>
                 <div class="table-responsive">
                     <table class="table table-modern">
@@ -552,14 +691,14 @@
                                 <th class="text-center">Critical</th>
                                 <th class="text-center">High</th>
                                 <th class="text-center">Medium</th>
-                                <th class="text-center">Status</th>
+                                <th class="text-center">Low</th>
                             </tr>
                         </thead>
-                        <tbody id="businessUnitHeatmap">
+                        <tbody id="businessUnitAnalysis">
                             <tr>
                                 <td colspan="5" class="no-data-message">
                                     <i class="fas fa-building"></i>
-                                    Loading business unit data...
+                                    Loading business unit analysis...
                                 </td>
                             </tr>
                         </tbody>
@@ -567,12 +706,28 @@
                 </div>
             </div>
         </div>
+
+        <!-- Compliance Framework Status -->
+        <div class="col-lg-4 mb-4">
+            <div class="chart-executive h-100">
+                <h5>
+                    <i class="fas fa-clipboard-check"></i>Compliance Frameworks
+                </h5>
+                <div class="compliance-frameworks" id="complianceFrameworks">
+                    <div class="no-data-message">
+                        <i class="fas fa-clipboard-check"></i>
+                        Loading compliance data...
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Top Financial Risks and Top Assets with High Risks -->
+
+    <!-- Financial Risks and Assets Analysis -->
     <div class="row mb-5">
         <div class="col-lg-6 mb-4">
-            <div class="chart-executive">
+            <div class="chart-executive h-100">
                 <h5>
                     <i class="fas fa-money-bill-wave"></i>Top Financial Risks
                 </h5>
@@ -581,7 +736,7 @@
                         <thead>
                             <tr>
                                 <th>Risk Description</th>
-                                <th class="text-end">Annual Loss Exposure</th>
+                                <th class="text-end">Risk Score</th>
                                 <th class="text-center">Status</th>
                             </tr>
                         </thead>
@@ -600,7 +755,7 @@
 
         <!-- Top Assets with High Risks -->
         <div class="col-lg-6 mb-4">
-            <div class="chart-executive">
+            <div class="chart-executive h-100">
                 <h5>
                     <i class="fas fa-server"></i>Top Assets - High Risk
                 </h5>
@@ -652,23 +807,6 @@
                 });
             }
 
-            // Set up create FAIR assessments button - with null check
-            const createFAIRAssessmentsButton = document.getElementById('createFAIRAssessmentsButton');
-            if (createFAIRAssessmentsButton) {
-                createFAIRAssessmentsButton.addEventListener('click', function () {
-                    console.log('🔄 Creating FAIR assessments...');
-                    createSampleFAIRAssessments();
-                });
-            }
-
-            // Set up create sample data button - with null check
-            const createSampleDataButton = document.getElementById('createSampleDataButton');
-            if (createSampleDataButton) {
-                createSampleDataButton.addEventListener('click', function () {
-                    console.log('🔄 Creating sample risk data...');
-                    createSampleRiskData();
-                });
-            }
 
             // Set up check database button - with null check
             const checkDatabaseButton = document.getElementById('checkDatabaseButton');
@@ -679,51 +817,11 @@
                 });
             }
 
-            // Set up fix identified risks button - with null check
-            const fixIdentifiedRisksButton = document.getElementById('fixIdentifiedRisksButton');
-            if (fixIdentifiedRisksButton) {
-                fixIdentifiedRisksButton.addEventListener('click', function () {
-                    console.log('🔧 Fixing identified risks ALE inheritance...');
-                    fixIdentifiedRisksALE();
-                });
-            }
 
             // Load available assessments
             loadAvailableAssessments();
         });
 
-        // Create sample FAIR assessments with ALE values
-        function createSampleFAIRAssessments() {
-            fetch('/CISOExecutive/CreateSampleFAIRAssessments', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('✅ FAIR assessments created successfully:', data.message);
-                    // Refresh the dashboard to show new data
-                    loadDashboardData();
-                    
-                    // Show success message
-                    const lastUpdatedElement = document.getElementById('lastUpdated');
-                    if (lastUpdatedElement) {
-                        lastUpdatedElement.textContent = `FAIR assessments created (${data.totalALE} ALE) - ` + new Date().toLocaleString();
-                        lastUpdatedElement.className = 'text-success';
-                    }
-                } else {
-                    console.error('❌ Failed to create FAIR assessments:', data.error);
-                    showErrorMessage('Failed to create FAIR assessments: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('❌ Error creating FAIR assessments:', error);
-                showErrorMessage('Failed to create FAIR assessments. Please try again.');
-            });
-        }
 
         // Check database status to debug data issues
         function checkDatabaseStatus() {
@@ -737,13 +835,13 @@
 Database Status:
 - Total Risks: ${data.totalRisks || 0}
 - Open Risks: ${data.openRisks || 0}
-- Risks with ALE: ${data.risksWithALE || 0}
-- Total ALE: $${(data.totalALE || 0).toLocaleString()}
+- Risks with Score > 0: ${data.risksWithQualitativeScoring || 0}
+- Total Risk Score: ${(data.totalRiskScore || 0).toLocaleString()}
 - Total Findings: ${data.totalFindings || 0}
 - Open Findings: ${data.openFindings || 0}
 - Total Assessments: ${data.totalAssessments || 0}
 - Completed Assessments: ${data.completedAssessments || 0}
-- FAIR Assessments: ${data.fairAssessments || 0}
+- Qualitative Assessments: ${data.qualitativeAssessments || 0}
 
 Risk Levels: ${JSON.stringify(data.risksByLevel || {})}
 Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
@@ -764,59 +862,7 @@ Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
                 });
         }
 
-        // Fix identified risks ALE inheritance
-        function fixIdentifiedRisksALE() {
-            fetch('/CISOExecutive/FixIdentifiedRisksALE')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('🔧 FIXED IDENTIFIED RISKS:', data);
-                    
-                    if (data.success) {
-                        alert(`✅ Fixed ${data.fixedCount} identified risks to inherit ALE from their FAIR assessments.\n\nRefreshing dashboard...`);
-                        // Refresh the dashboard after fixing
-                        loadDashboardData();
-                    } else {
-                        alert('❌ Error fixing identified risks: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ Error fixing identified risks:', error);
-                    alert('Error fixing identified risks: ' + error.message);
-                });
-        }
 
-        // Create sample risk data for testing ALE functionality
-        function createSampleRiskData() {
-            fetch('/CISOExecutive/CreateSampleRiskData', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('✅ Sample risk data created successfully:', data.message);
-                    // Refresh the dashboard to show new data
-                    loadDashboardData();
-                    
-                    // Show success message
-                    const lastUpdatedElement = document.getElementById('lastUpdated');
-                    if (lastUpdatedElement) {
-                        lastUpdatedElement.textContent = 'Sample data created - ' + new Date().toLocaleString();
-                        lastUpdatedElement.className = 'text-success';
-                    }
-                } else {
-                    console.error('❌ Failed to create sample data:', data.error);
-                    showErrorMessage('Failed to create sample data: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('❌ Error creating sample data:', error);
-                showErrorMessage('Failed to create sample data. Please try again.');
-            });
-        }
 
 
         // Load dashboard data with comprehensive error handling
@@ -842,13 +888,16 @@ Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
                         return;
                     }
 
-                    // Update all sections with null checks
+                    // Update all sections with comprehensive dashboard data
                     updateLastUpdated();
-                    updateKPIs(data);
-                    updateBusinessUnitsTable(data);
+                    updateExecutiveSummaryKPIs(data);
+                    updateStrategicMetrics(data);
+                    updateRiskDistributionChart(data);
+                    updateMaturityOverview(data);
+                    updateBusinessUnitAnalysis(data);
+                    updateComplianceFrameworks(data);
                     updateFinancialRisksTable(data);
                     updateTopAssetsTable(data);
-                    updateRiskDistributionChart(data);
 
                     console.log('✅ Dashboard update completed');
                 })
@@ -880,152 +929,184 @@ Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
             }
         }
 
-        // FIXED: Update KPIs with null checks
-        function updateKPIs(data) {
-            console.log('🔄 Updating KPIs with data:', data);
+        // Update Executive Summary KPIs
+        function updateExecutiveSummaryKPIs(data) {
+            console.log('🔄 Updating Executive Summary KPIs with data:', data);
 
-            // Set default values
-            const defaults = {
-                totalCriticalHighFindings: 0,
-                overdueFindings: 0,
-                totalALE: 0,
-                compliancePercentage: 0
-            };
+            if (data && data.executiveSummary) {
+                const summary = data.executiveSummary;
 
-            // Safely get values with null checks
-            if (data && data.summary) {
-                const summary = data.summary;
+                // Update primary KPIs
+                updateElement('totalCriticalHighFindings', summary.totalCriticalHighFindings || 0);
+                updateElement('risksAboveAppetite', summary.risksAboveAppetite || 0);
+                updateElement('riskVelocity', summary.riskVelocity || 0);
+                updateElement('overallComplianceRate', (summary.assessmentCompletionRate || 0) + '%');
 
-                const totalCriticalHigh = (summary.totalCriticalHighFindings !== undefined && summary.totalCriticalHighFindings !== null)
-                    ? summary.totalCriticalHighFindings : defaults.totalCriticalHighFindings;
-                const overdue = (summary.overdueFindings !== undefined && summary.overdueFindings !== null)
-                    ? summary.overdueFindings : defaults.overdueFindings;
-                const ale = (summary.totalALE !== undefined && summary.totalALE !== null)
-                    ? summary.totalALE : defaults.totalALE;
-                const compliance = (summary.compliancePercentage !== undefined && summary.compliancePercentage !== null)
-                    ? summary.compliancePercentage : defaults.compliancePercentage;
-
-                // Update elements with null checks
-                const totalCriticalHighElement = document.getElementById('totalCriticalHighFindings');
-                if (totalCriticalHighElement) {
-                    totalCriticalHighElement.textContent = totalCriticalHigh.toString();
-                }
-
-                const overdueElement = document.getElementById('overdueFindings');
-                if (overdueElement) {
-                    overdueElement.textContent = overdue.toString();
-                }
-
-                const aleElement = document.getElementById('totalALE');
-                if (aleElement) {
-                    aleElement.textContent = ale > 0 ? formatCurrency(ale) : '$0';
-                }
-
-                const complianceElement = document.getElementById('compliancePercentage');
-                if (complianceElement) {
-                    complianceElement.textContent = compliance + '%';
-                }
-
-                // Update risks above appetite
-                const risksAboveAppetite = (summary.risksAboveAppetite !== undefined && summary.risksAboveAppetite !== null)
-                    ? summary.risksAboveAppetite : 0;
-                const appetiteTrend = summary.riskAppetiteTrend || 'stable';
-
-                const risksAboveAppetiteElement = document.getElementById('risksAboveAppetite');
-                if (risksAboveAppetiteElement) {
-                    risksAboveAppetiteElement.textContent = risksAboveAppetite.toString();
-                }
-
-                const trendIcon = document.getElementById('appetiteTrendIcon');
-                if (trendIcon) {
-                    trendIcon.style.display = appetiteTrend === 'up' ? 'inline-block' : 'none';
-                    trendIcon.className = appetiteTrend === 'up' ? 'fas fa-arrow-up text-danger' : 'fas fa-arrow-down text-success';
-                }
-
-                console.log('✅ Updated KPIs');
+                console.log('✅ Updated Executive Summary KPIs');
             } else {
-                console.log('⚠️ No summary data available, using defaults');
-
-                // Set default values when no data
-                const elements = [
-                    { id: 'totalCriticalHighFindings', value: defaults.totalCriticalHighFindings },
-                    { id: 'overdueFindings', value: defaults.overdueFindings },
-                    { id: 'totalALE', value: '$0' },
-                    { id: 'compliancePercentage', value: defaults.compliancePercentage + '%' },
-                    { id: 'risksAboveAppetite', value: 0 }
-                ];
-
-                elements.forEach(element => {
-                    const el = document.getElementById(element.id);
-                    if (el) {
-                        el.textContent = element.value;
-                    }
-                });
-                
-                // Hide trend icon when no data
-                const trendIcon = document.getElementById('appetiteTrendIcon');
-                if (trendIcon) {
-                    trendIcon.style.display = 'none';
-                }
+                console.log('⚠️ No executive summary data available');
+                setDefaultKPIValues();
             }
         }
 
-        // FIXED: Update business units table with null checks
-        function updateBusinessUnitsTable(data) {
-            const tableBody = document.getElementById('businessUnitHeatmap');
-            if (!tableBody) {
-                console.error('❌ Business unit heatmap table not found');
-                return;
+        // Update Strategic Metrics
+        function updateStrategicMetrics(data) {
+            if (data && data.maturityInsights) {
+                const maturity = data.maturityInsights;
+                updateElement('maturityScore', (maturity.maturityScore || 0) + '%');
+                updateElement('maturityLevel', maturity.overallMaturityLevel || 'Not Assessed');
             }
 
-            if (data && data.businessUnitMetrics && Array.isArray(data.businessUnitMetrics) && data.businessUnitMetrics.length > 0) {
+            if (data && data.executiveSummary) {
+                updateElement('avgResolutionTime', (data.executiveSummary.avgResolutionTimeDays || 0).toFixed(1));
+            }
+        }
+
+
+        function updateMaturityOverview(data) {
+            const container = document.getElementById('maturityOverview');
+            if (!container) return;
+
+            if (data && data.maturityInsights && data.maturityInsights.domainMaturityBreakdown) {
+                const domains = data.maturityInsights.domainMaturityBreakdown;
                 let html = '';
-                data.businessUnitMetrics.forEach(unit => {
-                    if (unit) {
-                        const businessUnit = unit.businessUnit || 'Unknown';
-                        const totalRisks = unit.totalRisks || 0;
-                        const criticalCount = unit.criticalCount || 0;
-                        const highCount = unit.highCount || 0;
-                        const mediumCount = unit.mediumCount || 0;
-                        const lowCount = unit.lowCount || 0;
-                        const totalALE = unit.totalALE || 0;
-                        const status = unit.status || 'unknown';
-                        const statusClass = getStatusClass(status);
-
+                
+                if (domains.length > 0) {
+                    domains.slice(0, 6).forEach(domain => {
+                        const progressWidth = (domain.currentMaturity / 4) * 100;
                         html += `
-                            <tr>
-                                <td>
-                                    <div class="fw-semibold text-dark">${escapeHtml(businessUnit)}</div>
-                                    <small class="text-muted">${totalRisks} risks • $${totalALE.toLocaleString()} ALE</small>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-modern bg-danger">${criticalCount}</span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-modern bg-warning text-dark">${highCount}</span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-modern bg-info">${mediumCount}</span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-modern bg-${statusClass}">${status.toUpperCase()}</span>
-                                </td>
-                            </tr>
+                            <div class="maturity-domain-item">
+                                <div>
+                                    <div style="font-size: 0.875rem; font-weight: 600;">${escapeHtml(domain.domain)}</div>
+                                    <div class="maturity-progress">
+                                        <div class="maturity-progress-fill" style="width: ${progressWidth}%"></div>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: #7f8c8d;">Current: ${domain.currentMaturity}/4 | Target: ${domain.targetMaturity}/4</div>
+                                </div>
+                            </div>
                         `;
-                    }
-                });
-                tableBody.innerHTML = html;
-                console.log(`✅ Updated business units table with ${data.businessUnitMetrics.length} units`);
+                    });
+                } else {
+                    html = '<div class="no-data-message"><i class="fas fa-bullseye"></i>No maturity assessments completed</div>';
+                }
+                
+                container.innerHTML = html;
             } else {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="no-data-message">
-                            <i class="fas fa-building fa-2x mb-2 text-muted d-block"></i>
-                            No business unit data available
-                        </td>
-                    </tr>`;
-                console.log('⚠️ No business unit data available');
+                container.innerHTML = '<div class="no-data-message"><i class="fas fa-bullseye"></i>No maturity data available</div>';
             }
+        }
+
+        function updateBusinessUnitAnalysis(data) {
+            const tableBody = document.getElementById('businessUnitAnalysis');
+            if (!tableBody) return;
+
+            if (data && data.businessUnitAnalysis && data.businessUnitAnalysis.businessUnits) {
+                const units = data.businessUnitAnalysis.businessUnits;
+                let html = '';
+                
+                units.forEach(unit => {
+                    html += `
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">${escapeHtml(unit.businessUnit)}</div>
+                                <small class="text-muted">${unit.totalRisks} total risks</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-modern bg-danger">${unit.criticalCount || 0}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-modern bg-warning text-dark">${unit.highCount || 0}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-modern bg-info">${unit.mediumCount || 0}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-modern bg-secondary">${unit.lowCount || 0}</span>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tableBody.innerHTML = html;
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="5" class="no-data-message"><i class="fas fa-building"></i>No business unit data available</td></tr>';
+            }
+        }
+
+        function updateComplianceFrameworks(data) {
+            const container = document.getElementById('complianceFrameworks');
+            if (!container) return;
+
+            if (data && data.complianceMetrics && data.complianceMetrics.frameworkCompliance) {
+                const frameworks = data.complianceMetrics.frameworkCompliance;
+                let html = '';
+                
+                if (frameworks.length > 0) {
+                    frameworks.forEach(framework => {
+                        const complianceClass = getComplianceClass(framework.complianceRate);
+                        html += `
+                            <div class="compliance-framework-item ${complianceClass}">
+                                <div class="compliance-rate text-${getComplianceColor(framework.complianceRate)}">${framework.complianceRate}%</div>
+                                <div class="compliance-framework-name">${escapeHtml(framework.framework)}</div>
+                                <div class="compliance-gap-count">${framework.gapsCount} gaps identified</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html = '<div class="no-data-message"><i class="fas fa-clipboard-check"></i>No compliance frameworks assessed</div>';
+                }
+                
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div class="no-data-message"><i class="fas fa-clipboard-check"></i>No compliance data available</div>';
+            }
+        }
+
+
+        // Helper functions for the new dashboard
+        function updateElement(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        }
+
+        function setDefaultKPIValues() {
+            const defaultKPIs = [
+                { id: 'totalCriticalHighFindings', value: 0 },
+                { id: 'risksAboveAppetite', value: 0 },
+                { id: 'riskVelocity', value: 0 },
+                { id: 'overallComplianceRate', value: '0%' }
+            ];
+
+            defaultKPIs.forEach(kpi => updateElement(kpi.id, kpi.value));
+        }
+
+        function getTrendIcon(trend) {
+            switch (trend) {
+                case 'increasing': return '<i class="fas fa-arrow-up text-danger"></i>';
+                case 'decreasing': return '<i class="fas fa-arrow-down text-success"></i>';
+                default: return '<i class="fas fa-arrow-right text-info"></i>';
+            }
+        }
+
+        function getComplianceClass(rate) {
+            if (rate >= 80) return 'high-compliance';
+            if (rate >= 60) return 'medium-compliance';
+            return 'low-compliance';
+        }
+
+        function getComplianceColor(rate) {
+            if (rate >= 80) return 'success';
+            if (rate >= 60) return 'warning';
+            return 'danger';
+        }
+
+
+        // Keep the existing business units table function for compatibility
+        function updateBusinessUnitsTable(data) {
+            // This function kept for backward compatibility with existing charts
+            return updateBusinessUnitAnalysis(data);
         }
 
 
@@ -1043,7 +1124,7 @@ Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
                     if (risk) {
                         const riskDescription = risk.riskDescription || 'Unknown Risk';
                         const asset = risk.asset || 'Unknown Asset';
-                        const ale = risk.ale || 0;
+                        const riskScore = risk.riskScore || 0;
                         const status = risk.status || 'Unknown';
 
                         html += `
@@ -1053,7 +1134,7 @@ Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
                                     <small class="text-muted">${escapeHtml(asset)}</small>
                                 </td>
                                 <td class="text-end">
-                                    <span class="fw-bold" style="color: #27ae60; font-size: 1.1rem;">${formatCurrency(ale)}</span>
+                                    <span class="fw-bold" style="color: #27ae60; font-size: 1.1rem;">${riskScore}</span>
                                 </td>
                                 <td class="text-center">
                                     <span class="badge badge-modern bg-${getStatusClass(status.toLowerCase())}">${status.toUpperCase()}</span>
@@ -1094,7 +1175,7 @@ Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
                         const criticalCount = asset.criticalCount || 0;
                         const highCount = asset.highCount || 0;
                         const businessUnit = asset.businessUnit || 'Unknown';
-                        const totalALE = asset.totalALE || 0;
+                        const totalRiskScore = asset.totalRiskScore || 0;
 
                         // Create risk profile indicator
                         let profileClass = 'success';
@@ -1114,7 +1195,7 @@ Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
                             <tr>
                                 <td>
                                     <div class="fw-semibold text-dark">${escapeHtml(assetName)}</div>
-                                    <small class="text-muted">${escapeHtml(businessUnit)} • $${totalALE.toLocaleString()} ALE</small>
+                                    <small class="text-muted">${escapeHtml(businessUnit)} • ${totalRiskScore || 0} risk score</small>
                                 </td>
                                 <td class="text-center">
                                     <span class="badge badge-modern bg-danger">${risksAboveAppetite}</span>
