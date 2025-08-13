@@ -237,57 +237,69 @@ namespace CyberRiskApp.Services
         // NEW: Bulk operations for Excel upload with optimized transactions
         public async Task<List<Risk>> CreateRisksAsync(List<Risk> risks)
         {
-            return await _transactionService.ExecuteInTransactionAsync(async () =>
+            var strategy = _context.Database.CreateExecutionStrategy();
+            
+            return await strategy.ExecuteAsync(async () =>
             {
-                var createdRisks = new List<Risk>();
-                var currentUser = _auditService.GetCurrentUser();
-
-                foreach (var risk in risks)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    try
+                    var createdRisks = new List<Risk>();
+                    var currentUser = _auditService.GetCurrentUser();
+
+                    foreach (var risk in risks)
                     {
-                        // Generate unique risk number for each risk
-                        if (string.IsNullOrEmpty(risk.RiskNumber))
+                        try
                         {
-                            risk.RiskNumber = await GenerateNextRiskNumberAsync();
+                            // Generate unique risk number for each risk
+                            if (string.IsNullOrEmpty(risk.RiskNumber))
+                            {
+                                risk.RiskNumber = await GenerateNextRiskNumberAsync();
+                            }
+
+                            // Set audit fields
+                            _auditService.SetAuditFields(risk, currentUser);
+
+                            // Ensure required fields have defaults
+                            if (risk.OpenDate == default)
+                                risk.OpenDate = DateTime.Today;
+
+                            if (!risk.NextReviewDate.HasValue)
+                                risk.NextReviewDate = DateTime.Today.AddMonths(3);
+
+                            if (risk.Status == default)
+                                risk.Status = RiskStatus.Open;
+
+                            _context.Risks.Add(risk);
+                            createdRisks.Add(risk);
+
+                            // Batch save every 50 records for better performance
+                            if (createdRisks.Count % 50 == 0)
+                            {
+                                await _context.SaveChangesAsync();
+                            }
                         }
-
-                        // Set audit fields
-                        _auditService.SetAuditFields(risk, currentUser);
-
-                        // Ensure required fields have defaults
-                        if (risk.OpenDate == default)
-                            risk.OpenDate = DateTime.Today;
-
-                        if (!risk.NextReviewDate.HasValue)
-                            risk.NextReviewDate = DateTime.Today.AddMonths(3);
-
-                        if (risk.Status == default)
-                            risk.Status = RiskStatus.Open;
-
-                        _context.Risks.Add(risk);
-                        createdRisks.Add(risk);
-
-                        // Batch save every 50 records for better performance
-                        if (createdRisks.Count % 50 == 0)
+                        catch (Exception ex)
                         {
-                            await _context.SaveChangesAsync();
+                            // Log individual risk creation failure but continue with others
+                            Console.WriteLine($"Failed to create risk '{risk.Title}': {ex.Message}");
                         }
                     }
-                    catch (Exception ex)
+
+                    // Save remaining risks
+                    if (createdRisks.Count % 50 != 0)
                     {
-                        // Log individual risk creation failure but continue with others
-                        Console.WriteLine($"Failed to create risk '{risk.Title}': {ex.Message}");
+                        await _context.SaveChangesAsync();
                     }
-                }
 
-                // Save remaining risks
-                if (createdRisks.Count % 50 != 0)
+                    await transaction.CommitAsync();
+                    return createdRisks;
+                }
+                catch
                 {
-                    await _context.SaveChangesAsync();
+                    await transaction.RollbackAsync();
+                    throw;
                 }
-
-                return createdRisks;
             });
         }
 

@@ -1,0 +1,26 @@
+# .dockerignore for development
+.dockerignore
+.env
+.git
+.gitignore
+.vs
+.vscode
+*/bin
+*/obj
+**/.toolstarget
+**/.vs
+**/node_modules
+**/wwwroot/lib
+deployment/
+README.md
+LICENSE
+*.md
+Dockerfile*
+docker-compose*
+.docker/
+.github/
+*.log
+logs/
+temp/
+backups/
+uploads/

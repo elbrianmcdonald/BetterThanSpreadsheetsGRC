@@ -14,8 +14,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure Kestrel to accept custom domains
 builder.WebHost.ConfigureKestrel(options =>
 {
-    // Listen on all interfaces for HTTP
-    options.ListenAnyIP(5197); // HTTP
+    // Listen on all interfaces for HTTP - use environment variable or default to 5000
+    var httpPort = Environment.GetEnvironmentVariable("HTTP_PORT");
+    var port = int.TryParse(httpPort, out var parsedPort) ? parsedPort : 5000;
+    options.ListenAnyIP(port); // HTTP
     
     // Only configure HTTPS if we have a development certificate or in production
     // In development, this will use the dev certificate if available
@@ -144,6 +146,8 @@ builder.Services.AddScoped<IMitreImportService, MitreImportService>();
 builder.Services.AddScoped<IBackupService, BackupService>();
 // Register Risk Assessment Threat Model service
 builder.Services.AddScoped<IRiskAssessmentThreatModelService, RiskAssessmentThreatModelService>();
+// Register Framework Seeding service
+builder.Services.AddScoped<IFrameworkSeedingService, FrameworkSeedingService>();
 // Register HTTP Client Factory for external API calls
 builder.Services.AddHttpClient();
 
@@ -253,6 +257,19 @@ using (var scope = app.Services.CreateScope())
         var riskMatrixService = services.GetRequiredService<IRiskMatrixService>();
         await riskMatrixService.SeedDefaultMatricesAsync();
         Console.WriteLine("✅ Initialized default risk matrices");
+
+        // Initialize default frameworks (C2M2, NIST CSF 2.0, NIST 800-53)
+        var frameworkSeedingService = services.GetRequiredService<IFrameworkSeedingService>();
+        var needsSeeding = await frameworkSeedingService.IsFrameworkSeedingNeededAsync();
+        if (needsSeeding)
+        {
+            await frameworkSeedingService.SeedDefaultFrameworksAsync();
+            Console.WriteLine("✅ Seeded default GRC frameworks");
+        }
+        else
+        {
+            Console.WriteLine("ℹ️  GRC frameworks already exist, skipping seeding");
+        }
 
         // SSL settings are created on-demand when certificates are uploaded
         Console.WriteLine("✅ SSL will be available once certificates are uploaded");

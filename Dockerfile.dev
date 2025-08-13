@@ -1,0 +1,40 @@
+# Development Dockerfile with hot reload support
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 5000
+
+# Install curl and other development tools
+RUN apt-get update && \
+    apt-get install -y curl postgresql-client && \
+    rm -rf /var/lib/apt/lists/*
+
+# Development runtime
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS development
+WORKDIR /src
+
+# Install dotnet-ef tool for migrations
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+# Copy project files and restore dependencies
+COPY CyberRiskApp.csproj ./
+RUN dotnet restore "CyberRiskApp.csproj"
+
+# Copy source code
+COPY . .
+
+# Set environment variables for development
+ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_URLS=http://+:5000
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+ENV ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS=false
+
+# Create necessary directories
+RUN mkdir -p /app/wwwroot/uploads /app/logs /app/backups
+
+# Health check for development
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:5000 || exit 1
+
+# For development - run with watch for hot reload
+CMD ["dotnet", "watch", "run", "--project", "CyberRiskApp.csproj", "--no-launch-profile"]

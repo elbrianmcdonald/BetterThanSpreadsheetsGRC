@@ -443,7 +443,7 @@ namespace CyberRiskApp.Controllers
 
                     // Expected columns:
                     // A: Title, B: Description, C: Asset, D: Business Unit, E: Threat Scenario, 
-                    // F: ALE, G: Risk Level, H: Treatment Strategy, I: Owner
+                    // F: Risk Level, G: Treatment Strategy, H: Owner
 
                     for (int row = 2; row <= worksheet.Dimension.Rows; row++)
                     {
@@ -454,27 +454,14 @@ namespace CyberRiskApp.Controllers
                             var asset = GetCellValue(worksheet, row, 3)?.Trim() ?? "";
                             var businessUnit = GetCellValue(worksheet, row, 4)?.Trim() ?? "";
                             var threatScenario = GetCellValue(worksheet, row, 5)?.Trim() ?? "";
-                            var aleString = GetCellValue(worksheet, row, 6)?.Trim();
-                            var riskLevelString = GetCellValue(worksheet, row, 7)?.Trim();
-                            var treatmentString = GetCellValue(worksheet, row, 8)?.Trim();
-                            var owner = GetCellValue(worksheet, row, 9)?.Trim();
+                            var riskLevelString = GetCellValue(worksheet, row, 6)?.Trim();
+                            var treatmentString = GetCellValue(worksheet, row, 7)?.Trim();
+                            var owner = GetCellValue(worksheet, row, 8)?.Trim();
                             if (string.IsNullOrEmpty(owner)) owner = "Unknown";
 
                             // Skip rows without a title
                             if (string.IsNullOrEmpty(title))
                                 continue;
-
-                            // Parse ALE
-                            decimal ale = 0;
-                            if (!string.IsNullOrEmpty(aleString))
-                            {
-                                // Remove currency symbols and parse
-                                aleString = aleString.Replace("$", "").Replace(",", "");
-                                if (!decimal.TryParse(aleString, out ale))
-                                {
-                                    ale = 0; // Default to 0 if parsing fails
-                                }
-                            }
 
                             // Parse Risk Level
                             RiskLevel riskLevel = RiskLevel.Low;
@@ -507,7 +494,7 @@ namespace CyberRiskApp.Controllers
                                 Asset = asset,
                                 BusinessUnit = businessUnit,
                                 ThreatScenario = threatScenario,
-                                ALE = ale,
+                                ALE = 0, // No longer using quantitative risks - set to 0
                                 RiskLevel = riskLevel,
                                 Treatment = treatment,
                                 Owner = owner,

@@ -18,9 +18,18 @@
                     <i class="fas fa-file-excel me-1"></i>Export to Excel
                 </a>
             }
-            <a asp-action="Create" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>Add Finding
-            </a>
+            @if (User.CanUserPerformAssessments())
+            {
+                <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                    <i class="fas fa-upload me-1"></i>Upload Excel
+                </button>
+            }
+            @if (ViewBag.CanManageFindings == true)
+            {
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Finding
+                </a>
+            }
         </div>
     </div>
 
@@ -264,5 +273,112 @@
             var modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
             modal.show();
         }
+    </script>
+
+    <!-- Upload Modal -->
+    @if (User.CanUserPerformAssessments())
+    {
+        <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title" id="uploadModalLabel">
+                            <i class="fas fa-upload me-2"></i>Upload Findings from Excel
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form asp-action="UploadFindings" method="post" enctype="multipart/form-data" id="uploadForm">
+                        <div class="modal-body">
+                            @Html.AntiForgeryToken()
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Excel File Format:</strong> Your Excel file should contain the following columns in this order:
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ol class="small">
+                                        <li><strong>Title</strong> (Required)</li>
+                                        <li><strong>Details</strong> (Required)</li>
+                                        <li><strong>Impact</strong> (Critical/High/Medium/Low or 4/3/2/1)</li>
+                                        <li><strong>Likelihood</strong> (Almost Certain/Likely/Possible/Unlikely or 4/3/2/1)</li>
+                                        <li><strong>Exposure</strong> (Highly Exposed/Moderately Exposed/Exposed/Slightly Exposed or 4/3/2/1)</li>
+                                        <li><strong>Owner</strong> (Required)</li>
+                                        <li><strong>Domain</strong></li>
+                                    </ol>
+                                </div>
+                                <div class="col-md-6">
+                                    <ol start="8" class="small">
+                                        <li><strong>Business Unit</strong></li>
+                                        <li><strong>Business Owner</strong></li>
+                                        <li><strong>Asset</strong></li>
+                                        <li><strong>Technical Control</strong></li>
+                                        <li><strong>Assigned To</strong></li>
+                                        <li><strong>SLA Date</strong> (MM/DD/YYYY format)</li>
+                                    </ol>
+                                </div>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Important:</strong> The first row should contain column headers. Data should start from row 2.
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="uploadFile" class="form-label"><strong>Select Excel File (.xlsx)</strong></label>
+                                <input type="file" class="form-control" id="uploadFile" name="file" accept=".xlsx" required>
+                                <div class="form-text">Only .xlsx files are supported. Maximum file size: 10MB.</div>
+                            </div>
+                            
+                            <div class="alert alert-success d-none" id="uploadProgress">
+                                <i class="fas fa-spinner fa-spin me-2"></i>
+                                Processing your file, please wait...
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-info" id="uploadBtn">
+                                <i class="fas fa-upload me-1"></i>Upload Findings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            var fileInput = document.getElementById('uploadFile');
+            var uploadBtn = document.getElementById('uploadBtn');
+            var progressDiv = document.getElementById('uploadProgress');
+            
+            if (fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('Please select an Excel file to upload.');
+                return;
+            }
+            
+            var file = fileInput.files[0];
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                e.preventDefault();
+                alert('File size must be less than 10MB.');
+                return;
+            }
+            
+            if (!file.name.toLowerCase().endsWith('.xlsx')) {
+                e.preventDefault();
+                alert('Please select a valid .xlsx Excel file.');
+                return;
+            }
+            
+            // Show progress indicator
+            uploadBtn.disabled = true;
+            progressDiv.classList.remove('d-none');
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+        });
     </script>
 }

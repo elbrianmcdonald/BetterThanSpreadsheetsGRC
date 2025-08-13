@@ -1,0 +1,149 @@
+@{
+    ViewData["Title"] = "Upload Findings from Excel";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-upload text-info me-2"></i>
+            Upload Findings from Excel
+        </h2>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Findings Register
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-excel me-2"></i>Upload Excel File
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="UploadFindings" method="post" enctype="multipart/form-data" id="uploadForm">
+                        @Html.AntiForgeryToken()
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Excel File Format Requirements:</strong>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6>Required Columns (in order):</h6>
+                                <ol class="small">
+                                    <li><strong>Title</strong> (Required)</li>
+                                    <li><strong>Details</strong> (Required)</li>
+                                    <li><strong>Impact</strong> (Critical/High/Medium/Low or 4/3/2/1)</li>
+                                    <li><strong>Likelihood</strong> (Almost Certain/Likely/Possible/Unlikely or 4/3/2/1)</li>
+                                    <li><strong>Exposure</strong> (Highly Exposed/Moderately Exposed/Exposed/Slightly Exposed or 4/3/2/1)</li>
+                                    <li><strong>Owner</strong> (Required)</li>
+                                    <li><strong>Domain</strong></li>
+                                </ol>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Optional Columns:</h6>
+                                <ol start="8" class="small">
+                                    <li><strong>Business Unit</strong></li>
+                                    <li><strong>Business Owner</strong></li>
+                                    <li><strong>Asset</strong></li>
+                                    <li><strong>Technical Control</strong></li>
+                                    <li><strong>Assigned To</strong></li>
+                                    <li><strong>SLA Date</strong> (MM/DD/YYYY format)</li>
+                                </ol>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Important Notes:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>The first row should contain column headers</li>
+                                <li>Data should start from row 2</li>
+                                <li>Only .xlsx files are supported</li>
+                                <li>Maximum file size: 10MB</li>
+                                <li>Risk ratings will be calculated automatically based on Impact, Likelihood, and Exposure</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="uploadFile" class="form-label"><strong>Select Excel File (.xlsx)</strong></label>
+                            <input type="file" class="form-control" id="uploadFile" name="file" accept=".xlsx" required>
+                            <div class="form-text">Choose the Excel file containing your findings data.</div>
+                        </div>
+                        
+                        <div class="alert alert-success d-none" id="uploadProgress">
+                            <i class="fas fa-spinner fa-spin me-2"></i>
+                            Processing your file, please wait... This may take a few moments.
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="Index" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-times me-1"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-info" id="uploadBtn">
+                                <i class="fas fa-upload me-1"></i>Upload Findings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        var fileInput = document.getElementById('uploadFile');
+        var uploadBtn = document.getElementById('uploadBtn');
+        var progressDiv = document.getElementById('uploadProgress');
+        
+        if (fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Please select an Excel file to upload.');
+            return;
+        }
+        
+        var file = fileInput.files[0];
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            e.preventDefault();
+            alert('File size must be less than 10MB.');
+            return;
+        }
+        
+        if (!file.name.toLowerCase().endsWith('.xlsx')) {
+            e.preventDefault();
+            alert('Please select a valid .xlsx Excel file.');
+            return;
+        }
+        
+        // Show progress indicator
+        uploadBtn.disabled = true;
+        progressDiv.classList.remove('d-none');
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+    });
+    
+    // File input change handler for validation feedback
+    document.getElementById('uploadFile').addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        var feedback = document.querySelector('.form-text');
+        
+        if (file) {
+            if (file.size > 10 * 1024 * 1024) {
+                feedback.textContent = 'Warning: File size exceeds 10MB limit.';
+                feedback.className = 'form-text text-danger';
+            } else if (!file.name.toLowerCase().endsWith('.xlsx')) {
+                feedback.textContent = 'Warning: Please select a .xlsx Excel file.';
+                feedback.className = 'form-text text-danger';
+            } else {
+                feedback.textContent = 'File selected: ' + file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + ' MB)';
+                feedback.className = 'form-text text-success';
+            }
+        } else {
+            feedback.textContent = 'Choose the Excel file containing your findings data.';
+            feedback.className = 'form-text';
+        }
+    });
+</script>

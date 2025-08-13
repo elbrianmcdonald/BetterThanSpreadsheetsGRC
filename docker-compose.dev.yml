@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  cyberrisk-db:
+    image: postgres:16
+    container_name: cyberrisk-postgres-dev
+    environment:
+      POSTGRES_DB: CyberRiskDB
+      POSTGRES_USER: cyberrisk_user
+      POSTGRES_PASSWORD: CyberRisk123!
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      # Uncomment if you have init scripts
+      # - ./deployment/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5433:5432"  # Use different port to avoid conflicts with local PostgreSQL
+    networks:
+      - cyberrisk-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyberrisk_user -d CyberRiskDB"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  cyberrisk-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: cyberrisk-app-dev
+    depends_on:
+      cyberrisk-db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:5000
+      HTTP_PORT: "5000"
+      DOTNET_LAUNCH_PROFILE: ""
+      ConnectionStrings__DefaultConnection: "Host=cyberrisk-db;Port=5432;Database=CyberRiskDB;Username=cyberrisk_user;Password=CyberRisk123!;Pooling=true;MinPoolSize=5;MaxPoolSize=50;ConnectionIdleLifetime=300;ConnectionPruningInterval=10"
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft.AspNetCore: Information
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount source code for hot reload
+      - .:/src:rw
+      - /src/bin
+      - /src/obj
+      # Mount data directories
+      - app_dev_data:/app/wwwroot/uploads
+      - app_dev_logs:/app/logs
+    networks:
+      - cyberrisk-dev-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: cyberrisk-pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+    networks:
+      - cyberrisk-dev-network
+    restart: unless-stopped
+    depends_on:
+      - cyberrisk-db
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  app_dev_data:
+    driver: local
+  app_dev_logs:
+    driver: local
+  pgadmin_dev_data:
+    driver: local
+
+networks:
+  cyberrisk-dev-network:
+    driver: bridge
