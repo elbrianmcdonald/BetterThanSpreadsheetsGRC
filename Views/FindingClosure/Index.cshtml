@@ -56,12 +56,13 @@
                         <tbody>
                             @foreach (var request in Model)
                             {
-                                <tr class="@(request.Status == CyberRiskApp.Models.RequestStatus.Pending ? "clickable-row cursor-pointer" : "clickable-row-details cursor-pointer")"
-                                    data-pending="@(request.Status == CyberRiskApp.Models.RequestStatus.Pending ? "true" : "false")"
+                                <tr class="@((request.Status == CyberRiskApp.Models.RequestStatus.Pending || request.Status == CyberRiskApp.Models.RequestStatus.PendingApproval) ? "clickable-row cursor-pointer" : "clickable-row-details cursor-pointer")"
+                                    data-pending="@((request.Status == CyberRiskApp.Models.RequestStatus.Pending || request.Status == CyberRiskApp.Models.RequestStatus.PendingApproval) ? "true" : "false")"
                                     data-request-id="@request.Id">
                                     <td class="px-3 py-3">
                                         <code class="text-primary">#@request.Id</code>
-                                        @if (request.Status == CyberRiskApp.Models.RequestStatus.Pending)
+                                        @if (request.Status == CyberRiskApp.Models.RequestStatus.Pending || 
+                                             request.Status == CyberRiskApp.Models.RequestStatus.PendingApproval)
                                         {
                                             <small class="d-block text-success">
                                                 <i class="fas fa-hand-pointer me-1"></i>Click to review
@@ -155,13 +156,28 @@
                                                 <i class="fas fa-eye me-1"></i>Details
                                             </a>
 
-                                            @if (request.Status == CyberRiskApp.Models.RequestStatus.Pending)
+                                            @if (request.Status == CyberRiskApp.Models.RequestStatus.Pending || 
+                                                 request.Status == CyberRiskApp.Models.RequestStatus.PendingApproval)
                                             {
                                                 <a asp-action="Review" asp-route-id="@request.Id"
                                                    class="btn btn-warning btn-sm text-dark" title="Review Request"
                                                    onclick="event.stopPropagation();">
                                                     <i class="fas fa-clipboard-check me-1"></i>Review
                                                 </a>
+                                            }
+                                            else if (request.Status == CyberRiskApp.Models.RequestStatus.InProgress)
+                                            {
+                                                <a asp-action="Complete" asp-route-id="@request.Id"
+                                                   class="btn btn-info btn-sm" title="Complete Request"
+                                                   onclick="event.stopPropagation();">
+                                                    <i class="fas fa-check-circle me-1"></i>Complete
+                                                </a>
+                                            }
+                                            else if (request.Status == CyberRiskApp.Models.RequestStatus.Completed)
+                                            {
+                                                <span class="badge bg-success fs-6">
+                                                    <i class="fas fa-check me-1"></i>Completed
+                                                </span>
                                             }
                                             else if (request.Status == CyberRiskApp.Models.RequestStatus.Approved)
                                             {
@@ -190,16 +206,24 @@
             <div class="col-md-3">
                 <div class="card bg-warning text-white">
                     <div class="card-body text-center">
-                        <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Pending)</h3>
+                        <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Pending || r.Status == CyberRiskApp.Models.RequestStatus.PendingApproval)</h3>
                         <p class="mb-0">Pending Review</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.InProgress)</h3>
+                        <p class="mb-0">In Progress</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card bg-success text-white">
                     <div class="card-body text-center">
-                        <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Approved)</h3>
-                        <p class="mb-0">Approved</p>
+                        <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Completed || r.Status == CyberRiskApp.Models.RequestStatus.Approved)</h3>
+                        <p class="mb-0">Completed</p>
                     </div>
                 </div>
             </div>
@@ -208,14 +232,6 @@
                     <div class="card-body text-center">
                         <h3>@Model.Count(r => r.Status == CyberRiskApp.Models.RequestStatus.Rejected)</h3>
                         <p class="mb-0">Rejected</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-info text-white">
-                    <div class="card-body text-center">
-                        <h3>@Model.Count()</h3>
-                        <p class="mb-0">Total Requests</p>
                     </div>
                 </div>
             </div>
@@ -300,9 +316,11 @@
         return status switch
         {
             CyberRiskApp.Models.RequestStatus.Pending => "warning",
+            CyberRiskApp.Models.RequestStatus.PendingApproval => "warning",
+            CyberRiskApp.Models.RequestStatus.InProgress => "info",
+            CyberRiskApp.Models.RequestStatus.Completed => "success",
             CyberRiskApp.Models.RequestStatus.Approved => "success",
             CyberRiskApp.Models.RequestStatus.Rejected => "danger",
-            CyberRiskApp.Models.RequestStatus.InProgress => "info",
             _ => "secondary"
         };
     }
@@ -312,9 +330,11 @@
         return status switch
         {
             CyberRiskApp.Models.RequestStatus.Pending => "Pending Review",
+            CyberRiskApp.Models.RequestStatus.PendingApproval => "Pending Assignment",
+            CyberRiskApp.Models.RequestStatus.InProgress => "In Progress",
+            CyberRiskApp.Models.RequestStatus.Completed => "Completed",
             CyberRiskApp.Models.RequestStatus.Approved => "Approved",
             CyberRiskApp.Models.RequestStatus.Rejected => "Rejected",
-            CyberRiskApp.Models.RequestStatus.InProgress => "In Progress",
             _ => "Unknown"
         };
     }

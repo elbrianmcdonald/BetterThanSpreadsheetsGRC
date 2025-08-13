@@ -360,7 +360,11 @@ namespace CyberRiskApp.Controllers
 
                 if (success)
                 {
-                    TempData["Success"] = $"Risk {risk.RiskNumber} '{risk.Title}' has been closed successfully.";
+                    var isAdmin = User.IsInRole("Admin");
+                    var message = isAdmin 
+                        ? $"Risk {risk.RiskNumber} '{risk.Title}' has been closed successfully using admin override privileges."
+                        : $"Risk {risk.RiskNumber} '{risk.Title}' has been closed successfully.";
+                    TempData["Success"] = message;
                 }
                 else
                 {

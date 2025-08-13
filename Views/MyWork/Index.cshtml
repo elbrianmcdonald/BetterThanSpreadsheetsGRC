@@ -161,6 +161,9 @@
                                                     <a asp-action="Complete" asp-route-id="@request.Id" class="btn btn-primary btn-sm">
                                                         <i class="fas fa-check me-1"></i>Complete Work
                                                     </a>
+                                                    <a asp-controller="RiskAssessments" asp-action="Create" class="btn btn-info btn-sm ms-1">
+                                                        <i class="fas fa-external-link-alt me-1"></i>Go to Assessment
+                                                    </a>
                                                 }
                                                 @if (request.Status == RequestStatus.Completed)
                                                 {
@@ -249,11 +252,23 @@
                                                 </p>
                                             </div>
                                             <div class="card-footer">
-                                                @if (request.Status == RequestStatus.InProgress)
+                                                @if (request.Status == RequestStatus.PendingApproval || request.Status == RequestStatus.InProgress)
                                                 {
-                                                    <a href="#" class="btn btn-warning btn-sm">
+                                                    <a asp-controller="RiskAcceptance" asp-action="Review" asp-route-id="@request.Id" class="btn btn-warning btn-sm">
                                                         <i class="fas fa-gavel me-1"></i>Review Request
                                                     </a>
+                                                    @if (request.LinkedRisk != null)
+                                                    {
+                                                        <a asp-controller="Risks" asp-action="Details" asp-route-id="@request.RiskId" class="btn btn-info btn-sm ms-1">
+                                                            <i class="fas fa-external-link-alt me-1"></i>View Risk
+                                                        </a>
+                                                    }
+                                                    @if (request.LinkedFinding != null)
+                                                    {
+                                                        <a asp-controller="Findings" asp-action="Details" asp-route-id="@request.FindingId" class="btn btn-info btn-sm ms-1">
+                                                            <i class="fas fa-external-link-alt me-1"></i>View Finding
+                                                        </a>
+                                                    }
                                                 }
                                                 @if (request.Status == RequestStatus.Completed || request.Status == RequestStatus.Approved || request.Status == RequestStatus.Rejected)
                                                 {
@@ -342,11 +357,17 @@
                                                 </p>
                                             </div>
                                             <div class="card-footer">
-                                                @if (request.Status == RequestStatus.InProgress)
+                                                @if (request.Status == RequestStatus.PendingApproval || request.Status == RequestStatus.InProgress)
                                                 {
                                                     <a asp-controller="FindingClosure" asp-action="Review" asp-route-id="@request.Id" class="btn btn-success btn-sm">
                                                         <i class="fas fa-clipboard-check me-1"></i>Review Request
                                                     </a>
+                                                    @if (request.LinkedFinding != null)
+                                                    {
+                                                        <a asp-controller="Findings" asp-action="Details" asp-route-id="@request.FindingId" class="btn btn-info btn-sm ms-1">
+                                                            <i class="fas fa-external-link-alt me-1"></i>View Finding
+                                                        </a>
+                                                    }
                                                 }
                                                 @if (request.Status == RequestStatus.Completed || request.Status == RequestStatus.Approved || request.Status == RequestStatus.Rejected)
                                                 {

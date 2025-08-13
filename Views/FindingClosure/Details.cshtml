@@ -1,4 +1,6 @@
 ﻿@model CyberRiskApp.Models.FindingClosureRequest
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<CyberRiskApp.Models.User> UserManager
 @{
     ViewData["Title"] = $"Closure Request #{Model.Id}";
 }
@@ -207,11 +209,62 @@
             <div class="card shadow">
                 <div class="card-body">
                     <div class="d-flex gap-3 flex-wrap">
-                        @if (Model.Status == CyberRiskApp.Models.RequestStatus.Pending)
+                        @{
+                            var currentUserId = UserManager.GetUserId(User);
+                            var isAdmin = User.IsInRole("Admin");
+                            var canReview = User.IsInRole("GRCUser") || User.IsInRole("Admin");
+                            var isAssignedToCurrentUser = Model.AssignedToUserId == currentUserId;
+                        }
+
+                        @* Old workflow - Review pending requests *@
+                        @if ((Model.Status == CyberRiskApp.Models.RequestStatus.Pending || 
+                              Model.Status == CyberRiskApp.Models.RequestStatus.PendingApproval) && canReview)
                         {
                             <a asp-action="Review" asp-route-id="@Model.Id" class="btn btn-warning">
                                 <i class="fas fa-clipboard-check me-2"></i>Review Request
                             </a>
+                        }
+
+                        @* New workflow - Complete assigned requests *@
+                        @if (Model.Status == CyberRiskApp.Models.RequestStatus.InProgress)
+                        {
+                            @if (isAssignedToCurrentUser || isAdmin)
+                            {
+                                <a asp-action="Complete" asp-route-id="@Model.Id" 
+                                   class="btn @(isAdmin ? "btn-danger" : "btn-success")">
+                                    @if (isAdmin && !isAssignedToCurrentUser)
+                                    {
+                                        <i class="fas fa-shield-alt me-2"></i><span>Admin Override - Complete Request</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-check-circle me-2"></i><span>Complete Request</span>
+                                    }
+                                </a>
+                            }
+                            else if (canReview)
+                            {
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    This request is assigned to <strong>@(Model.AssignedToUser?.FullName ?? Model.AssignedToUserId)</strong> and can only be completed by them or an administrator.
+                                </div>
+                            }
+                        }
+
+                        @* Assignment info display *@
+                        @if (!string.IsNullOrEmpty(Model.AssignedToUserId))
+                        {
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-info me-2">
+                                    <i class="fas fa-user me-1"></i>Assigned to: @(Model.AssignedToUser?.FullName ?? Model.AssignedToUserId)
+                                </span>
+                                @if (Model.AssignmentDate.HasValue)
+                                {
+                                    <small class="text-muted">
+                                        on @Model.AssignmentDate.Value.ToString("MMM dd, yyyy")
+                                    </small>
+                                }
+                            </div>
                         }
 
                         <a asp-controller="Findings" asp-action="Details" asp-route-id="@Model.FindingId" class="btn btn-info">
@@ -238,9 +291,11 @@
         return status switch
         {
             CyberRiskApp.Models.RequestStatus.Pending => "warning",
+            CyberRiskApp.Models.RequestStatus.PendingApproval => "warning",
+            CyberRiskApp.Models.RequestStatus.InProgress => "info",
+            CyberRiskApp.Models.RequestStatus.Completed => "success",
             CyberRiskApp.Models.RequestStatus.Approved => "success",
             CyberRiskApp.Models.RequestStatus.Rejected => "danger",
-            CyberRiskApp.Models.RequestStatus.InProgress => "info",
             _ => "secondary"
         };
     }
@@ -250,9 +305,11 @@
         return status switch
         {
             CyberRiskApp.Models.RequestStatus.Pending => "Pending Review",
+            CyberRiskApp.Models.RequestStatus.PendingApproval => "Pending Assignment",
+            CyberRiskApp.Models.RequestStatus.InProgress => "In Progress",
+            CyberRiskApp.Models.RequestStatus.Completed => "Completed",
             CyberRiskApp.Models.RequestStatus.Approved => "Approved",
             CyberRiskApp.Models.RequestStatus.Rejected => "Rejected",
-            CyberRiskApp.Models.RequestStatus.InProgress => "In Progress",
             _ => "Unknown"
         };
     }

@@ -31,6 +31,8 @@ namespace CyberRiskApp.Services
             return await _context.Risks
                 .Include(r => r.LinkedFinding)
                 .Include(r => r.LinkedAssessment)
+                    .ThenInclude(a => a.ThreatScenarios)
+                .Include(r => r.LinkedThreatScenario)
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
 

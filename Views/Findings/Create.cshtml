@@ -147,7 +147,7 @@
                                 <div class="card bg-light mb-3">
                                     <div class="card-body">
                                         <h5 class="card-title mb-3">
-                                            <i class="fas fa-tachometer-alt me-2"></i>Risk Assessment
+                                            <i class="fas fa-tachometer-alt me-2"></i>Risk Assessment (Using Admin Matrix)
                                         </h5>
                                         <div class="row text-center">
                                             <div class="col-md-3">
@@ -170,7 +170,7 @@
                                             </div>
                                             <div class="col-md-3">
                                                 <div class="p-2 border-start">
-                                                    <small class="text-muted d-block">Risk Score (Average)</small>
+                                                    <small class="text-muted d-block">Risk Score (Matrix)</small>
                                                     <h3 class="mb-0" id="riskScore">-</h3>
                                                     <span id="riskLevel" class="badge fs-6">-</span>
                                                 </div>
@@ -264,51 +264,99 @@
             console.log('Technical controls updated:', value);
         }
         
-        // Calculate risk score and level using the same method as Finding.CalculateRiskRating()
-        function calculateRisk() {
+        // Calculate risk score and level using the admin-configured risk matrix
+        async function calculateRisk() {
             const impact = parseInt(document.querySelector('[name="Impact"]').value) || 0;
             const likelihood = parseInt(document.querySelector('[name="Likelihood"]').value) || 0;
             const exposure = parseInt(document.querySelector('[name="Exposure"]').value) || 0;
             
-            // Update displays
-            const impactLabels = ['', 'Low', 'Medium', 'High', 'Critical'];
-            const likelihoodLabels = ['', 'Unlikely', 'Possible', 'Likely', 'Almost Certain'];
-            const exposureLabels = ['', 'Low', 'Medium', 'High', 'Critical'];
+            // Reset displays
+            document.getElementById('impactDisplay').textContent = '-';
+            document.getElementById('likelihoodDisplay').textContent = '-';
+            document.getElementById('exposureDisplay').textContent = '-';
+            document.getElementById('riskScore').textContent = '-';
+            document.getElementById('riskLevel').textContent = '-';
+            document.getElementById('riskLevel').className = 'badge fs-6';
             
-            document.getElementById('impactDisplay').textContent = impact ? `${impact} - ${impactLabels[impact]}` : '-';
-            document.getElementById('likelihoodDisplay').textContent = likelihood ? `${likelihood} - ${likelihoodLabels[likelihood]}` : '-';
-            document.getElementById('exposureDisplay').textContent = exposure ? `${exposure} - ${exposureLabels[exposure]}` : '-';
+            // Only calculate if all required values are present
+            if (!impact || !likelihood || !exposure) {
+                return;
+            }
             
-            if (impact && likelihood && exposure) {
-                // Calculate average score - matching Finding.CalculateRiskRating()
-                const averageScore = (impact + likelihood + exposure) / 3.0;
+            try {
+                const token = document.querySelector('[name="__RequestVerificationToken"]').value;
+                const response = await fetch('/Findings/CalculateRisk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        impact: impact,
+                        likelihood: likelihood,
+                        exposure: exposure
+                    })
+                });
                 
-                // For display, show the average score (rounded to 2 decimals)
-                document.getElementById('riskScore').textContent = averageScore.toFixed(2);
-                
-                // Determine risk level based on average - matching the C# logic
-                let level, badgeClass;
-                if (averageScore >= 4.0) {
-                    level = 'Critical';
-                    badgeClass = 'bg-danger';
-                } else if (averageScore >= 3.0) {
-                    level = 'High';
-                    badgeClass = 'bg-warning';
-                } else if (averageScore >= 2.0) {
-                    level = 'Medium';
-                    badgeClass = 'bg-info';
-                } else {
-                    level = 'Low';
-                    badgeClass = 'bg-success';
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                const riskLevelElement = document.getElementById('riskLevel');
-                riskLevelElement.textContent = level;
-                riskLevelElement.className = `badge fs-6 ${badgeClass}`;
-            } else {
-                document.getElementById('riskScore').textContent = '-';
-                document.getElementById('riskLevel').textContent = '-';
-                document.getElementById('riskLevel').className = 'badge fs-6';
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update displays with actual matrix configuration values
+                    document.getElementById('impactDisplay').textContent = `${impact} - ${result.impactName}`;
+                    document.getElementById('likelihoodDisplay').textContent = `${likelihood} - ${result.likelihoodName}`;
+                    
+                    if (result.exposureName) {
+                        document.getElementById('exposureDisplay').textContent = `${exposure} - ${result.exposureName}`;
+                    } else {
+                        document.getElementById('exposureDisplay').textContent = '-';
+                    }
+                    
+                    // Update risk score and level
+                    document.getElementById('riskScore').textContent = result.riskScore;
+                    
+                    const riskLevelElement = document.getElementById('riskLevel');
+                    riskLevelElement.textContent = result.riskLevel;
+                    
+                    // Set badge color based on risk level
+                    let badgeClass;
+                    switch (result.riskLevel.toLowerCase()) {
+                        case 'critical':
+                            badgeClass = 'bg-danger';
+                            break;
+                        case 'high':
+                            badgeClass = 'bg-warning';
+                            break;
+                        case 'medium':
+                            badgeClass = 'bg-info';
+                            break;
+                        case 'low':
+                            badgeClass = 'bg-success';
+                            break;
+                        default:
+                            badgeClass = 'bg-secondary';
+                    }
+                    riskLevelElement.className = `badge fs-6 ${badgeClass}`;
+                } else {
+                    console.error('Risk calculation failed:', result.error);
+                    // Fallback to simple display
+                    document.getElementById('impactDisplay').textContent = `${impact}`;
+                    document.getElementById('likelihoodDisplay').textContent = `${likelihood}`;
+                    document.getElementById('exposureDisplay').textContent = `${exposure}`;
+                    document.getElementById('riskScore').textContent = 'Error';
+                    document.getElementById('riskLevel').textContent = 'Unknown';
+                }
+            } catch (error) {
+                console.error('Error calculating risk:', error);
+                // Fallback display
+                document.getElementById('impactDisplay').textContent = `${impact}`;
+                document.getElementById('likelihoodDisplay').textContent = `${likelihood}`;
+                document.getElementById('exposureDisplay').textContent = `${exposure}`;
+                document.getElementById('riskScore').textContent = 'Error';
+                document.getElementById('riskLevel').textContent = 'Unknown';
             }
         }
         

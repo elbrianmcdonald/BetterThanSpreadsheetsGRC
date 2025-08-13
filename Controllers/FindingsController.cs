@@ -13,13 +13,15 @@ namespace CyberRiskApp.Controllers
         private readonly IFindingService _findingService;
         private readonly IRequestService _requestService;
         private readonly IExportService _exportService;
+        private readonly IRiskMatrixService _riskMatrixService;
         private readonly ILogger<FindingsController> _logger;
 
-        public FindingsController(IFindingService findingService, IRequestService requestService, IExportService exportService, ILogger<FindingsController> logger)
+        public FindingsController(IFindingService findingService, IRequestService requestService, IExportService exportService, IRiskMatrixService riskMatrixService, ILogger<FindingsController> logger)
         {
             _findingService = findingService;
             _requestService = requestService;
             _exportService = exportService;
+            _riskMatrixService = riskMatrixService;
             _logger = logger;
         }
 
@@ -109,11 +111,38 @@ namespace CyberRiskApp.Controllers
             {
                 try
                 {
-                    // Auto-calculate risk rating based on impact, likelihood, and exposure
-                    finding.RiskRating = finding.CalculateRiskRating();
+                    // Get the default risk matrix and calculate risk rating using it
+                    var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                    if (defaultMatrix != null)
+                    {
+                        // Convert enum values to integers for the risk matrix calculation
+                        int impactLevel = (int)finding.Impact;
+                        int likelihoodLevel = (int)finding.Likelihood;
+                        int? exposureLevel = defaultMatrix.MatrixType == RiskMatrixType.ImpactLikelihoodExposure 
+                            ? (int)finding.Exposure 
+                            : null;
+
+                        var riskLevel = await _riskMatrixService.CalculateRiskLevelAsync(
+                            defaultMatrix.Id, impactLevel, likelihoodLevel, exposureLevel);
+
+                        // Convert RiskLevel back to RiskRating
+                        finding.RiskRating = riskLevel switch
+                        {
+                            RiskLevel.Low => RiskRating.Low,
+                            RiskLevel.Medium => RiskRating.Medium,
+                            RiskLevel.High => RiskRating.High,
+                            RiskLevel.Critical => RiskRating.Critical,
+                            _ => RiskRating.Medium
+                        };
+                    }
+                    else
+                    {
+                        // Fallback to original calculation if no matrix is configured
+                        finding.RiskRating = finding.CalculateRiskRating();
+                    }
 
                     await _findingService.CreateFindingAsync(finding);
-                    TempData["Success"] = "Finding created successfully with auto-calculated risk rating.";
+                    TempData["Success"] = "Finding created successfully with risk rating calculated using configured matrix.";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
@@ -156,15 +185,108 @@ namespace CyberRiskApp.Controllers
 
             if (ModelState.IsValid)
             {
-                // Auto-calculate risk rating when editing
-                finding.RiskRating = finding.CalculateRiskRating();
+                // Get the default risk matrix and calculate risk rating using it
+                var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                if (defaultMatrix != null)
+                {
+                    // Convert enum values to integers for the risk matrix calculation
+                    int impactLevel = (int)finding.Impact;
+                    int likelihoodLevel = (int)finding.Likelihood;
+                    int? exposureLevel = defaultMatrix.MatrixType == RiskMatrixType.ImpactLikelihoodExposure 
+                        ? (int)finding.Exposure 
+                        : null;
+
+                    var riskLevel = await _riskMatrixService.CalculateRiskLevelAsync(
+                        defaultMatrix.Id, impactLevel, likelihoodLevel, exposureLevel);
+
+                    // Convert RiskLevel back to RiskRating
+                    finding.RiskRating = riskLevel switch
+                    {
+                        RiskLevel.Low => RiskRating.Low,
+                        RiskLevel.Medium => RiskRating.Medium,
+                        RiskLevel.High => RiskRating.High,
+                        RiskLevel.Critical => RiskRating.Critical,
+                        _ => RiskRating.Medium
+                    };
+                }
+                else
+                {
+                    // Fallback to original calculation if no matrix is configured
+                    finding.RiskRating = finding.CalculateRiskRating();
+                }
 
                 await _findingService.UpdateFindingAsync(finding);
-                TempData["Success"] = "Finding updated successfully with recalculated risk rating.";
+                TempData["Success"] = "Finding updated successfully with risk rating calculated using configured matrix.";
                 return RedirectToAction(nameof(Index));
             }
 
             return View(finding);
+        }
+
+        // API endpoint for real-time risk calculation during finding creation
+        [HttpPost]
+        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        public async Task<IActionResult> CalculateRisk([FromBody] RiskCalculationRequest request)
+        {
+            try
+            {
+                var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                if (defaultMatrix == null)
+                {
+                    return Json(new { success = false, error = "No default risk matrix configured" });
+                }
+
+                // Validate input ranges
+                if (request.Impact < 1 || request.Impact > defaultMatrix.MatrixSize ||
+                    request.Likelihood < 1 || request.Likelihood > defaultMatrix.MatrixSize)
+                {
+                    return Json(new { success = false, error = "Invalid impact or likelihood level" });
+                }
+
+                int? exposureLevel = null;
+                if (defaultMatrix.MatrixType == RiskMatrixType.ImpactLikelihoodExposure)
+                {
+                    if (request.Exposure < 1 || request.Exposure > defaultMatrix.MatrixSize)
+                    {
+                        return Json(new { success = false, error = "Invalid exposure level" });
+                    }
+                    exposureLevel = request.Exposure;
+                }
+
+                var riskLevel = await _riskMatrixService.CalculateRiskLevelAsync(
+                    defaultMatrix.Id, request.Impact, request.Likelihood, exposureLevel);
+
+                var riskScore = await _riskMatrixService.CalculateRiskScoreAsync(
+                    defaultMatrix.Id, request.Impact, request.Likelihood, exposureLevel);
+
+                // Get the level names from the matrix configuration
+                var levels = await _riskMatrixService.GetLevelsByMatrixIdAsync(defaultMatrix.Id);
+                var impactLevels = levels.Where(l => l.LevelType == RiskMatrixLevelType.Impact).OrderBy(l => l.LevelValue).ToList();
+                var likelihoodLevels = levels.Where(l => l.LevelType == RiskMatrixLevelType.Likelihood).OrderBy(l => l.LevelValue).ToList();
+                var exposureLevels = levels.Where(l => l.LevelType == RiskMatrixLevelType.Exposure).OrderBy(l => l.LevelValue).ToList();
+
+                var impactName = impactLevels.ElementAtOrDefault(request.Impact - 1)?.LevelName ?? "Unknown";
+                var likelihoodName = likelihoodLevels.ElementAtOrDefault(request.Likelihood - 1)?.LevelName ?? "Unknown";
+                var exposureName = exposureLevel.HasValue 
+                    ? (exposureLevels.ElementAtOrDefault(exposureLevel.Value - 1)?.LevelName ?? "Unknown")
+                    : null;
+
+                return Json(new
+                {
+                    success = true,
+                    riskLevel = riskLevel.ToString(),
+                    riskScore = Math.Round(riskScore, 2),
+                    impactName,
+                    likelihoodName,
+                    exposureName,
+                    matrixType = defaultMatrix.MatrixType.ToString()
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating risk");
+                return Json(new { success = false, error = "Error calculating risk" });
+            }
         }
 
         // UPDATED: Only Admin can delete findings
@@ -346,6 +468,14 @@ namespace CyberRiskApp.Controllers
                 return Json(new List<object>());
             }
         }
+    }
+
+    // Request model for risk calculation API
+    public class RiskCalculationRequest
+    {
+        public int Impact { get; set; }
+        public int Likelihood { get; set; }
+        public int Exposure { get; set; }
     }
 
     // View Model for the risk acceptance request workflow

@@ -5,16 +5,19 @@ using CyberRiskApp.Data;
 using CyberRiskApp.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Identity;
 
 namespace CyberRiskApp.Controllers
 {
     public class FindingClosureController : Controller
     {
         private readonly CyberRiskContext _context;
+        private readonly UserManager<User> _userManager;
 
-        public FindingClosureController(CyberRiskContext context)
+        public FindingClosureController(CyberRiskContext context, UserManager<User> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         // GET: FindingClosure - All users can view closure requests
@@ -23,6 +26,8 @@ namespace CyberRiskApp.Controllers
         {
             var requests = await _context.FindingClosureRequests
                 .Include(r => r.LinkedFinding)
+                .Include(r => r.AssignedToUser)
+                .Include(r => r.AssignedByUser)
                 .OrderByDescending(r => r.RequestDate)
                 .ToListAsync();
 
@@ -93,7 +98,8 @@ namespace CyberRiskApp.Controllers
 
                 if (ModelState.IsValid)
                 {
-                    request.Requester = User.Identity?.Name ?? "Current User";
+                    var currentUser = await _userManager.GetUserAsync(User);
+                    request.Requester = currentUser?.FullName ?? User.Identity?.Name ?? "Current User";
                     request.RequestDate = DateTime.Today;
                     request.Status = RequestStatus.Pending;
 
@@ -157,6 +163,8 @@ namespace CyberRiskApp.Controllers
         {
             var request = await _context.FindingClosureRequests
                 .Include(r => r.LinkedFinding)
+                .Include(r => r.AssignedToUser)
+                .Include(r => r.AssignedByUser)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (request == null)
@@ -171,12 +179,15 @@ namespace CyberRiskApp.Controllers
         {
             var request = await _context.FindingClosureRequests
                 .Include(r => r.LinkedFinding)
+                .Include(r => r.AssignedToUser)
+                .Include(r => r.AssignedByUser)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (request == null)
                 return NotFound();
 
-            if (request.Status != RequestStatus.Pending)
+            // Allow review of both old Pending status and new PendingApproval status
+            if (request.Status != RequestStatus.Pending && request.Status != RequestStatus.PendingApproval)
             {
                 TempData["Error"] = "Only pending requests can be reviewed.";
                 return RedirectToAction(nameof(Details), new { id });
@@ -185,7 +196,99 @@ namespace CyberRiskApp.Controllers
             return View(request);
         }
 
-        // POST: FindingClosure/Approve/5 - Only GRC and Admin can approve
+        // GET: FindingClosure/Complete/5 - Complete assigned finding closure request
+        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        public async Task<IActionResult> Complete(int id)
+        {
+            var request = await _context.FindingClosureRequests
+                .Include(r => r.LinkedFinding)
+                .Include(r => r.AssignedToUser)
+                .Include(r => r.AssignedByUser)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (request == null)
+                return NotFound();
+
+            // Check if request is assigned and in progress, or if user is admin (can override)
+            var currentUser = await _userManager.GetUserAsync(User);
+            var currentUserId = currentUser?.Id ?? "Unknown";
+            var isAdmin = User.IsInRole("Admin");
+            
+            if (request.Status != RequestStatus.InProgress && !isAdmin)
+            {
+                TempData["Error"] = "Only in-progress requests can be completed.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            if (!isAdmin && request.AssignedToUserId != currentUserId)
+            {
+                TempData["Error"] = "You can only complete requests assigned to you.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+
+            return View(request);
+        }
+
+        // POST: FindingClosure/Complete/5 - Complete assigned finding closure request
+        [HttpPost]
+        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompleteConfirmed(int id, string reviewComments = "")
+        {
+            try
+            {
+                var request = await _context.FindingClosureRequests
+                    .Include(r => r.LinkedFinding)
+                    .FirstOrDefaultAsync(r => r.Id == id);
+
+                if (request == null)
+                    return NotFound();
+
+                var currentUser = await _userManager.GetUserAsync(User);
+                var currentUserId = currentUser?.Id ?? "Unknown";
+                var currentUserName = User?.Identity?.Name ?? "Unknown";
+                var isAdmin = User.IsInRole("Admin");
+
+                // Admin override or assigned user completing
+                if (!isAdmin && request.AssignedToUserId != currentUserId)
+                {
+                    TempData["Error"] = "You can only complete requests assigned to you.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                // Update the closure request
+                request.Status = RequestStatus.Completed;
+                request.ReviewedBy = currentUser?.FullName ?? currentUserName;
+                request.ReviewDate = DateTime.UtcNow;
+                request.CompletedDate = DateTime.UtcNow;
+                request.ReviewComments = reviewComments;
+                request.UpdatedAt = DateTime.UtcNow;
+
+                // Close the finding
+                if (request.LinkedFinding != null)
+                {
+                    request.LinkedFinding.Status = FindingStatus.Closed;
+                    request.LinkedFinding.UpdatedAt = DateTime.UtcNow;
+                    request.LinkedFinding.UpdatedBy = currentUserName;
+                }
+
+                await _context.SaveChangesAsync();
+
+                var message = isAdmin 
+                    ? $"Finding closure request completed using admin override. Finding {request.LinkedFinding?.FindingNumber} has been closed."
+                    : $"Finding closure request completed. Finding {request.LinkedFinding?.FindingNumber} has been closed.";
+
+                TempData["Success"] = message;
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"An error occurred while completing the request: {ex.Message}";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+        }
+
+        // POST: FindingClosure/Approve/5 - Only GRC and Admin can approve (legacy workflow)
         [HttpPost]
         [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
         [ValidateAntiForgeryToken]
@@ -200,7 +303,8 @@ namespace CyberRiskApp.Controllers
                 if (request == null)
                     return NotFound();
 
-                if (request.Status != RequestStatus.Pending)
+                // Handle both old and new workflow statuses
+                if (request.Status != RequestStatus.Pending && request.Status != RequestStatus.PendingApproval)
                 {
                     TempData["Error"] = "Only pending requests can be approved.";
                     return RedirectToAction(nameof(Details), new { id });
@@ -208,14 +312,18 @@ namespace CyberRiskApp.Controllers
 
                 // Update the closure request
                 request.Status = RequestStatus.Approved;
-                request.ReviewedBy = User.Identity?.Name ?? "Current User";
-                request.ReviewDate = DateTime.Today;
+                var currentUser = await _userManager.GetUserAsync(User);
+                request.ReviewedBy = currentUser?.FullName ?? User.Identity?.Name ?? "Current User";
+                request.ReviewDate = DateTime.UtcNow;
                 request.ReviewComments = reviewComments;
+                request.UpdatedAt = DateTime.UtcNow;
 
                 // Close the finding
                 if (request.LinkedFinding != null)
                 {
                     request.LinkedFinding.Status = FindingStatus.Closed;
+                    request.LinkedFinding.UpdatedAt = DateTime.UtcNow;
+                    request.LinkedFinding.UpdatedBy = User.Identity?.Name ?? "Current User";
                 }
 
                 await _context.SaveChangesAsync();
@@ -244,15 +352,17 @@ namespace CyberRiskApp.Controllers
                 if (request == null)
                     return NotFound();
 
-                if (request.Status != RequestStatus.Pending)
+                // Handle both old and new workflow statuses  
+                if (request.Status != RequestStatus.Pending && request.Status != RequestStatus.PendingApproval)
                 {
                     TempData["Error"] = "Only pending requests can be rejected.";
                     return RedirectToAction(nameof(Details), new { id });
                 }
 
                 request.Status = RequestStatus.Rejected;
-                request.ReviewedBy = User.Identity?.Name ?? "Current User";
-                request.ReviewDate = DateTime.Today;
+                var currentUser = await _userManager.GetUserAsync(User);
+                request.ReviewedBy = currentUser?.FullName ?? User.Identity?.Name ?? "Current User";
+                request.ReviewDate = DateTime.UtcNow;
                 request.ReviewComments = reviewComments;
 
                 await _context.SaveChangesAsync();

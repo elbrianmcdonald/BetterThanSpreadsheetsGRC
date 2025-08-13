@@ -1,0 +1,231 @@
+@{
+    ViewData["Title"] = "Data Fix Utility";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tools me-2"></i>Data Fix Utility</h2>
+        <span class="badge bg-danger">Admin Only</span>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>@Html.Raw(TempData["Success"])
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Warning:</strong> This utility fixes data consistency issues that may occur after system updates. 
+        Only run these fixes if you're experiencing issues with request assignments or statuses.
+    </div>
+
+    <!-- Status Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Current Request Status</h5>
+                </div>
+                <div class="card-body">
+                    <button class="btn btn-info mb-3" onclick="checkRequestStatus()">
+                        <i class="fas fa-refresh me-1"></i>Check Current Status
+                    </button>
+                    <div id="statusResults">
+                        <p class="text-muted">Click "Check Current Status" to see the current state of requests.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fix Options -->
+    <div class="row">
+        <!-- Finding Closure Requests -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-warning">
+                    <h6 class="mb-0"><i class="fas fa-times-circle me-2"></i>Finding Closure Requests</h6>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Fixes finding closure requests that are in "In Progress" status but have no assigned user.
+                        This resets them to "Pending Approval" so they can be properly assigned.
+                    </p>
+                    <h6>What this fixes:</h6>
+                    <ul class="small">
+                        <li>Requests with InProgress status but no assignee</li>
+                        <li>Missing created/updated timestamps</li>
+                        <li>Orphaned requests (linked to deleted findings)</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <form asp-action="FixFindingClosureRequests" method="post" onsubmit="return confirm('Are you sure you want to fix finding closure requests? This will reset problematic requests to pending status.')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="fas fa-wrench me-1"></i>Fix Finding Closure Requests
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Acceptance Requests -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-info">
+                    <h6 class="mb-0"><i class="fas fa-handshake me-2"></i>Risk Acceptance Requests</h6>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Fixes risk acceptance requests that are in inconsistent states after system updates.
+                        Resets problematic requests to proper pending status.
+                    </p>
+                    <h6>What this fixes:</h6>
+                    <ul class="small">
+                        <li>Requests with InProgress status but no assignee</li>
+                        <li>Missing assignment tracking data</li>
+                        <li>Inconsistent status transitions</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <form asp-action="FixRiskAcceptanceRequests" method="post" onsubmit="return confirm('Are you sure you want to fix risk acceptance requests?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-info w-100">
+                            <i class="fas fa-wrench me-1"></i>Fix Risk Acceptance Requests
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assessment Requests -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary">
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Assessment Requests</h6>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Fixes risk assessment requests that may be stuck in inconsistent states.
+                        Ensures proper assignment workflow functionality.
+                    </p>
+                    <h6>What this fixes:</h6>
+                    <ul class="small">
+                        <li>Requests with InProgress status but no assignee</li>
+                        <li>Missing assignment and tracking data</li>
+                        <li>Broken workflow states</li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <form asp-action="FixAssessmentRequests" method="post" onsubmit="return confirm('Are you sure you want to fix assessment requests?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-wrench me-1"></i>Fix Assessment Requests
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>When to use this utility</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Symptoms that indicate you need data fixes:</h6>
+                            <ul>
+                                <li>Requests showing as "In Progress" in My Work but no one can work on them</li>
+                                <li>Users can't assign requests in the Request Management page</li>
+                                <li>Requests appear in wrong status or won't transition properly</li>
+                                <li>Assignment buttons not working or showing errors</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>What the fixes do:</h6>
+                            <ul>
+                                <li>Reset problematic requests to proper "Pending" status</li>
+                                <li>Clear invalid assignment data that's causing conflicts</li>
+                                <li>Fix missing timestamps and metadata</li>
+                                <li>Remove references to deleted related items</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function checkRequestStatus() {
+            $('#statusResults').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Checking status...</div>');
+            
+            $.ajax({
+                url: '@Url.Action("CheckRequestStatus", "DataFix")',
+                type: 'GET',
+                success: function(data) {
+                    var html = '<div class="row">';
+                    
+                    // Finding Closure Requests
+                    html += '<div class="col-md-4"><div class="card border-warning"><div class="card-header bg-warning text-dark"><small><strong>Finding Closure Requests</strong></small></div><div class="card-body"><small>';
+                    data.FindingClosureRequests.forEach(function(line) {
+                        html += line + '<br/>';
+                    });
+                    html += '</small></div></div></div>';
+                    
+                    // Risk Acceptance Requests  
+                    html += '<div class="col-md-4"><div class="card border-info"><div class="card-header bg-info text-white"><small><strong>Risk Acceptance Requests</strong></small></div><div class="card-body"><small>';
+                    data.RiskAcceptanceRequests.forEach(function(line) {
+                        html += line + '<br/>';
+                    });
+                    html += '</small></div></div></div>';
+                    
+                    // Assessment Requests
+                    html += '<div class="col-md-4"><div class="card border-primary"><div class="card-header bg-primary text-white"><small><strong>Assessment Requests</strong></small></div><div class="card-body"><small>';
+                    data.AssessmentRequests.forEach(function(line) {
+                        html += line + '<br/>';
+                    });
+                    html += '</small></div></div></div>';
+                    
+                    html += '</div>';
+                    
+                    // Highlight problematic counts
+                    html = html.replace(/Problematic.*?: (\d+)/g, function(match, count) {
+                        if (count > 0) {
+                            return '<span class="text-danger fw-bold">' + match + '</span>';
+                        }
+                        return match;
+                    });
+                    
+                    $('#statusResults').html(html);
+                },
+                error: function() {
+                    $('#statusResults').html('<div class="alert alert-danger">Error checking request status</div>');
+                }
+            });
+        }
+        
+        // Auto-check status on page load
+        $(document).ready(function() {
+            checkRequestStatus();
+        });
+    </script>
+}

@@ -1,0 +1,395 @@
+﻿@model CyberRiskApp.Models.FindingClosureRequest
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<CyberRiskApp.Models.User> UserManager
+@{
+    ViewData["Title"] = $"Complete Closure Request #{Model.Id}";
+    var currentUserId = UserManager.GetUserId(User);
+    var isAdmin = User.IsInRole("Admin");
+    var isAssignedToCurrentUser = Model.AssignedToUserId == currentUserId;
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="card shadow mb-4">
+                <div class="card-header @(isAdmin && !isAssignedToCurrentUser ? "bg-danger text-white" : "bg-success text-white")">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="card-title mb-0">
+                                <i class="fas fa-check-circle me-2"></i>
+                                @if (isAdmin && !isAssignedToCurrentUser)
+                                {
+                                    <span>Complete Closure Request (Admin Override)</span>
+                                    <i class="fas fa-shield-alt ms-2" title="Admin Override"></i>
+                                }
+                                else
+                                {
+                                    <span>Complete Closure Request</span>
+                                }
+                            </h3>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge bg-light text-dark fs-6">#@Model.Id</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (isAdmin && !isAssignedToCurrentUser)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            <strong>Admin Override:</strong> This request is assigned to <strong>@(Model.AssignedToUser?.FullName ?? Model.AssignedToUserId)</strong>, but as an administrator, you can complete it on their behalf. This action will override normal assignment restrictions.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success">
+                            <i class="fas fa-user-check me-2"></i>
+                            <strong>Assigned Request:</strong> This closure request has been assigned to you for completion. Review the information below and complete the closure process.
+                        </div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="fw-bold text-primary mb-2">
+                                Finding: @Model.LinkedFinding.FindingNumber
+                            </h5>
+                            <h6 class="text-muted mb-3">@Model.LinkedFinding.Title</h6>
+                            <div class="d-flex gap-2 mb-3">
+                                <span class="badge bg-@GetRiskColor(Model.LinkedFinding.RiskRating) fs-6">
+                                    @Model.LinkedFinding.RiskRating Risk
+                                </span>
+                                <span class="badge bg-info fs-6">In Progress</span>
+                                @if (!string.IsNullOrEmpty(Model.AssignedToUserId))
+                                {
+                                    <span class="badge bg-secondary fs-6">
+                                        Assigned to: @(Model.AssignedToUser?.FullName ?? Model.AssignedToUserId)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                <strong>Requested by:</strong><br>
+                                <i class="fas fa-user me-1"></i>@Model.Requester
+                            </div>
+                            <div class="mb-2">
+                                <strong>Request Date:</strong><br>
+                                <i class="fas fa-calendar me-1"></i>@Model.RequestDate.ToString("MMMM dd, yyyy")
+                            </div>
+                            @if (Model.AssignmentDate.HasValue)
+                            {
+                                <div class="mb-2">
+                                    <strong>Assigned Date:</strong><br>
+                                    <i class="fas fa-clock me-1"></i>@Model.AssignmentDate.Value.ToString("MMMM dd, yyyy")
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Finding Summary -->
+            <div class="card shadow mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Finding Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Open Date:</strong> @Model.LinkedFinding.OpenDate.ToString("MMM dd, yyyy")<br>
+                            <strong>Days Open:</strong> @((DateTime.Today - Model.LinkedFinding.OpenDate).Days) days
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Owner:</strong> @Model.LinkedFinding.Owner<br>
+                            <strong>Asset:</strong> @Model.LinkedFinding.Asset
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Domain:</strong> @Model.LinkedFinding.Domain<br>
+                            @if (Model.LinkedFinding.SlaDate.HasValue)
+                            {
+                                <strong>SLA Date:</strong>
+                                <span class="@(Model.LinkedFinding.SlaDate < DateTime.Today ? "text-danger" : "")">
+                                    @Model.LinkedFinding.SlaDate.Value.ToString("MMM dd, yyyy")
+                                </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <strong>Finding Details:</strong>
+                        <div class="border rounded p-2 bg-light small">
+                            @Model.LinkedFinding.Details
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Closure Justification Review -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info bg-opacity-10">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i>Closure Justification
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="border rounded p-3 bg-light">
+                        @Html.Raw(Model.ClosureJustification.Replace("\n", "<br>"))
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evidence Review -->
+            @if (!string.IsNullOrEmpty(Model.EvidenceLinks))
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-success bg-opacity-10">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-link me-2"></i>Evidence Documentation
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="border rounded p-3 bg-light">
+                            @Html.Raw(Model.EvidenceLinks.Replace("\n", "<br>"))
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Additional Notes -->
+            @if (!string.IsNullOrEmpty(Model.AdditionalNotes))
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sticky-note me-2"></i>Additional Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="border rounded p-3 bg-light">
+                            @Html.Raw(Model.AdditionalNotes.Replace("\n", "<br>"))
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Assignment Information -->
+            @if (!string.IsNullOrEmpty(Model.AssignmentNotes))
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-secondary bg-opacity-10">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-user-cog me-2"></i>Assignment Notes
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="border rounded p-3 bg-light">
+                            @Html.Raw(Model.AssignmentNotes.Replace("\n", "<br>"))
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.AssignedByUserId))
+                        {
+                            <small class="text-muted">
+                                Assigned by: <strong>@(Model.AssignedByUser?.FullName ?? Model.AssignedByUserId)</strong> 
+                                @if (Model.AssignmentDate.HasValue)
+                                {
+                                    <span>on @Model.AssignmentDate.Value.ToString("MMM dd, yyyy")</span>
+                                }
+                            </small>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Completion Form -->
+            <div class="card shadow mb-4">
+                <div class="card-header @(isAdmin && !isAssignedToCurrentUser ? "bg-danger text-white" : "bg-success text-white")">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Complete Closure Request
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form asp-action="CompleteConfirmed" asp-route-id="@Model.Id" method="post" id="completeForm">
+                        <div class="mb-3">
+                            <label for="reviewComments" class="form-label fw-bold">Completion Comments</label>
+                            <textarea name="reviewComments" id="reviewComments" class="form-control" rows="4"
+                                      placeholder="Optional: Add comments about the completion of this closure request..."></textarea>
+                            <div class="form-text">
+                                Provide any additional comments about completing this closure request.
+                            </div>
+                        </div>
+
+                        <div class="alert alert-@(isAdmin && !isAssignedToCurrentUser ? "warning" : "success")">
+                            <i class="fas fa-@(isAdmin && !isAssignedToCurrentUser ? "shield-alt" : "info-circle") me-2"></i>
+                            <strong>Completing this request will:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Mark the finding as <strong>CLOSED</strong></li>
+                                <li>Set the request status to <strong>COMPLETED</strong></li>
+                                <li>Record your completion decision</li>
+                                @if (isAdmin && !isAssignedToCurrentUser)
+                                {
+                                    <li><strong>Override assignment restrictions (Admin)</strong></li>
+                                }
+                            </ul>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="button" class="btn btn-@(isAdmin && !isAssignedToCurrentUser ? "danger" : "success") btn-lg" 
+                                    id="completeBtn" onclick="showCompleteConfirmation()">
+                                @if (isAdmin && !isAssignedToCurrentUser)
+                                {
+                                    <i class="fas fa-shield-alt me-2"></i><span>Admin Override - Complete Request</span>
+                                }
+                                else
+                                {
+                                    <i class="fas fa-check-circle me-2"></i><span>Complete Request</span>
+                                }
+                            </button>
+
+                            <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Details
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="d-flex gap-3">
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info">
+                            <i class="fas fa-eye me-2"></i>View Details Only
+                        </a>
+
+                        <a asp-controller="Findings" asp-action="Details" asp-route-id="@Model.FindingId" class="btn btn-outline-primary">
+                            <i class="fas fa-external-link-alt me-2"></i>View Full Finding
+                        </a>
+
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-list me-2"></i>Back to Requests
+                        </a>
+
+                        <button class="btn btn-outline-secondary" onclick="window.print()">
+                            <i class="fas fa-print me-2"></i>Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Complete Confirmation Modal -->
+<div class="modal fade" id="completeModal" tabindex="-1" aria-labelledby="completeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header @(isAdmin && !isAssignedToCurrentUser ? "bg-danger text-white" : "bg-success text-white")">
+                <h5 class="modal-title" id="completeModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Finding Closure
+                </h5>
+                <button type="button" class="btn-close @(isAdmin && !isAssignedToCurrentUser ? "btn-close-white" : "")" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (isAdmin && !isAssignedToCurrentUser)
+                {
+                    <div class="alert alert-warning">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        <strong>Admin Override Warning:</strong> You are completing a request assigned to someone else!
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Please confirm your completion decision.</strong>
+                    </div>
+                }
+                <p class="mb-3">
+                    You are about to <strong>COMPLETE</strong> the closure request for:
+                </p>
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title mb-1">@Model.LinkedFinding.FindingNumber</h6>
+                        <p class="card-text mb-0">@Model.LinkedFinding.Title</p>
+                    </div>
+                </div>
+                <p class="mb-0">
+                    This will:
+                </p>
+                <ul>
+                    <li>Permanently close the finding</li>
+                    <li>Mark this request as completed</li>
+                    <li>Record your completion decision</li>
+                    @if (isAdmin && !isAssignedToCurrentUser)
+                    {
+                        <li><strong>Override assignment to @(Model.AssignedToUser?.FullName ?? Model.AssignedToUserId)</strong></li>
+                    }
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-@(isAdmin && !isAssignedToCurrentUser ? "danger" : "success")" onclick="confirmComplete()">
+                    @if (isAdmin && !isAssignedToCurrentUser)
+                    {
+                        <i class="fas fa-shield-alt me-2"></i><span>Yes, Override &amp; Complete</span>
+                    }
+                    else
+                    {
+                        <i class="fas fa-check-circle me-2"></i><span>Yes, Complete Request</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Modal instance
+        let completeModal;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            completeModal = new bootstrap.Modal(document.getElementById('completeModal'));
+        });
+        
+        // Show complete confirmation modal
+        function showCompleteConfirmation() {
+            completeModal.show();
+        }
+        
+        // Confirm complete action
+        function confirmComplete() {
+            const form = document.getElementById('completeForm');
+            const btn = document.getElementById('completeBtn');
+            const modalBtn = event.target;
+            
+            // Update both buttons
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Completing...';
+            btn.disabled = true;
+            modalBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            modalBtn.disabled = true;
+            
+            // Hide modal and submit form
+            completeModal.hide();
+            form.submit();
+        }
+    </script>
+}
+
+@functions {
+    private string GetRiskColor(CyberRiskApp.Models.RiskRating rating)
+    {
+        return rating switch
+        {
+            CyberRiskApp.Models.RiskRating.High => "danger",
+            CyberRiskApp.Models.RiskRating.Medium => "warning",
+            CyberRiskApp.Models.RiskRating.Low => "success",
+            CyberRiskApp.Models.RiskRating.Critical => "dark",
+            _ => "secondary"
+        };
+    }
+}

@@ -1,0 +1,489 @@
+@model CyberRiskApp.ViewModels.RequestManagementViewModel
+@{
+    ViewData["Title"] = "Request Management";
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tasks me-2"></i>Request Management</h2>
+        <span class="badge bg-info">Admin Only</span>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h3 class="text-warning">@(Model.TotalUnassignedAssessments + Model.TotalUnassignedAcceptances + Model.TotalUnassignedClosures)</h3>
+                    <p class="mb-0">Unassigned Requests</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">@Model.TotalPendingRequests</h3>
+                    <p class="mb-0">Pending</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h3 class="text-info">@Model.TotalInProgressRequests</h3>
+                    <p class="mb-0">In Progress</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h3 class="text-success">@Model.AvailableAssignees.Count</h3>
+                    <p class="mb-0">Available Assignees</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Tabs -->
+    <ul class="nav nav-tabs" id="requestTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="assessments-tab" data-bs-toggle="tab" data-bs-target="#assessments"
+                    type="button" role="tab" aria-controls="assessments" aria-selected="true">
+                <i class="fas fa-chart-line me-2"></i>Risk Assessments (@Model.AssessmentRequests.Count())
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="acceptances-tab" data-bs-toggle="tab" data-bs-target="#acceptances"
+                    type="button" role="tab" aria-controls="acceptances" aria-selected="false">
+                <i class="fas fa-handshake me-2"></i>Risk Acceptances (@Model.RiskAcceptanceRequests.Count())
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="closures-tab" data-bs-toggle="tab" data-bs-target="#closures"
+                    type="button" role="tab" aria-controls="closures" aria-selected="false">
+                <i class="fas fa-times-circle me-2"></i>Finding Closures (@Model.FindingClosureRequests.Count())
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="requestTabsContent">
+        <!-- Risk Assessment Requests Tab -->
+        <div class="tab-pane fade show active" id="assessments" role="tabpanel" aria-labelledby="assessments-tab">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Request ID</th>
+                                    <th>Scope</th>
+                                    <th>Requester</th>
+                                    <th>Department</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Assigned To</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var request in Model.AssessmentRequests)
+                                {
+                                    <tr>
+                                        <td>#@request.Id</td>
+                                        <td>
+                                            <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@request.Id">
+                                                @request.Scope
+                                            </a>
+                                        </td>
+                                        <td>@request.RequesterName</td>
+                                        <td>@request.Department</td>
+                                        <td>
+                                            @switch (request.Priority)
+                                            {
+                                                case Priority.Urgent:
+                                                    <span class="badge bg-danger">Urgent</span>
+                                                    break;
+                                                case Priority.High:
+                                                    <span class="badge bg-warning">High</span>
+                                                    break;
+                                                case Priority.Medium:
+                                                    <span class="badge bg-info">Medium</span>
+                                                    break;
+                                                case Priority.Low:
+                                                    <span class="badge bg-success">Low</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            @switch (request.Status)
+                                            {
+                                                case RequestStatus.Pending:
+                                                    <span class="badge bg-warning">Pending</span>
+                                                    break;
+                                                case RequestStatus.InProgress:
+                                                    <span class="badge bg-info">In Progress</span>
+                                                    break;
+                                                case RequestStatus.Completed:
+                                                    <span class="badge bg-success">Completed</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-secondary">@request.Status</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            <span id="assignee-assessment-@request.Id">
+                                                @if (request.AssignedToUser != null)
+                                                {
+                                                    <span class="badge bg-primary">
+                                                        @request.AssignedToUser.FirstName @request.AssignedToUser.LastName
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Unassigned</span>
+                                                }
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (string.IsNullOrEmpty(request.AssignedToUserId))
+                                            {
+                                                <select class="form-select form-select-sm assignee-select" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="assessment">
+                                                    <option value="">Select Assignee</option>
+                                                    @foreach (var user in Model.AvailableAssignees)
+                                                    {
+                                                        <option value="@user.Id">@user.FirstName @user.LastName</option>
+                                                    }
+                                                </select>
+                                                <button class="btn btn-sm btn-primary mt-1 assign-btn" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="assessment">
+                                                    <i class="fas fa-user-plus"></i> Assign
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-warning unassign-btn" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="assessment">
+                                                    <i class="fas fa-user-minus"></i> Unassign
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Acceptance Requests Tab -->
+        <div class="tab-pane fade" id="acceptances" role="tabpanel" aria-labelledby="acceptances-tab">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Request ID</th>
+                                    <th>Description</th>
+                                    <th>Requester</th>
+                                    <th>Linked To</th>
+                                    <th>Status</th>
+                                    <th>Assigned To</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var request in Model.RiskAcceptanceRequests)
+                                {
+                                    <tr>
+                                        <td>#@request.Id</td>
+                                        <td>
+                                            <a asp-controller="RiskAcceptance" asp-action="Details" asp-route-id="@request.Id">
+                                                @request.Description
+                                            </a>
+                                        </td>
+                                        <td>@request.Requester</td>
+                                        <td>
+                                            @if (request.LinkedFinding != null)
+                                            {
+                                                <span class="badge bg-info">
+                                                    <i class="fas fa-search me-1"></i>@request.LinkedFinding.FindingNumber
+                                                </span>
+                                            }
+                                            else if (request.LinkedRisk != null)
+                                            {
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>@request.LinkedRisk.RiskNumber
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">None</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @switch (request.Status)
+                                            {
+                                                case RequestStatus.PendingApproval:
+                                                    <span class="badge bg-warning">Pending</span>
+                                                    break;
+                                                case RequestStatus.InProgress:
+                                                    <span class="badge bg-info">In Progress</span>
+                                                    break;
+                                                case RequestStatus.Approved:
+                                                    <span class="badge bg-success">Approved</span>
+                                                    break;
+                                                case RequestStatus.Rejected:
+                                                    <span class="badge bg-danger">Rejected</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-secondary">@request.Status</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            <span id="assignee-acceptance-@request.Id">
+                                                @if (request.AssignedToUser != null)
+                                                {
+                                                    <span class="badge bg-primary">
+                                                        @request.AssignedToUser.FirstName @request.AssignedToUser.LastName
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Unassigned</span>
+                                                }
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (string.IsNullOrEmpty(request.AssignedToUserId))
+                                            {
+                                                <select class="form-select form-select-sm assignee-select" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="acceptance">
+                                                    <option value="">Select Assignee</option>
+                                                    @foreach (var user in Model.AvailableAssignees)
+                                                    {
+                                                        <option value="@user.Id">@user.FirstName @user.LastName</option>
+                                                    }
+                                                </select>
+                                                <button class="btn btn-sm btn-primary mt-1 assign-btn" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="acceptance">
+                                                    <i class="fas fa-user-plus"></i> Assign
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-warning unassign-btn" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="acceptance">
+                                                    <i class="fas fa-user-minus"></i> Unassign
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Finding Closure Requests Tab -->
+        <div class="tab-pane fade" id="closures" role="tabpanel" aria-labelledby="closures-tab">
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Request ID</th>
+                                    <th>Finding</th>
+                                    <th>Requester</th>
+                                    <th>Request Date</th>
+                                    <th>Status</th>
+                                    <th>Assigned To</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var request in Model.FindingClosureRequests)
+                                {
+                                    <tr>
+                                        <td>#@request.Id</td>
+                                        <td>
+                                            @if (request.LinkedFinding != null)
+                                            {
+                                                <a asp-controller="Findings" asp-action="Details" asp-route-id="@request.FindingId">
+                                                    @request.LinkedFinding.FindingNumber - @request.LinkedFinding.Title
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span>Finding Closure Request</span>
+                                            }
+                                        </td>
+                                        <td>@request.Requester</td>
+                                        <td>@request.RequestDate.ToString("MM/dd/yyyy")</td>
+                                        <td>
+                                            @switch (request.Status)
+                                            {
+                                                case RequestStatus.PendingApproval:
+                                                    <span class="badge bg-warning">Pending</span>
+                                                    break;
+                                                case RequestStatus.InProgress:
+                                                    <span class="badge bg-info">In Progress</span>
+                                                    break;
+                                                case RequestStatus.Approved:
+                                                    <span class="badge bg-success">Approved</span>
+                                                    break;
+                                                case RequestStatus.Rejected:
+                                                    <span class="badge bg-danger">Rejected</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-secondary">@request.Status</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            <span id="assignee-closure-@request.Id">
+                                                @if (request.AssignedToUser != null)
+                                                {
+                                                    <span class="badge bg-primary">
+                                                        @request.AssignedToUser.FirstName @request.AssignedToUser.LastName
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Unassigned</span>
+                                                }
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (string.IsNullOrEmpty(request.AssignedToUserId))
+                                            {
+                                                <select class="form-select form-select-sm assignee-select" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="closure">
+                                                    <option value="">Select Assignee</option>
+                                                    @foreach (var user in Model.AvailableAssignees)
+                                                    {
+                                                        <option value="@user.Id">@user.FirstName @user.LastName</option>
+                                                    }
+                                                </select>
+                                                <button class="btn btn-sm btn-primary mt-1 assign-btn" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="closure">
+                                                    <i class="fas fa-user-plus"></i> Assign
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-warning unassign-btn" 
+                                                        data-request-id="@request.Id" 
+                                                        data-request-type="closure">
+                                                    <i class="fas fa-user-minus"></i> Unassign
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Handle assignment
+            $('.assign-btn').click(function() {
+                var requestId = $(this).data('request-id');
+                var requestType = $(this).data('request-type');
+                var assigneeSelect = $(`.assignee-select[data-request-id='${requestId}'][data-request-type='${requestType}']`);
+                var assigneeId = assigneeSelect.val();
+                
+                if (!assigneeId) {
+                    alert('Please select an assignee');
+                    return;
+                }
+                
+                var actionUrl = '';
+                switch(requestType) {
+                    case 'assessment':
+                        actionUrl = '@Url.Action("AssignAssessment", "RequestManagement")';
+                        break;
+                    case 'acceptance':
+                        actionUrl = '@Url.Action("AssignRiskAcceptance", "RequestManagement")';
+                        break;
+                    case 'closure':
+                        actionUrl = '@Url.Action("AssignFindingClosure", "RequestManagement")';
+                        break;
+                }
+                
+                $.ajax({
+                    url: actionUrl,
+                    type: 'POST',
+                    data: {
+                        requestId: requestId,
+                        assigneeId: assigneeId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert(response.message || 'An error occurred');
+                        }
+                    },
+                    error: function() {
+                        alert('An error occurred while assigning the request');
+                    }
+                });
+            });
+            
+            // Handle unassignment
+            $('.unassign-btn').click(function() {
+                if (!confirm('Are you sure you want to unassign this request?')) {
+                    return;
+                }
+                
+                var requestId = $(this).data('request-id');
+                var requestType = $(this).data('request-type');
+                
+                $.ajax({
+                    url: '@Url.Action("UnassignRequest", "RequestManagement")',
+                    type: 'POST',
+                    data: {
+                        requestId: requestId,
+                        requestType: requestType,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert(response.message || 'An error occurred');
+                        }
+                    },
+                    error: function() {
+                        alert('An error occurred while unassigning the request');
+                    }
+                });
+            });
+        });
+    </script>
+}

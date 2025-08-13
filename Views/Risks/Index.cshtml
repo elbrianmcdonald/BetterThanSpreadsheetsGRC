@@ -336,8 +336,12 @@
                                                     <button type="button" class="btn btn-sm btn-outline-warning" 
                                                             data-bs-toggle="modal" 
                                                             data-bs-target="#closeModal@(risk.Id)"
-                                                            title="Close Risk">
+                                                            title="@(User.IsInRole("Admin") ? "Close Risk (Admin Override)" : "Close Risk")">
                                                         <i class="fas fa-times-circle"></i>
+                                                        @if (User.IsInRole("Admin"))
+                                                        {
+                                                            <i class="fas fa-shield-alt" style="font-size: 0.7em; margin-left: 2px;" title="Admin Override Available"></i>
+                                                        }
                                                     </button>
                                                 }
                                             }
@@ -361,17 +365,36 @@
                                     <div class="modal fade" id="closeModal@(risk.Id)" tabindex="-1">
                                         <div class="modal-dialog modal-lg">
                                             <div class="modal-content">
-                                                <div class="modal-header bg-warning text-dark">
+                                                <div class="modal-header @(User.IsInRole("Admin") ? "bg-danger text-white" : "bg-warning text-dark")">
                                                     <h5 class="modal-title">
-                                                        <i class="fas fa-times-circle me-2"></i>Close Risk
+                                                        <i class="fas fa-times-circle me-2"></i>
+                                                        @if (User.IsInRole("Admin"))
+                                                        {
+                                                            <span>Close Risk (Admin Override)</span>
+                                                            <i class="fas fa-shield-alt ms-2" title="Admin Override Privileges"></i>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span>Close Risk</span>
+                                                        }
                                                     </h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    <div class="alert alert-info">
-                                                        <i class="fas fa-info-circle me-2"></i>
-                                                        <strong>Important:</strong> Closing this risk will mark it as resolved. This action can be reversed by editing the risk later if needed.
-                                                    </div>
+                                                    @if (User.IsInRole("Admin"))
+                                                    {
+                                                        <div class="alert alert-warning">
+                                                            <i class="fas fa-shield-alt me-2"></i>
+                                                            <strong>Admin Override:</strong> As an administrator, you can close any risk regardless of assignment or ownership status. This action will override normal workflow restrictions and immediately close the risk.
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="alert alert-info">
+                                                            <i class="fas fa-info-circle me-2"></i>
+                                                            <strong>Important:</strong> Closing this risk will mark it as resolved. This action can be reversed by editing the risk later if needed.
+                                                        </div>
+                                                    }
 
                                                     <!-- Risk Summary -->
                                                     <div class="card mb-4">
@@ -446,9 +469,18 @@
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                                         <i class="fas fa-arrow-left me-2"></i>Cancel
                                                     </button>
-                                                    <button type="button" class="btn btn-warning" onclick="submitCloseForm(@risk.Id)">
-                                                        <i class="fas fa-times-circle me-2"></i>Close Risk
-                                                    </button>
+                                                    @if (User.IsInRole("Admin"))
+                                                    {
+                                                        <button type="button" class="btn btn-danger" onclick="submitCloseForm(@risk.Id)">
+                                                            <i class="fas fa-shield-alt me-2"></i>Admin Override - Close Risk
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="button" class="btn btn-warning" onclick="submitCloseForm(@risk.Id)">
+                                                            <i class="fas fa-times-circle me-2"></i>Close Risk
+                                                        </button>
+                                                    }
                                                 </div>
                                             </div>
                                         </div>
@@ -958,7 +990,13 @@
             return;
         }
         
-        if (confirm('Are you sure you want to close this risk? Make sure you have provided complete remediation details.')) {
+        // Check if user is admin for different confirmation message
+        var isAdmin = @Html.Raw(User.IsInRole("Admin").ToString().ToLower());
+        var confirmMessage = isAdmin 
+            ? 'ADMIN OVERRIDE: Are you sure you want to force close this risk? This will override normal workflow restrictions and immediately close the risk regardless of assignment status.'
+            : 'Are you sure you want to close this risk? Make sure you have provided complete remediation details.';
+        
+        if (confirm(confirmMessage)) {
             document.getElementById('closeForm' + riskId).submit();
         }
     }
