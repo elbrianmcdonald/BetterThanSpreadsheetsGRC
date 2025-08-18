@@ -1,0 +1,475 @@
+@model CyberRiskApp.ViewModels.BacklogDetailsViewModel
+@{
+    ViewData["Title"] = $"Backlog Entry - {Model.Entry.BacklogNumber}";
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-controller="RiskBacklog" asp-action="Index">Risk Backlog</a></li>
+                    <li class="breadcrumb-item active">@Model.Entry.BacklogNumber</li>
+                </ol>
+            </nav>
+            <h2><i class="fas fa-inbox me-2 text-primary"></i>@Model.Entry.BacklogNumber</h2>
+            <p class="text-muted mb-0">@Model.Entry.ActionType - @Model.Entry.Priority Priority</p>
+        </div>
+        <div>
+            <a asp-controller="RiskBacklog" asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Backlog
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Left Column - Entry Details -->
+        <div class="col-lg-8">
+            <!-- Entry Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Entry Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Status</label>
+                                <div>
+                                    <span class="badge bg-@(Model.Entry.Status switch 
+                                    { 
+                                        CyberRiskApp.Models.RiskBacklogStatus.Unassigned => "secondary",
+                                        CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst => "primary", 
+                                        CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager => "info",
+                                        CyberRiskApp.Models.RiskBacklogStatus.Approved => "success",
+                                        CyberRiskApp.Models.RiskBacklogStatus.Rejected => "danger",
+                                        CyberRiskApp.Models.RiskBacklogStatus.Escalated => "warning",
+                                        _ => "secondary"
+                                    }) fs-6">@Model.Entry.Status</span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Priority</label>
+                                <div>
+                                    <span class="badge bg-@(Model.Entry.Priority switch 
+                                    { 
+                                        CyberRiskApp.Models.BacklogPriority.Low => "secondary",
+                                        CyberRiskApp.Models.BacklogPriority.Medium => "primary", 
+                                        CyberRiskApp.Models.BacklogPriority.High => "warning",
+                                        CyberRiskApp.Models.BacklogPriority.Critical => "danger",
+                                        _ => "secondary"
+                                    }) fs-6">@Model.Entry.Priority</span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Action Type</label>
+                                <div>
+                                    <span class="badge bg-info fs-6">@Model.Entry.ActionType</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Current Assignee</label>
+                                <div>@Model.Entry.GetCurrentAssignee()</div>
+                            </div>
+                            @if (Model.Entry.DueDate.HasValue)
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Due Date</label>
+                                    <div class="@(Model.Entry.IsOverdue() ? "text-danger fw-bold" : "")">
+                                        @Model.Entry.DueDate.Value.ToString("MMMM dd, yyyy 'at' HH:mm")
+                                        @if (Model.Entry.IsOverdue())
+                                        {
+                                            <i class="fas fa-exclamation-triangle ms-1"></i>
+                                            <small class="text-danger">(Overdue)</small>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Requested By</label>
+                                <div>@Model.Entry.RequesterUserId</div>
+                                <small class="text-muted">@Model.Entry.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Description</label>
+                        <div class="p-3 bg-light rounded">
+                            @Model.Entry.RequestDescription
+                        </div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(Model.Entry.RequestJustification))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Justification</label>
+                            <div class="p-3 bg-light rounded">
+                                @Model.Entry.RequestJustification
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Related Risk Information -->
+            @if (Model.Entry.Risk != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-shield-alt me-2"></i>Related Risk</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <strong>Risk ID:</strong> 
+                                    <a asp-controller="Risks" asp-action="Details" asp-route-id="@Model.Entry.Risk.Id">
+                                        @Model.Entry.Risk.RiskNumber
+                                    </a>
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Title:</strong> @Model.Entry.Risk.Title
+                                </div>
+                                <div class="mb-2">
+                                    <strong>Status:</strong> 
+                                    <span class="badge bg-@(Model.Entry.Risk.Status switch 
+                                    { 
+                                        CyberRiskApp.Models.RiskStatus.UnderReview => "warning",
+                                        CyberRiskApp.Models.RiskStatus.Open => "danger", 
+                                        CyberRiskApp.Models.RiskStatus.Closed => "success",
+                                        CyberRiskApp.Models.RiskStatus.Accepted => "primary",
+                                        _ => "secondary"
+                                    })">@Model.Entry.Risk.Status</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                @if (Model.Entry.Risk.InherentRiskLevel != CyberRiskApp.Models.RiskLevel.Low || true)
+                                {
+                                    <div class="mb-2">
+                                        <strong>Risk Level:</strong> 
+                                        <span class="badge bg-@(Model.Entry.Risk.InherentRiskLevel switch 
+                                        { 
+                                            CyberRiskApp.Models.RiskLevel.Low => "success",
+                                            CyberRiskApp.Models.RiskLevel.Medium => "warning", 
+                                            CyberRiskApp.Models.RiskLevel.High => "danger",
+                                            CyberRiskApp.Models.RiskLevel.Critical => "dark",
+                                            _ => "secondary"
+                                        })">@Model.Entry.Risk.InherentRiskLevel</span>
+                                    </div>
+                                }
+                                @if (Model.Entry.Risk.LinkedAssessment != null)
+                                {
+                                    <div class="mb-2">
+                                        <strong>Source Assessment:</strong> 
+                                        <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.Entry.Risk.LinkedAssessment.Id">
+                                            @Model.Entry.Risk.LinkedAssessment.Title
+                                        </a>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Comments Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-comments me-2"></i>Comments (@Model.Comments.Count)</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Comments.Any())
+                    {
+                        <div class="comments-list">
+                            @foreach (var comment in Model.Comments.OrderBy(c => c.CreatedAt))
+                            {
+                                <div class="comment mb-3 p-3 @(comment.IsInternal ? "bg-warning bg-opacity-10 border-warning" : "bg-light") rounded">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <strong>@comment.CreatedBy</strong>
+                                            <span class="badge bg-info ms-2">@comment.CommentType</span>
+                                            @if (comment.IsInternal)
+                                            {
+                                                <span class="badge bg-warning ms-1">Internal</span>
+                                            }
+                                        </div>
+                                        <small class="text-muted">@comment.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</small>
+                                    </div>
+                                    <div>@comment.Comment</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No comments yet.</p>
+                    }
+
+                    @if (Model.CanComment)
+                    {
+                        <hr>
+                        <form asp-action="AddComment" method="post">
+                            <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
+                            <div class="mb-3">
+                                <label class="form-label">Add Comment</label>
+                                <textarea name="comment" class="form-control" rows="3" required></textarea>
+                            </div>
+                            @if (User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
+                            {
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" name="isInternal" value="true" class="form-check-input" id="isInternal">
+                                    <label class="form-check-label" for="isInternal">
+                                        Internal comment (not visible to requester)
+                                    </label>
+                                </div>
+                            }
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i>Add Comment
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <!-- Activity Timeline -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-history me-2"></i>Activity Timeline</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Activities.Any())
+                    {
+                        <div class="timeline">
+                            @foreach (var activity in Model.Activities.OrderByDescending(a => a.CreatedAt))
+                            {
+                                <div class="timeline-item mb-3">
+                                    <div class="d-flex">
+                                        <div class="timeline-marker me-3">
+                                            <i class="fas fa-@(activity.ActivityType switch 
+                                            { 
+                                                "Created" => "plus-circle text-success",
+                                                "Assigned" => "user-plus text-primary", 
+                                                "Approved" => "check-circle text-success",
+                                                "Rejected" => "times-circle text-danger",
+                                                "Escalated" => "exclamation-triangle text-warning",
+                                                "PriorityChanged" => "flag text-info",
+                                                _ => "circle text-secondary"
+                                            })"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between">
+                                                <div>
+                                                    <strong>@activity.ActivityType</strong>
+                                                    @if (!string.IsNullOrEmpty(activity.AdditionalDetails))
+                                                    {
+                                                        <span class="text-muted">- @activity.AdditionalDetails</span>
+                                                    }
+                                                </div>
+                                                <small class="text-muted">@activity.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</small>
+                                            </div>
+                                            <small class="text-muted">by @activity.CreatedBy</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No activity recorded yet.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Actions -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-bolt me-2"></i>Actions</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Assignment Actions (Managers Only) -->
+                    @if (Model.CanAssign && Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.Unassigned)
+                    {
+                        <div class="mb-3">
+                            <h6>Assign to Analyst</h6>
+                            <form asp-action="AssignToAnalyst" method="post" class="d-flex">
+                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
+                                <select name="analystId" class="form-select me-2" required>
+                                    <option value="">Select Analyst...</option>
+                                    @foreach (var user in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager))
+                                    {
+                                        <option value="@user.Id">@user.FirstName @user.LastName</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-user-plus"></i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+
+                    <!-- Analyst Actions -->
+                    @if (Model.CanApprove && Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst)
+                    {
+                        <div class="mb-3">
+                            <h6>Analyst Review</h6>
+                            <form asp-action="AnalystApprove" method="post" class="mb-2">
+                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
+                                <div class="mb-2">
+                                    <textarea name="comments" class="form-control" rows="2" placeholder="Comments (optional)"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                    <i class="fas fa-check me-1"></i>Approve & Forward to Manager
+                                </button>
+                            </form>
+                            <form asp-action="AnalystReject" method="post">
+                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
+                                <div class="mb-2">
+                                    <textarea name="reason" class="form-control" rows="2" placeholder="Rejection reason (required)" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-danger btn-sm w-100">
+                                    <i class="fas fa-times me-1"></i>Reject
+                                </button>
+                            </form>
+                        </div>
+                    }
+
+                    <!-- Manager Actions -->
+                    @if (Model.CanAssign && Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
+                    {
+                        <div class="mb-3">
+                            <h6>Manager Decision</h6>
+                            <form asp-action="ManagerApprove" method="post" class="mb-2">
+                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
+                                <div class="mb-2">
+                                    <textarea name="comments" class="form-control" rows="2" placeholder="Comments (optional)"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-sm w-100">
+                                    <i class="fas fa-check me-1"></i>Final Approval
+                                </button>
+                            </form>
+                            <form asp-action="ManagerReject" method="post">
+                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
+                                <div class="mb-2">
+                                    <textarea name="reason" class="form-control" rows="2" placeholder="Rejection reason (required)" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-danger btn-sm w-100">
+                                    <i class="fas fa-times me-1"></i>Reject
+                                </button>
+                            </form>
+                        </div>
+                    }
+
+                    <!-- Priority Management -->
+                    @if (Model.CanAssign && Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Approved && Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Rejected)
+                    {
+                        <div class="mb-3">
+                            <h6>Change Priority</h6>
+                            <form asp-action="SetPriority" method="post" class="d-flex">
+                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
+                                <select name="priority" class="form-select me-2">
+                                    <option value="Low" selected="@(Model.Entry.Priority == CyberRiskApp.Models.BacklogPriority.Low)">Low</option>
+                                    <option value="Medium" selected="@(Model.Entry.Priority == CyberRiskApp.Models.BacklogPriority.Medium)">Medium</option>
+                                    <option value="High" selected="@(Model.Entry.Priority == CyberRiskApp.Models.BacklogPriority.High)">High</option>
+                                    <option value="Critical" selected="@(Model.Entry.Priority == CyberRiskApp.Models.BacklogPriority.Critical)">Critical</option>
+                                </select>
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-flag"></i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+
+                    <!-- Escalation -->
+                    @if (Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Approved && Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Rejected && Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Escalated)
+                    {
+                        <div class="mb-3">
+                            <h6>Escalate</h6>
+                            <form asp-action="Escalate" method="post">
+                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
+                                <div class="mb-2">
+                                    <textarea name="reason" class="form-control" rows="2" placeholder="Escalation reason (required)" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-warning btn-sm w-100">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Escalate
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Entry Summary -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="fas fa-chart-pie me-2"></i>Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">Entry ID:</small>
+                        <div>@Model.Entry.BacklogNumber</div>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Created:</small>
+                        <div>@Model.Entry.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</div>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Last Updated:</small>
+                        <div>@Model.Entry.UpdatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</div>
+                    </div>
+                    @if (Model.Entry.AssignedDate.HasValue)
+                    {
+                        <div class="mb-2">
+                            <small class="text-muted">Assigned:</small>
+                            <div>@Model.Entry.AssignedDate.Value.ToString("MMM dd, yyyy 'at' HH:mm")</div>
+                        </div>
+                    }
+                    @if (Model.Entry.CompletedDate.HasValue)
+                    {
+                        <div class="mb-2">
+                            <small class="text-muted">Completed:</small>
+                            <div>@Model.Entry.CompletedDate.Value.ToString("MMM dd, yyyy 'at' HH:mm")</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline-marker {
+        width: 20px;
+        text-align: center;
+    }
+    
+    .timeline-item {
+        position: relative;
+    }
+    
+    .timeline-item:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 20px;
+        bottom: -15px;
+        width: 2px;
+        background: #dee2e6;
+    }
+    
+    .comment {
+        border-left: 3px solid #007bff;
+    }
+    
+    .comment.bg-warning {
+        border-left-color: #ffc107;
+    }
+</style>

@@ -1,0 +1,1034 @@
+@model CyberRiskApp.ViewModels.BacklogDashboardViewModel
+@{
+    ViewData["Title"] = "Risk Backlog Dashboard";
+}
+
+<div class="container-fluid">
+    <!-- Enhanced Header with Navigation Context -->
+    <div class="mb-4">
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a asp-controller="Dashboard" asp-action="Index" class="text-decoration-none">
+                        <i class="fas fa-home me-1"></i>Home Dashboard
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a asp-controller="Risks" asp-action="Index" class="text-decoration-none">
+                        <i class="fas fa-bullseye me-1"></i>Risk Management
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">
+                    <i class="fas fa-tasks me-1"></i>Risk Workflow
+                </li>
+            </ol>
+        </nav>
+
+        <!-- Main Header -->
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-inbox me-2 text-primary"></i>Risk Workflow Dashboard</h2>
+                <p class="text-muted mb-0">Centralized triage queue for risk management workflow</p>
+            </div>
+            <div class="btn-toolbar" role="toolbar">
+                <!-- Quick Navigation -->
+                <div class="btn-group me-2" role="group" aria-label="Quick Navigation">
+                    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary" title="Return to main dashboard">
+                        <i class="fas fa-home me-1"></i>Dashboard
+                    </a>
+                    <a asp-controller="Risks" asp-action="Index" class="btn btn-outline-secondary" title="View risk register">
+                        <i class="fas fa-clipboard-list me-1"></i>Risk Register
+                    </a>
+                    <a asp-controller="RiskAssessments" asp-action="Index" class="btn btn-outline-secondary" title="View risk assessments">
+                        <i class="fas fa-chart-bar me-1"></i>Assessments
+                    </a>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="btn-group" role="group" aria-label="Actions">
+                    @if (Model.CanAssign)
+                    {
+                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkActionsModal" title="Perform bulk operations">
+                            <i class="fas fa-tasks me-1"></i>Bulk Actions
+                        </button>
+                    }
+                    <a asp-controller="RiskBacklog" asp-action="Reports" class="btn btn-outline-info" title="View detailed reports">
+                        <i class="fas fa-chart-bar me-1"></i>Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (User.IsInRole("Admin"))
+    {
+        <!-- Admin Overview Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Admin Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h3 class="text-danger">@((ViewBag.OrphanedCount ?? 0))</h3>
+                                    <small>Orphaned Entries<br/><span class="text-muted">(RiskId = null)</span></small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h3 class="text-warning">@((ViewBag.StuckCount ?? 0))</h3>
+                                    <small>Stuck in Workflow<br/><span class="text-muted">(&gt;7 days assigned)</span></small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h3 class="text-info">@((ViewBag.RecentErrors ?? 0))</h3>
+                                    <small>Recent Errors<br/><span class="text-muted">(Last 24h)</span></small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h3 class="text-success">@((ViewBag.SystemHealth ?? 100))%</h3>
+                                    <small>System Health<br/><span class="text-muted">Score</span></small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="btn-group" role="group">
+                                    <a href="@Url.Action("SystemHealth")" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-heartbeat me-1"></i>System Health
+                                    </a>
+                                    <a href="@Url.Action("AdminWorkflow")" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-sitemap me-1"></i>Workflow Pipeline
+                                    </a>
+                                    <button type="button" class="btn btn-outline-success btn-sm" onclick="testBacklogCreation()">
+                                        <i class="fas fa-vial me-1"></i>Test Backlog Creation
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <a asp-action="Index" asp-route-filter="all" class="text-decoration-none">
+                <div class="metric-card bg-primary clickable-metric @((ViewBag.CurrentFilter == "all" || string.IsNullOrEmpty(ViewBag.CurrentFilter as string)) ? "active-filter" : "")">
+                    <div class="metric-icon">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">@Model.Statistics.TotalEntries</div>
+                        <div class="metric-label">Total Entries</div>
+                        <small class="metric-hint">
+                            <i class="fas fa-mouse-pointer me-1"></i>Click to view all
+                        </small>
+                    </div>
+                    @if ((ViewBag.CurrentFilter == "all" || string.IsNullOrEmpty(ViewBag.CurrentFilter as string)) && string.IsNullOrEmpty(ViewBag.CurrentStatus as string))
+                    {
+                        <div class="filter-indicator"></div>
+                    }
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <a asp-action="Index" asp-route-status="Unassigned" class="text-decoration-none">
+                <div class="metric-card bg-warning clickable-metric @(ViewBag.CurrentStatus == "Unassigned" ? "active-filter" : "")">
+                    <div class="metric-icon">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">@Model.Statistics.Unassigned</div>
+                        <div class="metric-label">Unassigned</div>
+                        <small class="metric-hint">
+                            <i class="fas fa-mouse-pointer me-1"></i>Click to view unassigned
+                        </small>
+                    </div>
+                    @if (ViewBag.CurrentStatus == "Unassigned")
+                    {
+                        <div class="filter-indicator"></div>
+                    }
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <a asp-action="Index" asp-route-filter="overdue" class="text-decoration-none">
+                <div class="metric-card bg-danger clickable-metric @(ViewBag.CurrentFilter == "overdue" ? "active-filter" : "")">
+                    <div class="metric-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">@Model.Statistics.OverdueSLA</div>
+                        <div class="metric-label">Overdue SLA</div>
+                        <small class="metric-hint">
+                            <i class="fas fa-mouse-pointer me-1"></i>Click to view overdue
+                        </small>
+                    </div>
+                    @if (ViewBag.CurrentFilter == "overdue")
+                    {
+                        <div class="filter-indicator"></div>
+                    }
+                </div>
+            </a>
+        </div>
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <a asp-action="Index" asp-route-filter="completed-this-week" class="text-decoration-none">
+                <div class="metric-card bg-success clickable-metric @(ViewBag.CurrentFilter == "completed-this-week" ? "active-filter" : "")">
+                    <div class="metric-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="metric-content">
+                        <div class="metric-value">@Model.Statistics.CompletedThisWeek</div>
+                        <div class="metric-label">Completed This Week</div>
+                        <small class="metric-hint">
+                            <i class="fas fa-mouse-pointer me-1"></i>Click to view completed
+                        </small>
+                    </div>
+                    @if (ViewBag.CurrentFilter == "completed-this-week")
+                    {
+                        <div class="filter-indicator"></div>
+                    }
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Filter Status -->
+    @{
+        var hasActiveFilter = !string.IsNullOrEmpty(ViewBag.CurrentFilter as string) || 
+                             !string.IsNullOrEmpty(ViewBag.CurrentStatus as string) || 
+                             !string.IsNullOrEmpty(ViewBag.CurrentAction as string);
+        var filterDescription = "";
+        
+        if (!string.IsNullOrEmpty(ViewBag.CurrentStatus as string))
+        {
+            filterDescription = $"Status: {ViewBag.CurrentStatus}";
+        }
+        else if (!string.IsNullOrEmpty(ViewBag.CurrentFilter as string))
+        {
+            filterDescription = ViewBag.CurrentFilter switch 
+            {
+                "overdue" => "Showing: Overdue SLA entries",
+                "completed-this-week" => "Showing: Completed this week",
+                "all" => "Showing: All entries",
+                _ => $"Filter: {ViewBag.CurrentFilter}"
+            };
+        }
+        else if (!string.IsNullOrEmpty(ViewBag.CurrentAction as string))
+        {
+            filterDescription = $"Action: {ViewBag.CurrentAction}";
+        }
+    }
+
+    @if (hasActiveFilter && !string.IsNullOrEmpty(filterDescription))
+    {
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-filter me-2"></i>
+                        <strong>Active Filter:</strong> @filterDescription
+                        <small class="text-muted ms-2">(@Model.AllEntries.Count() entries shown)</small>
+                    </div>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-times me-1"></i>Clear Filter
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" asp-action="Index">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="Unassigned">Unassigned</option>
+                            <option value="AssignedToAnalyst">Assigned to Analyst</option>
+                            <option value="AssignedToManager">Assigned to Manager</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Action Type</label>
+                        <select name="action" class="form-select">
+                            <option value="">All Actions</option>
+                            <option value="NewRisk">New Risk</option>
+                            <option value="RiskAcceptance">Risk Acceptance</option>
+                            <option value="RiskExtension">Risk Extension</option>
+                            <option value="RiskReview">Risk Review</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Priority</label>
+                        <select name="priority" class="form-select">
+                            <option value="">All Priorities</option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>Filter
+                            </button>
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- My Backlog Section -->
+    @if (Model.MyBacklogEntries.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-user me-2"></i>My Assignments (@Model.MyBacklogEntries.Count)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Backlog #</th>
+                                <th>Action</th>
+                                <th>Priority</th>
+                                <th>Description</th>
+                                <th>Source</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in Model.MyBacklogEntries)
+                            {
+                                <tr class="@(entry.IsOverdue() ? "table-danger" : "")">
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@entry.Id" class="fw-bold">
+                                            @entry.BacklogNumber
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">@entry.ActionType</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(entry.Priority switch 
+                                        { 
+                                            CyberRiskApp.Models.BacklogPriority.Low => "secondary",
+                                            CyberRiskApp.Models.BacklogPriority.Medium => "primary", 
+                                            CyberRiskApp.Models.BacklogPriority.High => "warning",
+                                            CyberRiskApp.Models.BacklogPriority.Critical => "danger",
+                                            _ => "secondary"
+                                        })">@entry.Priority</span>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 300px;" title="@entry.RequestDescription">
+                                            @entry.RequestDescription
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (entry.Risk?.LinkedAssessment != null)
+                                        {
+                                            <div>
+                                                <span class="badge bg-info">Assessment</span>
+                                                <br><small class="text-muted">@entry.Risk.LinkedAssessment.Title</small>
+                                            </div>
+                                        }
+                                        else if (entry.Risk?.LinkedFinding != null)
+                                        {
+                                            <div>
+                                                <span class="badge bg-warning">Finding</span>
+                                                <br><small class="text-muted">@entry.Risk.LinkedFinding.FindingNumber</small>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Manual</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (entry.DueDate.HasValue)
+                                        {
+                                            <span class="@(entry.IsOverdue() ? "text-danger fw-bold" : "")">
+                                                @entry.DueDate.Value.ToString("MMM dd, yyyy")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No due date</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(entry.Status switch 
+                                        { 
+                                            CyberRiskApp.Models.RiskBacklogStatus.Unassigned => "secondary",
+                                            CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst => "primary", 
+                                            CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager => "info",
+                                            CyberRiskApp.Models.RiskBacklogStatus.Approved => "success",
+                                            CyberRiskApp.Models.RiskBacklogStatus.Rejected => "danger",
+                                            _ => "secondary"
+                                        })">@entry.Status</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a asp-action="Details" asp-route-id="@entry.Id" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            @if (Model.CanApprove && (entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
+                                            {
+                                                <a asp-action="Details" asp-route-id="@entry.Id" class="btn btn-outline-success btn-sm">
+                                                    <i class="fas fa-check"></i>
+                                                </a>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Unassigned Entries (Managers Only) -->
+    @if (Model.CanAssign && Model.UnassignedEntries.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-user-times me-2"></i>Unassigned Entries (@Model.UnassignedEntries.Count)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>
+                                    <input type="checkbox" id="selectAllUnassigned" class="form-check-input">
+                                </th>
+                                <th>Backlog #</th>
+                                <th>Action</th>
+                                <th>Priority</th>
+                                <th>Description</th>
+                                <th>Requested</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in Model.UnassignedEntries)
+                            {
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" name="selectedEntries" value="@entry.Id" class="form-check-input entry-checkbox">
+                                    </td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@entry.Id" class="fw-bold">
+                                            @entry.BacklogNumber
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">@entry.ActionType</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(entry.Priority switch 
+                                        { 
+                                            CyberRiskApp.Models.BacklogPriority.Low => "secondary",
+                                            CyberRiskApp.Models.BacklogPriority.Medium => "primary", 
+                                            CyberRiskApp.Models.BacklogPriority.High => "warning",
+                                            CyberRiskApp.Models.BacklogPriority.Critical => "danger",
+                                            _ => "secondary"
+                                        })">@entry.Priority</span>
+                                    </td>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 300px;" title="@entry.RequestDescription">
+                                            @entry.RequestDescription
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            @entry.CreatedAt.ToString("MMM dd, yyyy")
+                                            <br>by @entry.CreatedBy
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a asp-action="Details" asp-route-id="@entry.Id" class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <div class="dropdown">
+                                                <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    <i class="fas fa-user-plus"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                                                    {
+                                                        <li>
+                                                            <a class="dropdown-item" href="javascript:void(0)" onclick="assignToAnalyst(@entry.Id, '@analyst.Id', '@analyst.FirstName @analyst.LastName')">
+                                                                <i class="fas fa-user me-2"></i>@analyst.FirstName @analyst.LastName
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="javascript:void(0)" onclick="showAssignmentModal(@entry.Id)">
+                                                            <i class="fas fa-cog me-2"></i>Custom Assignment...
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- All Entries -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>All Backlog Entries (@Model.AllEntries.Count)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Backlog #</th>
+                            <th>Action</th>
+                            <th>Priority</th>
+                            <th>Description</th>
+                            <th>Assignee</th>
+                            <th>Status</th>
+                            <th>Due Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in Model.AllEntries)
+                        {
+                            <tr class="@(entry.IsOverdue() ? "table-warning" : "")">
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@entry.Id" class="fw-bold">
+                                        @entry.BacklogNumber
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@entry.ActionType</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@(entry.Priority switch 
+                                    { 
+                                        CyberRiskApp.Models.BacklogPriority.Low => "secondary",
+                                        CyberRiskApp.Models.BacklogPriority.Medium => "primary", 
+                                        CyberRiskApp.Models.BacklogPriority.High => "warning",
+                                        CyberRiskApp.Models.BacklogPriority.Critical => "danger",
+                                        _ => "secondary"
+                                    })">@entry.Priority</span>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 250px;" title="@entry.RequestDescription">
+                                        @entry.RequestDescription
+                                    </div>
+                                </td>
+                                <td>
+                                    <small class="text-muted">@entry.GetCurrentAssignee()</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@(entry.Status switch 
+                                    { 
+                                        CyberRiskApp.Models.RiskBacklogStatus.Unassigned => "secondary",
+                                        CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst => "primary", 
+                                        CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager => "info",
+                                        CyberRiskApp.Models.RiskBacklogStatus.Approved => "success",
+                                        CyberRiskApp.Models.RiskBacklogStatus.Rejected => "danger",
+                                        _ => "secondary"
+                                    })">@entry.Status</span>
+                                </td>
+                                <td>
+                                    @if (entry.DueDate.HasValue)
+                                    {
+                                        <small class="@(entry.IsOverdue() ? "text-danger fw-bold" : "text-muted")">
+                                            @entry.DueDate.Value.ToString("MMM dd")
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">-</small>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@entry.Id" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions Modal -->
+<div class="modal fade" id="bulkActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user-plus me-2"></i>Assign to Analyst</h6>
+                        <select id="bulkAnalystSelect" class="form-select mb-3">
+                            <option value="">Select Analyst...</option>
+                            @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                            {
+                                <option value="@analyst.Id">@analyst.FirstName @analyst.LastName</option>
+                            }
+                        </select>
+                        <button type="button" class="btn btn-primary" onclick="bulkAssignAnalyst()">
+                            <i class="fas fa-users me-1"></i>Assign Selected
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user-tie me-2"></i>Assign to Manager</h6>
+                        <select id="bulkManagerSelect" class="form-select mb-3">
+                            <option value="">Select Manager...</option>
+                            @foreach (var manager in Model.AvailableManagers.Where(u => u.Role == CyberRiskApp.Models.UserRole.Admin))
+                            {
+                                <option value="@manager.Id">@manager.FirstName @manager.LastName</option>
+                            }
+                        </select>
+                        <button type="button" class="btn btn-info" onclick="bulkAssignManager()">
+                            <i class="fas fa-users me-1"></i>Assign Selected
+                        </button>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-flag me-2"></i>Set Priority</h6>
+                        <select id="bulkPrioritySelect" class="form-select mb-3">
+                            <option value="">Select Priority...</option>
+                            <option value="1">Low</option>
+                            <option value="2">Medium</option>
+                            <option value="3">High</option>
+                            <option value="4">Critical</option>
+                        </select>
+                        <button type="button" class="btn btn-warning" onclick="bulkSetPriority()">
+                            <i class="fas fa-flag me-1"></i>Update Priority
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-check me-2"></i>Quick Actions</h6>
+                        <button type="button" class="btn btn-success mb-2 w-100" onclick="bulkApprove()">
+                            <i class="fas fa-check-circle me-1"></i>Bulk Approve
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary w-100" onclick="clearSelection()">
+                            <i class="fas fa-times me-1"></i>Clear Selection
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <span id="selectedCount" class="text-muted me-auto">0 items selected</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Modal -->
+<div class="modal fade" id="assignmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Backlog Entry</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="assignmentEntryId" value="">
+                <div class="mb-3">
+                    <label class="form-label">Assign to Analyst</label>
+                    <select id="assignmentAnalystSelect" class="form-select">
+                        <option value="">Select Analyst...</option>
+                        @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                        {
+                            <option value="@analyst.Id">@analyst.FirstName @analyst.LastName</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Comments (Optional)</label>
+                    <textarea id="assignmentComments" class="form-control" rows="3" placeholder="Add any comments about this assignment..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmAssignment()">
+                    <i class="fas fa-user-plus me-1"></i>Assign
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .metric-card {
+        background: linear-gradient(135deg, var(--bs-primary), var(--bs-primary));
+        color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        text-align: center;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .metric-card.bg-info { background: linear-gradient(135deg, var(--bs-info), var(--bs-info)); }
+    .metric-card.bg-warning { background: linear-gradient(135deg, var(--bs-warning), var(--bs-warning)); }
+    .metric-card.bg-success { background: linear-gradient(135deg, var(--bs-success), var(--bs-success)); }
+    .metric-card.bg-danger { background: linear-gradient(135deg, var(--bs-danger), var(--bs-danger)); }
+    .metric-card.bg-secondary { background: linear-gradient(135deg, var(--bs-secondary), var(--bs-secondary)); }
+    
+    .metric-icon {
+        font-size: 2rem;
+        margin-right: 1rem;
+        opacity: 0.8;
+    }
+    
+    .metric-content {
+        flex: 1;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        margin-top: 0.25rem;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Select all checkbox functionality
+        document.getElementById('selectAllUnassigned')?.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.entry-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSelectedCount();
+        });
+
+        // Update selected count when individual checkboxes change
+        document.querySelectorAll('.entry-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelectedCount);
+        });
+
+        function updateSelectedCount() {
+            const selectedCheckboxes = document.querySelectorAll('.entry-checkbox:checked');
+            const count = selectedCheckboxes.length;
+            const countElement = document.getElementById('selectedCount');
+            if (countElement) {
+                countElement.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+            }
+        }
+
+        // Quick assign functions
+        function assignToAnalyst(backlogId, analystId, analystName) {
+            if (confirm(`Assign this backlog entry to ${analystName}?`)) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/RiskBacklog/AssignToAnalyst';
+                
+                const backlogIdInput = document.createElement('input');
+                backlogIdInput.type = 'hidden';
+                backlogIdInput.name = 'backlogId';
+                backlogIdInput.value = backlogId;
+                
+                const analystIdInput = document.createElement('input');
+                analystIdInput.type = 'hidden';
+                analystIdInput.name = 'analystId';
+                analystIdInput.value = analystId;
+                
+                // Add anti-forgery token
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+                
+                form.appendChild(backlogIdInput);
+                form.appendChild(analystIdInput);
+                form.appendChild(tokenInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function showAssignmentModal(backlogId) {
+            document.getElementById('assignmentEntryId').value = backlogId;
+            document.getElementById('assignmentAnalystSelect').value = '';
+            document.getElementById('assignmentComments').value = '';
+            new bootstrap.Modal(document.getElementById('assignmentModal')).show();
+        }
+
+        function confirmAssignment() {
+            const backlogId = document.getElementById('assignmentEntryId').value;
+            const analystId = document.getElementById('assignmentAnalystSelect').value;
+            const comments = document.getElementById('assignmentComments').value;
+            
+            if (!analystId) {
+                alert('Please select an analyst to assign to.');
+                return;
+            }
+            
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/RiskBacklog/AssignToAnalyst';
+            
+            const backlogIdInput = document.createElement('input');
+            backlogIdInput.type = 'hidden';
+            backlogIdInput.name = 'backlogId';
+            backlogIdInput.value = backlogId;
+            
+            const analystIdInput = document.createElement('input');
+            analystIdInput.type = 'hidden';
+            analystIdInput.name = 'analystId';
+            analystIdInput.value = analystId;
+            
+            // Add anti-forgery token
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '__RequestVerificationToken';
+            tokenInput.value = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            
+            form.appendChild(backlogIdInput);
+            form.appendChild(analystIdInput);
+            form.appendChild(tokenInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // Bulk actions
+        function getSelectedBacklogIds() {
+            const selectedCheckboxes = document.querySelectorAll('.entry-checkbox:checked');
+            return Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+        }
+
+        function bulkAssignAnalyst() {
+            const selectedIds = getSelectedBacklogIds();
+            const analystId = document.getElementById('bulkAnalystSelect').value;
+            
+            if (selectedIds.length === 0) {
+                alert('Please select at least one backlog entry.');
+                return;
+            }
+            
+            if (!analystId) {
+                alert('Please select an analyst.');
+                return;
+            }
+            
+            if (confirm(`Assign ${selectedIds.length} backlog entries to the selected analyst?`)) {
+                fetch('/api/backlog/bulk-assign-analyst', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        backlogIds: selectedIds,
+                        assigneeId: analystId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Successfully assigned ${data.assignedCount} entries.`);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            }
+        }
+
+        function bulkAssignManager() {
+            const selectedIds = getSelectedBacklogIds();
+            const managerId = document.getElementById('bulkManagerSelect').value;
+            
+            if (selectedIds.length === 0) {
+                alert('Please select at least one backlog entry.');
+                return;
+            }
+            
+            if (!managerId) {
+                alert('Please select a manager.');
+                return;
+            }
+            
+            if (confirm(`Assign ${selectedIds.length} backlog entries to the selected manager?`)) {
+                fetch('/api/backlog/bulk-assign-manager', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        backlogIds: selectedIds,
+                        assigneeId: managerId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Successfully assigned ${data.assignedCount} entries.`);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            }
+        }
+
+        function bulkSetPriority() {
+            const selectedIds = getSelectedBacklogIds();
+            const priority = document.getElementById('bulkPrioritySelect').value;
+            
+            if (selectedIds.length === 0) {
+                alert('Please select at least one backlog entry.');
+                return;
+            }
+            
+            if (!priority) {
+                alert('Please select a priority.');
+                return;
+            }
+            
+            if (confirm(`Update priority for ${selectedIds.length} backlog entries?`)) {
+                fetch('/api/backlog/bulk-priority', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        backlogIds: selectedIds,
+                        priority: parseInt(priority)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Successfully updated priority for ${data.updatedCount} entries.`);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            }
+        }
+
+        function bulkApprove() {
+            const selectedIds = getSelectedBacklogIds();
+            
+            if (selectedIds.length === 0) {
+                alert('Please select at least one backlog entry.');
+                return;
+            }
+            
+            if (confirm(`Approve ${selectedIds.length} backlog entries?`)) {
+                fetch('/api/backlog/bulk-approve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        backlogIds: selectedIds,
+                        comments: 'Bulk approved by manager'
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Successfully approved ${data.approvedCount} entries.`);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error.message);
+                });
+            }
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.entry-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            document.getElementById('selectAllUnassigned').checked = false;
+            updateSelectedCount();
+        }
+
+        // Initialize selected count on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectedCount();
+        });
+    </script>
+}

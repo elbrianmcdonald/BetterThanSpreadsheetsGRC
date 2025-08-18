@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  cyberrisk-db:
+    image: postgres:16
+    container_name: cyberrisk-postgres-deploy
+    environment:
+      POSTGRES_DB: CyberRiskDB
+      POSTGRES_USER: cyberrisk_user
+      POSTGRES_PASSWORD: CyberRisk123!
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_deploy_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"  # Use different port to avoid conflicts
+    networks:
+      - cyberrisk-deploy-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyberrisk_user -d CyberRiskDB"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  cyberrisk-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: cyberrisk-app-deploy
+    depends_on:
+      cyberrisk-db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:5002
+      HTTP_PORT: "5002"
+      DOTNET_LAUNCH_PROFILE: ""
+      ConnectionStrings__DefaultConnection: "Host=cyberrisk-db;Port=5432;Database=CyberRiskDB;Username=cyberrisk_user;Password=CyberRisk123!;Pooling=true;MinPoolSize=5;MaxPoolSize=50;ConnectionIdleLifetime=300;ConnectionPruningInterval=10"
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft.AspNetCore: Information
+    ports:
+      - "5002:5002"  # Use port 5002 to avoid conflicts
+    volumes:
+      # Mount source code for hot reload
+      - .:/src:rw
+      - /src/bin
+      - /src/obj
+      # Mount data directories
+      - app_deploy_data:/app/wwwroot/uploads
+      - app_deploy_logs:/app/logs
+    networks:
+      - cyberrisk-deploy-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  postgres_deploy_data:
+    driver: local
+  app_deploy_data:
+    driver: local
+  app_deploy_logs:
+    driver: local
+
+networks:
+  cyberrisk-deploy-network:
+    driver: bridge

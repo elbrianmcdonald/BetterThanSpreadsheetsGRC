@@ -1,0 +1,372 @@
+@model CyberRiskApp.ViewModels.AdminWorkflowViewModel
+@{
+    ViewData["Title"] = "Admin Workflow Pipeline";
+}
+
+<div class="container-fluid">
+    <!-- Enhanced Header with Navigation Context -->
+    <div class="mb-4">
+        <!-- Breadcrumb Navigation -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a asp-controller="Dashboard" asp-action="Index" class="text-decoration-none">
+                        <i class="fas fa-home me-1"></i>Home Dashboard
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a asp-controller="RiskBacklog" asp-action="Index" class="text-decoration-none">
+                        <i class="fas fa-inbox me-1"></i>Risk Workflow
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">
+                    <i class="fas fa-sitemap me-1"></i>Workflow Pipeline
+                </li>
+            </ol>
+        </nav>
+
+        <!-- Main Header -->
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2><i class="fas fa-sitemap me-2 text-primary"></i>Risk Workflow Pipeline</h2>
+                <p class="text-muted mb-0">Complete view of the risk backlog workflow for administrators</p>
+            </div>
+            <div class="btn-toolbar" role="toolbar">
+                <!-- Navigation -->
+                <div class="btn-group me-2" role="group" aria-label="Navigation">
+                    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary" title="Return to main dashboard">
+                        <i class="fas fa-home me-1"></i>Dashboard
+                    </a>
+                    <a asp-action="Index" class="btn btn-outline-primary" title="Back to Risk Workflow dashboard">
+                        <i class="fas fa-inbox me-1"></i>Workflow Dashboard
+                    </a>
+                </div>
+
+                <!-- Admin Tools -->
+                <div class="btn-group" role="group" aria-label="Admin Tools">
+                    <a asp-action="SystemHealth" class="btn btn-outline-info" title="View system health metrics">
+                        <i class="fas fa-heartbeat me-1"></i>System Health
+                    </a>
+                    <a asp-controller="RiskBacklog" asp-action="Reports" class="btn btn-outline-warning" title="View detailed reports">
+                        <i class="fas fa-chart-bar me-1"></i>Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Health Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>System Health Score</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="display-4 @(Model.SystemHealthScore >= 90 ? "text-success" : Model.SystemHealthScore >= 70 ? "text-warning" : "text-danger")">
+                                    @Model.SystemHealthScore%
+                                </div>
+                                <small>Overall Health</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-info">@Model.TotalEntries</h3>
+                                <small>Total Entries</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-warning">@Model.OrphanedCount</h3>
+                                <small>Orphaned Entries</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h3 class="text-danger">@Model.StuckCount</h3>
+                                <small>Stuck Entries</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow Pipeline -->
+    <div class="row">
+        <!-- Unassigned -->
+        <div class="col-lg-2 col-md-4 mb-4">
+            <div class="card border-secondary">
+                <div class="card-header bg-secondary text-white text-center">
+                    <h6 class="mb-0"><i class="fas fa-inbox me-1"></i>Unassigned</h6>
+                    <span class="badge bg-light text-dark">@Model.UnassignedCount</span>
+                </div>
+                <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var entry in Model.UnassignedEntries.Take(10))
+                    {
+                        <div class="border-bottom pb-2 mb-2">
+                            <small class="fw-bold">@entry.BacklogNumber</small><br>
+                            <small class="text-muted">@entry.RequestDescription.Substring(0, Math.Min(50, entry.RequestDescription.Length))...</small><br>
+                            <small class="text-info">@entry.CreatedAt.ToString("MMM dd")</small>
+                        </div>
+                    }
+                    @if (Model.UnassignedEntries.Count > 10)
+                    {
+                        <small class="text-muted">+ @(Model.UnassignedEntries.Count - 10) more...</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Assigned to Analyst -->
+        <div class="col-lg-2 col-md-4 mb-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white text-center">
+                    <h6 class="mb-0"><i class="fas fa-user me-1"></i>With Analyst</h6>
+                    <span class="badge bg-light text-dark">@Model.AnalystCount</span>
+                </div>
+                <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var entry in Model.AnalystEntries.Take(10))
+                    {
+                        <div class="border-bottom pb-2 mb-2">
+                            <small class="fw-bold">@entry.BacklogNumber</small><br>
+                            <small class="text-muted">@entry.RequestDescription.Substring(0, Math.Min(50, entry.RequestDescription.Length))...</small><br>
+                            <small class="text-info">@entry.AssignedDate?.ToString("MMM dd")</small>
+                        </div>
+                    }
+                    @if (Model.AnalystEntries.Count > 10)
+                    {
+                        <small class="text-muted">+ @(Model.AnalystEntries.Count - 10) more...</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Assigned to Manager -->
+        <div class="col-lg-2 col-md-4 mb-4">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white text-center">
+                    <h6 class="mb-0"><i class="fas fa-user-tie me-1"></i>With Manager</h6>
+                    <span class="badge bg-light text-dark">@Model.ManagerCount</span>
+                </div>
+                <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var entry in Model.ManagerEntries.Take(10))
+                    {
+                        <div class="border-bottom pb-2 mb-2">
+                            <small class="fw-bold">@entry.BacklogNumber</small><br>
+                            <small class="text-muted">@entry.RequestDescription.Substring(0, Math.Min(50, entry.RequestDescription.Length))...</small><br>
+                            <small class="text-info">@entry.AssignedDate?.ToString("MMM dd")</small>
+                        </div>
+                    }
+                    @if (Model.ManagerEntries.Count > 10)
+                    {
+                        <small class="text-muted">+ @(Model.ManagerEntries.Count - 10) more...</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Approved -->
+        <div class="col-lg-2 col-md-4 mb-4">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white text-center">
+                    <h6 class="mb-0"><i class="fas fa-check me-1"></i>Approved</h6>
+                    <span class="badge bg-light text-dark">@Model.ApprovedCount</span>
+                </div>
+                <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var entry in Model.ApprovedEntries.Take(10))
+                    {
+                        <div class="border-bottom pb-2 mb-2">
+                            <small class="fw-bold">@entry.BacklogNumber</small><br>
+                            <small class="text-muted">@entry.RequestDescription.Substring(0, Math.Min(50, entry.RequestDescription.Length))...</small><br>
+                            <small class="text-success">@entry.CompletedDate?.ToString("MMM dd")</small>
+                        </div>
+                    }
+                    @if (Model.ApprovedEntries.Count > 10)
+                    {
+                        <small class="text-muted">+ @(Model.ApprovedEntries.Count - 10) more...</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Rejected -->
+        <div class="col-lg-2 col-md-4 mb-4">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white text-center">
+                    <h6 class="mb-0"><i class="fas fa-times me-1"></i>Rejected</h6>
+                    <span class="badge bg-light text-dark">@Model.RejectedCount</span>
+                </div>
+                <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var entry in Model.RejectedEntries.Take(10))
+                    {
+                        <div class="border-bottom pb-2 mb-2">
+                            <small class="fw-bold">@entry.BacklogNumber</small><br>
+                            <small class="text-muted">@entry.RequestDescription.Substring(0, Math.Min(50, entry.RequestDescription.Length))...</small><br>
+                            <small class="text-danger">@entry.CompletedDate?.ToString("MMM dd")</small>
+                        </div>
+                    }
+                    @if (Model.RejectedEntries.Count > 10)
+                    {
+                        <small class="text-muted">+ @(Model.RejectedEntries.Count - 10) more...</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Escalated -->
+        <div class="col-lg-2 col-md-4 mb-4">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark text-center">
+                    <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-1"></i>Escalated</h6>
+                    <span class="badge bg-dark text-light">@Model.EscalatedCount</span>
+                </div>
+                <div class="card-body p-2" style="max-height: 400px; overflow-y: auto;">
+                    @foreach (var entry in Model.EscalatedEntries.Take(10))
+                    {
+                        <div class="border-bottom pb-2 mb-2">
+                            <small class="fw-bold">@entry.BacklogNumber</small><br>
+                            <small class="text-muted">@entry.RequestDescription.Substring(0, Math.Min(50, entry.RequestDescription.Length))...</small><br>
+                            <small class="text-warning">@entry.AssignedDate?.ToString("MMM dd")</small>
+                        </div>
+                    }
+                    @if (Model.EscalatedEntries.Count > 10)
+                    {
+                        <small class="text-muted">+ @(Model.EscalatedEntries.Count - 10) more...</small>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Problem Areas -->
+    @if (Model.OrphanedEntries.Any() || Model.StuckEntries.Any())
+    {
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Issues Requiring Attention</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @if (Model.OrphanedEntries.Any())
+                            {
+                                <div class="col-md-6">
+                                    <h6 class="text-danger"><i class="fas fa-unlink me-1"></i>Orphaned Entries (@Model.OrphanedEntries.Count)</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Backlog #</th>
+                                                    <th>Created</th>
+                                                    <th>Issue</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var entry in Model.OrphanedEntries.Take(5))
+                                                {
+                                                    <tr>
+                                                        <td><a asp-action="Details" asp-route-id="@entry.Id">@entry.BacklogNumber</a></td>
+                                                        <td>@entry.CreatedAt.ToString("MMM dd")</td>
+                                                        <td><small class="text-danger">No linked risk</small></td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (Model.StuckEntries.Any())
+                            {
+                                <div class="col-md-6">
+                                    <h6 class="text-warning"><i class="fas fa-clock me-1"></i>Stuck Entries (@Model.StuckEntries.Count)</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Backlog #</th>
+                                                    <th>Assigned</th>
+                                                    <th>Days</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var entry in Model.StuckEntries.Take(5))
+                                                {
+                                                    <tr>
+                                                        <td><a asp-action="Details" asp-route-id="@entry.Id">@entry.BacklogNumber</a></td>
+                                                        <td>@entry.AssignedDate?.ToString("MMM dd")</td>
+                                                        <td><small class="text-warning">@((DateTime.UtcNow - (entry.AssignedDate ?? entry.CreatedAt)).Days) days</small></td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Workflow Metrics -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Workflow Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded">
+                                <h4 class="text-primary">@(Model.ApprovedCount + Model.RejectedCount)</h4>
+                                <small>Total Processed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded">
+                                <h4 class="text-success">@((Model.TotalEntries > 0) ? Math.Round((decimal)Model.ApprovedCount / Model.TotalEntries * 100, 1) : 0)%</h4>
+                                <small>Approval Rate</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded">
+                                <h4 class="text-info">@(Model.UnassignedCount + Model.AnalystCount + Model.ManagerCount)</h4>
+                                <small>In Progress</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 border rounded">
+                                <h4 class="text-warning">@Model.EscalatedCount</h4>
+                                <small>Escalated</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        transition: transform 0.2s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .workflow-stage {
+        border-left: 4px solid #007bff;
+        background: linear-gradient(90deg, rgba(0,123,255,0.1) 0%, rgba(255,255,255,1) 100%);
+    }
+</style>
