@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class ThreatModelingController : Controller
     {
         private readonly IThreatModelingService _threatModelingService;

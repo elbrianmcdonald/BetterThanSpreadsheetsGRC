@@ -10,7 +10,7 @@ namespace CyberRiskApp.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class TechnicalControlMappingController : ControllerBase
     {
         private readonly ITechnicalControlMappingService _mappingService;

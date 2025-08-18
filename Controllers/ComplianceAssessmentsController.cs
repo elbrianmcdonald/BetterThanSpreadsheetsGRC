@@ -38,7 +38,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // Only GRC and Admin can create assessments
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(int? frameworkId = null, int? organizationId = null)
         {
             try
@@ -81,7 +81,7 @@ namespace CyberRiskApp.Controllers
         // Only GRC and Admin can create assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(ComplianceAssessmentViewModel model)
         {
             try
@@ -136,7 +136,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // Only GRC and Admin can edit assessments
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id)
         {
             var assessment = await _governanceService.GetAssessmentByIdAsync(id);
@@ -156,7 +156,7 @@ namespace CyberRiskApp.Controllers
         // Only GRC and Admin can edit assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id, ComplianceAssessmentViewModel model)
         {
             if (id != model.Assessment.Id)
@@ -186,7 +186,7 @@ namespace CyberRiskApp.Controllers
         // Only GRC and Admin can delete assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Delete(int id)
         {
             try

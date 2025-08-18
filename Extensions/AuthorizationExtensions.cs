@@ -10,7 +10,7 @@ namespace CyberRiskApp.Extensions
             var roleClaim = user.FindFirst("Role")?.Value;
             if (Enum.TryParse<UserRole>(roleClaim, out var role))
             {
-                return role == UserRole.GRCUser || role == UserRole.Admin;
+                return role == UserRole.GRCAnalyst || role == UserRole.GRCManager || role == UserRole.Admin;
             }
             return false;
         }
@@ -20,7 +20,7 @@ namespace CyberRiskApp.Extensions
             var roleClaim = user.FindFirst("Role")?.Value;
             if (Enum.TryParse<UserRole>(roleClaim, out var role))
             {
-                return role == UserRole.GRCUser || role == UserRole.Admin;
+                return role == UserRole.GRCAnalyst || role == UserRole.GRCManager || role == UserRole.Admin;
             }
             return false;
         }
@@ -50,7 +50,8 @@ namespace CyberRiskApp.Extensions
             return user.GetUserRole() switch
             {
                 UserRole.Admin => "Admin",
-                UserRole.GRCUser => "GRC User",
+                UserRole.GRCManager => "GRC Manager",
+                UserRole.GRCAnalyst => "GRC Analyst",
                 UserRole.ITUser => "IT User",
                 _ => "User"
             };

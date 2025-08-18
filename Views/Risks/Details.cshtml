@@ -389,26 +389,32 @@
         };
     }
 
-    public string GetImpactColor(CyberRiskApp.Models.ImpactLevel? impact)
+    public string GetImpactColor(decimal? impact)
     {
-        return impact switch
+        if (!impact.HasValue) return "secondary";
+        
+        return impact.Value switch
         {
-            CyberRiskApp.Models.ImpactLevel.Critical => "danger",
-            CyberRiskApp.Models.ImpactLevel.High => "warning", 
-            CyberRiskApp.Models.ImpactLevel.Medium => "info",
-            CyberRiskApp.Models.ImpactLevel.Low => "success",
+            >= 5 => "danger",     // Critical/Extreme
+            >= 4 => "danger",     // Critical  
+            >= 3 => "warning",    // High
+            >= 2 => "info",       // Medium
+            >= 1 => "success",    // Low
             _ => "secondary"
         };
     }
 
-    public string GetLikelihoodColor(CyberRiskApp.Models.LikelihoodLevel? likelihood)
+    public string GetLikelihoodColor(decimal? likelihood)
     {
-        return likelihood switch
+        if (!likelihood.HasValue) return "secondary";
+        
+        return likelihood.Value switch
         {
-            CyberRiskApp.Models.LikelihoodLevel.AlmostCertain => "danger",
-            CyberRiskApp.Models.LikelihoodLevel.Likely => "warning",
-            CyberRiskApp.Models.LikelihoodLevel.Possible => "info", 
-            CyberRiskApp.Models.LikelihoodLevel.Unlikely => "success",
+            >= 5 => "danger",     // Certain/Extreme
+            >= 4 => "danger",     // Almost Certain
+            >= 3 => "warning",    // Likely
+            >= 2 => "info",       // Possible
+            >= 1 => "success",    // Unlikely
             _ => "secondary"
         };
     }

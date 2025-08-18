@@ -167,7 +167,7 @@
                                                         <button class="btn btn-outline-success btn-sm" onclick="duplicateScenario(@scenario.Id)">
                                                             <i class="fas fa-copy me-1"></i>Copy
                                                         </button>
-                                                        @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                                        @if (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin"))
                                                         {
                                                             <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteScenario(@scenario.Id, '@scenario.Name')">
                                                                 <i class="fas fa-trash me-1"></i>Delete
@@ -219,7 +219,7 @@
                                                         <button class="btn btn-outline-success btn-sm" onclick="duplicateScenario(@scenario.Id)">
                                                             <i class="fas fa-copy"></i>
                                                         </button>
-                                                        @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                                        @if (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin"))
                                                         {
                                                             <button class="btn btn-outline-danger btn-sm" onclick="confirmDeleteScenario(@scenario.Id, '@scenario.Name')">
                                                                 <i class="fas fa-trash"></i>

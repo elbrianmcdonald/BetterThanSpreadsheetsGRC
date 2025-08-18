@@ -25,8 +25,8 @@ services:
 
   cyberrisk-app:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: deployment/Dockerfile
     container_name: cyberrisk-app
     depends_on:
       cyberrisk-db:
@@ -38,7 +38,7 @@ services:
       AdminSetup__AdminEmail: ${ADMIN_EMAIL:-admin@company.com}
       AdminSetup__RequirePasswordChange: "true"
     ports:
-      - "5000:5000"
+      - "5002:5000"
     volumes:
       - app_data:/app/wwwroot/uploads
       - app_logs:/app/logs

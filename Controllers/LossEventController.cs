@@ -8,7 +8,7 @@ using CyberRiskApp.Authorization;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class LossEventController : Controller
     {
         private readonly CyberRiskContext _context;

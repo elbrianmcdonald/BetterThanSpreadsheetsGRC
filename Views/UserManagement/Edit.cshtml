@@ -59,7 +59,8 @@
                                 <label asp-for="Role" class="form-label">Role *</label>
                                 <select asp-for="Role" class="form-select">
                                     <option value="@UserRole.ITUser">IT User</option>
-                                    <option value="@UserRole.GRCUser">GRC User</option>
+                                    <option value="@UserRole.GRCAnalyst">GRC Analyst</option>
+                                    <option value="@UserRole.GRCManager">GRC Manager</option>
                                     <option value="@UserRole.Admin">Admin</option>
                                 </select>
                                 <span asp-validation-for="Role" class="text-danger"></span>

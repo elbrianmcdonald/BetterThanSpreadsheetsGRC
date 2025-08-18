@@ -84,17 +84,25 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 .AddEntityFrameworkStores<CyberRiskContext>()
 .AddDefaultTokenProviders();
 
-// Configure authorization policies (your existing setup)
+// Configure authorization policies (updated role hierarchy)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(PolicyConstants.RequireAdminRole, policy =>
         policy.RequireRole("Admin"));
 
+    // Legacy policies - kept for backward compatibility during transition
     options.AddPolicy(PolicyConstants.RequireGRCOrAdminRole, policy =>
-        policy.RequireRole("Admin", "GRCUser"));
+        policy.RequireRole("Admin", "GRCManager", "GRCAnalyst"));
+
+    // New role hierarchy policies
+    options.AddPolicy(PolicyConstants.RequireGRCAnalystOrAbove, policy =>
+        policy.RequireRole("Admin", "GRCManager", "GRCAnalyst"));
+
+    options.AddPolicy(PolicyConstants.RequireGRCManagerOrAdmin, policy =>
+        policy.RequireRole("Admin", "GRCManager"));
 
     options.AddPolicy(PolicyConstants.RequireAnyRole, policy =>
-        policy.RequireRole("Admin", "GRCUser", "ITUser"));
+        policy.RequireRole("Admin", "GRCManager", "GRCAnalyst", "ITUser"));
 });
 
 // Register audit and transaction services for concurrency control
@@ -106,6 +114,7 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<IFindingService, FindingService>();
 builder.Services.AddScoped<IRiskService, RiskService>();
 builder.Services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
+builder.Services.AddScoped<IRiskBacklogService, RiskBacklogService>();
 builder.Services.AddScoped<IRequestService, RequestService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
@@ -203,6 +212,49 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     try
     {
+        // Fix database schema first
+        var context = services.GetRequiredService<CyberRiskContext>();
+        try 
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""RiskAssessments"" 
+                ADD COLUMN IF NOT EXISTS ""GenerateRisksForRegister"" boolean NOT NULL DEFAULT false;
+            ");
+            
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""RiskAssessments"" 
+                ADD COLUMN IF NOT EXISTS ""RisksGenerated"" boolean NOT NULL DEFAULT false;
+            ");
+            
+            await context.Database.ExecuteSqlRawAsync(@"
+                ALTER TABLE ""RiskAssessments"" 
+                ADD COLUMN IF NOT EXISTS ""RisksGeneratedDate"" timestamp with time zone NULL;
+            ");
+            
+            Console.WriteLine("✅ Database schema fixed successfully!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️  Database fix failed: {ex.Message}");
+        }
+
+        // Fix migration records manually
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(@"
+                INSERT INTO ""__EFMigrationsHistory"" (""MigrationId"", ""ProductVersion"") 
+                VALUES ('20250816220519_AddRiskGenerationToRiskAssessment', '8.0.18')
+                ON CONFLICT (""MigrationId"") DO NOTHING;
+            ");
+            Console.WriteLine("✅ Fixed migration records");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️  Migration fix failed: {ex.Message}");
+        }
+
+        // Test will be done through normal application flow
+
         var userService = services.GetRequiredService<IUserService>();
         var userManager = services.GetRequiredService<UserManager<User>>();
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();

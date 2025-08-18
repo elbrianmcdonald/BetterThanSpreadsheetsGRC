@@ -135,7 +135,7 @@
                                             <a asp-action="Details" asp-route-id="@thirdParty.Id" class="btn btn-sm btn-outline-primary" title="View Details">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                            @if (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin"))
                                             {
                                                 <a asp-action="Edit" asp-route-id="@thirdParty.Id" class="btn btn-sm btn-outline-secondary" title="Edit">
                                                     <i class="fas fa-edit"></i>

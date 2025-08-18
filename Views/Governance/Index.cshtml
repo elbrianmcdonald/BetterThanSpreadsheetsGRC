@@ -26,7 +26,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-building me-2"></i>GRC Governance Dashboard</h2>
-    @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+    @if (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin"))
     {
         <div>
             <a asp-controller="Frameworks" asp-action="Upload" class="btn btn-primary">

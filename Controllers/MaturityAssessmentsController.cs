@@ -111,7 +111,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: MaturityAssessments/Create - Only GRC & Admin users can create assessments
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create()
         {
             var viewModel = new MaturityAssessmentViewModel
@@ -126,7 +126,7 @@ namespace CyberRiskApp.Controllers
         // POST: MaturityAssessments/Create - Only GRC & Admin users can create assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(MaturityAssessmentViewModel model)
         {
             // Remove audit fields from model validation since they're set automatically
@@ -153,7 +153,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: MaturityAssessments/Edit/5 - Only GRC & Admin users can edit assessments
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id)
         {
             var assessment = await _maturityService.GetAssessmentByIdAsync(id);
@@ -173,7 +173,7 @@ namespace CyberRiskApp.Controllers
         // POST: MaturityAssessments/Edit/5 - Only GRC & Admin users can edit assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id, MaturityAssessmentViewModel model)
         {
             if (id != model.Assessment.Id)
@@ -194,7 +194,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: MaturityAssessments/PerformBulk/5 - Single page assessment for all controls
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> PerformBulk(int id)
         {
             var assessment = await _maturityService.GetAssessmentByIdAsync(id);
@@ -231,7 +231,7 @@ namespace CyberRiskApp.Controllers
         // POST: MaturityAssessments/PerformBulk - Save all control assessments at once
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> PerformBulk(int id, IFormCollection formData)
         {
             try
@@ -438,7 +438,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: MaturityAssessments/Perform/5 - Single control assessment (step-by-step)
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Perform(int id, int? controlIndex)
         {
             var assessment = await _maturityService.GetAssessmentByIdAsync(id);
@@ -484,7 +484,7 @@ namespace CyberRiskApp.Controllers
         // POST: MaturityAssessments/UpdateControl - Only GRC & Admin users can update control assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> UpdateControl(MaturityControlAssessment controlAssessment, int assessmentId, int controlIndex)
         {
             try
@@ -524,7 +524,7 @@ namespace CyberRiskApp.Controllers
 
         // POST: MaturityAssessments/UpdateControlPriority - Update individual control priority
         [HttpPost]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> UpdateControlPriority(int controlId, ControlPriority priority)
         {
             try
@@ -547,7 +547,7 @@ namespace CyberRiskApp.Controllers
 
         // POST: MaturityAssessments/UpdateTargetLevel - Update individual control target level
         [HttpPost]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> UpdateTargetLevel(int controlAssessmentId, MaturityLevel targetLevel)
         {
             try
@@ -574,7 +574,7 @@ namespace CyberRiskApp.Controllers
         // POST: MaturityAssessments/BulkUpdatePriority - Update multiple control priorities
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> BulkUpdatePriority(int assessmentId, List<int> controlIds, ControlPriority priority)
         {
             try
@@ -599,7 +599,7 @@ namespace CyberRiskApp.Controllers
         // POST: MaturityAssessments/BulkUpdateTargetLevel - Update multiple control target levels
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> BulkUpdateTargetLevel(int assessmentId, List<int> controlAssessmentIds, MaturityLevel targetLevel)
         {
             try
@@ -630,7 +630,7 @@ namespace CyberRiskApp.Controllers
         // POST: MaturityAssessments/Delete/5 - Only GRC & Admin users can delete assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Delete(int id)
         {
             var result = await _maturityService.DeleteAssessmentAsync(id);

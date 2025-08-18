@@ -85,3 +85,461 @@ body {
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
+
+/* ========================================
+   Enhanced Navigation Menu Styles
+   ======================================== */
+
+/* Wider dropdown menus for better readability */
+.navbar-nav .dropdown-menu {
+    min-width: 280px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+/* Enhanced dropdown headers */
+.dropdown-header {
+    color: #495057 !important;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 16px 4px 16px;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 4px;
+}
+
+/* Improved dropdown items */
+.dropdown-item {
+    padding: 8px 16px;
+    border-radius: 4px;
+    margin: 2px 8px;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(2px);
+}
+
+.dropdown-item:active {
+    background-color: #e9ecef;
+}
+
+/* Description text styling */
+.dropdown-item small.text-muted {
+    font-size: 0.7rem;
+    line-height: 1.2;
+    margin-top: 2px;
+    opacity: 0.8;
+}
+
+/* Icon spacing and alignment */
+.dropdown-item i {
+    width: 16px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+/* Navigation link hover effects */
+.navbar-nav .nav-link {
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    margin: 0 2px;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Active navigation state */
+.navbar-nav .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: 500;
+}
+
+/* Dropdown toggle caret animation */
+.dropdown-toggle::after {
+    transition: transform 0.2s ease;
+}
+
+.dropdown-toggle[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+}
+
+/* Tooltips for navigation items */
+.nav-link[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 991.98px) {
+    .navbar-nav .dropdown-menu {
+        background-color: rgba(33, 37, 41, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .dropdown-item {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+    
+    .dropdown-header {
+        color: rgba(255, 255, 255, 0.9) !important;
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* ========================================
+   Enhanced Breadcrumb and Navigation Styles
+   ======================================== */
+
+/* Enhanced breadcrumb styling */
+.breadcrumb {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.breadcrumb-item a {
+    color: #495057;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.breadcrumb-item a:hover {
+    color: #007bff;
+    background-color: rgba(0, 123, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.breadcrumb-item.active {
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #6c757d;
+    font-weight: bold;
+    padding: 0 8px;
+}
+
+/* Enhanced button toolbar styling */
+.btn-toolbar .btn-group {
+    margin-right: 8px;
+}
+
+.btn-toolbar .btn-group:last-child {
+    margin-right: 0;
+}
+
+/* Enhanced button styling with hover effects */
+.btn-group .btn {
+    transition: all 0.2s ease;
+    border-width: 1px;
+}
+
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-group .btn:active {
+    transform: translateY(0);
+}
+
+/* Risk Workflow Dashboard specific styles */
+.risk-workflow-header {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.risk-workflow-nav {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 15px;
+}
+
+/* Enhanced card styling for dashboard widgets */
+.dashboard-widget {
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-widget:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.dashboard-widget .card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+}
+
+/* Quick access button styling */
+.quick-access-btn {
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.quick-access-btn:hover {
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Workflow status indicators */
+.workflow-status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.workflow-status.unassigned {
+    background-color: #6c757d;
+    color: white;
+}
+
+.workflow-status.assigned {
+    background-color: #007bff;
+    color: white;
+}
+
+.workflow-status.approved {
+    background-color: #28a745;
+    color: white;
+}
+
+.workflow-status.rejected {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Mobile responsive enhancements */
+@media (max-width: 768px) {
+    .breadcrumb {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+    
+    .btn-toolbar {
+        flex-direction: column;
+    }
+    
+    .btn-group {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .btn-group .btn {
+        flex: 1;
+    }
+}
+
+/* ========================================
+   Clickable Metric Cards
+   ======================================== */
+
+/* Clickable metric card styling */
+.clickable-metric {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.clickable-metric:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.clickable-metric:active {
+    transform: translateY(-1px) scale(1.01);
+}
+
+/* Metric hint text */
+.metric-hint {
+    display: block;
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    color: rgba(255, 255, 255, 0.8);
+    margin-top: 4px;
+}
+
+.clickable-metric:hover .metric-hint {
+    opacity: 1;
+}
+
+/* Add subtle animation on metric value */
+.clickable-metric:hover .metric-value {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+/* Add hover effect to metric icons */
+.clickable-metric:hover .metric-icon i {
+    transform: scale(1.1) rotate(5deg);
+    transition: transform 0.2s ease;
+}
+
+/* Active/filtered state styling */
+.metric-card.active-filter {
+    border: 3px solid #fff;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.metric-card.active-filter::after {
+    content: "✓";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #fff;
+    color: #28a745;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* Ripple effect for clicks */
+.clickable-metric::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+}
+
+.clickable-metric:active::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Enhanced metric card base styling */
+.metric-card {
+    border-radius: 12px;
+    padding: 20px;
+    color: white;
+    display: flex;
+    align-items: center;
+    min-height: 120px;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card .metric-icon {
+    font-size: 2.5rem;
+    margin-right: 15px;
+    opacity: 0.8;
+}
+
+.metric-card .metric-content {
+    flex: 1;
+}
+
+.metric-card .metric-value {
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.metric-card .metric-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* Color-specific hover effects */
+.metric-card.bg-primary:hover {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.metric-card.bg-warning:hover {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+}
+
+.metric-card.bg-danger:hover {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+}
+
+.metric-card.bg-success:hover {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+/* Filter indicator */
+.filter-indicator {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid #fff;
+    border-radius: 14px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.metric-card.filtered .filter-indicator {
+    opacity: 1;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}

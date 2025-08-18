@@ -48,7 +48,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="Assessment.Asset" class="form-label fw-bold">Primary Asset <span class="text-danger">*</span></label>
-                                    @Html.AssetComboboxFor(m => m.Assessment.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"), required: true)
+                                    @Html.AssetComboboxFor(m => m.Assessment.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"), required: true)
                                 </div>
                             </div>
                         </div>
@@ -57,13 +57,13 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="Assessment.BusinessUnit" class="form-label fw-bold">Business Unit</label>
-                                    @Html.BusinessUnitComboboxFor(m => m.Assessment.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                    @Html.BusinessUnitComboboxFor(m => m.Assessment.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="Assessment.BusinessOwner" class="form-label fw-bold">Business Owner</label>
-                                    @Html.BusinessOwnerComboboxFor(m => m.Assessment.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                    @Html.BusinessOwnerComboboxFor(m => m.Assessment.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                                 </div>
                             </div>
                         </div>
@@ -703,7 +703,7 @@
         // Main threat scenario management
         function addThreatScenario() {
             const container = document.getElementById('threatScenariosContainer');
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
             
             const scenarioHtml = `
                 <div class="threat-scenario-item card mb-4 border-primary" id="threatScenario_${threatScenarioIndex}">
@@ -1035,7 +1035,7 @@
         
         function addVulnerability(scenarioIndex) {
             const container = document.getElementById('vulnerabilitiesContainer_' + scenarioIndex);
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
             const vulnHtml = `
                 <div class="vulnerability-item card mb-2 border-warning" id="vulnerability_${scenarioIndex}_${vulnerabilityIndex}">
                     <div class="card-body p-2">
@@ -1123,7 +1123,7 @@
         
         function addLossEvent(scenarioIndex) {
             const container = document.getElementById('lossEventsContainer_' + scenarioIndex);
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
             const lossHtml = `
                 <div class="loss-event-item card mb-2 border-info" id="lossEvent_${scenarioIndex}_${lossEventIndex}">
                     <div class="card-body p-2">
@@ -1208,7 +1208,7 @@
         
         function addControl(scenarioIndex) {
             const container = document.getElementById('controlsContainer_' + scenarioIndex);
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
             const controlHtml = `
                 <div class="control-item card mb-2 border-success" id="control_${scenarioIndex}_${qualitativeControlIndex}">
                     <div class="card-body p-2">
@@ -1271,7 +1271,7 @@
         // Scenario-specific risk management functions
         function addScenarioRisk(scenarioIndex) {
             const container = document.getElementById('risksContainer_' + scenarioIndex);
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
             const riskHtml = `
                 <div class="risk-item card mb-2 border-danger" id="scenarioRisk_${scenarioIndex}_${scenarioRiskIndex}">
                     <div class="card-body p-2">

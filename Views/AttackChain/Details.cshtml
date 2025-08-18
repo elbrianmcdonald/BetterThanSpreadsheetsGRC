@@ -297,7 +297,7 @@
                         <a asp-action="CalculateRisk" asp-route-id="@Model.Id" class="btn btn-success">
                             <i class="fas fa-calculator me-1"></i>Calculate Risk
                         </a>
-                        @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                        @if (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin"))
                         {
                             <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger" 
                                onclick="return confirm('Are you sure you want to delete this threat model?');">

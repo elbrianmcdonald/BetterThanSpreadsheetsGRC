@@ -8,7 +8,7 @@ using OfficeOpenXml;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class MaturityFrameworksController : Controller
     {
         private readonly IMaturityService _maturityService;

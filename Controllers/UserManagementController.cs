@@ -151,7 +151,8 @@ namespace CyberRiskApp.Controllers
                 string newRoleName = model.Role switch
                 {
                     UserRole.Admin => "Admin",
-                    UserRole.GRCUser => "GRCUser",
+                    UserRole.GRCManager => "GRCManager",
+                    UserRole.GRCAnalyst => "GRCAnalyst",
                     UserRole.ITUser => "ITUser",
                     _ => "ITUser"
                 };

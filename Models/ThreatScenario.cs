@@ -14,13 +14,15 @@ namespace CyberRiskApp.Models
         public string Description { get; set; } = string.Empty;
 
         [Display(Name = "Likelihood Level")]
-        public LikelihoodLevel? QualitativeLikelihood { get; set; }
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? QualitativeLikelihood { get; set; }
 
         [Display(Name = "Impact Level")]
-        public ImpactLevel? QualitativeImpact { get; set; }
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? QualitativeImpact { get; set; }
 
         [Display(Name = "Exposure Level")]
-        [Column(TypeName = "decimal(3,2)")]
+        [Column(TypeName = "decimal(5,2)")]
         public decimal? QualitativeExposure { get; set; }
 
         // Calculated Qualitative Risk Score for this scenario
@@ -80,8 +82,9 @@ namespace CyberRiskApp.Models
         {
             if (QualitativeLikelihood.HasValue && QualitativeImpact.HasValue && QualitativeExposure.HasValue)
             {
-                var likelihood = (int)QualitativeLikelihood.Value;
-                var impact = (int)QualitativeImpact.Value;
+                // Use decimal values directly from RiskMatrixLevel system
+                var likelihood = QualitativeLikelihood.Value;
+                var impact = QualitativeImpact.Value;
                 var exposureMultiplier = QualitativeExposure.Value;
                 
                 QualitativeRiskScore = (likelihood * impact) * exposureMultiplier;

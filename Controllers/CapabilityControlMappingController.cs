@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = "RequireGRCOrAdminRole")]
+    [Authorize(Policy = "RequireGRCAnalystOrAbove")]
     public class CapabilityControlMappingController : Controller
     {
         private readonly CyberRiskContext _context;

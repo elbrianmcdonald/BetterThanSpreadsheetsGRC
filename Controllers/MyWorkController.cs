@@ -7,7 +7,7 @@ using CyberRiskApp.ViewModels;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class MyWorkController : Controller
     {
         private readonly IRequestService _requestService;

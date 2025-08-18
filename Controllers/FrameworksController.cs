@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class FrameworksController : Controller
     {
         private readonly IGovernanceService _governanceService;

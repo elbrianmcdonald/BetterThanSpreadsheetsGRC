@@ -132,22 +132,22 @@
                                 <label asp-for="Owner" class="form-label fw-bold">
                                     Technical Owner <span class="text-danger">*</span>
                                 </label>
-                                @Html.OwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"), required: true)
+                                @Html.OwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"), required: true)
                             </div>
 
                             <div class="col-md-6">
                                 <label asp-for="BusinessOwner" class="form-label fw-bold">Business Owner</label>
-                                @Html.BusinessOwnerComboboxFor(m => m.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                @Html.BusinessOwnerComboboxFor(m => m.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                             </div>
 
                             <div class="col-md-6">
                                 <label asp-for="Domain" class="form-label fw-bold">Domain</label>
-                                @Html.AssetComboboxFor(m => m.Domain, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                @Html.AssetComboboxFor(m => m.Domain, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                             </div>
 
                             <div class="col-md-6">
                                 <label asp-for="BusinessUnit" class="form-label fw-bold">Business Unit</label>
-                                @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                             </div>
 
                             <!-- Asset & Timeline Section -->
@@ -160,12 +160,12 @@
 
                             <div class="col-md-6">
                                 <label asp-for="Asset" class="form-label fw-bold">Affected Asset</label>
-                                @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                             </div>
 
                             <div class="col-md-6">
                                 <label asp-for="TechnicalControl" class="form-label fw-bold">Technical Control</label>
-                                @Html.TechnicalControlComboboxFor(m => m.TechnicalControl, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                @Html.TechnicalControlComboboxFor(m => m.TechnicalControl, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                             </div>
 
                             <div class="col-md-6">

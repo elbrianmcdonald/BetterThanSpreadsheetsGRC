@@ -16,6 +16,12 @@ RUN dotnet restore "CyberRiskApp.csproj"
 # Copy source code
 COPY . .
 WORKDIR "/src"
+
+# Install LibMan tool and restore client-side packages
+RUN dotnet tool install --global Microsoft.Web.LibraryManager.Cli
+ENV PATH="${PATH}:/root/.dotnet/tools"
+RUN libman restore || echo "LibMan restore failed, will copy existing lib directory"
+
 RUN dotnet build "CyberRiskApp.csproj" -c Debug -o /app/build
 
 FROM build AS publish
@@ -27,11 +33,19 @@ WORKDIR /app
 # Create directories for data and logs
 RUN mkdir -p /app/wwwroot/uploads /app/logs /app/backups
 
-# Set proper permissions
-RUN chown -R app:app /app && chmod -R 755 /app
-
 # Copy published application
 COPY --from=publish /app/publish .
+
+# Create minimal lib structure - the login page works with CDNs anyway
+RUN mkdir -p /app/wwwroot/lib/bootstrap/dist/css && \
+    mkdir -p /app/wwwroot/lib/bootstrap/dist/js && \
+    mkdir -p /app/wwwroot/lib/jquery/dist && \
+    echo "/* Bootstrap fallback - using CDN */" > /app/wwwroot/lib/bootstrap/dist/css/bootstrap.min.css && \
+    echo "/* jQuery fallback - using CDN */" > /app/wwwroot/lib/jquery/dist/jquery.min.js && \
+    echo "/* Bootstrap JS fallback - using CDN */" > /app/wwwroot/lib/bootstrap/dist/js/bootstrap.bundle.min.js
+
+# Set proper permissions
+RUN chown -R app:app /app && chmod -R 755 /app
 
 # Switch to non-root user
 USER app

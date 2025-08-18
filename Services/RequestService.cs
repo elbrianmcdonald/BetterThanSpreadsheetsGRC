@@ -234,7 +234,7 @@ namespace CyberRiskApp.Services
             try
             {
                 return await _context.Users
-                    .Where(u => u.IsActive && (u.Role == UserRole.GRCUser || u.Role == UserRole.Admin))
+                    .Where(u => u.IsActive && (u.Role == UserRole.GRCAnalyst || u.Role == UserRole.GRCManager || u.Role == UserRole.Admin))
                     .OrderBy(u => u.FirstName)
                     .ThenBy(u => u.LastName)
                     .ToListAsync();

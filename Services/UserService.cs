@@ -141,7 +141,7 @@ namespace CyberRiskApp.Services
                 TotalUsers = users.Count,
                 ActiveUsers = users.Count(u => u.IsActive),
                 AdminUsers = users.Count(u => u.Role == UserRole.Admin),
-                GRCUsers = users.Count(u => u.Role == UserRole.GRCUser),
+                GRCUsers = users.Count(u => u.Role == UserRole.GRCAnalyst || u.Role == UserRole.GRCManager),
                 ITUsers = users.Count(u => u.Role == UserRole.ITUser)
             };
         }
@@ -168,7 +168,7 @@ namespace CyberRiskApp.Services
         // Helper method to ensure all roles exist
         private async Task EnsureRolesExistAsync()
         {
-            string[] roleNames = { "Admin", "GRCUser", "ITUser" };
+            string[] roleNames = { "Admin", "GRCManager", "GRCAnalyst", "ITUser", "GRCUser" }; // Keep GRCUser for backward compatibility
 
             foreach (string roleName in roleNames)
             {
@@ -185,7 +185,8 @@ namespace CyberRiskApp.Services
             return role switch
             {
                 UserRole.Admin => "Admin",
-                UserRole.GRCUser => "GRCUser",
+                UserRole.GRCManager => "GRCManager",
+                UserRole.GRCAnalyst => "GRCAnalyst", 
                 UserRole.ITUser => "ITUser",
                 _ => "ITUser"
             };

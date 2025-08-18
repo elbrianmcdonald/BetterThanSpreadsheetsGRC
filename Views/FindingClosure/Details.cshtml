@@ -212,7 +212,7 @@
                         @{
                             var currentUserId = UserManager.GetUserId(User);
                             var isAdmin = User.IsInRole("Admin");
-                            var canReview = User.IsInRole("GRCUser") || User.IsInRole("Admin");
+                            var canReview = User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin");
                             var isAssignedToCurrentUser = Model.AssignedToUserId == currentUserId;
                         }
 

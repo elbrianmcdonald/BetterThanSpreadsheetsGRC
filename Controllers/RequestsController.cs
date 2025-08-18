@@ -8,7 +8,7 @@ using CyberRiskApp.Authorization;
 
 namespace CyberRiskApp.Controllers
 {
-    // REMOVED: [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)] - controller level authorization
+    // REMOVED: [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)] - controller level authorization
     public class RequestsController : Controller
     {
         private readonly IRequestService _requestService;
@@ -69,7 +69,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // UPDATED: Only GRC and Admin can edit requests
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id)
         {
             var request = await _requestService.GetAssessmentRequestByIdAsync(id);
@@ -82,7 +82,7 @@ namespace CyberRiskApp.Controllers
         // UPDATED: Only GRC and Admin can edit requests
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id, AssessmentRequest request)
         {
             if (id != request.Id)
@@ -108,7 +108,7 @@ namespace CyberRiskApp.Controllers
         // UPDATED: Only GRC and Admin can delete requests
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             try
@@ -125,7 +125,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // UPDATED: Only GRC and Admin can create assessment requests
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public IActionResult Create()
         {
             var model = new AssessmentRequest
@@ -139,7 +139,7 @@ namespace CyberRiskApp.Controllers
         // UPDATED: Only GRC and Admin can create assessment requests
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(AssessmentRequest request)
         {
             if (ModelState.IsValid)
@@ -167,7 +167,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // UPDATED: Only GRC and Admin can perform assignment
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Assignment()
         {
             try
@@ -198,7 +198,7 @@ namespace CyberRiskApp.Controllers
         // UPDATED: Only GRC and Admin can assign requests
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Assign(int requestId, string assignedToUserId, string notes, decimal? estimatedHours)
         {
             try
@@ -387,7 +387,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // UPDATED: Only GRC and Admin can review acceptance requests
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> ReviewAcceptance(int id)
         {
             var request = await _requestService.GetAcceptanceRequestByIdAsync(id);
@@ -405,7 +405,7 @@ namespace CyberRiskApp.Controllers
 
         // UPDATED: Only GRC and Admin can review acceptance requests
         [HttpPost]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ReviewAcceptance(int id, RequestStatus decision, string reviewComments,
             string riskSummary, string currentCompensatingControls,

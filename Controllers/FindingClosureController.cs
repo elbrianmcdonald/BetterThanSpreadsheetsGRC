@@ -174,7 +174,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: FindingClosure/Review/5 - Only GRC and Admin can review
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Review(int id)
         {
             var request = await _context.FindingClosureRequests
@@ -197,7 +197,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: FindingClosure/Complete/5 - Complete assigned finding closure request
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Complete(int id)
         {
             var request = await _context.FindingClosureRequests
@@ -231,7 +231,7 @@ namespace CyberRiskApp.Controllers
 
         // POST: FindingClosure/Complete/5 - Complete assigned finding closure request
         [HttpPost]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CompleteConfirmed(int id, string reviewComments = "")
         {
@@ -290,7 +290,7 @@ namespace CyberRiskApp.Controllers
 
         // POST: FindingClosure/Approve/5 - Only GRC and Admin can approve (legacy workflow)
         [HttpPost]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int id, string reviewComments = "")
         {
@@ -340,7 +340,7 @@ namespace CyberRiskApp.Controllers
 
         // POST: FindingClosure/Reject/5 - Only GRC and Admin can reject
         [HttpPost]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int id, string reviewComments = "")
         {

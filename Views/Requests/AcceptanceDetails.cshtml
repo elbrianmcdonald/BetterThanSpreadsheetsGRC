@@ -15,7 +15,7 @@
                     <a asp-action="Index" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Back to Requests
                     </a>
-                    @if (Model.Status == CyberRiskApp.Models.RequestStatus.PendingApproval && User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                    @if (Model.Status == CyberRiskApp.Models.RequestStatus.PendingApproval && (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin")))
                     {
                         <a asp-action="ReviewAcceptance" asp-route-id="@Model.Id" class="btn btn-warning">
                             <i class="fas fa-gavel me-2"></i>Review Request

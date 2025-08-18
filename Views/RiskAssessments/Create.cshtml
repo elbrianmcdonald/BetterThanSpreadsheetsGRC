@@ -38,7 +38,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="Assessment.Asset" class="form-label fw-bold">Primary Asset <span class="text-danger">*</span></label>
-                                    @Html.AssetComboboxFor(m => m.Assessment.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"), required: true)
+                                    @Html.AssetComboboxFor(m => m.Assessment.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"), required: true)
                                 </div>
                             </div>
                         </div>
@@ -47,13 +47,13 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="Assessment.BusinessUnit" class="form-label fw-bold">Business Unit</label>
-                                    @Html.BusinessUnitComboboxFor(m => m.Assessment.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                    @Html.BusinessUnitComboboxFor(m => m.Assessment.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label asp-for="Assessment.BusinessOwner" class="form-label fw-bold">Business Owner</label>
-                                    @Html.BusinessOwnerComboboxFor(m => m.Assessment.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                    @Html.BusinessOwnerComboboxFor(m => m.Assessment.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                                 </div>
                             </div>
                         </div>
@@ -242,7 +242,7 @@
         // Qualitative control management functions
         function addQualitativeControl() {
             const container = document.getElementById('qualitativeControlsContainer');
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
             const controlHtml = `
                 <div class="control-item card mb-2 border-primary" id="qualitative_control_${qualitativeControlIndex}">
                     <div class="card-body p-3">
@@ -398,7 +398,7 @@
         // Risk management functions
         function addRisk() {
             const container = document.getElementById('risksContainer');
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
             const riskHtml = `
                 <div class="risk-item card mb-2 border-danger" id="risk_${riskIndex}">
                     <div class="card-body p-2">

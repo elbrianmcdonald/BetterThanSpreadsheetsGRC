@@ -80,19 +80,19 @@
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="BusinessUnit" class="form-label"></label>
-                                    @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                    @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="Asset" class="form-label"></label>
-                                    @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                    @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="Owner" class="form-label"></label>
-                                    @Html.BusinessOwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                    @Html.BusinessOwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                                 </div>
                             </div>
                         </div>

@@ -32,205 +32,255 @@
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <ul class="navbar-nav flex-grow-1">
-                            <!-- Dashboard - All Users -->
+                            <!-- 🏠 Home Dashboard -->
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Dashboard" asp-action="Index">
-                                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                                <a class="nav-link text-light" asp-controller="Dashboard" asp-action="Index" title="Main dashboard with overview of all activities">
+                                    <i class="fas fa-home me-1"></i>Home
                                 </a>
                             </li>
 
-                            <!-- UPDATED: CISO Executive Dashboard - Now accessible to all users -->
-                            <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="CISOExecutive" asp-action="Index">
-                                    <i class="fas fa-chart-line me-1"></i>CISO Dashboard
-                                </a>
-                            </li>
-                            <!-- Findings - All Users -->
+                            <!-- 🚨 Security Operations -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-light" href="#" id="findingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>Findings
+                                <a class="nav-link dropdown-toggle text-light" href="#" id="securityDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Security findings, vulnerabilities, and incident tracking">
+                                    <i class="fas fa-shield-alt me-1"></i>Security
                                 </a>
-                                <ul class="dropdown-menu" aria-labelledby="findingsDropdown">
+                                <ul class="dropdown-menu" aria-labelledby="securityDropdown">
+                                    <li><h6 class="dropdown-header"><i class="fas fa-exclamation-triangle me-1"></i>Findings & Issues</h6></li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Findings" asp-action="Index">
-                                            <i class="fas fa-list me-1"></i>Findings Register
+                                            <i class="fas fa-list me-1"></i>Security Findings
+                                            <small class="text-muted d-block">View all security issues</small>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="FindingClosure" asp-action="Index">
                                             <i class="fas fa-check-circle me-1"></i>Closure Requests
+                                            <small class="text-muted d-block">Track finding closures</small>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="FindingClosure" asp-action="Create">
                                             <i class="fas fa-plus me-1"></i>Request Closure
+                                            <small class="text-muted d-block">Close a security finding</small>
                                         </a>
                                     </li>
                                 </ul>
                             </li>
 
-                            <!-- Risk Management - All Users -->
+                            <!-- 🎯 Risk Management -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-light" href="#" id="riskDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-shield-alt me-1"></i>Risk
+                                <a class="nav-link dropdown-toggle text-light" href="#" id="riskDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Risk assessments, register, and workflow management">
+                                    <i class="fas fa-bullseye me-1"></i>Risk Management
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="riskDropdown">
+                                    <li><h6 class="dropdown-header"><i class="fas fa-list me-1"></i>Risk Overview</h6></li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Risks" asp-action="Index">
-                                            <i class="fas fa-list me-1"></i>Risk Register
+                                            <i class="fas fa-clipboard-list me-1"></i>Risk Register
+                                            <small class="text-muted d-block">All identified risks</small>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="RiskAssessments" asp-action="Index">
                                             <i class="fas fa-chart-bar me-1"></i>Risk Assessments
+                                            <small class="text-muted d-block">Conduct & review assessments</small>
                                         </a>
                                     </li>
+                                    @if (User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || (User.Identity.IsAuthenticated && User.GetUserRole() == CyberRiskApp.Models.UserRole.Admin))
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="RiskBacklog" asp-action="Index">
+                                                <i class="fas fa-tasks me-1"></i>Risk Workflow
+                                                <small class="text-muted d-block">Approve & assign risks</small>
+                                            </a>
+                                        </li>
+                                    }
                                     <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header"><i class="fas fa-cog me-1"></i>Tools & Templates</h6></li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="AttackChain" asp-action="Index">
-                                            <i class="fas fa-file-alt me-1"></i>Templates
+                                            <i class="fas fa-file-alt me-1"></i>Assessment Templates
+                                            <small class="text-muted d-block">Risk scenario templates</small>
                                         </a>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header"><i class="fas fa-handshake me-1"></i>Risk Acceptance</h6></li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Requests" asp-action="CreateAcceptance">
-                                            <i class="fas fa-handshake me-1"></i>Request Risk Acceptance
+                                            <i class="fas fa-plus me-1"></i>Request Acceptance
+                                            <small class="text-muted d-block">Accept business risk</small>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Requests" asp-action="Index">
-                                            <i class="fas fa-tasks me-1"></i>All Requests
+                                            <i class="fas fa-inbox me-1"></i>All Requests
+                                            <small class="text-muted d-block">View all risk requests</small>
                                         </a>
                                     </li>
                                 </ul>
                             </li>
 
-                            <!-- GRC Functions - Accessible to all users for viewing, GRC/Admin for management -->
+                            <!-- 📋 Compliance & Governance -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-light" href="#" id="grcDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-cogs me-1"></i>GRC
+                                <a class="nav-link dropdown-toggle text-light" href="#" id="complianceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Compliance assessments, governance, and regulatory frameworks">
+                                    <i class="fas fa-balance-scale me-1"></i>Compliance
                                 </a>
-                                <ul class="dropdown-menu" aria-labelledby="grcDropdown">
+                                <ul class="dropdown-menu" aria-labelledby="complianceDropdown">
+                                    <li><h6 class="dropdown-header"><i class="fas fa-tachometer-alt me-1"></i>Dashboards</h6></li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Governance" asp-action="Index">
-                                            <i class="fas fa-building me-1"></i>Governance Dashboard
+                                            <i class="fas fa-building me-1"></i>Governance Overview
+                                            <small class="text-muted d-block">Organizational compliance</small>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Governance" asp-action="AssessmentDashboard">
-                                            <i class="fas fa-th-large me-1"></i>Assessment Dashboard
+                                            <i class="fas fa-th-large me-1"></i>Assessment Progress
+                                            <small class="text-muted d-block">Track all assessments</small>
                                         </a>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header"><i class="fas fa-check-square me-1"></i>Assessments</h6></li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="ComplianceAssessments" asp-action="Index">
-                                            <i class="fas fa-balance-scale me-1"></i>Compliance Assessments
+                                            <i class="fas fa-clipboard-check me-1"></i>Compliance Assessments
+                                            <small class="text-muted d-block">ISO27001, SOX, GDPR, etc.</small>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="MaturityAssessments" asp-action="Index">
                                             <i class="fas fa-chart-line me-1"></i>Maturity Assessments
+                                            <small class="text-muted d-block">NIST CSF, C2M2 maturity</small>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="ThirdParties" asp-action="Index">
-                                            <i class="fas fa-handshake me-1"></i>Third Party Risk Management
+                                            <i class="fas fa-handshake me-1"></i>Third Party Reviews
+                                            <small class="text-muted d-block">Vendor risk assessments</small>
                                         </a>
                                     </li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Strategy" asp-action="Index">
-                                            <i class="fas fa-chart-line me-1"></i>Strategy Planning
+                                            <i class="fas fa-road me-1"></i>Strategic Planning
+                                            <small class="text-muted d-block">Roadmap & initiatives</small>
                                         </a>
                                     </li>
-                                    @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                                    @if (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin"))
                                     {
                                         <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header"><i class="fas fa-cogs me-1"></i>Configuration</h6></li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="Frameworks" asp-action="Index">
                                                 <i class="fas fa-book me-1"></i>Compliance Frameworks
+                                                <small class="text-muted d-block">Manage frameworks</small>
                                             </a>
                                         </li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="MaturityFrameworks" asp-action="Index">
                                                 <i class="fas fa-chart-area me-1"></i>Maturity Frameworks
+                                                <small class="text-muted d-block">Configure maturity models</small>
                                             </a>
                                         </li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="Organizations" asp-action="Index">
                                                 <i class="fas fa-sitemap me-1"></i>Organizations
+                                                <small class="text-muted d-block">Manage org structure</small>
                                             </a>
                                         </li>
                                     }
                                 </ul>
                             </li>
 
-                            <!-- My Work - For GRC Users and Admins -->
-                            @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+                            <!-- 📊 Executive Reports -->
+                            <li class="nav-item">
+                                <a class="nav-link text-light" asp-controller="CISOExecutive" asp-action="Index" title="Executive dashboards and reports for leadership">
+                                    <i class="fas fa-chart-pie me-1"></i>Reports
+                                </a>
+                            </li>
+
+                            <!-- 💼 My Work - For GRC Users and Admins -->
+                            @if (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-light" asp-controller="MyWork" asp-action="Index">
+                                    <a class="nav-link text-light" asp-controller="MyWork" asp-action="Index" title="Your assigned tasks and work items">
                                         <i class="fas fa-briefcase me-1"></i>My Work
                                     </a>
                                 </li>
                             }
 
-                            <!-- Admin Functions - Only for Admin -->
+                            <!-- 🔧 System Administration - Only for Admin -->
                             @if (User.IsInRole("Admin"))
                             {
                                 <li class="nav-item dropdown">
-                                    <a class="nav-link dropdown-toggle text-light" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <i class="fas fa-tools me-1"></i>Admin
+                                    <a class="nav-link dropdown-toggle text-light" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="System administration and configuration">
+                                        <i class="fas fa-cog me-1"></i>Settings
                                     </a>
                                     <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                        <li><h6 class="dropdown-header"><i class="fas fa-users me-1"></i>User Management</h6></li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="UserManagement" asp-action="Index">
-                                                <i class="fas fa-users me-1"></i>User Management
+                                                <i class="fas fa-user-cog me-1"></i>Manage Users
+                                                <small class="text-muted d-block">Add, edit, and assign roles</small>
                                             </a>
                                         </li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="RequestManagement" asp-action="Index">
-                                                <i class="fas fa-tasks me-1"></i>Request Management
+                                                <i class="fas fa-inbox me-1"></i>Request Queue
+                                                <small class="text-muted d-block">Approve user requests</small>
                                             </a>
                                         </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="DataFix" asp-action="Index">
-                                                <i class="fas fa-tools me-1"></i>Data Fix Utility
-                                            </a>
-                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header"><i class="fas fa-sliders-h me-1"></i>Risk Configuration</h6></li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="RiskLevelSettings" asp-action="Index">
-                                                <i class="fas fa-sliders-h me-1"></i>Risk Level Settings
+                                                <i class="fas fa-thermometer-half me-1"></i>Risk Levels
+                                                <small class="text-muted d-block">Configure risk scoring</small>
                                             </a>
                                         </li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="RiskMatrix" asp-action="Index">
-                                                <i class="fas fa-th me-1"></i>Risk Matrix Management
+                                                <i class="fas fa-th me-1"></i>Risk Matrix
+                                                <small class="text-muted d-block">Impact & likelihood matrix</small>
                                             </a>
                                         </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header"><i class="fas fa-database me-1"></i>Data Management</h6></li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="ReferenceDataManagement" asp-action="Index">
-                                                <i class="fas fa-database me-1"></i>Reference Data Management
+                                                <i class="fas fa-list me-1"></i>Reference Data
+                                                <small class="text-muted d-block">Manage lookup values</small>
                                             </a>
                                         </li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="AttackChain" asp-action="MitreDataManagement">
-                                                <i class="fas fa-shield-alt me-1"></i>MITRE Data Management
+                                                <i class="fas fa-shield-alt me-1"></i>MITRE ATT&CK
+                                                <small class="text-muted d-block">Update threat intelligence</small>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="DataFix" asp-action="Index">
+                                                <i class="fas fa-wrench me-1"></i>Data Repair
+                                                <small class="text-muted d-block">Fix data issues</small>
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header"><i class="fas fa-server me-1"></i>System</h6></li>
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="AppSettings" asp-action="Index">
+                                                <i class="fas fa-globe me-1"></i>Domain Settings
+                                                <small class="text-muted d-block">Application configuration</small>
                                             </a>
                                         </li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="SSLManagement" asp-action="Index">
-                                                <i class="fas fa-lock me-1"></i>SSL Management
+                                                <i class="fas fa-lock me-1"></i>SSL Certificates
+                                                <small class="text-muted d-block">Manage security certificates</small>
                                             </a>
                                         </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="AppSettings" asp-action="Index">
-                                                <i class="fas fa-globe me-1"></i>Application Domain
-                                            </a>
-                                        </li>
-                                        <li><hr class="dropdown-divider"></li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="Backup" asp-action="Index">
-                                                <i class="fas fa-database me-1"></i>Backup & Restore
+                                                <i class="fas fa-download me-1"></i>Backup & Restore
+                                                <small class="text-muted d-block">System backup operations</small>
                                             </a>
                                         </li>
                                     </ul>

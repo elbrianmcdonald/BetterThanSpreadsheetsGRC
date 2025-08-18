@@ -6,7 +6,7 @@ using CyberRiskApp.Authorization;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class TechnicalControlMappingController : Controller
     {
         private readonly ITechnicalControlMappingService _mappingService;

@@ -91,7 +91,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: ThirdParties/Create
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public IActionResult Create()
         {
             var model = new ThirdParty
@@ -106,7 +106,7 @@ namespace CyberRiskApp.Controllers
         // POST: ThirdParties/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(ThirdParty thirdParty)
         {
             // Check for unique name
@@ -137,7 +137,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: ThirdParties/Edit/5
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id)
         {
             var thirdParty = await _thirdPartyService.GetThirdPartyByIdAsync(id);
@@ -150,7 +150,7 @@ namespace CyberRiskApp.Controllers
         // POST: ThirdParties/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id, ThirdParty thirdParty)
         {
             if (id != thirdParty.Id)
@@ -218,7 +218,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: ThirdParties/Export
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> ExportToExcel()
         {
             try

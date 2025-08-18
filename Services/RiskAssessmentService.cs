@@ -2,6 +2,7 @@
 using CyberRiskApp.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace CyberRiskApp.Services
 {
@@ -12,16 +13,18 @@ namespace CyberRiskApp.Services
         private readonly IRiskService _riskService;
         private readonly ILogger<RiskAssessmentService> _logger;
         private readonly IAuditService _auditService;
+        private readonly IRiskBacklogService _backlogService;
 
         public RiskAssessmentService(CyberRiskContext context, IRiskLevelSettingsService settingsService, 
             IRiskService riskService, ILogger<RiskAssessmentService> logger,
-            IAuditService auditService)
+            IAuditService auditService, IRiskBacklogService backlogService)
         {
             _context = context;
             _settingsService = settingsService;
             _riskService = riskService;
             _logger = logger;
             _auditService = auditService;
+            _backlogService = backlogService;
         }
 
         public async Task<IEnumerable<RiskAssessment>> GetAllAssessmentsAsync()
@@ -43,6 +46,8 @@ namespace CyberRiskApp.Services
         {
             try
             {
+                Console.WriteLine($"=== DEBUGGING RiskAssessmentService.GetAssessmentByIdAsync({id}) ===");
+                
                 var assessment = await _context.RiskAssessments
                     .Include(a => a.IdentifiedRisks)
                     .Include(a => a.QualitativeControls)
@@ -53,10 +58,35 @@ namespace CyberRiskApp.Services
                         .ThenInclude(ts => ts.IdentifiedRisks)
                     .FirstOrDefaultAsync(a => a.Id == id);
 
+                if (assessment != null)
+                {
+                    Console.WriteLine($"   DEBUGGING: Assessment found: '{assessment.Title}'");
+                    Console.WriteLine($"   DEBUGGING: IdentifiedRisks loaded: {assessment.IdentifiedRisks?.Count ?? 0} items");
+                    Console.WriteLine($"   DEBUGGING: QualitativeControls loaded: {assessment.QualitativeControls?.Count ?? 0} items");
+                    Console.WriteLine($"   DEBUGGING: ThreatScenarios loaded: {assessment.ThreatScenarios?.Count ?? 0} items");
+                    
+                    if (assessment.IdentifiedRisks?.Any() == true)
+                    {
+                        foreach (var risk in assessment.IdentifiedRisks)
+                        {
+                            Console.WriteLine($"   DEBUGGING: - IdentifiedRisk: '{risk.Title}' (ID: {risk.Id})");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("   DEBUGGING: No IdentifiedRisks found in database");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"   DEBUGGING: Assessment with ID {id} not found in database");
+                }
+
                 return assessment;
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"   DEBUGGING: Exception in GetAssessmentByIdAsync: {ex.Message}");
                 return null;
             }
         }
@@ -79,6 +109,9 @@ namespace CyberRiskApp.Services
 
                 _context.RiskAssessments.Add(assessment);
                 await _context.SaveChangesAsync();
+
+                // Automatically generate risks for the backlog
+                await AutoGenerateRisksForBacklogAsync(assessment);
 
                 return assessment;
             }
@@ -116,6 +149,13 @@ namespace CyberRiskApp.Services
                     _auditService.SetAuditFields(existingEntity, _auditService.GetCurrentUser(), true);
                     
                     await _context.SaveChangesAsync();
+
+                    // Automatically generate risks for the backlog if assessment is completed
+                    if (existingEntity.Status == AssessmentStatus.Completed && !existingEntity.RisksGenerated)
+                    {
+                        await AutoGenerateRisksForBacklogAsync(existingEntity);
+                    }
+
                     return existingEntity;
                 }
                 else
@@ -132,6 +172,13 @@ namespace CyberRiskApp.Services
 
                     _context.Entry(assessment).State = EntityState.Modified;
                     await _context.SaveChangesAsync();
+
+                    // Automatically generate risks for the backlog if assessment is completed
+                    if (assessment.Status == AssessmentStatus.Completed && !assessment.RisksGenerated)
+                    {
+                        await AutoGenerateRisksForBacklogAsync(assessment);
+                    }
+
                     return assessment;
                 }
             }
@@ -260,15 +307,150 @@ namespace CyberRiskApp.Services
         {
             if (assessment.QualitativeLikelihood.HasValue && assessment.QualitativeImpact.HasValue && assessment.QualitativeExposure.HasValue)
             {
-                var likelihoodScore = (int)assessment.QualitativeLikelihood.Value;
-                var impactScore = (int)assessment.QualitativeImpact.Value;
-                var exposureRating = assessment.QualitativeExposure.Value; // Direct decimal value
+                // Use decimal values directly from RiskMatrixLevel system
+                var likelihoodScore = assessment.QualitativeLikelihood.Value;
+                var impactScore = assessment.QualitativeImpact.Value;
+                var exposureRating = assessment.QualitativeExposure.Value;
 
                 // Calculate: (Likelihood × Impact) × Exposure Rating
                 assessment.QualitativeRiskScore = (likelihoodScore * impactScore) * exposureRating;
             }
 
             return assessment;
+        }
+
+        private async Task AutoGenerateRisksForBacklogAsync(RiskAssessment assessment)
+        {
+            try
+            {
+                _logger.LogInformation("Automatically generating risks for assessment {AssessmentId}: {Title}", assessment.Id, assessment.Title);
+
+                // Don't generate risks if already generated or if assessment doesn't have risk data
+                if (assessment.RisksGenerated)
+                {
+                    _logger.LogInformation("Risks already generated for assessment {AssessmentId}, skipping", assessment.Id);
+                    return;
+                }
+
+                var backlogEntries = new List<RiskBacklogEntry>();
+                var currentUser = _auditService.GetCurrentUser();
+
+                // Generate risks from threat scenarios
+                if (assessment.ThreatScenarios?.Any() == true)
+                {
+                    foreach (var scenario in assessment.ThreatScenarios.Where(ts => ts.QualitativeRiskScore > 0))
+                    {
+                        // Create risk data object (don't save to database yet)
+                        var riskData = new
+                        {
+                            Title = $"Risk from {assessment.Title} - Scenario {scenario.Id}",
+                            Description = scenario.Description ?? "",
+                            ThreatScenario = scenario.Description ?? "",
+                            Asset = assessment.Asset,
+                            BusinessUnit = assessment.BusinessUnit ?? "",
+                            Owner = assessment.BusinessOwner ?? assessment.Assessor,
+                            RiskAssessmentId = assessment.Id,
+                            ThreatScenarioId = scenario.Id,
+                            
+                            // Map scenario values to risk (simplified mapping)
+                            Impact = (ImpactLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeImpact!)),
+                            Likelihood = (LikelihoodLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeLikelihood!)),
+                            Exposure = (ExposureLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeExposure!)),
+                            InherentRiskLevel = MapRiskScore(scenario.QualitativeRiskScore!.Value),
+                            RiskLevel = MapRiskScore(scenario.QualitativeRiskScore!.Value),
+                            
+                            CreatedBy = currentUser,
+                            UpdatedBy = currentUser
+                        };
+                        
+                        // Serialize risk data for backlog description
+                        var riskDescription = JsonSerializer.Serialize(riskData);
+                        
+                        // Create backlog entry WITHOUT creating the risk yet
+                        var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
+                            riskId: null, // No risk exists yet - will be created upon approval
+                            actionType: RiskBacklogAction.NewRisk,
+                            description: riskDescription, // Store full risk data here
+                            justification: $"Risk assessment completed with {scenario.CalculateRiskLevel()} risk level (Score: {scenario.QualitativeRiskScore:F1})",
+                            requesterId: currentUser
+                        );
+                        
+                        backlogEntries.Add(backlogEntry);
+                    }
+                }
+                // Legacy: Single assessment-level risk
+                else if (assessment.QualitativeRiskScore.HasValue && assessment.QualitativeRiskScore > 0)
+                {
+                    // Create risk data object (don't save to database yet)
+                    var riskData = new
+                    {
+                        Title = $"Risk from Assessment: {assessment.Title}",
+                        Description = assessment.Description,
+                        ThreatScenario = assessment.ThreatScenario,
+                        Asset = assessment.Asset,
+                        BusinessUnit = assessment.BusinessUnit ?? "",
+                        Owner = assessment.BusinessOwner ?? assessment.Assessor,
+                        RiskAssessmentId = assessment.Id,
+                        
+                        // Map assessment values (simplified mapping)
+                        Impact = (ImpactLevel)Math.Min(5, Math.Max(1, (int)assessment.QualitativeImpact!)),
+                        Likelihood = (LikelihoodLevel)Math.Min(5, Math.Max(1, (int)assessment.QualitativeLikelihood!)),
+                        Exposure = (ExposureLevel)Math.Min(5, Math.Max(1, (int)assessment.QualitativeExposure!)),
+                        InherentRiskLevel = MapRiskScore(assessment.QualitativeRiskScore.Value),
+                        RiskLevel = MapRiskScore(assessment.QualitativeRiskScore.Value),
+                        
+                        CreatedBy = currentUser,
+                        UpdatedBy = currentUser
+                    };
+                    
+                    // Serialize risk data for backlog description
+                    var riskDescription = JsonSerializer.Serialize(riskData);
+                    
+                    // Create backlog entry WITHOUT creating the risk yet
+                    var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
+                        riskId: null, // No risk exists yet - will be created upon approval
+                        actionType: RiskBacklogAction.NewRisk,
+                        description: riskDescription, // Store full risk data here
+                        justification: $"Risk assessment completed with {assessment.CalculateRiskLevel()} risk level (Score: {assessment.QualitativeRiskScore:F1})",
+                        requesterId: currentUser
+                    );
+                    
+                    backlogEntries.Add(backlogEntry);
+                }
+                
+                // Mark assessment as having generated risks if any were created
+                if (backlogEntries.Any())
+                {
+                    assessment.RisksGenerated = true;
+                    assessment.RisksGeneratedDate = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Successfully generated {Count} risk backlog entries for assessment {AssessmentId}", 
+                        backlogEntries.Count, assessment.Id);
+                }
+                else
+                {
+                    _logger.LogInformation("No risks to generate for assessment {AssessmentId} - no threat scenarios or risk scores found", 
+                        assessment.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error automatically generating risks for assessment {AssessmentId}: {Message}", 
+                    assessment.Id, ex.Message);
+                // Don't rethrow - this is an automatic background operation
+            }
+        }
+
+        private RiskLevel MapRiskScore(decimal score)
+        {
+            return score switch
+            {
+                >= 16 => RiskLevel.Critical,
+                >= 10 => RiskLevel.High,
+                >= 4 => RiskLevel.Medium,
+                _ => RiskLevel.Low
+            };
         }
 
     }

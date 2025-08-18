@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class AttackChainController : Controller
     {
         private readonly CyberRiskContext _context;
@@ -286,7 +286,7 @@ namespace CyberRiskApp.Controllers
         // POST: AttackChain/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var attackChain = await _context.AttackChains.FindAsync(id);

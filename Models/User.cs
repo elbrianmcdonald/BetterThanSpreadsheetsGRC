@@ -46,10 +46,13 @@ namespace CyberRiskApp.Models
         [Display(Name = "IT User")]
         ITUser = 1,
 
-        [Display(Name = "GRC User")]
-        GRCUser = 2,
+        [Display(Name = "GRC Analyst")]
+        GRCAnalyst = 2,
+
+        [Display(Name = "GRC Manager")]
+        GRCManager = 3,
 
         [Display(Name = "Admin")]
-        Admin = 3
+        Admin = 4
     }
 }

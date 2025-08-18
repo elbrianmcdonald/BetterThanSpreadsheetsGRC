@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class ThreatEventController : Controller
     {
         private readonly CyberRiskContext _context;

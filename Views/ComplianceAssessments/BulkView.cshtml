@@ -1,293 +1,377 @@
 @model CyberRiskApp.Models.ComplianceAssessment
 @{
-    ViewData["Title"] = $"Bulk Control View - {Model.Title}";
+    ViewData["Title"] = $"Bulk Assessment - {Model.Title}";
 }
 
-<div class="row">
-    <div class="col-md-12">
-        <!-- Assessment Header -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h4><i class="fas fa-clipboard-list me-2"></i>@Model.Title - Bulk Control View</h4>
-                    <div>
-                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-arrow-left me-1"></i>Back to Details
+<!-- Header with Progress -->
+<div class="container-fluid">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light rounded mb-4">
+        <div class="container-fluid">
+            <div class="navbar-brand mb-0">
+                <h4 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Bulk Assessment</h4>
+                <small class="text-muted">@Model.Title • @Model.Framework.Name</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <div class="me-4">
+                    <div class="d-flex align-items-center">
+                        <div class="progress me-3" style="height: 8px; width: 120px;">
+                            <div class="progress-bar bg-@(Model.CompliancePercentage >= 80 ? "success" : Model.CompliancePercentage >= 60 ? "warning" : "danger")" 
+                                 style="width: @Model.CompliancePercentage%;"></div>
+                        </div>
+                        <small class="text-muted fw-medium">@Model.CompliancePercentage.ToString("F1")%</small>
+                    </div>
+                </div>
+                <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Details
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-lg-3">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Categories & Progress</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="categoryNav">
+                        @{
+                            var groupedControls = Model.ControlAssessments.GroupBy(ca => ca.Control.Category).OrderBy(g => g.Key);
+                        }
+                        <a href="#" class="list-group-item list-group-item-action category-nav-item active" data-category="all">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-medium">All Categories</div>
+                                    <small class="text-muted">@Model.ControlAssessments.Count controls</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="progress mt-1" style="height: 3px; width: 80px;">
+                                        <div class="progress-bar bg-@(Model.CompliancePercentage >= 80 ? "success" : Model.CompliancePercentage >= 60 ? "warning" : "danger")" 
+                                             style="width: @Model.CompliancePercentage%;"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </a>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <strong>Framework:</strong> @Model.Framework.Name @Model.Framework.Version
-                    </div>
-                    <div class="col-md-4">
-                        <strong>Organization:</strong> @Model.Organization.Name
-                    </div>
-                    <div class="col-md-4">
-                        <strong>Status:</strong>
-                        <span class="badge bg-@(Model.Status switch
+                        @foreach (var group in groupedControls)
                         {
-                            CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
-                            CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
-                            CyberRiskApp.Models.AssessmentStatus.Completed => "success",
-                            CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
-                            _ => "secondary"
-                        })">
-                            @Model.Status
-                        </span>
+                            var completedInGroup = group.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.FullyCompliant);
+                            var progressInGroup = group.Any() ? (decimal)completedInGroup / group.Count() * 100 : 0;
+                            <a href="#category-@group.Key.Replace(" ", "-")" class="list-group-item list-group-item-action category-nav-item" data-category="@group.Key">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-medium">@group.Key</div>
+                                        <small class="text-muted">@group.Count() controls</small>
+                                    </div>
+                                    <div class="text-end">
+                                        @if (progressInGroup == 100)
+                                        {
+                                            <i class="fas fa-check-circle text-success"></i>
+                                        }
+                                        else if (progressInGroup > 0)
+                                        {
+                                            <i class="fas fa-clock text-warning"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="fas fa-circle text-muted"></i>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="progress mt-1" style="height: 3px;">
+                                    <div class="progress-bar bg-@(progressInGroup == 100 ? "success" : progressInGroup > 0 ? "warning" : "secondary")" 
+                                         style="width: @progressInGroup.ToString("F0")%;"></div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="assessSelected()" id="assessSelectedBtn" disabled>
+                            <i class="fas fa-edit me-1"></i>Assess Selected (<span id="selectedCount">0</span>)
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="selectAll()">
+                            <i class="fas fa-check-square me-1"></i>Select All Visible
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="clearAll()">
+                            <i class="fas fa-square me-1"></i>Clear All
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Control Selection Header -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h5><i class="fas fa-tasks me-1"></i>Controls (@Model.ControlAssessments.Count)</h5>
-                <small class="text-muted">Select controls to assess together</small>
-            </div>
-            <div>
-                <button class="btn btn-sm btn-outline-secondary me-2" onclick="selectAll()">
-                    <i class="fas fa-check-square me-1"></i>Select All
-                </button>
-                <button class="btn btn-sm btn-outline-secondary me-2" onclick="clearAll()">
-                    <i class="fas fa-square me-1"></i>Clear All
-                </button>
-                <button class="btn btn-sm btn-primary" onclick="assessSelected()" id="assessSelectedBtn" disabled>
-                    <i class="fas fa-edit me-1"></i>Assess Selected (<span id="selectedCount">0</span>)
-                </button>
-            </div>
-        </div>
-
-        <!-- Quick Filters -->
-        <div class="card mb-3">
-            <div class="card-body py-2">
-                <div class="row align-items-center">
-                    <div class="col-md-3">
-                        <label class="form-label mb-1">Filter by Status:</label>
-                        <select class="form-select form-select-sm" onchange="filterByStatus(this.value)">
-                            <option value="all">All Controls</option>
-                            <option value="NonCompliant">Non-Compliant</option>
-                            <option value="PartiallyCompliant">Partially Compliant</option>
-                            <option value="MajorlyCompliant">Majorly Compliant</option>
-                            <option value="FullyCompliant">Fully Compliant</option>
-                            <option value="NotApplicable">N/A</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label mb-1">Category:</label>
-                        <select class="form-select form-select-sm" onchange="filterByCategory(this.value)" id="categoryFilter">
-                            <option value="all">All Categories</option>
-                            @foreach (var category in Model.ControlAssessments.Select(ca => ca.Control.Category).Distinct().OrderBy(c => c))
-                            {
-                                <option value="@category">@category</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-check mt-4">
-                            <input class="form-check-input" type="checkbox" id="projectNeededFilter" onchange="filterByProjectNeeded()">
-                            <label class="form-check-label" for="projectNeededFilter">
-                                Projects Needed Only
-                            </label>
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Quick Filters -->
+            <div class="card mb-3 border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Status Filter</label>
+                            <select class="form-select form-select-sm" onchange="filterByStatus(this.value)" id="statusFilter">
+                                <option value="all">All Statuses</option>
+                                <option value="NonCompliant">Non-Compliant</option>
+                                <option value="PartiallyCompliant">Partially Compliant</option>
+                                <option value="MajorlyCompliant">Majorly Compliant</option>
+                                <option value="FullyCompliant">Fully Compliant</option>
+                                <option value="NotApplicable">N/A</option>
+                            </select>
                         </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="mt-4">
-                            <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
-                                <i class="fas fa-times me-1"></i>Clear Filters
-                            </button>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Project Filter</label>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="projectNeededFilter" onchange="filterByProjectNeeded()">
+                                <label class="form-check-label small" for="projectNeededFilter">
+                                    Projects Needed Only
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Search</label>
+                            <input type="text" class="form-control form-control-sm" placeholder="Search controls..." onkeyup="searchControls(this.value)" id="searchInput">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">&nbsp;</label>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
+                                    <i class="fas fa-times me-1"></i>Clear
+                                </button>
+                                <span class="badge bg-light text-dark d-flex align-items-center" id="visibleCount">@Model.ControlAssessments.Count controls</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Controls List -->
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th width="40">
-                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
-                                </th>
-                                <th>Control ID</th>
-                                <th>Title</th>
-                                <th>Category</th>
-                                <th>Current Status</th>
-                                <th>Owner</th>
-                                <th>Project Needed</th>
-                                <th>Last Updated</th>
-                            </tr>
-                        </thead>
-                        <tbody id="controlsTableBody">
-                            @foreach (var ca in Model.ControlAssessments.OrderBy(ca => ca.Control.ControlId))
-                            {
-                                <tr class="control-row" 
-                                    data-control-id="@ca.Id"
-                                    data-status="@ca.Status"
-                                    data-category="@ca.Control.Category"
-                                    data-project-needed="@ca.ProjectNeeded.ToString().ToLower()">
-                                    <td>
-                                        <input type="checkbox" 
-                                               class="control-checkbox" 
-                                               value="@ca.Id" 
-                                               onchange="updateSelectedCount()">
-                                    </td>
-                                    <td>
-                                        <code>@ca.Control.ControlId</code>
-                                    </td>
-                                    <td>
-                                        <strong>@ca.Control.Title</strong>
-                                        @if (!string.IsNullOrEmpty(ca.Control.Description))
-                                        {
-                                            <br><small class="text-muted">@ca.Control.Description.Substring(0, Math.Min(ca.Control.Description.Length, 80))@(ca.Control.Description.Length > 80 ? "..." : "")</small>
-                                        }
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">@ca.Control.Category</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-@(ca.Status switch
-                                        {
-                                            CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "success",
-                                            CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "info",
-                                            CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "warning",
-                                            CyberRiskApp.Models.ComplianceStatus.NonCompliant => "danger",
-                                            CyberRiskApp.Models.ComplianceStatus.NotApplicable => "secondary",
-                                            _ => "secondary"
-                                        })">
-                                            @(ca.Status switch
-                                            {
-                                                CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "Fully Compliant",
-                                                CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "Majorly Compliant",
-                                                CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "Partially Compliant",
-                                                CyberRiskApp.Models.ComplianceStatus.NonCompliant => "Non-Compliant",
-                                                CyberRiskApp.Models.ComplianceStatus.NotApplicable => "N/A",
-                                                _ => "Unknown"
-                                            })
-                                        </span>
-                                    </td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(ca.Ownership))
-                                        {
-                                            @ca.Ownership
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Not assigned</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (ca.ProjectNeeded)
-                                        {
-                                            <span class="badge bg-info">Required</span>
-                                            @if (!string.IsNullOrEmpty(ca.ProjectNumber))
-                                            {
-                                                <br><small>@ca.ProjectNumber</small>
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">No</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (ca.AssessmentDate.HasValue)
-                                        {
-                                            @ca.AssessmentDate.Value.ToString("MMM dd")
-                                            <br><small class="text-muted">@ca.AssessedBy</small>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">Never</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+            <!-- Controls Cards -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Control Selection</h5>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                            <label class="form-check-label small" for="selectAllCheckbox">Select All Visible</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="controlCardsContainer">
+                        @foreach (var group in groupedControls)
+                        {
+                            <div class="category-section" id="category-@group.Key.Replace(" ", "-")" data-category="@group.Key">
+                                <div class="bg-light border-bottom px-4 py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 fw-bold text-primary">
+                                            <i class="fas fa-folder me-2"></i>@group.Key
+                                        </h6>
+                                        <span class="badge bg-light text-dark">@group.Count() controls</span>
+                                    </div>
+                                </div>
+                                
+                                @foreach (var ca in group.OrderBy(ca => ca.Control.ControlId))
+                                {
+                                    <div class="control-card border-0 border-bottom py-3 px-4" 
+                                         data-control-id="@ca.Id"
+                                         data-status="@ca.Status"
+                                         data-category="@ca.Control.Category"
+                                         data-project-needed="@ca.ProjectNeeded.ToString().ToLower()"
+                                         data-search-text="@(ca.Control.ControlId + " " + ca.Control.Title + " " + ca.Control.Description)">
+                                        
+                                        <div class="d-flex align-items-start">
+                                            <div class="form-check me-3 mt-1">
+                                                <input type="checkbox" 
+                                                       class="form-check-input control-checkbox" 
+                                                       value="@ca.Id" 
+                                                       onchange="updateSelectedCount()">
+                                            </div>
+                                            
+                                            <div class="flex-grow-1">
+                                                <div class="row align-items-center">
+                                                    <div class="col-lg-3 col-md-4">
+                                                        <div class="d-flex align-items-center gap-2 mb-2">
+                                                            <span class="badge bg-primary">@ca.Control.ControlId</span>
+                                                            @if (ca.ProjectNeeded)
+                                                            {
+                                                                <i class="fas fa-project-diagram text-info" title="Project Required"></i>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-lg-5 col-md-8">
+                                                        <div class="fw-medium mb-1">@ca.Control.Title</div>
+                                                        @if (!string.IsNullOrEmpty(ca.Control.Description))
+                                                        {
+                                                            <small class="text-muted">@ca.Control.Description.Substring(0, Math.Min(ca.Control.Description.Length, 100))@(ca.Control.Description.Length > 100 ? "..." : "")</small>
+                                                        }
+                                                    </div>
+                                                    <div class="col-lg-2 col-md-6">
+                                                        <span class="badge bg-@(ca.Status switch
+                                                        {
+                                                            CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "success",
+                                                            CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "info",
+                                                            CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "warning",
+                                                            CyberRiskApp.Models.ComplianceStatus.NonCompliant => "danger",
+                                                            CyberRiskApp.Models.ComplianceStatus.NotApplicable => "secondary",
+                                                            _ => "secondary"
+                                                        })">
+                                                            @(ca.Status switch
+                                                            {
+                                                                CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "Compliant",
+                                                                CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "Majorly",
+                                                                CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "Partially",
+                                                                CyberRiskApp.Models.ComplianceStatus.NonCompliant => "Non-Compliant",
+                                                                CyberRiskApp.Models.ComplianceStatus.NotApplicable => "N/A",
+                                                                _ => "Unknown"
+                                                            })
+                                                        </span>
+                                                    </div>
+                                                    <div class="col-lg-2 col-md-6">
+                                                        <div class="text-end">
+                                                            @if (!string.IsNullOrEmpty(ca.Ownership))
+                                                            {
+                                                                <small class="text-muted d-block">@ca.Ownership</small>
+                                                            }
+                                                            @if (ca.AssessmentDate.HasValue)
+                                                            {
+                                                                <small class="text-muted">@ca.AssessmentDate.Value.ToString("MMM dd")</small>
+                                                            }
+                                                            else
+                                                            {
+                                                                <small class="text-warning">Not assessed</small>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Assessment Modal -->
+<!-- Enhanced Assessment Modal -->
 <div class="modal fade" id="assessmentModal" tabindex="-1">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Assess Selected Controls (<span id="modalSelectedCount">0</span>)</h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Bulk Assessment - <span id="modalSelectedCount">0</span> Controls
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="bulkAssessmentForm">
-                    <input type="hidden" id="selectedControlIds" name="selectedControlIds">
-                    
-                    <!-- Common Fields -->
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h6><i class="fas fa-cog me-1"></i>Apply to All Selected Controls</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Ownership</label>
-                                        <input type="text" class="form-control" id="commonOwnership" placeholder="Enter owner name">
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Compliance Status</label>
-                                        <select class="form-select" id="commonStatus">
-                                            <option value="">Don't change</option>
-                                            <option value="NonCompliant">Non-Compliant</option>
-                                            <option value="PartiallyCompliant">Partially Compliant</option>
-                                            <option value="MajorlyCompliant">Majorly Compliant</option>
-                                            <option value="FullyCompliant">Fully Compliant</option>
-                                            <option value="NotApplicable">N/A</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="mb-3">
-                                        <label class="form-label">Projected Compliance Date</label>
-                                        <input type="date" class="form-control" id="commonProjectedDate">
-                                    </div>
-                                </div>
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs mb-4" id="assessmentTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#commonTab">
+                            <i class="fas fa-cog me-1"></i>Common Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#individualTab">
+                            <i class="fas fa-list me-1"></i>Individual Controls
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#reviewTab">
+                            <i class="fas fa-eye me-1"></i>Review & Save
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Common Settings Tab -->
+                    <div class="tab-pane fade show active" id="commonTab">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-magic me-2"></i>Apply to All Selected Controls</h6>
                             </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="commonProjectNeeded">
-                                        <label class="form-check-label" for="commonProjectNeeded">
-                                            Mark all as "Project Needed"
-                                        </label>
+                            <div class="card-body">
+                                <form id="commonSettingsForm">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Compliance Status</label>
+                                                <select class="form-select" id="commonStatus">
+                                                    <option value="">Don't change</option>
+                                                    <option value="NonCompliant">Non-Compliant</option>
+                                                    <option value="PartiallyCompliant">Partially Compliant</option>
+                                                    <option value="MajorlyCompliant">Majorly Compliant</option>
+                                                    <option value="FullyCompliant">Fully Compliant</option>
+                                                    <option value="NotApplicable">N/A</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Ownership</label>
+                                                <input type="text" class="form-control" id="commonOwnership" placeholder="Enter owner name">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Target Compliance Date</label>
+                                                <input type="date" class="form-control" id="commonProjectedDate">
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="applyCommonFields()">
-                                    <i class="fas fa-copy me-1"></i>Apply to All Below
-                                </button>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="commonProjectNeeded">
+                                                <label class="form-check-label fw-bold" for="commonProjectNeeded">
+                                                    Mark all as "Project Required"
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="text-end">
+                                                <button type="button" class="btn btn-primary" onclick="applyCommonFields()">
+                                                    <i class="fas fa-magic me-1"></i>Apply to All Controls
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Individual Control Assessment -->
-                    <div id="individualControlsContainer">
-                        <!-- Controls will be populated here by JavaScript -->
+                    <!-- Individual Controls Tab -->
+                    <div class="tab-pane fade" id="individualTab">
+                        <div id="individualControlsContainer">
+                            <!-- Controls will be populated here by JavaScript -->
+                        </div>
                     </div>
-                </form>
+
+                    <!-- Review Tab -->
+                    <div class="tab-pane fade" id="reviewTab">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Review Changes</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="reviewSummary">
+                                    <!-- Summary will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" onclick="showReviewTab()">
+                    <i class="fas fa-eye me-1"></i>Review Changes
+                </button>
                 <button type="button" class="btn btn-primary" onclick="saveSelectedAssessments()">
                     <i class="fas fa-save me-1"></i>Save All Assessments
                 </button>
@@ -297,27 +381,66 @@
 </div>
 
 @section Scripts {
+    <style>
+        .sticky-top {
+            top: 20px !important;
+        }
+        .control-card {
+            transition: all 0.3s ease;
+        }
+        .control-card:hover {
+            background-color: #f8f9fa;
+        }
+        .category-nav-item.active {
+            background-color: #e3f2fd !important;
+            border-left: 4px solid #2196f3;
+        }
+        .category-section {
+            border-left: 3px solid transparent;
+        }
+        .category-section.highlight {
+            border-left-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .control-checkbox:checked {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        .nav-tabs .nav-link {
+            color: #6c757d;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+            color: #0d6efd;
+        }
+    </style>
     <script>
         let selectedControls = [];
 
         // Update selected count and button state
         function updateSelectedCount() {
             const checkboxes = document.querySelectorAll('.control-checkbox:checked');
+            const visibleCheckboxes = document.querySelectorAll('.control-checkbox:visible');
             const count = checkboxes.length;
             selectedControls = Array.from(checkboxes).map(cb => cb.value);
             
             document.getElementById('selectedCount').textContent = count;
             document.getElementById('assessSelectedBtn').disabled = count === 0;
             
-            // Update select all checkbox
+            // Update select all checkbox state
             const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-            const allCheckboxes = document.querySelectorAll('.control-checkbox:visible');
+            const allVisible = document.querySelectorAll('.control-checkbox:visible');
             const visibleChecked = document.querySelectorAll('.control-checkbox:visible:checked');
             
             if (visibleChecked.length === 0) {
                 selectAllCheckbox.checked = false;
                 selectAllCheckbox.indeterminate = false;
-            } else if (visibleChecked.length === allCheckboxes.length) {
+            } else if (visibleChecked.length === allVisible.length) {
                 selectAllCheckbox.checked = true;
                 selectAllCheckbox.indeterminate = false;
             } else {
@@ -326,7 +449,7 @@
             }
         }
 
-        // Toggle select all
+        // Toggle select all visible controls
         function toggleSelectAll() {
             const selectAll = document.getElementById('selectAllCheckbox').checked;
             const visibleCheckboxes = document.querySelectorAll('.control-checkbox:visible');
@@ -338,11 +461,12 @@
             updateSelectedCount();
         }
 
-        // Select all controls
+        // Select all visible controls
         function selectAll() {
             document.querySelectorAll('.control-checkbox:visible').forEach(checkbox => {
                 checkbox.checked = true;
             });
+            document.getElementById('selectAllCheckbox').checked = true;
             updateSelectedCount();
         }
 
@@ -351,73 +475,125 @@
             document.querySelectorAll('.control-checkbox').forEach(checkbox => {
                 checkbox.checked = false;
             });
+            document.getElementById('selectAllCheckbox').checked = false;
             updateSelectedCount();
         }
 
-        // Filter functions
-        function filterByStatus(status) {
-            const rows = document.querySelectorAll('.control-row');
-            rows.forEach(row => {
-                if (status === 'all' || row.dataset.status === status) {
-                    row.style.display = 'table-row';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-            updateSelectedCount();
-        }
-
+        // Category navigation
         function filterByCategory(category) {
-            const rows = document.querySelectorAll('.control-row');
-            rows.forEach(row => {
-                if (category === 'all' || row.dataset.category === category) {
-                    row.style.display = 'table-row';
+            const categoryItems = document.querySelectorAll('.category-nav-item');
+            const categorySections = document.querySelectorAll('.category-section');
+            
+            // Update navigation active state
+            categoryItems.forEach(item => {
+                if (item.dataset.category === category || (category === 'all' && !item.dataset.category)) {
+                    item.classList.add('active');
                 } else {
-                    row.style.display = 'none';
+                    item.classList.remove('active');
                 }
             });
+            
+            // Show/hide category sections
+            categorySections.forEach(section => {
+                if (category === 'all' || section.dataset.category === category) {
+                    section.style.display = 'block';
+                    section.classList.add('highlight');
+                } else {
+                    section.style.display = 'none';
+                    section.classList.remove('highlight');
+                }
+            });
+            
+            updateVisibleCount();
             updateSelectedCount();
         }
 
+        // Filter by status
+        function filterByStatus(status) {
+            const controls = document.querySelectorAll('.control-card');
+            controls.forEach(control => {
+                const controlStatus = control.dataset.status;
+                if (status === 'all' || controlStatus === status) {
+                    control.style.display = 'block';
+                } else {
+                    control.style.display = 'none';
+                }
+            });
+            updateVisibleCount();
+            updateSelectedCount();
+        }
+
+        // Filter by project needed
         function filterByProjectNeeded() {
             const checked = document.getElementById('projectNeededFilter').checked;
-            const rows = document.querySelectorAll('.control-row');
+            const controls = document.querySelectorAll('.control-card');
             
-            rows.forEach(row => {
-                if (!checked || row.dataset.projectNeeded === 'true') {
-                    row.style.display = 'table-row';
+            controls.forEach(control => {
+                const projectNeeded = control.dataset.projectNeeded === 'true';
+                if (!checked || projectNeeded) {
+                    control.style.display = 'block';
                 } else {
-                    row.style.display = 'none';
+                    control.style.display = 'none';
                 }
             });
+            updateVisibleCount();
             updateSelectedCount();
         }
 
-        function resetFilters() {
-            document.querySelector('select[onchange="filterByStatus(this.value)"]').value = 'all';
-            document.getElementById('categoryFilter').value = 'all';
-            document.getElementById('projectNeededFilter').checked = false;
+        // Search controls
+        function searchControls(searchTerm) {
+            const controls = document.querySelectorAll('.control-card');
+            const term = searchTerm.toLowerCase();
             
-            document.querySelectorAll('.control-row').forEach(row => {
-                row.style.display = 'table-row';
+            controls.forEach(control => {
+                const searchText = control.dataset.searchText.toLowerCase();
+                if (!term || searchText.includes(term)) {
+                    control.style.display = 'block';
+                } else {
+                    control.style.display = 'none';
+                }
             });
+            updateVisibleCount();
             updateSelectedCount();
+        }
+
+        // Reset all filters
+        function resetFilters() {
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('projectNeededFilter').checked = false;
+            document.getElementById('searchInput').value = '';
+            
+            // Reset category filter to all
+            filterByCategory('all');
+            
+            // Show all controls
+            document.querySelectorAll('.control-card').forEach(control => {
+                control.style.display = 'block';
+            });
+            document.querySelectorAll('.category-section').forEach(section => {
+                section.style.display = 'block';
+                section.classList.remove('highlight');
+            });
+            
+            updateVisibleCount();
+            updateSelectedCount();
+        }
+
+        // Update visible count
+        function updateVisibleCount() {
+            const visibleControls = document.querySelectorAll('.control-card:visible');
+            document.getElementById('visibleCount').textContent = `${visibleControls.length} controls`;
         }
 
         // Assess selected controls
         function assessSelected() {
             if (selectedControls.length === 0) {
-                alert('Please select at least one control to assess.');
+                showToast('Please select at least one control to assess.', 'warning');
                 return;
             }
 
             document.getElementById('modalSelectedCount').textContent = selectedControls.length;
-            document.getElementById('selectedControlIds').value = selectedControls.join(',');
-            
-            // Populate individual controls in modal
             populateIndividualControls();
-            
-            // Show modal
             new bootstrap.Modal(document.getElementById('assessmentModal')).show();
         }
 
@@ -427,21 +603,27 @@
             container.innerHTML = '';
 
             selectedControls.forEach(controlId => {
-                const row = document.querySelector(`[data-control-id="${controlId}"]`);
-                const controlCode = row.querySelector('code').textContent;
-                const controlTitle = row.querySelector('strong').textContent;
+                const controlCard = document.querySelector(`[data-control-id="${controlId}"]`);
+                const controlBadge = controlCard.querySelector('.badge.bg-primary');
+                const controlTitle = controlCard.querySelector('.fw-medium');
+                
+                const controlCode = controlBadge.textContent;
+                const title = controlTitle.textContent;
                 
                 const controlHtml = `
                     <div class="card mb-3 control-assessment-form" data-control-id="${controlId}">
                         <div class="card-header">
-                            <h6><code>${controlCode}</code> - ${controlTitle}</h6>
+                            <h6 class="mb-0">
+                                <span class="badge bg-primary me-2">${controlCode}</span>
+                                ${title}
+                            </h6>
                         </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Compliance Status</label>
-                                        <select class="form-control" name="Status_${controlId}">
+                                        <label class="form-label fw-bold">Compliance Status</label>
+                                        <select class="form-select" name="Status_${controlId}">
                                             <option value="NonCompliant">Non-Compliant</option>
                                             <option value="PartiallyCompliant">Partially Compliant</option>
                                             <option value="MajorlyCompliant">Majorly Compliant</option>
@@ -450,23 +632,23 @@
                                         </select>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Ownership</label>
+                                        <label class="form-label fw-bold">Ownership</label>
                                         <input type="text" class="form-control" name="Ownership_${controlId}" placeholder="Enter owner name">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Projected Compliance Date</label>
+                                        <label class="form-label fw-bold">Target Compliance Date</label>
                                         <input type="date" class="form-control" name="ProjectedComplianceDate_${controlId}">
                                     </div>
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="ProjectNeeded_${controlId}">
-                                                <label class="form-check-label">Project Needed</label>
+                                                <label class="form-check-label fw-bold">Project Required</label>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">T-Shirt Size</label>
-                                            <select class="form-control" name="TShirtSize_${controlId}">
+                                            <label class="form-label fw-bold">Project Size</label>
+                                            <select class="form-select form-select-sm" name="TShirtSize_${controlId}">
                                                 <option value="">-</option>
                                                 <option value="XS">XS</option>
                                                 <option value="S">S</option>
@@ -478,18 +660,18 @@
                                         </div>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Project Number</label>
-                                        <input type="text" class="form-control" name="ProjectNumber_${controlId}" placeholder="Enter project number">
+                                        <label class="form-label fw-bold">Project Number</label>
+                                        <input type="text" class="form-control" name="ProjectNumber_${controlId}" placeholder="Enter project reference">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label class="form-label">Gap Notes</label>
-                                        <textarea class="form-control" name="GapNotes_${controlId}" rows="3" placeholder="Describe any gaps or issues..."></textarea>
+                                        <label class="form-label fw-bold">Gap Analysis</label>
+                                        <textarea class="form-control" name="GapNotes_${controlId}" rows="3" placeholder="Describe gaps and issues..."></textarea>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Evidence of Compliance</label>
-                                        <textarea class="form-control" name="EvidenceOfCompliance_${controlId}" rows="4" placeholder="Document evidence, links, procedures, etc..."></textarea>
+                                        <label class="form-label fw-bold">Evidence of Compliance</label>
+                                        <textarea class="form-control" name="EvidenceOfCompliance_${controlId}" rows="4" placeholder="Document evidence, links, procedures..."></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -509,20 +691,94 @@
 
             selectedControls.forEach(controlId => {
                 if (commonOwnership) {
-                    document.querySelector(`[name="Ownership_${controlId}"]`).value = commonOwnership;
+                    const ownershipField = document.querySelector(`[name="Ownership_${controlId}"]`);
+                    if (ownershipField) ownershipField.value = commonOwnership;
                 }
                 if (commonStatus) {
-                    document.querySelector(`[name="Status_${controlId}"]`).value = commonStatus;
+                    const statusField = document.querySelector(`[name="Status_${controlId}"]`);
+                    if (statusField) statusField.value = commonStatus;
                 }
                 if (commonProjectedDate) {
-                    document.querySelector(`[name="ProjectedComplianceDate_${controlId}"]`).value = commonProjectedDate;
+                    const dateField = document.querySelector(`[name="ProjectedComplianceDate_${controlId}"]`);
+                    if (dateField) dateField.value = commonProjectedDate;
                 }
                 if (commonProjectNeeded) {
-                    document.querySelector(`[name="ProjectNeeded_${controlId}"]`).checked = true;
+                    const projectField = document.querySelector(`[name="ProjectNeeded_${controlId}"]`);
+                    if (projectField) projectField.checked = true;
                 }
             });
 
-            showToast('Common fields applied to all controls', 'success');
+            showToast('Common settings applied to all controls', 'success');
+        }
+
+        // Show review tab with summary
+        function showReviewTab() {
+            generateReviewSummary();
+            document.querySelector('[href="#reviewTab"]').click();
+        }
+
+        // Generate review summary
+        function generateReviewSummary() {
+            const summary = document.getElementById('reviewSummary');
+            let summaryHtml = '<div class="row">';
+            
+            const statusCounts = { NonCompliant: 0, PartiallyCompliant: 0, MajorlyCompliant: 0, FullyCompliant: 0, NotApplicable: 0 };
+            let projectsNeeded = 0;
+            let withOwners = 0;
+            
+            selectedControls.forEach(controlId => {
+                const status = document.querySelector(`[name="Status_${controlId}"]`)?.value;
+                const ownership = document.querySelector(`[name="Ownership_${controlId}"]`)?.value;
+                const projectNeeded = document.querySelector(`[name="ProjectNeeded_${controlId}"]`)?.checked;
+                
+                if (status) statusCounts[status]++;
+                if (ownership) withOwners++;
+                if (projectNeeded) projectsNeeded++;
+            });
+            
+            summaryHtml += `
+                <div class="col-md-6">
+                    <h6>Status Distribution</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><span class="badge bg-success me-2"></span>Fully Compliant</span>
+                            <span class="badge bg-light text-dark">${statusCounts.FullyCompliant}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><span class="badge bg-info me-2"></span>Majorly Compliant</span>
+                            <span class="badge bg-light text-dark">${statusCounts.MajorlyCompliant}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><span class="badge bg-warning me-2"></span>Partially Compliant</span>
+                            <span class="badge bg-light text-dark">${statusCounts.PartiallyCompliant}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span><span class="badge bg-danger me-2"></span>Non-Compliant</span>
+                            <span class="badge bg-light text-dark">${statusCounts.NonCompliant}</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Assignment Summary</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Controls with Owners</span>
+                            <span class="badge bg-primary">${withOwners}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Projects Required</span>
+                            <span class="badge bg-info">${projectsNeeded}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Total Controls</span>
+                            <span class="badge bg-secondary">${selectedControls.length}</span>
+                        </li>
+                    </ul>
+                </div>
+            `;
+            
+            summaryHtml += '</div>';
+            summary.innerHTML = summaryHtml;
         }
 
         // Save selected assessments
@@ -597,6 +853,16 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateSelectedCount();
+            updateVisibleCount();
+            
+            // Category navigation click handlers
+            document.querySelectorAll('.category-nav-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const category = this.dataset.category || 'all';
+                    filterByCategory(category);
+                });
+            });
         });
     </script>
 }

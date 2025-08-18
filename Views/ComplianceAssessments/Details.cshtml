@@ -3,402 +3,355 @@
     ViewData["Title"] = $"Assessment: {Model.Title}";
 }
 
-<div class="row">
-    <div class="col-md-9">
-        <!-- Assessment Header -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h4><i class="fas fa-clipboard-check me-2"></i>@Model.Title</h4>
-                    <div>
-                        @if (Model.Status == CyberRiskApp.Models.AssessmentStatus.Draft)
-                        {
-                            <form asp-action="StartAssessment" asp-route-id="@Model.Id" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-success btn-sm">
-                                    <i class="fas fa-play me-1"></i>Start Assessment
-                                </button>
-                            </form>
-                        }
-                        @if (Model.Status == CyberRiskApp.Models.AssessmentStatus.InProgress)
-                        {
-                            <form asp-action="CompleteAssessment" asp-route-id="@Model.Id" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Are you sure you want to complete this assessment?')">
-                                    <i class="fas fa-check me-1"></i>Complete Assessment
-                                </button>
-                            </form>
-                        }
-                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-edit me-1"></i>Edit Assessment
-                        </a>
-                        <a asp-action="BulkView" asp-route-id="@Model.Id" class="btn btn-outline-info btn-sm">
-                            <i class="fas fa-th-list me-1"></i>Bulk View
-                        </a>
-                        <button class="btn btn-info btn-sm" onclick="exportToExcel()">
-                            <i class="fas fa-download me-1"></i>Export Report
+<!-- Header with Progress -->
+<div class="container-fluid">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light rounded mb-4">
+        <div class="container-fluid">
+            <div class="navbar-brand mb-0">
+                <h4 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>@Model.Title</h4>
+                <small class="text-muted">@Model.Framework.Name • @Model.Organization.Name</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <div class="me-4">
+                    <div class="d-flex align-items-center">
+                        <div class="progress me-3" style="height: 8px; width: 120px;">
+                            <div class="progress-bar bg-@(Model.CompliancePercentage >= 80 ? "success" : Model.CompliancePercentage >= 60 ? "warning" : "danger")" 
+                                 style="width: @Model.CompliancePercentage%;"></div>
+                        </div>
+                        <small class="text-muted fw-medium">@Model.CompliancePercentage.ToString("F1")%</small>
+                    </div>
+                </div>
+                <div class="btn-group" role="group">
+                    @if (Model.Status == CyberRiskApp.Models.AssessmentStatus.Draft)
+                    {
+                        <form asp-action="StartAssessment" asp-route-id="@Model.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-play me-1"></i>Start Assessment
+                            </button>
+                        </form>
+                    }
+                    @if (Model.Status == CyberRiskApp.Models.AssessmentStatus.InProgress)
+                    {
+                        <form asp-action="CompleteAssessment" asp-route-id="@Model.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-primary" onclick="return confirm('Are you sure you want to complete this assessment?')">
+                                <i class="fas fa-check me-1"></i>Complete Assessment
+                            </button>
+                        </form>
+                    }
+                    <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@Model.Id"><i class="fas fa-edit me-2"></i>Edit Assessment</a></li>
+                        <li><a class="dropdown-item" asp-action="BulkView" asp-route-id="@Model.Id"><i class="fas fa-th-list me-2"></i>Bulk View</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportToExcel()"><i class="fas fa-download me-2"></i>Export Report</a></li>
+                    </ul>
+                </div>
+                <a asp-action="Index" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-arrow-left me-1"></i>Back
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Quick Info Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Assessor</small>
+                    <strong>@Model.Assessor</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Status</small>
+                    <span class="badge bg-@(Model.Status switch
+                    {
+                        CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+                        CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
+                        CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+                        CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
+                        _ => "secondary"
+                    })">
+                        @Model.Status
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Due Date</small>
+                    <strong>@(Model.DueDate?.ToString("MMM dd") ?? "Not set")</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Controls</small>
+                    <strong>@Model.ControlAssessments.Count</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Non-Compliant</small>
+                    <strong class="text-danger">@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.NonCompliant)</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Projects</small>
+                    <strong class="text-info">@Model.ControlAssessments.Count(ca => ca.ProjectNeeded)</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-lg-3">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filters & Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2 mb-3">
+                        <button class="btn btn-sm btn-outline-secondary active" onclick="filterByStatus('all')" id="filter-all">Show All (@Model.ControlAssessments.Count)</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="filterByStatus('NonCompliant')" id="filter-noncompliant">Non-Compliant (@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.NonCompliant))</button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="filterByStatus('PartiallyCompliant')" id="filter-partial">Partially Compliant (@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant))</button>
+                        <button class="btn btn-sm btn-outline-success" onclick="filterByStatus('FullyCompliant')" id="filter-compliant">Fully Compliant (@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.FullyCompliant))</button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="filterByProjectNeeded()" id="filter-projects">Projects Needed (@Model.ControlAssessments.Count(ca => ca.ProjectNeeded))</button>
+                    </div>
+                    <hr>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-sm" onclick="saveAllChanges()">
+                            <i class="fas fa-save me-1"></i>Save All Changes
+                        </button>
+                        <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                            <i class="fas fa-edit me-1"></i>Bulk Update
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="toggleExpandAll()">
+                            <i class="fas fa-expand-arrows-alt me-1"></i>Expand All
                         </button>
                     </div>
                 </div>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-4">Framework:</dt>
-                            <dd class="col-sm-8">@Model.Framework.Name @Model.Framework.Version</dd>
-                            <dt class="col-sm-4">Organization:</dt>
-                            <dd class="col-sm-8">@Model.Organization.Name</dd>
-                            <dt class="col-sm-4">Assessor:</dt>
-                            <dd class="col-sm-8">@Model.Assessor</dd>
-                            <dt class="col-sm-4">Status:</dt>
-                            <dd class="col-sm-8">
-                                <span class="badge bg-@(Model.Status switch
-                                {
-                                    CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
-                                    CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
-                                    CyberRiskApp.Models.AssessmentStatus.Completed => "success",
-                                    CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
-                                    _ => "secondary"
-                                })">
-                                    @Model.Status
-                                </span>
-                            </dd>
-                        </dl>
-                    </div>
-                    <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-4">Start Date:</dt>
-                            <dd class="col-sm-8">@Model.StartDate.ToString("MMM dd, yyyy")</dd>
-                            <dt class="col-sm-4">Due Date:</dt>
-                            <dd class="col-sm-8">
-                                @if (Model.DueDate.HasValue)
-                                {
-                                    @Model.DueDate.Value.ToString("MMM dd, yyyy")
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Not set</span>
-                                }
-                            </dd>
-                            <dt class="col-sm-4">Completed:</dt>
-                            <dd class="col-sm-8">
-                                @if (Model.CompletedDate.HasValue)
-                                {
-                                    @Model.CompletedDate.Value.ToString("MMM dd, yyyy")
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Not completed</span>
-                                }
-                            </dd>
-                            <dt class="col-sm-4">Compliance:</dt>
-                            <dd class="col-sm-8">
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-@(Model.CompliancePercentage >= 80 ? "success" : Model.CompliancePercentage >= 60 ? "warning" : "danger")"
-                                         role="progressbar"
-                                         style="width: @Model.CompliancePercentage%"
-                                         aria-valuenow="@Model.CompliancePercentage"
-                                         aria-valuemin="0"
-                                         aria-valuemax="100">
-                                        @Model.CompliancePercentage.ToString("F1")%
-                                    </div>
-                                </div>
-                            </dd>
-                        </dl>
+                <div class="card-footer">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="text-success fw-bold">@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.FullyCompliant)</div>
+                            <small class="text-muted">Compliant</small>
+                        </div>
+                        <div class="col-6">
+                            @{
+                                var daysRemaining = Model.DueDate.HasValue ? (Model.DueDate.Value - DateTime.UtcNow).Days : 0;
+                            }
+                            <div class="fw-bold text-@(daysRemaining < 0 ? "danger" : daysRemaining < 7 ? "warning" : "info")">
+                                @(Model.DueDate.HasValue ? daysRemaining.ToString() : "--")
+                            </div>
+                            <small class="text-muted">Days Left</small>
+                        </div>
                     </div>
                 </div>
-                @if (!string.IsNullOrEmpty(Model.Description))
-                {
-                    <div class="mt-3">
-                        <strong>Description:</strong>
-                        <p class="mb-0">@Model.Description</p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Control Assessments</h5>
+                        <span class="badge bg-light text-dark" id="visibleCount">@Model.ControlAssessments.Count controls</span>
                     </div>
-                }
-            </div>
-        </div>
+                </div>
+                
+                <!-- Column Headers -->
+                <div class="bg-light border-bottom px-4 py-2">
+                    <div class="row align-items-center fw-bold text-muted small">
+                        <div class="col-lg-3 col-md-3">CONTROL NAME</div>
+                        <div class="col-lg-5 col-md-5">CONTROL TEXT</div>
+                        <div class="col-lg-3 col-md-3">COMPLIANCE STATUS</div>
+                        <div class="col-lg-1 col-md-1 text-end">ACTIONS</div>
+                    </div>
+                </div>
+                
+                <div class="card-body p-0">
 
-        <!-- Control Assessments Header -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5><i class="fas fa-tasks me-1"></i>Control Assessments (@Model.ControlAssessments.Count)</h5>
-            <div>
-                <button class="btn btn-sm btn-primary" onclick="saveAllChanges()">
-                    <i class="fas fa-save me-1"></i>Save All Changes
-                </button>
-                <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
-                    <i class="fas fa-edit me-1"></i>Bulk Update
-                </button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="toggleExpandAll()">
-                    <i class="fas fa-expand-arrows-alt me-1"></i>Expand All
-                </button>
-            </div>
-        </div>
-
-        <!-- Control Assessment Cards -->
-        @if (Model.ControlAssessments.Any())
-        {
-            <div id="controlCardsContainer">
-                @foreach (var ca in Model.ControlAssessments.OrderBy(ca => ca.Control.ControlId))
-                {
-                    <div class="card mb-3 control-assessment-card" data-control-id="@ca.Id">
-                        <div class="card-header" style="cursor: pointer;" onclick="toggleCard(@ca.Id)">
-                            <div class="row align-items-center">
-                                <div class="col-md-2">
-                                    <code class="fs-6">@ca.Control.ControlId</code>
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>@ca.Control.Title</strong>
-                                    <br><small class="text-muted">@ca.Control.Category</small>
-                                </div>
-                                <div class="col-md-3">
-                                    <span class="badge bg-@(ca.Status switch
-                                    {
-                                        CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "success",
-                                        CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "info",
-                                        CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "warning",
-                                        CyberRiskApp.Models.ComplianceStatus.NonCompliant => "danger",
-                                        CyberRiskApp.Models.ComplianceStatus.NotApplicable => "secondary",
-                                        _ => "secondary"
-                                    })">
-                                        @(ca.Status switch
-                                        {
-                                            CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "Fully Compliant",
-                                            CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "Majorly Compliant",
-                                            CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "Partially Compliant",
-                                            CyberRiskApp.Models.ComplianceStatus.NonCompliant => "Non-Compliant",
-                                            CyberRiskApp.Models.ComplianceStatus.NotApplicable => "N/A",
-                                            _ => "Unknown"
-                                        })
-                                    </span>
-                                </div>
-                                <div class="col-md-1 text-end">
-                                    <i class="fas fa-chevron-down card-toggle-icon" id="toggle-icon-@ca.Id"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-body collapse" id="card-body-@ca.Id">
-                            <!-- Control Description -->
-                            @if (!string.IsNullOrEmpty(ca.Control.Description))
+                    <!-- Control Assessment Cards -->
+                    @if (Model.ControlAssessments.Any())
+                    {
+                        <div id="controlCardsContainer">
+                            @foreach (var ca in Model.ControlAssessments.OrderBy(ca => ca.Control.ControlId))
                             {
-                                <div class="alert alert-light mb-3">
-                                    <small><strong>Control Description:</strong> @ca.Control.Description</small>
-                                </div>
-                            }
-
-                            <div class="row">
-                                <!-- Left Column -->
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label"><strong>Compliance Status</strong></label>
-                                        <select class="form-select compliance-status" data-field="Status" data-id="@ca.Id">
-                                            <option value="NonCompliant" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.NonCompliant)">Non-Compliant</option>
-                                            <option value="PartiallyCompliant" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant)">Partially Compliant</option>
-                                            <option value="MajorlyCompliant" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant)">Majorly Compliant</option>
-                                            <option value="FullyCompliant" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.FullyCompliant)">Fully Compliant</option>
-                                            <option value="NotApplicable" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.NotApplicable)">N/A</option>
-                                        </select>
+                                <div class="control-assessment-card border-0 border-bottom py-3 px-4" data-control-id="@ca.Id" data-status="@ca.Status" data-project-needed="@ca.ProjectNeeded.ToString().ToLower()">
+                                    <div class="control-header" style="cursor: pointer;" onclick="toggleCard(@ca.Id)">
+                                        <div class="row align-items-center">
+                                            <div class="col-lg-3 col-md-3 col-sm-12 mb-1 mb-md-0 pe-3">
+                                                <div class="d-flex flex-column">
+                                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                                        <span class="badge bg-primary" style="word-wrap: break-word; overflow-wrap: break-word; white-space: normal; max-width: 100%;">@ca.Control.ControlId</span>
+                                                        @if (ca.ProjectNeeded)
+                                                        {
+                                                            <i class="fas fa-project-diagram text-info" title="Project Required"></i>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-5 col-md-5 col-sm-12 mb-1 mb-md-0 ps-2 pe-3">
+                                                <div class="control-text-container">
+                                                    <div class="fw-medium control-title" style="word-wrap: break-word; overflow-wrap: break-word; line-height: 1.3; hyphens: auto;">@ca.Control.Title</div>
+                                                    @if (!string.IsNullOrEmpty(ca.Control.Description))
+                                                    {
+                                                        <div class="small text-muted mt-1" style="word-wrap: break-word; overflow-wrap: break-word; line-height: 1.2;">@ca.Control.Description.Substring(0, Math.Min(ca.Control.Description.Length, 120))@(ca.Control.Description.Length > 120 ? "..." : "")</div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-3 col-md-3 col-sm-10 mb-1 mb-md-0 ps-2">
+                                                <span class="badge bg-@(ca.Status switch
+                                                {
+                                                    CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "success",
+                                                    CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "info",
+                                                    CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "warning",
+                                                    CyberRiskApp.Models.ComplianceStatus.NonCompliant => "danger",
+                                                    CyberRiskApp.Models.ComplianceStatus.NotApplicable => "secondary",
+                                                    _ => "secondary"
+                                                }) text-wrap">
+                                                    @(ca.Status switch
+                                                    {
+                                                        CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "Fully Compliant",
+                                                        CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "Majorly Compliant",
+                                                        CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "Partially Compliant",
+                                                        CyberRiskApp.Models.ComplianceStatus.NonCompliant => "Non-Compliant",
+                                                        CyberRiskApp.Models.ComplianceStatus.NotApplicable => "N/A",
+                                                        _ => "Unknown"
+                                                    })
+                                                </span>
+                                            </div>
+                                            <div class="col-lg-1 col-md-1 col-sm-2 text-end">
+                                                <i class="fas fa-chevron-down card-toggle-icon transition-all" id="toggle-icon-@ca.Id"></i>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label"><strong>Ownership</strong></label>
-                                        <input type="text"
-                                               class="form-control assessment-field"
-                                               data-field="Ownership"
-                                               data-id="@ca.Id"
-                                               value="@ca.Ownership"
-                                               placeholder="Enter owner/responsible person..." />
-                                    </div>
+                                    <div class="control-details collapse" id="card-body-@ca.Id">
+                                        <div class="mt-3 pt-3 border-top">
+                                            <!-- Control Description (Full) -->
+                                            @if (!string.IsNullOrEmpty(ca.Control.Description))
+                                            {
+                                                <div class="alert alert-light mb-3">
+                                                    <small><strong>Full Control Description:</strong> @ca.Control.Description</small>
+                                                </div>
+                                            }
 
-                                    <div class="mb-3">
-                                        <label class="form-label"><strong>Projected Compliance Date</strong></label>
-                                        <input type="date"
-                                               class="form-control assessment-field"
-                                               data-field="ProjectedComplianceDate"
-                                               data-id="@ca.Id"
-                                               value="@(ca.ProjectedComplianceDate?.ToString("yyyy-MM-dd"))" />
-                                    </div>
+                                            <!-- Quick Assessment Row -->
+                                            <div class="row mb-3 bg-light rounded p-3">
+                                                <div class="col-md-3">
+                                                    <label class="form-label small fw-bold text-primary">Compliance Status</label>
+                                                    <select class="form-select form-select-sm compliance-status" data-field="Status" data-id="@ca.Id">
+                                                        <option value="NonCompliant" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.NonCompliant)">Non-Compliant</option>
+                                                        <option value="PartiallyCompliant" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant)">Partially Compliant</option>
+                                                        <option value="MajorlyCompliant" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant)">Majorly Compliant</option>
+                                                        <option value="FullyCompliant" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.FullyCompliant)">Fully Compliant</option>
+                                                        <option value="NotApplicable" selected="@(ca.Status == CyberRiskApp.Models.ComplianceStatus.NotApplicable)">N/A</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small fw-bold">Owner</label>
+                                                    <input type="text" class="form-control form-control-sm assessment-field" data-field="Ownership" data-id="@ca.Id" value="@ca.Ownership" placeholder="Owner name" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small fw-bold">Target Date</label>
+                                                    <input type="date" class="form-control form-control-sm assessment-field" data-field="ProjectedComplianceDate" data-id="@ca.Id" value="@(ca.ProjectedComplianceDate?.ToString("yyyy-MM-dd"))" />
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label small fw-bold">Project Required</label>
+                                                    <div class="form-check mt-2">
+                                                        <input class="form-check-input assessment-field" type="checkbox" data-field="ProjectNeeded" data-id="@ca.Id" checked="@ca.ProjectNeeded" />
+                                                        <label class="form-check-label small">Improvement needed</label>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <div class="form-check">
-                                                    <input class="form-check-input assessment-field"
-                                                           type="checkbox"
-                                                           data-field="ProjectNeeded"
-                                                           data-id="@ca.Id"
-                                                           checked="@ca.ProjectNeeded" />
-                                                    <label class="form-check-label">
-                                                        <strong>Project Needed</strong>
-                                                    </label>
+                                            <!-- Detailed Assessment -->
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-bold">Gap Analysis</label>
+                                                        <textarea class="form-control form-control-sm assessment-field" data-field="GapNotes" data-id="@ca.Id" rows="3" placeholder="Describe gaps and issues...">@ca.GapNotes</textarea>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-bold">Evidence of Compliance</label>
+                                                        <textarea class="form-control form-control-sm assessment-field" data-field="EvidenceOfCompliance" data-id="@ca.Id" rows="3" placeholder="Document evidence, links, procedures...">@ca.EvidenceOfCompliance</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="row">
+                                                        <div class="col-6">
+                                                            <label class="form-label small fw-bold">Project Size</label>
+                                                            <select class="form-select form-select-sm assessment-field" data-field="TShirtSize" data-id="@ca.Id">
+                                                                <option value="">-</option>
+                                                                <option value="XS" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.XS)">XS</option>
+                                                                <option value="S" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.S)">S</option>
+                                                                <option value="M" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.M)">M</option>
+                                                                <option value="L" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.L)">L</option>
+                                                                <option value="XL" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.XL)">XL</option>
+                                                                <option value="XXL" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.XXL)">XXL</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <label class="form-label small fw-bold">Project Number</label>
+                                                            <input type="text" class="form-control form-control-sm assessment-field" data-field="ProjectNumber" data-id="@ca.Id" value="@ca.ProjectNumber" placeholder="Project ref" />
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Assessment Metadata -->
+                                                    @if (!string.IsNullOrEmpty(ca.AssessedBy) || ca.AssessmentDate.HasValue)
+                                                    {
+                                                        <div class="mt-3 p-2 bg-light rounded">
+                                                            <small class="text-muted d-block"><strong>Last Assessed:</strong> @ca.AssessedBy</small>
+                                                            <small class="text-muted"><strong>Date:</strong> @(ca.AssessmentDate?.ToString("MMM dd, yyyy") ?? "Not assessed")</small>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Action Buttons -->
+                                            <div class="row mt-3">
+                                                <div class="col-12 text-end">
+                                                    <button class="btn btn-outline-success btn-sm me-2" onclick="saveControlAssessment(@ca.Id)">
+                                                        <i class="fas fa-save me-1"></i>Save
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary btn-sm me-2" onclick="resetControlAssessment(@ca.Id)">
+                                                        <i class="fas fa-undo me-1"></i>Reset
+                                                    </button>
+                                                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleCard(@ca.Id)">
+                                                        <i class="fas fa-chevron-up me-1"></i>Collapse
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label"><strong>T-Shirt Size</strong></label>
-                                                <select class="form-select assessment-field" data-field="TShirtSize" data-id="@ca.Id">
-                                                    <option value="">-</option>
-                                                    <option value="XS" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.XS)">XS</option>
-                                                    <option value="S" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.S)">S</option>
-                                                    <option value="M" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.M)">M</option>
-                                                    <option value="L" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.L)">L</option>
-                                                    <option value="XL" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.XL)">XL</option>
-                                                    <option value="XXL" selected="@(ca.TShirtSize == CyberRiskApp.Models.TShirtSize.XXL)">XXL</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label"><strong>Project Number</strong></label>
-                                        <input type="text"
-                                               class="form-control assessment-field"
-                                               data-field="ProjectNumber"
-                                               data-id="@ca.Id"
-                                               value="@ca.ProjectNumber"
-                                               placeholder="Enter project number..." />
-                                    </div>
-                                </div>
-
-                                <!-- Right Column -->
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label"><strong>Gap Notes</strong></label>
-                                        <textarea class="form-control assessment-field"
-                                                  data-field="GapNotes"
-                                                  data-id="@ca.Id"
-                                                  rows="3"
-                                                  placeholder="Describe any gaps or issues...">@ca.GapNotes</textarea>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label"><strong>Evidence of Compliance</strong></label>
-                                        <textarea class="form-control assessment-field"
-                                                  data-field="EvidenceOfCompliance"
-                                                  data-id="@ca.Id"
-                                                  rows="4"
-                                                  placeholder="Document evidence, links, procedures, etc...">@ca.EvidenceOfCompliance</textarea>
-                                    </div>
-
-                                    <div class="d-flex justify-content-end gap-2">
-                                        <button class="btn btn-sm btn-outline-primary" onclick="saveControlAssessment(@ca.Id)">
-                                            <i class="fas fa-save me-1"></i>Save
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="resetControlAssessment(@ca.Id)">
-                                            <i class="fas fa-undo me-1"></i>Reset
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Assessment Metadata -->
-                            @if (!string.IsNullOrEmpty(ca.AssessedBy) || ca.AssessmentDate.HasValue)
-                            {
-                                <hr>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <small class="text-muted">
-                                            <strong>Last Assessed By:</strong> @ca.AssessedBy
-                                        </small>
-                                    </div>
-                                    <div class="col-md-6 text-end">
-                                        <small class="text-muted">
-                                            <strong>Assessment Date:</strong> @(ca.AssessmentDate?.ToString("MMM dd, yyyy") ?? "Not assessed")
-                                        </small>
                                     </div>
                                 </div>
                             }
                         </div>
-                    </div>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="card">
-                <div class="card-body text-center">
-                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
-                    <h5>No Control Assessments Found</h5>
-                    <p class="text-muted">This assessment doesn't have any control assessments yet.</p>
-                </div>
-            </div>
-        }
-    </div>
-
-    <!-- Sidebar Statistics -->
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-header">
-                <h6><i class="fas fa-chart-bar me-1"></i>Assessment Statistics</h6>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-12 mb-3">
-                        <h4 class="text-primary">@Model.ControlAssessments.Count</h4>
-                        <small class="text-muted">Total Controls</small>
-                    </div>
-                    <div class="col-12 mb-3">
-                        <h4 class="text-success">@Model.CompliancePercentage.ToString("F1")%</h4>
-                        <small class="text-muted">Compliance</small>
-                    </div>
-                </div>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-6 mb-2">
-                        <h6 class="text-success">@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.FullyCompliant)</h6>
-                        <small class="text-muted">Fully Compliant</small>
-                    </div>
-                    <div class="col-6 mb-2">
-                        <h6 class="text-info">@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant)</h6>
-                        <small class="text-muted">Majorly Compliant</small>
-                    </div>
-                    <div class="col-6 mb-2">
-                        <h6 class="text-warning">@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant)</h6>
-                        <small class="text-muted">Partially Compliant</small>
-                    </div>
-                    <div class="col-6 mb-2">
-                        <h6 class="text-danger">@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.NonCompliant)</h6>
-                        <small class="text-muted">Non-Compliant</small>
-                    </div>
-                    <div class="col-12">
-                        <h6 class="text-secondary">@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.NotApplicable)</h6>
-                        <small class="text-muted">Not Applicable</small>
-                    </div>
-                </div>
-                <hr>
-                <div class="row text-center">
-                    <div class="col-12 mb-2">
-                        <h6 class="text-primary">@Model.ControlAssessments.Count(ca => ca.ProjectNeeded)</h6>
-                        <small class="text-muted">Projects Needed</small>
-                    </div>
-                    <div class="col-12">
-                        <h6 class="text-info">
-                            @if (Model.DueDate.HasValue)
-                            {
-                                @((Model.DueDate.Value - DateTime.UtcNow).Days)
-                            }
-                            else
-                            {
-                                <span>--</span>
-                            }
-                        </h6>
-                        <small class="text-muted">Days Remaining</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Filters -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6><i class="fas fa-filter me-1"></i>Quick Filters</h6>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="filterByStatus('all')">Show All</button>
-                    <button class="btn btn-sm btn-outline-danger" onclick="filterByStatus('NonCompliant')">Non-Compliant Only</button>
-                    <button class="btn btn-sm btn-outline-warning" onclick="filterByStatus('PartiallyCompliant')">Partially Compliant</button>
-                    <button class="btn btn-sm btn-outline-success" onclick="filterByStatus('FullyCompliant')">Fully Compliant</button>
-                    <button class="btn btn-sm btn-outline-primary" onclick="filterByProjectNeeded()">Projects Needed</button>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <h5>No Control Assessments Found</h5>
+                            <p class="text-muted">This assessment doesn't have any control assessments yet.</p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -459,7 +412,92 @@
 </div>
 
 @section Scripts {
+    <style>
+        .sticky-top {
+            top: 20px !important;
+        }
+        .control-assessment-card {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        .control-assessment-card:hover {
+            background-color: #f8f9fa;
+        }
+        .control-details {
+            animation: slideDown 0.3s ease;
+        }
+        @@keyframes slideDown {
+            from { opacity: 0; max-height: 0; }
+            to { opacity: 1; max-height: 800px; }
+        }
+        .transition-all {
+            transition: all 0.3s ease;
+        }
+        .btn.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+        .control-header .row {
+            margin: 0;
+            align-items: flex-start;
+        }
+        .control-header .row > [class*='col-'] {
+            min-width: 0;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .control-title {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            display: block;
+        }
+        /* Proper column spacing with gutters */
+        .control-header .row.gx-2 {
+            --bs-gutter-x: 0.5rem;
+        }
+        .control-header .pe-2 {
+            padding-right: 0.75rem !important;
+        }
+        /* Control ID styling */
+        .badge.text-nowrap {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        /* Wrapping badge styling */
+        .badge {
+            line-height: 1.2;
+        }
+        /* Column headers styling */
+        .bg-light .row > [class*='col-'] {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        /* Flex container for control ID and icon */
+        .d-flex.gap-2 {
+            gap: 0.5rem !important;
+        }
+        .badge.text-wrap {
+            white-space: normal;
+            word-wrap: break-word;
+        }
+        @@media (max-width: 768px) {
+            .control-header .row {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            .control-header .text-end {
+                text-align: left !important;
+                align-self: flex-end;
+            }
+            .control-header .col-lg-5 {
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
     <script>
+        let unsavedChanges = false;
+
         // Toggle individual card
         function toggleCard(controlId) {
             const cardBody = document.getElementById(`card-body-${controlId}`);
@@ -467,12 +505,10 @@
 
             if (cardBody.classList.contains('show')) {
                 cardBody.classList.remove('show');
-                icon.classList.remove('fa-chevron-up');
-                icon.classList.add('fa-chevron-down');
+                icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
             } else {
                 cardBody.classList.add('show');
-                icon.classList.remove('fa-chevron-down');
-                icon.classList.add('fa-chevron-up');
+                icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
             }
         }
 
@@ -503,36 +539,46 @@
             });
         }
 
-        // Filter by status
+        // Filter by status with improved UX
         function filterByStatus(status) {
             const allCards = document.querySelectorAll('.control-assessment-card');
+            const filterButtons = document.querySelectorAll('[onclick*="filterByStatus"]');
+            let visibleCount = 0;
+
+            // Update button states
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`filter-${status === 'all' ? 'all' : status.toLowerCase().replace('compliant', '').replace('non', 'noncompliant')}`).classList.add('active');
 
             allCards.forEach(card => {
-                if (status === 'all') {
-                    card.style.display = 'block';
-                } else {
-                    const statusSelect = card.querySelector('.compliance-status');
-                    if (statusSelect.value === status) {
-                        card.style.display = 'block';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                }
+                const cardStatus = card.getAttribute('data-status');
+                const shouldShow = status === 'all' || cardStatus === status;
+                
+                card.style.display = shouldShow ? 'block' : 'none';
+                if (shouldShow) visibleCount++;
             });
+
+            // Update visible count
+            document.getElementById('visibleCount').textContent = `${visibleCount} controls`;
         }
 
-        // Filter by project needed
+        // Filter by project needed with improved UX
         function filterByProjectNeeded() {
             const allCards = document.querySelectorAll('.control-assessment-card');
+            const filterButtons = document.querySelectorAll('[onclick*="filter"]');
+            let visibleCount = 0;
+
+            // Update button states
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            document.getElementById('filter-projects').classList.add('active');
 
             allCards.forEach(card => {
-                const projectCheckbox = card.querySelector('[data-field="ProjectNeeded"]');
-                if (projectCheckbox.checked) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
+                const projectNeeded = card.getAttribute('data-project-needed') === 'true';
+                card.style.display = projectNeeded ? 'block' : 'none';
+                if (projectNeeded) visibleCount++;
             });
+
+            // Update visible count
+            document.getElementById('visibleCount').textContent = `${visibleCount} controls`;
         }
 
         // Save individual control assessment
@@ -732,12 +778,56 @@
             return container;
         }
 
-        // Auto-update card headers when status changes
+        // Enhanced change tracking and auto-updates
         document.addEventListener('change', function(e) {
             if (e.target.classList.contains('compliance-status')) {
                 const controlId = e.target.getAttribute('data-id');
                 updateCardBadge(controlId, e.target.value);
+                // Update data attribute for filtering
+                const card = document.querySelector(`[data-control-id="${controlId}"]`);
+                card.setAttribute('data-status', e.target.value);
             }
+            
+            if (e.target.classList.contains('assessment-field')) {
+                unsavedChanges = true;
+                if (e.target.getAttribute('data-field') === 'ProjectNeeded') {
+                    // Update data attribute for filtering
+                    const controlId = e.target.getAttribute('data-id');
+                    const card = document.querySelector(`[data-control-id="${controlId}"]`);
+                    card.setAttribute('data-project-needed', e.target.checked.toString());
+                    
+                    // Update project icon in header
+                    const projectIcon = card.querySelector('.fa-project-diagram');
+                    if (e.target.checked && !projectIcon) {
+                        const badge = card.querySelector('.badge.bg-primary');
+                        badge.insertAdjacentHTML('afterend', ' <i class="fas fa-project-diagram text-info" title="Project Required"></i>');
+                    } else if (!e.target.checked && projectIcon) {
+                        projectIcon.remove();
+                    }
+                }
+            }
+        });
+
+        // Auto-save notification
+        function notifyUnsavedChanges() {
+            if (unsavedChanges) {
+                const saveBtn = document.querySelector('.btn-primary');
+                saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save All Changes <span class="badge bg-warning ms-1">!</span>';
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up change notifications
+            setInterval(notifyUnsavedChanges, 2000);
+            
+            // Warn before leaving with unsaved changes
+            window.addEventListener('beforeunload', function(e) {
+                if (unsavedChanges) {
+                    e.preventDefault();
+                    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                }
+            });
         });
     </script>
 }

@@ -60,7 +60,7 @@ namespace CyberRiskApp.Controllers.Api
         // POST: api/referencedata
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create([FromBody] CreateReferenceDataViewModel model)
         {
             if (!ModelState.IsValid)
@@ -97,7 +97,7 @@ namespace CyberRiskApp.Controllers.Api
 
         // PUT: api/referencedata/{id}
         [HttpPut("{id}")]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateReferenceDataViewModel model)
         {
             if (!ModelState.IsValid)
@@ -175,7 +175,7 @@ namespace CyberRiskApp.Controllers.Api
 
         // GET: api/referencedata/stats
         [HttpGet("stats")]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> GetStatistics()
         {
             try

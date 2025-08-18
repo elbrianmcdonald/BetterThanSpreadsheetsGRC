@@ -191,7 +191,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: Risks/Create
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create()
         {
             var model = new Risk
@@ -208,7 +208,7 @@ namespace CyberRiskApp.Controllers
         // POST: Risks/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(Risk risk)
         {
             // Remove audit fields from model validation since they're set automatically
@@ -242,7 +242,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: Risks/Edit/5
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id)
         {
             var risk = await _riskService.GetRiskByIdAsync(id);
@@ -255,7 +255,7 @@ namespace CyberRiskApp.Controllers
         // POST: Risks/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id, Risk risk)
         {
             if (id != risk.Id)
@@ -280,7 +280,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // GET: Risks/Upload
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public IActionResult Upload()
         {
             var model = new RiskUploadViewModel();
@@ -290,7 +290,7 @@ namespace CyberRiskApp.Controllers
         // POST: Risks/Upload
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Upload(RiskUploadViewModel model)
         {
             if (model.ExcelFile == null || model.ExcelFile.Length == 0)
@@ -337,7 +337,7 @@ namespace CyberRiskApp.Controllers
         // POST: Risks/CloseConfirmed
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> CloseConfirmed(int id, string remediationDetails)
         {
             try

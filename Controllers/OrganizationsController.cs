@@ -7,7 +7,7 @@ using CyberRiskApp.Authorization;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class OrganizationsController : Controller
     {
         private readonly IGovernanceService _governanceService;

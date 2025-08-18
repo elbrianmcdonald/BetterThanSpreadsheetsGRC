@@ -68,15 +68,18 @@ namespace CyberRiskApp.Models
 
 
         // ===== Qualitative Analysis properties (for qualitative assessments) =====
+        // Updated to use decimal values that match RiskMatrixLevel system
 
         [Display(Name = "Likelihood Level")]
-        public LikelihoodLevel? QualitativeLikelihood { get; set; }
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? QualitativeLikelihood { get; set; }
 
         [Display(Name = "Impact Level")]
-        public ImpactLevel? QualitativeImpact { get; set; }
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? QualitativeImpact { get; set; }
 
         [Display(Name = "Exposure Level")]
-        [Column(TypeName = "decimal(3,2)")]
+        [Column(TypeName = "decimal(5,2)")]
         public decimal? QualitativeExposure { get; set; }
 
         // Calculated Qualitative Risk Score
@@ -125,6 +128,16 @@ namespace CyberRiskApp.Models
 
         // Collection for threat scenarios (new scenario-based qualitative approach)
         public virtual ICollection<ThreatScenario> ThreatScenarios { get; set; } = new List<ThreatScenario>();
+
+        // NEW: Risk Generation Support
+        [Display(Name = "Generate Risks for Register")]
+        public bool GenerateRisksForRegister { get; set; } = false;
+
+        [Display(Name = "Risks Generated")]
+        public bool RisksGenerated { get; set; } = false;
+
+        [Display(Name = "Date Risks Generated")]
+        public DateTime? RisksGeneratedDate { get; set; }
 
         // Method to calculate risk level from qualitative score
         public string CalculateRiskLevel()

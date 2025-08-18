@@ -35,79 +35,107 @@
 }
 
 <div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <!-- Assessment Header -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h4><i class="fas fa-chart-line me-2"></i>@Model.Assessment.Title</h4>
-                            <small class="text-muted">
-                                Framework: @Model.Assessment.Framework?.Name |
-                                Organization: @Model.Assessment.Organization?.Name
-                            </small>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <span class="badge badge-@(Model.Assessment.Status == CyberRiskApp.Models.AssessmentStatus.Completed ? "success" : Model.Assessment.Status == CyberRiskApp.Models.AssessmentStatus.InProgress ? "warning" : "secondary") fs-6">
-                                @Model.Assessment.Status
-                            </span>
-                            @if (ViewBag.CanPerformAssessments)
-                            {
-                                <div class="btn-group mt-2" role="group">
-                                    <a asp-action="PerformBulk" asp-route-id="@Model.Assessment.Id" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-tasks me-1"></i>Perform Assessment
-                                    </a>
-                                    <a asp-action="BulkView" asp-route-id="@Model.Assessment.Id" class="btn btn-outline-info btn-sm">
-                                        <i class="fas fa-th-list me-1"></i>Bulk View
-                                    </a>
-                                    <a asp-action="Edit" asp-route-id="@Model.Assessment.Id" class="btn btn-outline-secondary btn-sm">
-                                        <i class="fas fa-edit me-1"></i>Edit
-                                    </a>
-                                </div>
-                            }
-                        </div>
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light rounded mb-4">
+        <div class="container-fluid">
+            <div class="navbar-brand mb-0">
+                <h4 class="mb-0"><i class="fas fa-chart-line me-2"></i>@Model.Assessment.Title</h4>
+                <small class="text-muted">
+                    @Model.Assessment.Framework?.Name • @Model.Assessment.Organization?.Name
+                </small>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-@(Model.Assessment.Status == CyberRiskApp.Models.AssessmentStatus.Completed ? "success" : Model.Assessment.Status == CyberRiskApp.Models.AssessmentStatus.InProgress ? "warning" : "secondary") me-3 fs-6">
+                    @Model.Assessment.Status
+                </span>
+                @if (ViewBag.CanPerformAssessments)
+                {
+                    <div class="btn-group" role="group">
+                        <a asp-action="PerformBulk" asp-route-id="@Model.Assessment.Id" class="btn btn-primary">
+                            <i class="fas fa-tasks me-1"></i>Perform Assessment
+                        </a>
+                        <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" asp-action="BulkView" asp-route-id="@Model.Assessment.Id"><i class="fas fa-th-list me-2"></i>Bulk View</a></li>
+                            <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@Model.Assessment.Id"><i class="fas fa-edit me-2"></i>Edit Assessment</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>Export Report</a></li>
+                        </ul>
                     </div>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <small><strong>Assessor:</strong></small>
-                            <p>@Model.Assessment.Assessor</p>
-                        </div>
-                        <div class="col-md-3">
-                            <small><strong>Start Date:</strong></small>
-                            <p>@Model.Assessment.StartDate.ToString("MMM dd, yyyy")</p>
-                        </div>
-                        <div class="col-md-3">
-                            <small><strong>Due Date:</strong></small>
-                            <p>@(Model.Assessment.DueDate?.ToString("MMM dd, yyyy") ?? "Not set")</p>
-                        </div>
-                        <div class="col-md-3">
-                            <small><strong>Completed Date:</strong></small>
-                            <p>@(Model.Assessment.CompletedDate?.ToString("MMM dd, yyyy") ?? "Not completed")</p>
-                        </div>
-                    </div>
-                    @if (!string.IsNullOrEmpty(Model.Assessment.Description))
-                    {
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <small><strong>Description:</strong></small>
-                                <p>@Model.Assessment.Description</p>
-                            </div>
-                        </div>
-                    }
+                }
+                <a asp-action="Index" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-arrow-left me-1"></i>Back
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Quick Info Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Assessor</small>
+                    <strong>@Model.Assessment.Assessor</strong>
                 </div>
             </div>
-
-            <!-- Overall Score Card -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5><i class="fas fa-trophy me-2"></i>Overall Maturity Score</h5>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Start Date</small>
+                    <strong>@Model.Assessment.StartDate.ToString("MMM dd")</strong>
                 </div>
-                <div class="card-body">
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Due Date</small>
+                    <strong>@(Model.Assessment.DueDate?.ToString("MMM dd") ?? "Not set")</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Progress</small>
+                    @{
+                        var completedControls = Model.ControlAssessments.Count(ca => ca.AssessmentDate.HasValue);
+                        var completionPercentage = Model.ControlAssessments.Any() ? (decimal)completedControls / Model.ControlAssessments.Count() * 100 : 0;
+                    }
+                    <strong class="text-@(completionPercentage >= 75 ? "success" : completionPercentage >= 50 ? "warning" : "danger")">@completionPercentage.ToString("F0")%</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Controls</small>
+                    <strong>@Model.ControlAssessments.Count()</strong>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body text-center py-3">
+                    <small class="text-muted d-block">Projects</small>
+                    <strong class="text-info">@Model.ProjectsRequired</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+
+            <!-- Maturity Score Dashboard -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body p-4">
                     <div class="row align-items-center">
-                        <div class="col-md-6">
+                        <div class="col-lg-4 text-center">
                             @{
                                 var maxScore = Model.Assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.C2M2 ? 3.0m : 4.0m;
                                 var actualScore = Model.Assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.C2M2 ? 
@@ -115,383 +143,399 @@
                                 var scorePercentage = (actualScore / maxScore) * 100;
                                 var scoreClass = scorePercentage >= 75 ? "success" : scorePercentage >= 50 ? "warning" : "danger";
                             }
-                            <div class="display-4 text-@scoreClass">@Model.Assessment.GetDisplayMaturityLevel()</div>
-                            <div class="text-muted">out of @maxScore.ToString("F0")</div>
-                            <div class="progress mt-2" style="height: 10px;">
-                                <div class="progress-bar bg-@scoreClass" role="progressbar" style="width: @scorePercentage.ToString("F0")%"></div>
+                            <div class="position-relative d-inline-block">
+                                <svg width="120" height="120" viewBox="0 0 120 120" class="transform-rotate-90">
+                                    <circle cx="60" cy="60" r="50" stroke="#e9ecef" stroke-width="8" fill="none"></circle>
+                                    <circle cx="60" cy="60" r="50" stroke="var(--bs-@(scoreClass))" stroke-width="8" fill="none" 
+                                            stroke-dasharray="314" stroke-dashoffset="@(314 - (314 * scorePercentage / 100))" 
+                                            stroke-linecap="round" class="transition-all"></circle>
+                                </svg>
+                                <div class="position-absolute top-50 start-50 translate-middle text-center">
+                                    <div class="h2 mb-0 text-@scoreClass fw-bold">@Model.Assessment.GetDisplayMaturityLevel()</div>
+                                    <small class="text-muted">/ @maxScore.ToString("F0")</small>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <h5 class="mb-1">Overall Maturity</h5>
+                                <p class="text-muted mb-0">@scorePercentage.ToString("F0")% of target</p>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-lg-8">
                             @if (Model.MaturityDistribution.Any())
                             {
-                                <h6>Maturity Level Distribution</h6>
-                                @foreach (var item in Model.MaturityDistribution.OrderBy(x => x.Key))
-                                {
-                                    <div class="d-flex justify-content-between">
-                                        <span>Level @((int)item.Key) (@item.Key):</span>
-                                        <span><strong>@item.Value controls</strong></span>
-                                    </div>
-                                }
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Function/Domain Scores -->
-            @if (Model.FunctionScores.Any() || Model.DomainScores.Any())
-            {
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5>
-                            <i class="fas fa-chart-bar me-2"></i>
-                            @if (Model.Assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
-                            {
-                                <text>Function Scores</text>
-                            }
-                            else
-                            {
-                                <text>Domain Scores</text>
-                            }
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            @{
-                                var scores = Model.FunctionScores.Any() ? Model.FunctionScores : Model.DomainScores;
-                            }
-                            @foreach (var score in scores.OrderBy(x => x.Key))
-                            {
-                                var percentage = (score.Value / maxScore) * 100;
-                                var progressClass = percentage >= 75 ? "success" : percentage >= 50 ? "warning" : "danger";
-
-                                <div class="col-md-6 col-lg-4 mb-3">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <h6 class="card-title">@score.Key</h6>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="text-@progressClass fw-bold">@score.Value.ToString("F1")</span>
-                                                <small class="text-muted">/ @maxScore.ToString("F0")</small>
-                                            </div>
-                                            <div class="progress mt-2" style="height: 8px;">
-                                                <div class="progress-bar bg-@progressClass" role="progressbar" style="width: @percentage.ToString("F0")%"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            }
-
-            <!-- Summary Statistics -->
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h4 class="text-primary">@Model.ControlAssessments.Count()</h4>
-                            <small class="text-muted">Total Controls</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h4 class="text-warning">@Model.ControlsNeedingImprovement</h4>
-                            <small class="text-muted">Controls Needing Improvement</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h4 class="text-info">@Model.ProjectsRequired</h4>
-                            <small class="text-muted">Projects Required</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            @{
-                                var completedControls = Model.ControlAssessments.Count(ca => ca.AssessmentDate.HasValue);
-                                var completionPercentage = Model.ControlAssessments.Any() ? (decimal)completedControls / Model.ControlAssessments.Count() * 100 : 0;
-                            }
-                            <h4 class="text-success">@completionPercentage.ToString("F0")%</h4>
-                            <small class="text-muted">Assessment Progress</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Key Recommendations -->
-            @if (Model.KeyRecommendations != null && Model.KeyRecommendations.Any())
-            {
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5><i class="fas fa-lightbulb me-2"></i>Key Recommendations</h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled">
-                            @foreach (var recommendation in Model.KeyRecommendations)
-                            {
-                                <li class="mb-2">
-                                    <i class="fas fa-arrow-right text-primary me-2"></i>@recommendation
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                </div>
-            }
-
-            <!-- High Priority Gaps -->
-            @if (Model.HighPriorityGaps != null && Model.HighPriorityGaps.Any())
-            {
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>High Priority Gaps</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Control</th>
-                                        <th>Current Level</th>
-                                        <th>Target Level</th>
-                                        <th>Gap</th>
-                                        <th>Priority</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var gap in Model.HighPriorityGaps.Take(10))
+                                <h6 class="mb-3">Maturity Level Distribution</h6>
+                                <div class="row g-2">
+                                    @foreach (var item in Model.MaturityDistribution.OrderBy(x => x.Key))
                                     {
-                                        <tr>
-                                            <td>
-                                                <strong>@gap.Control.ControlId</strong><br>
-                                                <small class="text-muted">@gap.Control.Title</small>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-secondary">@gap.CurrentMaturityLevel</span>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-primary">@gap.TargetMaturityLevel</span>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-warning">@((int)gap.TargetMaturityLevel - (int)gap.CurrentMaturityLevel)</span>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-@(gap.Control.Priority == CyberRiskApp.Models.ControlPriority.Critical ? "danger" : gap.Control.Priority == CyberRiskApp.Models.ControlPriority.High ? "warning" : "info")">
-                                                    @gap.Control.Priority
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            }
-
-            <!-- Projects Required -->
-            @if (Model.ProjectsRequiredList != null && Model.ProjectsRequiredList.Any())
-            {
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5><i class="fas fa-project-diagram me-2"></i>Projects Required</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            @foreach (var project in Model.ProjectsRequiredList.Take(12))
-                            {
-                                <div class="col-md-6 col-lg-4 mb-3">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <h6 class="card-title">@project.Control.ControlId</h6>
-                                            <p class="card-text small">@project.Control.Title</p>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                @if (project.TShirtSize.HasValue)
-                                                {
-                                                    <span class="badge bg-info">@project.TShirtSize</span>
-                                                }
-                                                @if (project.TargetCompletionDate.HasValue)
-                                                {
-                                                    <small class="text-muted">Due: @project.TargetCompletionDate.Value.ToString("MMM yyyy")</small>
-                                                }
+                                        var levelPercentage = Model.ControlAssessments.Any() ? (decimal)item.Value / Model.ControlAssessments.Count() * 100 : 0;
+                                        var levelClass = (int)item.Key switch {
+                                            0 => "danger",
+                                            1 => "warning", 
+                                            2 => "info",
+                                            3 => "primary",
+                                            4 => "success",
+                                            _ => "secondary"
+                                        };
+                                        <div class="col-12">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span class="fw-medium">Level @((int)item.Key) - @item.Key</span>
+                                                <span class="badge bg-@levelClass">@item.Value controls</span>
+                                            </div>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-@levelClass" style="width: @levelPercentage.ToString("F0")%"></div>
                                             </div>
                                         </div>
-                                    </div>
+                                    }
                                 </div>
                             }
                         </div>
                     </div>
                 </div>
-            }
+            </div>
 
-            <!-- Control Assessments Table -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5><i class="fas fa-list me-2"></i>Control Assessments (@Model.ControlAssessments.Count())</h5>
-                        <div>
-                            @if (ViewBag.CanPerformAssessments)
-                            {
-                                <button class="btn btn-sm btn-outline-primary me-2" onclick="showBulkPriorityModal()">
-                                    <i class="fas fa-flag me-1"></i>Bulk Priority
-                                </button>
-                                <button class="btn btn-sm btn-outline-info me-2" onclick="showBulkTargetLevelModal()">
-                                    <i class="fas fa-target me-1"></i>Bulk Target Level
-                                </button>
-                            }
-                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleControlsView()">
-                                <i class="fas fa-eye me-1"></i>Toggle View
+            <!-- Tabbed Content -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <ul class="nav nav-tabs card-header-tabs" id="assessmentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                                <i class="fas fa-chart-bar me-2"></i>Overview
                             </button>
-                        </div>
-                    </div>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="controls-tab" data-bs-toggle="tab" data-bs-target="#controls" type="button" role="tab">
+                                <i class="fas fa-list me-2"></i>Controls <span class="badge bg-secondary ms-1">@Model.ControlAssessments.Count()</span>
+                            </button>
+                        </li>
+                        @if (Model.HighPriorityGaps != null && Model.HighPriorityGaps.Any())
+                        {
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="gaps-tab" data-bs-toggle="tab" data-bs-target="#gaps" type="button" role="tab">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Priority Gaps <span class="badge bg-warning ms-1">@Model.HighPriorityGaps.Count()</span>
+                                </button>
+                            </li>
+                        }
+                        @if (Model.ProjectsRequiredList != null && Model.ProjectsRequiredList.Any())
+                        {
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="projects-tab" data-bs-toggle="tab" data-bs-target="#projects" type="button" role="tab">
+                                    <i class="fas fa-project-diagram me-2"></i>Projects <span class="badge bg-info ms-1">@Model.ProjectsRequired</span>
+                                </button>
+                            </li>
+                        }
+                        @if (Model.KeyRecommendations != null && Model.KeyRecommendations.Any())
+                        {
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="recommendations-tab" data-bs-toggle="tab" data-bs-target="#recommendations" type="button" role="tab">
+                                    <i class="fas fa-lightbulb me-2"></i>Recommendations
+                                </button>
+                            </li>
+                        }
+                    </ul>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover" id="controlsTable">
-                            <thead class="table-dark">
-                                <tr>
+                    <div class="tab-content" id="assessmentTabsContent">
+                        <!-- Overview Tab -->
+                        <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                            @if (Model.FunctionScores.Any() || Model.DomainScores.Any())
+                            {
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h6 class="mb-3">
+                                            @if (Model.Assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
+                                            {
+                                                <text>Function Scores</text>
+                                            }
+                                            else
+                                            {
+                                                <text>Domain Scores</text>
+                                            }
+                                        </h6>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    @{
+                                        var scores = Model.FunctionScores.Any() ? Model.FunctionScores : Model.DomainScores;
+                                    }
+                                    @foreach (var score in scores.OrderBy(x => x.Key))
+                                    {
+                                        var percentage = (score.Value / maxScore) * 100;
+                                        var progressClass = percentage >= 75 ? "success" : percentage >= 50 ? "warning" : "danger";
+
+                                        <div class="col-md-6 col-xl-4 mb-3">
+                                            <div class="card border-0 bg-light h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title mb-2">@score.Key</h6>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <span class="h5 text-@progressClass mb-0">@score.Value.ToString("F1")</span>
+                                                        <small class="text-muted">/ @maxScore.ToString("F0")</small>
+                                                    </div>
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar bg-@progressClass" role="progressbar" style="width: @percentage.ToString("F0")%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+
+                        <!-- Priority Gaps Tab -->
+                        @if (Model.HighPriorityGaps != null && Model.HighPriorityGaps.Any())
+                        {
+                            <div class="tab-pane fade" id="gaps" role="tabpanel">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Control</th>
+                                                <th>Current Level</th>
+                                                <th>Target Level</th>
+                                                <th>Gap</th>
+                                                <th>Priority</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var gap in Model.HighPriorityGaps)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <div>
+                                                            <strong>@gap.Control.ControlId</strong>
+                                                            <div class="small text-muted">@gap.Control.Title</div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-secondary">@gap.CurrentMaturityLevel</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">@gap.TargetMaturityLevel</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-warning">@((int)gap.TargetMaturityLevel - (int)gap.CurrentMaturityLevel)</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-@(gap.Control.Priority == CyberRiskApp.Models.ControlPriority.Critical ? "danger" : gap.Control.Priority == CyberRiskApp.Models.ControlPriority.High ? "warning" : "info")">
+                                                            @gap.Control.Priority
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Projects Tab -->
+                        @if (Model.ProjectsRequiredList != null && Model.ProjectsRequiredList.Any())
+                        {
+                            <div class="tab-pane fade" id="projects" role="tabpanel">
+                                <div class="row">
+                                    @foreach (var project in Model.ProjectsRequiredList)
+                                    {
+                                        <div class="col-md-6 col-xl-4 mb-3">
+                                            <div class="card border-0 bg-light h-100">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">@project.Control.ControlId</h6>
+                                                    <p class="card-text small mb-2">@project.Control.Title</p>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        @if (project.TShirtSize.HasValue)
+                                                        {
+                                                            <span class="badge bg-info">@project.TShirtSize</span>
+                                                        }
+                                                        @if (project.TargetCompletionDate.HasValue)
+                                                        {
+                                                            <small class="text-muted">@project.TargetCompletionDate.Value.ToString("MMM yyyy")</small>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Recommendations Tab -->
+                        @if (Model.KeyRecommendations != null && Model.KeyRecommendations.Any())
+                        {
+                            <div class="tab-pane fade" id="recommendations" role="tabpanel">
+                                <div class="list-group list-group-flush">
+                                    @foreach (var recommendation in Model.KeyRecommendations)
+                                    {
+                                        <div class="list-group-item border-0 px-0">
+                                            <i class="fas fa-lightbulb text-primary me-3"></i>@recommendation
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Controls Tab -->
+                        <div class="tab-pane fade" id="controls" role="tabpanel">
+                            <!-- Controls Filter Bar -->
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <div class="btn-group" role="group">
+                                        <input type="radio" class="btn-check" name="controlFilter" id="allControls" autocomplete="off" checked>
+                                        <label class="btn btn-outline-secondary" for="allControls">All Controls</label>
+                                        
+                                        <input type="radio" class="btn-check" name="controlFilter" id="gapsOnly" autocomplete="off">
+                                        <label class="btn btn-outline-warning" for="gapsOnly">Gaps Only (@Model.ControlsNeedingImprovement)</label>
+                                        
+                                        <input type="radio" class="btn-check" name="controlFilter" id="completedOnly" autocomplete="off">
+                                        <label class="btn btn-outline-success" for="completedOnly">Completed</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
                                     @if (ViewBag.CanPerformAssessments)
                                     {
-                                        <th style="width: 40px;">
-                                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
-                                        </th>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="showBulkPriorityModal()">
+                                                <i class="fas fa-flag me-1"></i>Bulk Priority
+                                            </button>
+                                            <button class="btn btn-outline-info btn-sm" onclick="showBulkTargetLevelModal()">
+                                                <i class="fas fa-target me-1"></i>Bulk Target
+                                            </button>
+                                        </div>
                                     }
-                                    <th>Control ID</th>
-                                    <th>Title</th>
-                                    @if (Model.Assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
-                                    {
-                                        <th>Function</th>
-                                    }
-                                    else if (Model.Assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.C2M2)
-                                    {
-                                        <th>Domain</th>
-                                    }
-                                    else
-                                    {
-                                        <th>Category</th>
-                                    }
-                                    <th>Priority</th>
-                                    <th>Current Level</th>
-                                    <th>Target Level</th>
-                                    <th>Gap</th>
-                                    <th>Project</th>
-                                    <th>Owner</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var ca in Model.ControlAssessments.OrderBy(x => x.Control.Function).ThenBy(x => x.Control.ControlId))
-                                {
-                                    var hasGap = ca.CurrentMaturityLevel < ca.TargetMaturityLevel;
-                                    <tr class="@(hasGap ? "table-warning" : "")">
-                                        @if (ViewBag.CanPerformAssessments)
+                                </div>
+                            </div>
+
+                            <!-- Controls Table -->
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="controlsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            @if (ViewBag.CanPerformAssessments)
+                                            {
+                                                <th style="width: 40px;">
+                                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                                                </th>
+                                            }
+                                            <th>Control</th>
+                                            @if (Model.Assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.NISTCSF)
+                                            {
+                                                <th>Function</th>
+                                            }
+                                            else if (Model.Assessment.Framework?.Type == CyberRiskApp.Models.FrameworkType.C2M2)
+                                            {
+                                                <th>Domain</th>
+                                            }
+                                            else
+                                            {
+                                                <th>Category</th>
+                                            }
+                                            <th>Priority</th>
+                                            <th>Current</th>
+                                            <th>Target</th>
+                                            <th>Gap</th>
+                                            <th>Project</th>
+                                            <th>Owner</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var ca in Model.ControlAssessments.OrderBy(x => x.Control.Function).ThenBy(x => x.Control.ControlId))
                                         {
-                                            <td>
-                                                <input type="checkbox" class="control-checkbox"
-                                                       value="@ca.Control.Id"
-                                                       data-control-assessment-id="@ca.Id">
-                                            </td>
+                                            var hasGap = ca.CurrentMaturityLevel < ca.TargetMaturityLevel;
+                                            <tr class="@(hasGap ? "table-warning" : "")" data-has-gap="@hasGap.ToString().ToLower()" data-completed="@ca.AssessmentDate.HasValue.ToString().ToLower()">
+                                                @if (ViewBag.CanPerformAssessments)
+                                                {
+                                                    <td>
+                                                        <input type="checkbox" class="control-checkbox"
+                                                               value="@ca.Control.Id"
+                                                               data-control-assessment-id="@ca.Id">
+                                                    </td>
+                                                }
+                                                <td>
+                                                    <div>
+                                                        <strong>@ca.Control.ControlId</strong>
+                                                        <div class="small text-muted">@ca.Control.Title</div>
+                                                    </div>
+                                                </td>
+                                                <td>@ca.Control.Function</td>
+                                                <td>
+                                                    @if (ViewBag.CanPerformAssessments)
+                                                    {
+                                                        <select class="form-select form-select-sm priority-select"
+                                                                data-control-id="@ca.Control.Id"
+                                                                onchange="updateControlPriority(@ca.Control.Id, this.value)">
+                                                            @foreach (CyberRiskApp.Models.ControlPriority priority in Enum.GetValues<CyberRiskApp.Models.ControlPriority>())
+                                                            {
+                                                                <option value="@((int)priority)" selected="@(ca.Control.Priority == priority ? "selected" : null)">
+                                                                    @priority
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-@(ca.Control.Priority == CyberRiskApp.Models.ControlPriority.Critical ? "danger" : ca.Control.Priority == CyberRiskApp.Models.ControlPriority.High ? "warning" : ca.Control.Priority == CyberRiskApp.Models.ControlPriority.Medium ? "info" : "secondary")">
+                                                            @ca.Control.Priority
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-@(ca.CurrentMaturityLevel == CyberRiskApp.Models.MaturityLevel.NotImplemented ? "danger" : ca.CurrentMaturityLevel == CyberRiskApp.Models.MaturityLevel.Initial ? "warning" : "success")">
+                                                        @((int)ca.CurrentMaturityLevel)
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @if (ViewBag.CanPerformAssessments)
+                                                    {
+                                                        <select class="form-select form-select-sm target-level-select"
+                                                                data-control-assessment-id="@ca.Id"
+                                                                onchange="updateTargetLevel(@ca.Id, this.value)">
+                                                            @{
+                                                                var availableLevels = GetAvailableMaturityLevels(Model.Assessment.Framework?.Type ?? CyberRiskApp.Models.FrameworkType.Custom);
+                                                            }
+                                                            @foreach (var level in availableLevels)
+                                                            {
+                                                                <option value="@((int)level)" selected="@(ca.TargetMaturityLevel == level ? "selected" : null)">
+                                                                    @((int)level)
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-primary">@((int)ca.TargetMaturityLevel)</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (hasGap)
+                                                    {
+                                                        <span class="badge bg-warning">@((int)ca.TargetMaturityLevel - (int)ca.CurrentMaturityLevel)</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-success"><i class="fas fa-check"></i></span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (ca.ProjectNeeded)
+                                                    {
+                                                        <span class="badge bg-info">
+                                                            @(ca.TShirtSize?.ToString() ?? "Req")
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <small>@ca.Ownership</small>
+                                                </td>
+                                            </tr>
                                         }
-                                        <td><strong>@ca.Control.ControlId</strong></td>
-                                        <td>@ca.Control.Title</td>
-                                        <td>@ca.Control.Function</td>
-                                        <td>
-                                            @if (ViewBag.CanPerformAssessments)
-                                            {
-                                                <select class="form-select form-select-sm priority-select"
-                                                        data-control-id="@ca.Control.Id"
-                                                        onchange="updateControlPriority(@ca.Control.Id, this.value)">
-                                                    @foreach (CyberRiskApp.Models.ControlPriority priority in Enum.GetValues<CyberRiskApp.Models.ControlPriority>())
-                                                    {
-                                                        <option value="@((int)priority)" selected="@(ca.Control.Priority == priority ? "selected" : null)">
-                                                            @priority
-                                                        </option>
-                                                    }
-                                                </select>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-@(ca.Control.Priority == CyberRiskApp.Models.ControlPriority.Critical ? "danger" : ca.Control.Priority == CyberRiskApp.Models.ControlPriority.High ? "warning" : ca.Control.Priority == CyberRiskApp.Models.ControlPriority.Medium ? "info" : "secondary")">
-                                                    @ca.Control.Priority
-                                                </span>
-                                            }
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-@(ca.CurrentMaturityLevel == CyberRiskApp.Models.MaturityLevel.NotImplemented ? "danger" : ca.CurrentMaturityLevel == CyberRiskApp.Models.MaturityLevel.Initial ? "warning" : "success")">
-                                                @ca.CurrentMaturityLevel
-                                            </span>
-                                        </td>
-                                        <td>
-                                            @if (ViewBag.CanPerformAssessments)
-                                            {
-                                                <select class="form-select form-select-sm target-level-select"
-                                                        data-control-assessment-id="@ca.Id"
-                                                        onchange="updateTargetLevel(@ca.Id, this.value)">
-                                                    @{
-                                                        var availableLevels = GetAvailableMaturityLevels(Model.Assessment.Framework?.Type ?? CyberRiskApp.Models.FrameworkType.Custom);
-                                                    }
-                                                    @foreach (var level in availableLevels)
-                                                    {
-                                                        <option value="@((int)level)" selected="@(ca.TargetMaturityLevel == level ? "selected" : null)">
-                                                            Level @((int)level) - @level
-                                                        </option>
-                                                    }
-                                                </select>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-primary">@ca.TargetMaturityLevel</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (hasGap)
-                                            {
-                                                <span class="badge bg-warning">@((int)ca.TargetMaturityLevel - (int)ca.CurrentMaturityLevel)</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-success">✓</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            @if (ca.ProjectNeeded)
-                                            {
-                                                <span class="badge bg-info">
-                                                    @(ca.TShirtSize?.ToString() ?? "Required")
-                                                </span>
-                                            }
-                                        </td>
-                                        <td>@ca.Ownership</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="row">
-                <div class="col-12 text-center">
-                    <a asp-action="Index" class="btn btn-secondary me-2">
-                        <i class="fas fa-arrow-left me-1"></i>Back to Assessments
-                    </a>
-                    @if (ViewBag.CanPerformAssessments)
-                    {
-                        <a asp-action="PerformBulk" asp-route-id="@Model.Assessment.Id" class="btn btn-primary me-2">
-                            <i class="fas fa-tasks me-1"></i>Perform Assessment
-                        </a>
-                        <a asp-action="Edit" asp-route-id="@Model.Assessment.Id" class="btn btn-outline-primary">
-                            <i class="fas fa-edit me-1"></i>Edit Assessment
-                        </a>
-                    }
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -804,16 +848,36 @@
                 checkbox.addEventListener('change', updateSelectedCount);
             });
 
-            // Initialize DataTable if available
+            // Add event listeners to filter buttons
+            document.getElementById('allControls')?.addEventListener('change', () => filterControls('all'));
+            document.getElementById('gapsOnly')?.addEventListener('change', () => filterControls('gaps'));
+            document.getElementById('completedOnly')?.addEventListener('change', () => filterControls('completed'));
+
+            // Initialize DataTable if available with responsive design
             if (typeof $.fn.DataTable !== 'undefined') {
                 $('#controlsTable').DataTable({
                     pageLength: 25,
                     order: [[1, 'asc']], // Order by Control ID
                     columnDefs: [
-                        { orderable: false, targets: [0] } // Disable sorting on checkbox column
-                    ]
+                        { orderable: false, targets: [0] }, // Disable sorting on checkbox column
+                        { responsivePriority: 1, targets: [1] }, // Control ID
+                        { responsivePriority: 2, targets: [4, 5, 6] } // Current, Target, Gap
+                    ],
+                    responsive: true,
+                    dom: '<"top"f>rt<"bottom"lip>',
+                    language: {
+                        search: "Search controls:",
+                        lengthMenu: "Show _MENU_ controls per page"
+                    }
                 });
             }
+
+            // Animate progress bars on page load
+            setTimeout(() => {
+                document.querySelectorAll('.progress-bar').forEach(bar => {
+                    bar.style.transition = 'width 1s ease-in-out';
+                });
+            }, 100);
         });
     </script>
 }

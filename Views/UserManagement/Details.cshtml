@@ -26,8 +26,11 @@
                                 case UserRole.Admin:
                                     <span class="badge bg-danger">Admin</span>
                                     break;
-                                case UserRole.GRCUser:
-                                    <span class="badge bg-warning">GRC User</span>
+                                case UserRole.GRCManager:
+                                    <span class="badge bg-info">GRC Manager</span>
+                                    break;
+                                case UserRole.GRCAnalyst:
+                                    <span class="badge bg-warning">GRC Analyst</span>
                                     break;
                                 case UserRole.ITUser:
                                     <span class="badge bg-info">IT User</span>
@@ -104,9 +107,20 @@
                             </ul>
                         </div>
                         break;
-                    case UserRole.GRCUser:
+                    case UserRole.GRCManager:
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-user-tie me-1"></i> GRC Manager</h6>
+                            <ul class="mb-0">
+                                <li>Approve/reject risk backlog entries</li>
+                                <li>Assign work to GRC Analysts</li>
+                                <li>All GRC Analyst permissions</li>
+                                <li>Management oversight</li>
+                            </ul>
+                        </div>
+                        break;
+                    case UserRole.GRCAnalyst:
                         <div class="alert alert-warning">
-                            <h6><i class="fas fa-shield-alt me-1"></i> GRC User</h6>
+                            <h6><i class="fas fa-shield-alt me-1"></i> GRC Analyst</h6>
                             <ul class="mb-0">
                                 <li>Approve/reject closure requests</li>
                                 <li>Perform risk assessments</li>

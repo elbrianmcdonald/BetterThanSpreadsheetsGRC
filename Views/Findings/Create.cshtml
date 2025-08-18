@@ -31,7 +31,7 @@
                                     <label asp-for="Domain" class="form-label fw-bold">
                                         Domain
                                     </label>
-                                    @Html.AssetComboboxFor(m => m.Domain, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                                    @Html.AssetComboboxFor(m => m.Domain, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                                 </div>
                             </div>
                         </div>
@@ -90,7 +90,7 @@
                                     <label asp-for="Owner" class="form-label fw-bold">
                                         Finding Owner <span class="text-danger">*</span>
                                     </label>
-                                    @Html.OwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"), required: true)
+                                    @Html.OwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"), required: true)
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -109,21 +109,21 @@
                             <label asp-for="Asset" class="form-label fw-bold">
                                 Affected Asset
                             </label>
-                            @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                            @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                         </div>
 
                         <div class="mb-3">
                             <label asp-for="BusinessUnit" class="form-label fw-bold">
                                 Business Unit
                             </label>
-                            @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                            @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                         </div>
 
                         <div class="mb-3">
                             <label asp-for="BusinessOwner" class="form-label fw-bold">
                                 Business Owner
                             </label>
-                            @Html.BusinessOwnerComboboxFor(m => m.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCUser"))
+                            @Html.BusinessOwnerComboboxFor(m => m.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
                         </div>
 
                         <!-- Multiple Technical Controls -->
@@ -212,7 +212,7 @@
         // Add technical control function
         function addTechnicalControl() {
             const container = document.getElementById('technicalControlsContainer');
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCUser"))' === 'True';
+            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
             const controlHtml = `
                 <div class="input-group mb-2" id="control_${technicalControlIndex}">
                     <select class="form-select technical-control-select" 

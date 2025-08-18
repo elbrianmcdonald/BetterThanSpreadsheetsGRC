@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+    [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
     public class ImplementationMilestoneController : Controller
     {
         private readonly IStrategyPlanningService _strategyService;

@@ -20,6 +20,11 @@ namespace CyberRiskApp.Data
         public DbSet<RiskAcceptanceRequest> RiskAcceptanceRequests { get; set; }
         public DbSet<FindingClosureRequest> FindingClosureRequests { get; set; }
 
+        // NEW: Risk Backlog Management DbSets
+        public DbSet<RiskBacklogEntry> RiskBacklogEntries { get; set; }
+        public DbSet<RiskBacklogComment> RiskBacklogComments { get; set; }
+        public DbSet<RiskBacklogActivity> RiskBacklogActivities { get; set; }
+
         // Existing Governance Module DbSets (Compliance)
         public DbSet<ComplianceFramework> ComplianceFrameworks { get; set; }
         public DbSet<ComplianceControl> ComplianceControls { get; set; }

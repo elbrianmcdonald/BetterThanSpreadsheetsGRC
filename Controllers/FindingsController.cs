@@ -92,7 +92,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // UPDATED: Only GRC and Admin can create findings
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public IActionResult Create()
         {
             return View();
@@ -101,7 +101,7 @@ namespace CyberRiskApp.Controllers
         // UPDATED: Only GRC and Admin can create findings
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(Finding finding)
         {
             // Remove audit fields from model validation since they're set automatically
@@ -165,7 +165,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // UPDATED: Only GRC and Admin can edit findings
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id)
         {
             var finding = await _findingService.GetFindingByIdAsync(id);
@@ -178,7 +178,7 @@ namespace CyberRiskApp.Controllers
         // UPDATED: Only GRC and Admin can edit findings
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id, Finding finding)
         {
             if (id != finding.Id)
@@ -226,7 +226,7 @@ namespace CyberRiskApp.Controllers
 
         // API endpoint for real-time risk calculation during finding creation
         [HttpPost]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> CalculateRisk([FromBody] RiskCalculationRequest request)
         {
             try
@@ -471,7 +471,7 @@ namespace CyberRiskApp.Controllers
         }
 
         // Excel Upload functionality - Only GRC and Admin can upload
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public IActionResult UploadFindings()
         {
             return View();
@@ -479,7 +479,7 @@ namespace CyberRiskApp.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCOrAdminRole)]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> UploadFindings(IFormFile file)
         {
             if (file == null || file.Length == 0)

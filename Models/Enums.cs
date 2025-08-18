@@ -76,7 +76,8 @@
         Low = 1,
         Medium = 2,
         High = 3,
-        Critical = 4
+        Critical = 4,
+        Extreme = 5
     }
 
     public enum LikelihoodLevel
@@ -84,7 +85,8 @@
         Unlikely = 1,
         Possible = 2,
         Likely = 3,
-        AlmostCertain = 4
+        AlmostCertain = 4,
+        Certain = 5
     }
 
     public enum ExposureLevel
@@ -92,7 +94,8 @@
         SlightlyExposed = 1,      // 0.2
         Exposed = 2,              // 0.4
         ModeratelyExposed = 3,    // 0.8
-        HighlyExposed = 4         // 1.0
+        HighlyExposed = 4,        // 1.0
+        CriticallyExposed = 5     // 1.2
     }
 
     public enum RiskRating
@@ -100,7 +103,8 @@
         Low = 1,
         Medium = 2,
         High = 3,
-        Critical = 4
+        Critical = 4,
+        Extreme = 5
     }
 
     public enum FindingStatus
@@ -123,7 +127,8 @@
         Low = 1,
         Medium = 2,
         High = 3,
-        Critical = 4
+        Critical = 4,
+        Extreme = 5
     }
 
     public enum TreatmentStrategy
@@ -245,5 +250,40 @@
         Enterprise = 1,
         ICS = 2,
         Mobile = 3
+    }
+
+    // NEW: Risk Backlog System Enums
+    public enum RiskBacklogStatus
+    {
+        Unassigned = 1,
+        AssignedToAnalyst = 2,
+        AssignedToManager = 3,
+        Approved = 4,
+        Rejected = 5,
+        Escalated = 6
+    }
+
+    public enum RiskBacklogAction
+    {
+        NewRisk = 1,
+        RiskAcceptance = 2,
+        RiskExtension = 3,
+        RiskReview = 4,
+        RiskReassessment = 5
+    }
+
+    public enum BacklogPriority
+    {
+        Low = 1,
+        Medium = 2,
+        High = 3,
+        Critical = 4
+    }
+
+    public enum RiskSource
+    {
+        FindingAcceptance = 1,
+        ManualImport = 2,
+        RiskAssessment = 3
     }
 }
