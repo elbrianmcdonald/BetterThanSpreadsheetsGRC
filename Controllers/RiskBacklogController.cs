@@ -1,3 +1,4 @@
+using CyberRiskApp.Authorization;
 using CyberRiskApp.Models;
 using CyberRiskApp.Services;
 using CyberRiskApp.ViewModels;
@@ -72,6 +73,18 @@ namespace CyberRiskApp.Controllers
                             break;
                         case "completed-this-week":
                             allEntries = await _backlogService.GetCompletedThisWeekBacklogEntriesAsync();
+                            break;
+                        case "findings":
+                            // Filter for finding workflows only
+                            allEntries = (await _backlogService.GetAllBacklogEntriesAsync())
+                                .Where(e => e.IsFindingWorkflow())
+                                .ToList();
+                            break;
+                        case "risks":
+                            // Filter for risk workflows only
+                            allEntries = (await _backlogService.GetAllBacklogEntriesAsync())
+                                .Where(e => e.IsRiskWorkflow())
+                                .ToList();
                             break;
                         case "all":
                         default:
@@ -536,6 +549,306 @@ namespace CyberRiskApp.Controllers
                 return Json(new { success = false, error = ex.Message });
             }
         }
+
+        // Finding Creation Action
+        [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
+        public async Task<IActionResult> CreateFindingBacklogEntry([FromBody] CreateFindingRequest request)
+        {
+            try
+            {
+                var userId = User.Identity?.Name ?? "";
+                var backlogEntry = await _backlogService.CreateFindingBacklogEntryAsync(
+                    request.Title,
+                    request.Details,
+                    request.Source,
+                    request.Impact,
+                    request.Likelihood,
+                    request.Exposure,
+                    request.Asset,
+                    request.BusinessUnit,
+                    request.BusinessOwner,
+                    request.Domain,
+                    request.TechnicalControl,
+                    userId
+                );
+
+                return Json(new { 
+                    success = true, 
+                    backlogNumber = backlogEntry.BacklogNumber, 
+                    message = $"Finding backlog entry {backlogEntry.BacklogNumber} created successfully" 
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating finding backlog entry");
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        // New Re-assignment Actions
+        [HttpPost]
+        [Authorize(Policy = PolicyConstants.RequireGRCManagerOrAdmin)]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReassignToAnalyst(int backlogId, string analystId)
+        {
+            var userId = User.Identity?.Name ?? "Unknown";
+            _logger.LogInformation("ReassignToAnalyst called: BacklogId={BacklogId}, AnalystId={AnalystId}, UserId={UserId}", 
+                backlogId, analystId, userId);
+
+            try
+            {
+                // Validate inputs
+                if (backlogId <= 0)
+                {
+                    _logger.LogWarning("Invalid backlogId: {BacklogId}", backlogId);
+                    TempData["Error"] = "Invalid backlog entry ID.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (string.IsNullOrEmpty(analystId))
+                {
+                    _logger.LogWarning("Empty analystId provided for backlog {BacklogId}", backlogId);
+                    TempData["Error"] = "Please select an analyst.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                _logger.LogInformation("Fetching backlog entry {BacklogId}", backlogId);
+                
+                // Get the current backlog entry to check permissions
+                var entry = await _backlogService.GetBacklogEntryByIdAsync(backlogId);
+                if (entry == null)
+                {
+                    _logger.LogWarning("Backlog entry {BacklogId} not found", backlogId);
+                    TempData["Error"] = "Backlog entry not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                _logger.LogInformation("Found backlog entry {BacklogId}, current status: {Status}, current assignee: {Assignee}", 
+                    backlogId, entry.Status, entry.GetCurrentAssignee());
+
+                // Check if user can reassign
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
+                _logger.LogInformation("User {UserId} has roles: {Roles}", userId, userRoles);
+                
+                if (!User.IsInRole("Admin") && !User.IsInRole("GRCManager"))
+                {
+                    _logger.LogWarning("User {UserId} does not have permission to reassign entries", userId);
+                    TempData["Error"] = "You do not have permission to reassign entries.";
+                    return Forbid();
+                }
+
+                _logger.LogInformation("Starting reassignment of backlog {BacklogId} to analyst {AnalystId}", backlogId, analystId);
+
+                // Perform reassignment
+                await _backlogService.AssignToAnalystAsync(backlogId, analystId, userId);
+                
+                _logger.LogInformation("Successfully reassigned backlog {BacklogId} to analyst {AnalystId}", backlogId, analystId);
+                TempData["Success"] = "Entry successfully reassigned to analyst.";
+            }
+            catch (ArgumentException argEx)
+            {
+                _logger.LogError(argEx, "Argument error reassigning backlog entry {BacklogId} to analyst {AnalystId}: {Message}", 
+                    backlogId, analystId, argEx.Message);
+                TempData["Error"] = $"Error reassigning entry: {argEx.Message}";
+            }
+            catch (InvalidOperationException invEx)
+            {
+                _logger.LogError(invEx, "Invalid operation error reassigning backlog entry {BacklogId} to analyst {AnalystId}: {Message}", 
+                    backlogId, analystId, invEx.Message);
+                TempData["Error"] = $"Error reassigning entry: {invEx.Message}";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error reassigning backlog entry {BacklogId} to analyst {AnalystId}: {Message} | StackTrace: {StackTrace}", 
+                    backlogId, analystId, ex.Message, ex.StackTrace);
+                TempData["Error"] = $"Error reassigning entry: {ex.Message}";
+            }
+
+            _logger.LogInformation("ReassignToAnalyst completed, redirecting to Index");
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [Authorize(Policy = PolicyConstants.RequireGRCManagerOrAdmin)]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnassignEntry(int backlogId)
+        {
+            var userId = User.Identity?.Name ?? "Unknown";
+            _logger.LogInformation("UnassignEntry called: BacklogId={BacklogId}, UserId={UserId}", backlogId, userId);
+
+            try
+            {
+                // Validate inputs
+                if (backlogId <= 0)
+                {
+                    _logger.LogWarning("Invalid backlogId: {BacklogId}", backlogId);
+                    TempData["Error"] = "Invalid backlog entry ID.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                _logger.LogInformation("Fetching backlog entry {BacklogId}", backlogId);
+                
+                // Get the current backlog entry to check permissions
+                var entry = await _backlogService.GetBacklogEntryByIdAsync(backlogId);
+                if (entry == null)
+                {
+                    _logger.LogWarning("Backlog entry {BacklogId} not found", backlogId);
+                    TempData["Error"] = "Backlog entry not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                _logger.LogInformation("Found backlog entry {BacklogId}, current status: {Status}, current assignee: {Assignee}", 
+                    backlogId, entry.Status, entry.GetCurrentAssignee());
+
+                // Check if user can unassign
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
+                _logger.LogInformation("User {UserId} has roles: {Roles}", userId, userRoles);
+                
+                if (!User.IsInRole("Admin") && !User.IsInRole("GRCManager"))
+                {
+                    _logger.LogWarning("User {UserId} does not have permission to unassign entries", userId);
+                    TempData["Error"] = "You do not have permission to unassign entries.";
+                    return Forbid();
+                }
+
+                _logger.LogInformation("Starting unassignment of backlog {BacklogId}", backlogId);
+
+                // Perform unassignment - set back to unassigned status
+                await _backlogService.UnassignEntryAsync(backlogId, userId);
+                
+                _logger.LogInformation("Successfully unassigned backlog {BacklogId}", backlogId);
+                TempData["Success"] = "Entry unassigned and returned to backlog.";
+            }
+            catch (ArgumentException argEx)
+            {
+                _logger.LogError(argEx, "Argument error unassigning backlog entry {BacklogId}: {Message}", 
+                    backlogId, argEx.Message);
+                TempData["Error"] = $"Error unassigning entry: {argEx.Message}";
+            }
+            catch (InvalidOperationException invEx)
+            {
+                _logger.LogError(invEx, "Invalid operation error unassigning backlog entry {BacklogId}: {Message}", 
+                    backlogId, invEx.Message);
+                TempData["Error"] = $"Error unassigning entry: {invEx.Message}";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error unassigning backlog entry {BacklogId}: {Message} | StackTrace: {StackTrace}", 
+                    backlogId, ex.Message, ex.StackTrace);
+                TempData["Error"] = $"Error unassigning entry: {ex.Message}";
+            }
+
+            _logger.LogInformation("UnassignEntry completed, redirecting to Index");
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [Authorize(Policy = PolicyConstants.RequireGRCManagerOrAdmin)]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateStatus(int backlogId, string status, string reason = "")
+        {
+            var userId = User.Identity?.Name ?? "Unknown";
+            _logger.LogInformation("UpdateStatus called: BacklogId={BacklogId}, Status={Status}, Reason={Reason}, UserId={UserId}", 
+                backlogId, status, reason, userId);
+
+            try
+            {
+                // Validate inputs
+                if (backlogId <= 0)
+                {
+                    _logger.LogWarning("Invalid backlogId: {BacklogId}", backlogId);
+                    TempData["Error"] = "Invalid backlog entry ID.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (string.IsNullOrEmpty(status))
+                {
+                    _logger.LogWarning("Empty status provided for backlog {BacklogId}", backlogId);
+                    TempData["Error"] = "Please select a status.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                _logger.LogInformation("Fetching backlog entry {BacklogId}", backlogId);
+                
+                // Get the current backlog entry to check permissions
+                var entry = await _backlogService.GetBacklogEntryByIdAsync(backlogId);
+                if (entry == null)
+                {
+                    _logger.LogWarning("Backlog entry {BacklogId} not found", backlogId);
+                    TempData["Error"] = "Backlog entry not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                _logger.LogInformation("Found backlog entry {BacklogId}, current status: {CurrentStatus}, target status: {TargetStatus}", 
+                    backlogId, entry.Status, status);
+
+                // Check if user can update status
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
+                _logger.LogInformation("User {UserId} has roles: {Roles}", userId, userRoles);
+                
+                if (!User.IsInRole("Admin") && !User.IsInRole("GRCManager"))
+                {
+                    _logger.LogWarning("User {UserId} does not have permission to update entry status", userId);
+                    TempData["Error"] = "You do not have permission to update entry status.";
+                    return Forbid();
+                }
+
+                _logger.LogInformation("Parsing status value: {Status}", status);
+
+                // Parse and update status
+                if (Enum.TryParse<RiskBacklogStatus>(status, out var statusEnum))
+                {
+                    _logger.LogInformation("Successfully parsed status to enum: {StatusEnum}", statusEnum);
+                    
+                    if (statusEnum == RiskBacklogStatus.Approved)
+                    {
+                        _logger.LogInformation("Approving backlog {BacklogId} with reason: {Reason}", backlogId, reason);
+                        await _backlogService.ManagerApproveAsync(backlogId, reason, userId);
+                        _logger.LogInformation("Successfully approved backlog {BacklogId}", backlogId);
+                        TempData["Success"] = "Entry approved.";
+                    }
+                    else if (statusEnum == RiskBacklogStatus.Rejected)
+                    {
+                        _logger.LogInformation("Rejecting backlog {BacklogId} with reason: {Reason}", backlogId, reason);
+                        await _backlogService.ManagerRejectAsync(backlogId, reason, userId);
+                        _logger.LogInformation("Successfully rejected backlog {BacklogId}", backlogId);
+                        TempData["Success"] = "Entry rejected.";
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Invalid status update requested: {StatusEnum} for backlog {BacklogId}", statusEnum, backlogId);
+                        TempData["Error"] = "Invalid status update.";
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to parse status value: {Status} for backlog {BacklogId}", status, backlogId);
+                    TempData["Error"] = "Invalid status value.";
+                }
+            }
+            catch (ArgumentException argEx)
+            {
+                _logger.LogError(argEx, "Argument error updating status for backlog entry {BacklogId} to {Status}: {Message}", 
+                    backlogId, status, argEx.Message);
+                TempData["Error"] = $"Error updating entry status: {argEx.Message}";
+            }
+            catch (InvalidOperationException invEx)
+            {
+                _logger.LogError(invEx, "Invalid operation error updating status for backlog entry {BacklogId} to {Status}: {Message}", 
+                    backlogId, status, invEx.Message);
+                TempData["Error"] = $"Error updating entry status: {invEx.Message}";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error updating status for backlog entry {BacklogId} to {Status}: {Message} | StackTrace: {StackTrace}", 
+                    backlogId, status, ex.Message, ex.StackTrace);
+                TempData["Error"] = $"Error updating entry status: {ex.Message}";
+            }
+
+            _logger.LogInformation("UpdateStatus completed, redirecting to Index");
+            return RedirectToAction(nameof(Index));
+        }
     }
 
     // Request models for API endpoints
@@ -555,5 +868,20 @@ namespace CyberRiskApp.Controllers
     {
         public List<int> BacklogIds { get; set; } = new();
         public BacklogPriority Priority { get; set; }
+    }
+
+    public class CreateFindingRequest
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Details { get; set; } = string.Empty;
+        public string Source { get; set; } = string.Empty;
+        public ImpactLevel Impact { get; set; }
+        public LikelihoodLevel Likelihood { get; set; }
+        public ExposureLevel Exposure { get; set; }
+        public string Asset { get; set; } = string.Empty;
+        public string BusinessUnit { get; set; } = string.Empty;
+        public string BusinessOwner { get; set; } = string.Empty;
+        public string Domain { get; set; } = string.Empty;
+        public string TechnicalControl { get; set; } = string.Empty;
     }
 }

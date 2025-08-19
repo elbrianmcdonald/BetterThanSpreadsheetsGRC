@@ -83,6 +83,86 @@ namespace CyberRiskApp.Services
             return backlogEntry;
         }
 
+        public async Task<RiskBacklogEntry> CreateFindingBacklogEntryAsync(
+            string title, string details, string source, 
+            ImpactLevel impact, LikelihoodLevel likelihood, ExposureLevel exposure,
+            string asset, string businessUnit, string businessOwner, string domain, string technicalControl,
+            string requesterId)
+        {
+            var backlogEntry = new RiskBacklogEntry
+            {
+                BacklogNumber = await GenerateBacklogNumberAsync(),
+                ActionType = RiskBacklogAction.NewFinding,
+                Status = RiskBacklogStatus.Unassigned,
+                Priority = GetDefaultPriority(RiskBacklogAction.NewFinding),
+                RequestDescription = $"New finding: {title}",
+                RequestJustification = "Finding requires review before being added to the register",
+                RequesterUserId = requesterId,
+                DueDate = CalculateDueDate(RiskBacklogAction.NewFinding),
+                
+                // Finding-specific fields
+                FindingTitle = title,
+                FindingDetails = details,
+                FindingSource = source,
+                Impact = impact,
+                Likelihood = likelihood,
+                Exposure = exposure,
+                Asset = asset,
+                BusinessUnit = businessUnit,
+                BusinessOwner = businessOwner,
+                Domain = domain,
+                TechnicalControl = technicalControl,
+                
+                // Calculate risk rating for the finding
+                RiskRating = CalculateFindingRiskRating(impact, likelihood, exposure),
+                
+                // Audit fields
+                AnalystComments = string.Empty,
+                ManagerComments = string.Empty,
+                RejectionReason = string.Empty,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                CreatedBy = requesterId,
+                UpdatedBy = requesterId
+            };
+
+            _logger.LogInformation("🔍 DEBUGGING CreateFindingBacklogEntry - BacklogNumber: {BacklogNumber}, Title: {Title}, RequesterId: {RequesterId}", 
+                backlogEntry.BacklogNumber, title, requesterId);
+
+            _context.RiskBacklogEntries.Add(backlogEntry);
+            
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("💥 DETAILED ERROR: {Message}", ex.Message);
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("💥 INNER EXCEPTION: {InnerMessage}", ex.InnerException.Message);
+                    if (ex.InnerException.InnerException != null)
+                    {
+                        _logger.LogError("💥 DEEPEST EXCEPTION: {DeepestMessage}", ex.InnerException.InnerException.Message);
+                    }
+                }
+                throw;
+            }
+
+            // Log initial activity
+            try
+            {
+                await LogActivityAsync(backlogEntry.Id, "Created", "", backlogEntry.Status.ToString(), $"Finding backlog entry created: {title}", requesterId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to log activity for finding backlog entry {BacklogNumber}", backlogEntry.BacklogNumber);
+            }
+
+            _logger.LogInformation("Created finding backlog entry {BacklogNumber} for finding: {Title}", backlogEntry.BacklogNumber, title);
+            return backlogEntry;
+        }
+
         public async Task<RiskBacklogEntry?> GetBacklogEntryByIdAsync(int id)
         {
             return await _context.RiskBacklogEntries
@@ -90,6 +170,7 @@ namespace CyberRiskApp.Services
                     .ThenInclude(r => r.LinkedAssessment)
                 .Include(b => b.Risk)
                     .ThenInclude(r => r.LinkedFinding)
+                .Include(b => b.Finding)
                 .Include(b => b.Comments)
                 .Include(b => b.Activities)
                 .FirstOrDefaultAsync(b => b.Id == id);
@@ -97,21 +178,63 @@ namespace CyberRiskApp.Services
 
         public async Task<RiskBacklogEntry> AssignToAnalystAsync(int backlogId, string analystId, string assignedBy)
         {
-            var entry = await GetBacklogEntryByIdAsync(backlogId);
-            if (entry == null) throw new ArgumentException("Backlog entry not found");
+            _logger.LogInformation("AssignToAnalystAsync called: BacklogId={BacklogId}, AnalystId={AnalystId}, AssignedBy={AssignedBy}", 
+                backlogId, analystId, assignedBy);
 
-            var oldAssignee = entry.GetCurrentAssignee();
-            entry.AssignedToAnalyst = analystId;
-            entry.AssignedToManager = null;
-            entry.Status = RiskBacklogStatus.AssignedToAnalyst;
-            entry.AssignedDate = DateTime.UtcNow;
-            entry.UpdatedAt = DateTime.UtcNow;
-            entry.UpdatedBy = assignedBy;
+            try
+            {
+                _logger.LogInformation("Fetching backlog entry with ID: {BacklogId}", backlogId);
+                var entry = await GetBacklogEntryByIdAsync(backlogId);
+                
+                if (entry == null)
+                {
+                    _logger.LogError("Backlog entry with ID {BacklogId} not found in database", backlogId);
+                    throw new ArgumentException($"Backlog entry with ID {backlogId} not found");
+                }
 
-            await _context.SaveChangesAsync();
-            await LogActivityAsync(backlogId, "Assignment", oldAssignee, analystId, "Assigned to analyst", assignedBy);
+                _logger.LogInformation("Found backlog entry {BacklogNumber}, current status: {Status}, current analyst: {CurrentAnalyst}, current manager: {CurrentManager}", 
+                    entry.BacklogNumber, entry.Status, entry.AssignedToAnalyst ?? "None", entry.AssignedToManager ?? "None");
 
-            return entry;
+                var oldAssignee = entry.GetCurrentAssignee();
+                _logger.LogInformation("Current assignee: {OldAssignee}, assigning to analyst: {AnalystId}", oldAssignee, analystId);
+
+                // Update the entry
+                entry.AssignedToAnalyst = analystId;
+                entry.AssignedToManager = null;
+                entry.Status = RiskBacklogStatus.AssignedToAnalyst;
+                entry.AssignedDate = DateTime.UtcNow;
+                entry.UpdatedAt = DateTime.UtcNow;
+                entry.UpdatedBy = assignedBy;
+
+                // Create activity log entry (consolidated approach to avoid double SaveChanges)
+                var activity = new RiskBacklogActivity
+                {
+                    BacklogEntryId = backlogId,
+                    ActivityType = "Assignment",
+                    FromValue = oldAssignee,
+                    ToValue = analystId,
+                    Description = "Assigned to analyst",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    CreatedBy = assignedBy,
+                    UpdatedBy = assignedBy
+                };
+
+                _context.RiskBacklogActivities.Add(activity);
+
+                _logger.LogInformation("Updated entry properties and created activity log, saving all changes to database...");
+                
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Successfully completed assignment of backlog {BacklogId} to analyst {AnalystId}", backlogId, analystId);
+                return entry;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in AssignToAnalystAsync for BacklogId={BacklogId}, AnalystId={AnalystId}: {Message} | StackTrace: {StackTrace}", 
+                    backlogId, analystId, ex.Message, ex.StackTrace);
+                throw;
+            }
         }
 
         public async Task<RiskBacklogEntry> AssignToManagerAsync(int backlogId, string managerId, string assignedBy)
@@ -184,7 +307,7 @@ namespace CyberRiskApp.Services
             entry.UpdatedAt = DateTime.UtcNow;
             entry.UpdatedBy = managerId;
 
-            // Handle risk creation/update based on action type
+            // Handle risk/finding creation/update based on action type
             if (entry.ActionType == RiskBacklogAction.NewRisk)
             {
                 if (entry.Risk != null)
@@ -210,6 +333,24 @@ namespace CyberRiskApp.Services
                         _logger.LogError(ex, "Failed to create risk from backlog entry {BacklogNumber}", entry.BacklogNumber);
                         throw new InvalidOperationException($"Failed to create risk from backlog entry: {ex.Message}", ex);
                     }
+                }
+            }
+            else if (entry.ActionType == RiskBacklogAction.NewFinding)
+            {
+                // NEW FINDING - Create finding entity upon approval
+                try
+                {
+                    var newFinding = await CreateFindingFromBacklogEntryAsync(entry, managerId);
+                    entry.FindingId = newFinding.Id;
+                    entry.Finding = newFinding;
+                    
+                    _logger.LogInformation("Created new finding {FindingId} from approved backlog entry {BacklogNumber}", 
+                        newFinding.Id, entry.BacklogNumber);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create finding from backlog entry {BacklogNumber}", entry.BacklogNumber);
+                    throw new InvalidOperationException($"Failed to create finding from backlog entry: {ex.Message}", ex);
                 }
             }
 
@@ -336,6 +477,7 @@ namespace CyberRiskApp.Services
         {
             return await _context.RiskBacklogEntries
                 .Include(b => b.Risk)
+                .Include(b => b.Finding)
                 .Where(b => b.AssignedToAnalyst == analystId && b.Status == RiskBacklogStatus.AssignedToAnalyst)
                 .OrderBy(b => b.DueDate)
                 .ThenByDescending(b => b.Priority)
@@ -346,6 +488,7 @@ namespace CyberRiskApp.Services
         {
             var results = await _context.RiskBacklogEntries
                 .Include(b => b.Risk)
+                .Include(b => b.Finding)
                 .Where(b => b.AssignedToManager == managerId && b.Status == RiskBacklogStatus.AssignedToManager)
                 .OrderBy(b => b.DueDate)
                 .ThenByDescending(b => b.Priority)
@@ -359,6 +502,7 @@ namespace CyberRiskApp.Services
         {
             return await _context.RiskBacklogEntries
                 .Include(b => b.Risk)
+                .Include(b => b.Finding)
                 .Where(b => b.Status == RiskBacklogStatus.Unassigned)
                 .OrderByDescending(b => b.Priority)
                 .ThenBy(b => b.CreatedAt)
@@ -402,6 +546,7 @@ namespace CyberRiskApp.Services
                     .ThenInclude(r => r.LinkedAssessment)
                 .Include(b => b.Risk)
                     .ThenInclude(r => r.LinkedFinding)
+                .Include(b => b.Finding)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(filterBy) && !string.IsNullOrEmpty(filterValue))
@@ -783,6 +928,9 @@ namespace CyberRiskApp.Services
                 RiskBacklogAction.RiskExtension => BacklogPriority.Low,
                 RiskBacklogAction.RiskReview => BacklogPriority.Medium,
                 RiskBacklogAction.RiskReassessment => BacklogPriority.High,
+                RiskBacklogAction.NewFinding => BacklogPriority.Medium,
+                RiskBacklogAction.FindingReview => BacklogPriority.Medium,
+                RiskBacklogAction.FindingClosure => BacklogPriority.Low,
                 _ => BacklogPriority.Medium
             };
         }
@@ -796,6 +944,9 @@ namespace CyberRiskApp.Services
                 RiskBacklogAction.RiskExtension => 2,
                 RiskBacklogAction.RiskReview => 7,
                 RiskBacklogAction.RiskReassessment => 10,
+                RiskBacklogAction.NewFinding => 3, // 3 business days for new findings
+                RiskBacklogAction.FindingReview => 5,
+                RiskBacklogAction.FindingClosure => 2,
                 _ => 5
             };
 
@@ -814,6 +965,26 @@ namespace CyberRiskApp.Services
             if (risk?.LinkedAssessment != null) return RiskSource.RiskAssessment;
             if (risk?.LinkedFinding != null) return RiskSource.FindingAcceptance;
             return RiskSource.ManualImport;
+        }
+
+        private RiskRating CalculateFindingRiskRating(ImpactLevel impact, LikelihoodLevel likelihood, ExposureLevel exposure)
+        {
+            // Convert enum values to integers for calculation
+            int impactScore = (int)impact;
+            int likelihoodScore = (int)likelihood;
+            int exposureScore = (int)exposure;
+
+            // Calculate average score
+            double averageScore = (impactScore + likelihoodScore + exposureScore) / 3.0;
+
+            // Map average score to risk rating
+            return averageScore switch
+            {
+                >= 4.0 => RiskRating.Critical,
+                >= 3.0 => RiskRating.High,
+                >= 2.0 => RiskRating.Medium,
+                _ => RiskRating.Low
+            };
         }
 
         // Admin Methods Implementation
@@ -945,5 +1116,112 @@ namespace CyberRiskApp.Services
             }
             return defaultValue;
         }
+
+        /// <summary>
+        /// Creates a Finding entity from a finding backlog entry
+        /// </summary>
+        private async Task<Finding> CreateFindingFromBacklogEntryAsync(RiskBacklogEntry entry, string approverId)
+        {
+            if (!entry.IsFindingWorkflow())
+            {
+                throw new InvalidOperationException("Backlog entry is not a finding workflow entry");
+            }
+
+            try
+            {
+                // Create the Finding object from backlog entry data
+                var finding = new Finding
+                {
+                    Title = entry.FindingTitle ?? "Finding from Backlog Entry",
+                    Details = entry.FindingDetails ?? "",
+                    Asset = entry.Asset ?? "",
+                    BusinessUnit = entry.BusinessUnit ?? "",
+                    BusinessOwner = entry.BusinessOwner ?? approverId,
+                    Domain = entry.Domain ?? "",
+                    TechnicalControl = entry.TechnicalControl ?? "",
+                    Owner = entry.BusinessOwner ?? approverId,
+                    
+                    // Risk assessment fields
+                    Impact = entry.Impact ?? ImpactLevel.Medium,
+                    Likelihood = entry.Likelihood ?? LikelihoodLevel.Possible,
+                    Exposure = entry.Exposure ?? ExposureLevel.ModeratelyExposed,
+                    RiskRating = entry.RiskRating ?? RiskRating.Medium,
+                    
+                    // Set status to Open since it's approved
+                    Status = FindingStatus.Open,
+                    OpenDate = DateTime.UtcNow,
+                    SlaDate = DateTime.UtcNow.AddDays(30), // Default 30-day remediation period
+                    
+                    // Audit fields
+                    CreatedBy = approverId,
+                    UpdatedBy = approverId,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Findings.Add(finding);
+                await _context.SaveChangesAsync();
+                
+                return finding;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to create finding from backlog entry: {ex.Message}", ex);
+            }
+        }
+
+        // New methods for re-assignment functionality
+        public async Task<RiskBacklogEntry> UnassignEntryAsync(int backlogId, string userId)
+        {
+            _logger.LogInformation("UnassignEntryAsync called: BacklogId={BacklogId}, UserId={UserId}", backlogId, userId);
+
+            try
+            {
+                _logger.LogInformation("Fetching backlog entry with ID: {BacklogId}", backlogId);
+                var entry = await _context.RiskBacklogEntries
+                    .Include(e => e.Risk)
+                    .FirstOrDefaultAsync(e => e.Id == backlogId);
+
+                if (entry == null)
+                {
+                    _logger.LogError("Backlog entry with ID {BacklogId} not found in database", backlogId);
+                    throw new ArgumentException($"Backlog entry with ID {backlogId} not found", nameof(backlogId));
+                }
+
+                _logger.LogInformation("Found backlog entry {BacklogNumber}, current status: {Status}, current analyst: {CurrentAnalyst}, current manager: {CurrentManager}", 
+                    entry.BacklogNumber, entry.Status, entry.AssignedToAnalyst ?? "None", entry.AssignedToManager ?? "None");
+
+                // Store previous state for logging
+                var previousStatus = entry.Status;
+                var previousAssignee = entry.GetCurrentAssignee();
+                _logger.LogInformation("Previous status: {PreviousStatus}, Previous assignee: {PreviousAssignee}", previousStatus, previousAssignee);
+
+                // Reset to unassigned state
+                entry.Status = RiskBacklogStatus.Unassigned;
+                entry.UpdatedAt = DateTime.UtcNow;
+                entry.UpdatedBy = userId;
+                entry.AssignedToAnalyst = null;
+                entry.AssignedToManager = null;
+                entry.AssignedDate = null;
+
+                _logger.LogInformation("Updated entry to unassigned state, logging activity...");
+
+                // Log the activity
+                await LogActivityAsync(backlogId, "Unassigned", $"From: {previousAssignee}", "Unassigned", $"Entry unassigned by {userId}", userId);
+
+                _logger.LogInformation("Activity logged, saving changes to database...");
+                await _context.SaveChangesAsync();
+                
+                _logger.LogInformation("Successfully unassigned backlog entry {BacklogId}", backlogId);
+                return entry;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in UnassignEntryAsync for BacklogId={BacklogId}: {Message} | StackTrace: {StackTrace}", 
+                    backlogId, ex.Message, ex.StackTrace);
+                throw;
+            }
+        }
+
     }
 }

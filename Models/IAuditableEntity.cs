@@ -10,6 +10,6 @@ namespace CyberRiskApp.Models
         string UpdatedBy { get; set; }
         
         [Timestamp]
-        byte[] RowVersion { get; set; }
+        byte[]? RowVersion { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using CyberRiskApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CyberRiskApp.Migrations
 {
     [DbContext(typeof(CyberRiskContext))]
-    partial class CyberRiskContextModelSnapshot : ModelSnapshot
+    [Migration("20250818221839_AddFindingBacklogWorkflow")]
+    partial class AddFindingBacklogWorkflow
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1492,6 +1495,287 @@ namespace CyberRiskApp.Migrations
                     b.ToTable("Findings");
                 });
 
+            modelBuilder.Entity("CyberRiskApp.Models.FindingBacklogActivity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActivityType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("AdditionalDetails")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("BacklogEntryId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FromValue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+
+                    b.Property<string>("ToValue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BacklogEntryId");
+
+                    b.ToTable("FindingBacklogActivities", (string)null);
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.FindingBacklogComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BacklogEntryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("CommentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsInternal")
+                        .HasColumnType("boolean");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BacklogEntryId");
+
+                    b.ToTable("FindingBacklogComments", (string)null);
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.FindingBacklogEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AnalystComments")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Asset")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("AssignedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AssignedToAnalyst")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("AssignedToManager")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<string>("BacklogNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("BusinessOwner")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("BusinessUnit")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Exposure")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("FindingId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Impact")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsSLABreached")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Likelihood")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ManagerComments")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RequestDescription")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RequestJustification")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RequesterUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
+
+                    b.Property<int>("RiskRating")
+                        .HasColumnType("integer");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea")
+                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TechnicalControl")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BacklogNumber")
+                        .IsUnique();
+
+                    b.HasIndex("FindingId");
+
+                    b.ToTable("FindingBacklogEntries", (string)null);
+                });
+
             modelBuilder.Entity("CyberRiskApp.Models.FindingClosureRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -2886,10 +3170,6 @@ namespace CyberRiskApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Asset")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTime?>("AssignedDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -2906,14 +3186,6 @@ namespace CyberRiskApp.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("BusinessOwner")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("BusinessUnit")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -2927,39 +3199,11 @@ namespace CyberRiskApp.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("Domain")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("Exposure")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("FindingDetails")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<int?>("FindingId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("FindingSource")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("FindingTitle")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int?>("Impact")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsSLABreached")
                         .HasColumnType("boolean");
-
-                    b.Property<int?>("Likelihood")
-                        .HasColumnType("integer");
 
                     b.Property<string>("ManagerComments")
                         .IsRequired()
@@ -2988,9 +3232,6 @@ namespace CyberRiskApp.Migrations
                     b.Property<int?>("RiskId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("RiskRating")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("RiskSource")
                         .HasColumnType("integer");
 
@@ -3002,10 +3243,6 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
-
-                    b.Property<string>("TechnicalControl")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -3021,8 +3258,6 @@ namespace CyberRiskApp.Migrations
 
                     b.HasIndex("BacklogNumber")
                         .IsUnique();
-
-                    b.HasIndex("FindingId");
 
                     b.HasIndex("RiskId");
 
@@ -4528,6 +4763,41 @@ namespace CyberRiskApp.Migrations
                     b.Navigation("ApplicationDomain");
                 });
 
+            modelBuilder.Entity("CyberRiskApp.Models.FindingBacklogActivity", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.FindingBacklogEntry", "BacklogEntry")
+                        .WithMany("Activities")
+                        .HasForeignKey("BacklogEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_FindingBacklogActivities_FindingBacklogEntries_BacklogEntryId");
+
+                    b.Navigation("BacklogEntry");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.FindingBacklogComment", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.FindingBacklogEntry", "BacklogEntry")
+                        .WithMany("Comments")
+                        .HasForeignKey("BacklogEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_FindingBacklogComments_FindingBacklogEntries_BacklogEntryId");
+
+                    b.Navigation("BacklogEntry");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.FindingBacklogEntry", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.Finding", "Finding")
+                        .WithMany()
+                        .HasForeignKey("FindingId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_FindingBacklogEntries_Findings_FindingId");
+
+                    b.Navigation("Finding");
+                });
+
             modelBuilder.Entity("CyberRiskApp.Models.FindingClosureRequest", b =>
                 {
                     b.HasOne("CyberRiskApp.Models.User", "AssignedByUser")
@@ -4777,19 +5047,11 @@ namespace CyberRiskApp.Migrations
 
             modelBuilder.Entity("CyberRiskApp.Models.RiskBacklogEntry", b =>
                 {
-                    b.HasOne("CyberRiskApp.Models.Finding", "Finding")
-                        .WithMany()
-                        .HasForeignKey("FindingId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("FK_RiskBacklogEntries_Findings_FindingId");
-
                     b.HasOne("CyberRiskApp.Models.Risk", "Risk")
                         .WithMany()
                         .HasForeignKey("RiskId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("FK_RiskBacklogEntries_Risks_RiskId");
-
-                    b.Navigation("Finding");
 
                     b.Navigation("Risk");
                 });
@@ -5071,6 +5333,13 @@ namespace CyberRiskApp.Migrations
                     b.Navigation("AcceptanceRequests");
 
                     b.Navigation("RelatedRisks");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.FindingBacklogEntry", b =>
+                {
+                    b.Navigation("Activities");
+
+                    b.Navigation("Comments");
                 });
 
             modelBuilder.Entity("CyberRiskApp.Models.KillChainActivity", b =>

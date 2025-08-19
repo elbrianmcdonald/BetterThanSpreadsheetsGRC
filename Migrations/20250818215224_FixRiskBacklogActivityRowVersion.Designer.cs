@@ -3,6 +3,7 @@ using System;
 using CyberRiskApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CyberRiskApp.Migrations
 {
     [DbContext(typeof(CyberRiskContext))]
-    partial class CyberRiskContextModelSnapshot : ModelSnapshot
+    [Migration("20250818215224_FixRiskBacklogActivityRowVersion")]
+    partial class FixRiskBacklogActivityRowVersion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2886,10 +2889,6 @@ namespace CyberRiskApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Asset")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTime?>("AssignedDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -2906,14 +2905,6 @@ namespace CyberRiskApp.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<string>("BusinessOwner")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("BusinessUnit")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -2927,39 +2918,11 @@ namespace CyberRiskApp.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("Domain")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("Exposure")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("FindingDetails")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<int?>("FindingId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("FindingSource")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("FindingTitle")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int?>("Impact")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsSLABreached")
                         .HasColumnType("boolean");
-
-                    b.Property<int?>("Likelihood")
-                        .HasColumnType("integer");
 
                     b.Property<string>("ManagerComments")
                         .IsRequired()
@@ -2988,9 +2951,6 @@ namespace CyberRiskApp.Migrations
                     b.Property<int?>("RiskId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("RiskRating")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("RiskSource")
                         .HasColumnType("integer");
 
@@ -3002,10 +2962,6 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
-
-                    b.Property<string>("TechnicalControl")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -3021,8 +2977,6 @@ namespace CyberRiskApp.Migrations
 
                     b.HasIndex("BacklogNumber")
                         .IsUnique();
-
-                    b.HasIndex("FindingId");
 
                     b.HasIndex("RiskId");
 
@@ -4777,19 +4731,11 @@ namespace CyberRiskApp.Migrations
 
             modelBuilder.Entity("CyberRiskApp.Models.RiskBacklogEntry", b =>
                 {
-                    b.HasOne("CyberRiskApp.Models.Finding", "Finding")
-                        .WithMany()
-                        .HasForeignKey("FindingId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("FK_RiskBacklogEntries_Findings_FindingId");
-
                     b.HasOne("CyberRiskApp.Models.Risk", "Risk")
                         .WithMany()
                         .HasForeignKey("RiskId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("FK_RiskBacklogEntries_Risks_RiskId");
-
-                    b.Navigation("Finding");
 
                     b.Navigation("Risk");
                 });

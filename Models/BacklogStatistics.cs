@@ -11,6 +11,14 @@ namespace CyberRiskApp.Models
         public int CompletedThisMonth { get; set; }
         public int RejectedThisMonth { get; set; }
         
+        // Finding vs Risk breakdown
+        public int TotalFindings { get; set; }
+        public int TotalRisks { get; set; }
+        public int UnassignedFindings { get; set; }
+        public int UnassignedRisks { get; set; }
+        public int CompletedFindingsThisWeek { get; set; }
+        public int CompletedRisksThisWeek { get; set; }
+        
         public Dictionary<RiskBacklogAction, int> ActionTypeCounts { get; set; } = new();
         public Dictionary<BacklogPriority, int> PriorityCounts { get; set; } = new();
         public Dictionary<RiskSource, int> SourceCounts { get; set; } = new();

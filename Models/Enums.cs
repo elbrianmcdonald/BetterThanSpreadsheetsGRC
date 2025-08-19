@@ -114,6 +114,7 @@
         RiskAccepted = 3
     }
 
+
     public enum RiskStatus
     {
         Open = 1,
@@ -269,7 +270,10 @@
         RiskAcceptance = 2,
         RiskExtension = 3,
         RiskReview = 4,
-        RiskReassessment = 5
+        RiskReassessment = 5,
+        NewFinding = 6,
+        FindingReview = 7,
+        FindingClosure = 8
     }
 
     public enum BacklogPriority

@@ -15,14 +15,22 @@ namespace CyberRiskApp.Controllers
         private readonly IRequestService _requestService;
         private readonly IExportService _exportService;
         private readonly IRiskMatrixService _riskMatrixService;
+        private readonly IRiskBacklogService _riskBacklogService;
         private readonly ILogger<FindingsController> _logger;
 
-        public FindingsController(IFindingService findingService, IRequestService requestService, IExportService exportService, IRiskMatrixService riskMatrixService, ILogger<FindingsController> logger)
+        public FindingsController(
+            IFindingService findingService, 
+            IRequestService requestService, 
+            IExportService exportService, 
+            IRiskMatrixService riskMatrixService, 
+            IRiskBacklogService riskBacklogService, 
+            ILogger<FindingsController> logger)
         {
             _findingService = findingService;
             _requestService = requestService;
             _exportService = exportService;
             _riskMatrixService = riskMatrixService;
+            _riskBacklogService = riskBacklogService;
             _logger = logger;
         }
 
@@ -112,39 +120,28 @@ namespace CyberRiskApp.Controllers
             {
                 try
                 {
-                    // Get the default risk matrix and calculate risk rating using it
-                    var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
-                    if (defaultMatrix != null)
-                    {
-                        // Convert enum values to integers for the risk matrix calculation
-                        int impactLevel = (int)finding.Impact;
-                        int likelihoodLevel = (int)finding.Likelihood;
-                        int? exposureLevel = defaultMatrix.MatrixType == RiskMatrixType.ImpactLikelihoodExposure 
-                            ? (int)finding.Exposure 
-                            : null;
+                    // NEW WORKFLOW: Route finding through backlog for approval before creating in register
+                    var userId = User.Identity?.Name ?? "Unknown";
+                    
+                    var backlogEntry = await _riskBacklogService.CreateFindingBacklogEntryAsync(
+                        title: finding.Title,
+                        details: finding.Details,
+                        source: "Manual Creation", // Could be made configurable
+                        impact: finding.Impact,
+                        likelihood: finding.Likelihood,
+                        exposure: finding.Exposure,
+                        asset: finding.Asset ?? "",
+                        businessUnit: finding.BusinessUnit ?? "",
+                        businessOwner: finding.BusinessOwner ?? "",
+                        domain: finding.Domain ?? "",
+                        technicalControl: finding.TechnicalControl ?? "",
+                        requesterId: userId
+                    );
 
-                        var riskLevel = await _riskMatrixService.CalculateRiskLevelAsync(
-                            defaultMatrix.Id, impactLevel, likelihoodLevel, exposureLevel);
-
-                        // Convert RiskLevel back to RiskRating
-                        finding.RiskRating = riskLevel switch
-                        {
-                            RiskLevel.Low => RiskRating.Low,
-                            RiskLevel.Medium => RiskRating.Medium,
-                            RiskLevel.High => RiskRating.High,
-                            RiskLevel.Critical => RiskRating.Critical,
-                            _ => RiskRating.Medium
-                        };
-                    }
-                    else
-                    {
-                        // Fallback to original calculation if no matrix is configured
-                        finding.RiskRating = finding.CalculateRiskRating();
-                    }
-
-                    await _findingService.CreateFindingAsync(finding);
-                    TempData["Success"] = "Finding created successfully with risk rating calculated using configured matrix.";
-                    return RedirectToAction(nameof(Index));
+                    TempData["Success"] = $"Finding submitted for approval as backlog entry {backlogEntry.BacklogNumber}. It will be added to the findings register once approved.";
+                    
+                    // Redirect to the backlog to see the new entry
+                    return RedirectToAction("Index", "RiskBacklog");
                 }
                 catch (Exception ex)
                 {
@@ -512,37 +509,28 @@ namespace CyberRiskApp.Controllers
                 var errorCount = 0;
                 var errors = new List<string>();
 
+                var userId = User.Identity?.Name ?? "Unknown";
+                
                 foreach (var finding in findings)
                 {
                     try
                     {
-                        // Calculate risk rating using the configured matrix
-                        if (defaultMatrix != null)
-                        {
-                            int impactLevel = (int)finding.Impact;
-                            int likelihoodLevel = (int)finding.Likelihood;
-                            int? exposureLevel = defaultMatrix.MatrixType == RiskMatrixType.ImpactLikelihoodExposure 
-                                ? (int)finding.Exposure 
-                                : null;
-
-                            var riskLevel = await _riskMatrixService.CalculateRiskLevelAsync(
-                                defaultMatrix.Id, impactLevel, likelihoodLevel, exposureLevel);
-
-                            finding.RiskRating = riskLevel switch
-                            {
-                                RiskLevel.Low => RiskRating.Low,
-                                RiskLevel.Medium => RiskRating.Medium,
-                                RiskLevel.High => RiskRating.High,
-                                RiskLevel.Critical => RiskRating.Critical,
-                                _ => RiskRating.Medium
-                            };
-                        }
-                        else
-                        {
-                            finding.RiskRating = finding.CalculateRiskRating();
-                        }
-
-                        await _findingService.CreateFindingAsync(finding);
+                        // NEW WORKFLOW: Route finding through backlog for approval before creating in register
+                        var backlogEntry = await _riskBacklogService.CreateFindingBacklogEntryAsync(
+                            title: finding.Title,
+                            details: finding.Details,
+                            source: "Excel Upload",
+                            impact: finding.Impact,
+                            likelihood: finding.Likelihood,
+                            exposure: finding.Exposure,
+                            asset: finding.Asset ?? "",
+                            businessUnit: finding.BusinessUnit ?? "",
+                            businessOwner: finding.BusinessOwner ?? "",
+                            domain: finding.Domain ?? "",
+                            technicalControl: finding.TechnicalControl ?? "",
+                            requesterId: userId
+                        );
+                        
                         successCount++;
                     }
                     catch (Exception ex)
@@ -553,7 +541,7 @@ namespace CyberRiskApp.Controllers
                     }
                 }
 
-                var message = $"Upload completed: {successCount} findings created successfully";
+                var message = $"Upload completed: {successCount} findings submitted for approval in the backlog";
                 if (errorCount > 0)
                 {
                     message += $", {errorCount} errors occurred.";
@@ -562,10 +550,10 @@ namespace CyberRiskApp.Controllers
                 }
                 else
                 {
-                    TempData["Success"] = message + ".";
+                    TempData["Success"] = message + ". They will be added to the findings register once approved.";
                 }
 
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("Index", "RiskBacklog");
             }
             catch (Exception ex)
             {

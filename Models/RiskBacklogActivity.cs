@@ -51,6 +51,6 @@ namespace CyberRiskApp.Models
         public string UpdatedBy { get; set; } = string.Empty;
 
         [Timestamp]
-        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+        public byte[]? RowVersion { get; set; }
     }
 }

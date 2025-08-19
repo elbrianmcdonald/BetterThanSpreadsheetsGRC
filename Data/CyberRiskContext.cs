@@ -24,6 +24,7 @@ namespace CyberRiskApp.Data
         public DbSet<RiskBacklogEntry> RiskBacklogEntries { get; set; }
         public DbSet<RiskBacklogComment> RiskBacklogComments { get; set; }
         public DbSet<RiskBacklogActivity> RiskBacklogActivities { get; set; }
+        
 
         // Existing Governance Module DbSets (Compliance)
         public DbSet<ComplianceFramework> ComplianceFrameworks { get; set; }
@@ -245,6 +246,101 @@ namespace CyberRiskApp.Data
                     .IsRowVersion()
                     .HasDefaultValueSql("'\\x0000000000000001'::bytea"); // PostgreSQL bytea literal
             });
+
+            // ========================================
+            // RISK BACKLOG ENTITIES CONFIGURATION
+            // ========================================
+
+            // Configure RiskBacklogActivity entity RowVersion for PostgreSQL
+            modelBuilder.Entity<RiskBacklogActivity>(entity =>
+            {
+                entity.ToTable("RiskBacklogActivities");
+                entity.HasKey(rba => rba.Id);
+
+                // Configure RowVersion for PostgreSQL - nullable with default value
+                entity.Property(rba => rba.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea"); // PostgreSQL bytea literal
+                
+                // Configure BacklogEntry relationship
+                entity.HasOne(rba => rba.BacklogEntry)
+                    .WithMany(rbe => rbe.Activities)
+                    .HasForeignKey(rba => rba.BacklogEntryId)
+                    .HasConstraintName("FK_RiskBacklogActivities_RiskBacklogEntries_BacklogEntryId")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Configure audit fields default values
+                entity.Property(rba => rba.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(rba => rba.UpdatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            });
+
+            // Configure RiskBacklogComment entity RowVersion for PostgreSQL
+            modelBuilder.Entity<RiskBacklogComment>(entity =>
+            {
+                entity.ToTable("RiskBacklogComments");
+                entity.HasKey(rbc => rbc.Id);
+
+                // Configure RowVersion for PostgreSQL - non-nullable needs default value
+                entity.Property(rbc => rbc.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea"); // PostgreSQL bytea literal
+
+                // Configure BacklogEntry relationship
+                entity.HasOne(rbc => rbc.BacklogEntry)
+                    .WithMany(rbe => rbe.Comments)
+                    .HasForeignKey(rbc => rbc.BacklogEntryId)
+                    .HasConstraintName("FK_RiskBacklogComments_RiskBacklogEntries_BacklogEntryId")
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Configure audit fields default values
+                entity.Property(rbc => rbc.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(rbc => rbc.UpdatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+            });
+
+            // Configure RiskBacklogEntry entity (if not already configured)
+            modelBuilder.Entity<RiskBacklogEntry>(entity =>
+            {
+                entity.ToTable("RiskBacklogEntries");
+                entity.HasKey(rbe => rbe.Id);
+
+                // RowVersion was already fixed in migration 20250818012159_FixRowVersionNullable
+                // but ensure it has default value if needed
+                entity.Property(rbe => rbe.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea"); // PostgreSQL bytea literal
+
+                // Configure Risk relationship
+                entity.HasOne(rbe => rbe.Risk)
+                    .WithMany()
+                    .HasForeignKey(rbe => rbe.RiskId)
+                    .HasConstraintName("FK_RiskBacklogEntries_Risks_RiskId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Configure Finding relationship
+                entity.HasOne(rbe => rbe.Finding)
+                    .WithMany()
+                    .HasForeignKey(rbe => rbe.FindingId)
+                    .HasConstraintName("FK_RiskBacklogEntries_Findings_FindingId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Configure audit fields default values
+                entity.Property(rbe => rbe.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(rbe => rbe.UpdatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                // Ensure unique backlog numbers
+                entity.HasIndex(rbe => rbe.BacklogNumber)
+                    .IsUnique();
+            });
+
 
             // RiskAcceptanceRequest -> Finding (Many-to-One) - Can be linked to a finding
             modelBuilder.Entity<RiskAcceptanceRequest>()

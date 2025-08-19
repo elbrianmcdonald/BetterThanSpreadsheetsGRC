@@ -6,6 +6,13 @@ namespace CyberRiskApp.Services
     {
         // Backlog Entry Management
         Task<RiskBacklogEntry> CreateBacklogEntryAsync(int? riskId, RiskBacklogAction actionType, string description, string justification, string requesterId);
+        
+        // Finding Backlog Management
+        Task<RiskBacklogEntry> CreateFindingBacklogEntryAsync(
+            string title, string details, string source, 
+            ImpactLevel impact, LikelihoodLevel likelihood, ExposureLevel exposure,
+            string asset, string businessUnit, string businessOwner, string domain, string technicalControl,
+            string requesterId);
         Task<RiskBacklogEntry?> GetBacklogEntryByIdAsync(int id);
         Task<RiskBacklogEntry> AssignToAnalystAsync(int backlogId, string analystId, string assignedBy);
         Task<RiskBacklogEntry> AssignToManagerAsync(int backlogId, string managerId, string assignedBy);
@@ -17,6 +24,7 @@ namespace CyberRiskApp.Services
         Task<RiskBacklogEntry> ManagerApproveAsync(int backlogId, string comments, string managerId);
         Task<RiskBacklogEntry> ManagerRejectAsync(int backlogId, string reason, string managerId);
         Task<RiskBacklogEntry> EscalateAsync(int backlogId, string reason, string userId);
+        Task<RiskBacklogEntry> UnassignEntryAsync(int backlogId, string userId);
         
         // Comment Management
         Task<RiskBacklogComment> AddCommentAsync(int backlogId, string comment, string commentType, bool isInternal, string userId);

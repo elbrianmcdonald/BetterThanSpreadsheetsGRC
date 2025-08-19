@@ -9,7 +9,7 @@
         <div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a asp-controller="RiskBacklog" asp-action="Index">Risk Backlog</a></li>
+                    <li class="breadcrumb-item"><a asp-controller="RiskBacklog" asp-action="Index">Risk & Finding Workflow</a></li>
                     <li class="breadcrumb-item active">@Model.Entry.BacklogNumber</li>
                 </ol>
             </nav>
@@ -173,6 +173,127 @@
                                 }
                             </div>
                         </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Finding Information -->
+            @if (Model.Entry.IsFindingWorkflow())
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-search me-2"></i>Finding Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Finding Title</label>
+                                    <div class="p-2 bg-light rounded">
+                                        @(Model.Entry.FindingTitle ?? "Unnamed Finding")
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(Model.Entry.FindingSource))
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Source</label>
+                                        <div>
+                                            <span class="badge bg-success">@Model.Entry.FindingSource</span>
+                                        </div>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.Entry.Asset))
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Asset</label>
+                                        <div>@Model.Entry.Asset</div>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.Entry.Domain))
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Domain</label>
+                                        <div>@Model.Entry.Domain</div>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                @if (Model.Entry.RiskRating.HasValue)
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Risk Rating</label>
+                                        <div>
+                                            <span class="badge bg-@(Model.Entry.RiskRating.Value switch 
+                                            { 
+                                                CyberRiskApp.Models.RiskRating.Low => "secondary",
+                                                CyberRiskApp.Models.RiskRating.Medium => "primary", 
+                                                CyberRiskApp.Models.RiskRating.High => "warning",
+                                                CyberRiskApp.Models.RiskRating.Critical => "danger",
+                                                _ => "secondary"
+                                            }) fs-6">@Model.Entry.RiskRating</span>
+                                        </div>
+                                    </div>
+                                }
+                                <div class="row">
+                                    @if (Model.Entry.Impact.HasValue)
+                                    {
+                                        <div class="col-4">
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Impact</label>
+                                                <div>
+                                                    <span class="badge bg-info">@Model.Entry.Impact</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (Model.Entry.Likelihood.HasValue)
+                                    {
+                                        <div class="col-4">
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Likelihood</label>
+                                                <div>
+                                                    <span class="badge bg-info">@Model.Entry.Likelihood</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (Model.Entry.Exposure.HasValue)
+                                    {
+                                        <div class="col-4">
+                                            <div class="mb-3">
+                                                <label class="form-label text-muted small">Exposure</label>
+                                                <div>
+                                                    <span class="badge bg-info">@Model.Entry.Exposure</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrEmpty(Model.Entry.BusinessUnit))
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Business Unit</label>
+                                        <div>@Model.Entry.BusinessUnit</div>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(Model.Entry.BusinessOwner))
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted">Business Owner</label>
+                                        <div>@Model.Entry.BusinessOwner</div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.Entry.FindingDetails))
+                        {
+                            <div class="mt-3">
+                                <label class="form-label text-muted">Finding Details</label>
+                                <div class="p-3 bg-light rounded">
+                                    @Model.Entry.FindingDetails
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             }

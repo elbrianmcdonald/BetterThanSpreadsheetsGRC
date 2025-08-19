@@ -52,4 +52,5 @@ namespace CyberRiskApp.ViewModels
         public Dictionary<string, double> SLAPerformance { get; set; } = new();
         public Dictionary<string, int> AssigneeWorkload { get; set; } = new();
     }
+
 }
