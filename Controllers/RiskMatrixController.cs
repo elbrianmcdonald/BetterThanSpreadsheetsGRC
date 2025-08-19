@@ -71,7 +71,7 @@ namespace CyberRiskApp.Controllers
             return View(matrix);
         }
 
-        // GET: RiskMatrix/Edit/5
+        // GET: RiskMatrix/Edit/5 - Redirect to Configure
         public async Task<IActionResult> Edit(int id)
         {
             var matrix = await _riskMatrixService.GetMatrixByIdAsync(id);
@@ -79,7 +79,8 @@ namespace CyberRiskApp.Controllers
             {
                 return NotFound();
             }
-            return View(matrix);
+            // Redirect to Configure action since that's the actual edit view
+            return RedirectToAction(nameof(Configure), new { id });
         }
 
         // POST: RiskMatrix/Edit/5
@@ -105,7 +106,7 @@ namespace CyberRiskApp.Controllers
                     TempData["Error"] = $"Error updating risk matrix: {ex.Message}";
                 }
             }
-            return View(matrix);
+            return RedirectToAction(nameof(Configure), new { id = matrix.Id });
         }
 
         // GET: RiskMatrix/Configure/5
