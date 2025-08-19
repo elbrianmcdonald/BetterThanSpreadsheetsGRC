@@ -134,9 +134,9 @@ namespace CyberRiskApp.Controllers
                         ViewBag.SystemHealth = Math.Min(100, healthScore);
                     }
 
-                    return View(viewModel);
+                    return viewModel;
                 },
-                result => View(result),
+                viewModel => View(viewModel),
                 "loading backlog dashboard"
             );
         }

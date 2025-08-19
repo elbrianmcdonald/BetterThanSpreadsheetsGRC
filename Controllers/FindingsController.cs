@@ -122,36 +122,34 @@ namespace CyberRiskApp.Controllers
             
             if (ModelState.IsValid)
             {
-                return await ExecuteWithErrorHandling(
-                    async () =>
-                    {
-                        // NEW WORKFLOW: Route finding through backlog for approval before creating in register
-                        var userId = User.GetUserId();
-                        
-                        var backlogEntry = await _riskBacklogService.CreateFindingBacklogEntryAsync(
-                            title: finding.Title,
-                            details: finding.Details,
-                            source: "Manual Creation", // Could be made configurable
-                            impact: finding.Impact,
-                            likelihood: finding.Likelihood,
-                            exposure: finding.Exposure,
-                            asset: finding.Asset ?? "",
-                            businessUnit: finding.BusinessUnit ?? "",
-                            businessOwner: finding.BusinessOwner ?? "",
-                            domain: finding.Domain ?? "",
-                            technicalControl: finding.TechnicalControl ?? "",
-                            requesterId: userId
-                        );
+                try
+                {
+                    // NEW WORKFLOW: Route finding through backlog for approval before creating in register
+                    var userId = User.GetUserId();
+                    
+                    var backlogEntry = await _riskBacklogService.CreateFindingBacklogEntryAsync(
+                        title: finding.Title,
+                        details: finding.Details,
+                        source: "Manual Creation", // Could be made configurable
+                        impact: finding.Impact,
+                        likelihood: finding.Likelihood,
+                        exposure: finding.Exposure,
+                        asset: finding.Asset ?? "",
+                        businessUnit: finding.BusinessUnit ?? "",
+                        businessOwner: finding.BusinessOwner ?? "",
+                        domain: finding.Domain ?? "",
+                        technicalControl: finding.TechnicalControl ?? "",
+                        requesterId: userId
+                    );
 
-                        return backlogEntry;
-                    },
-                    backlogEntry =>
-                    {
-                        TempData["Success"] = $"Finding submitted for approval as backlog entry {backlogEntry.BacklogNumber}. It will be added to the findings register once approved.";
-                        return RedirectToAction("Index", "RiskBacklog");
-                    },
-                    "creating finding"
-                );
+                    TempData["Success"] = $"Finding submitted for approval as backlog entry {backlogEntry.BacklogNumber}. It will be added to the findings register once approved.";
+                    return RedirectToAction("Index", "RiskBacklog");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error creating finding");
+                    ModelState.AddModelError("", $"Error creating finding: {ex.Message}");
+                }
             }
 
             return View(finding);
