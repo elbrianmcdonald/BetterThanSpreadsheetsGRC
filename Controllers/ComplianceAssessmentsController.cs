@@ -5,14 +5,16 @@ using CyberRiskApp.Services;
 using CyberRiskApp.ViewModels;
 using CyberRiskApp.Authorization;
 using CyberRiskApp.Extensions;
+using CyberRiskApp.Filters;
+using Microsoft.Extensions.Logging;
 
 namespace CyberRiskApp.Controllers
 {
-    public class ComplianceAssessmentsController : Controller
+    public class ComplianceAssessmentsController : BaseController
     {
         private readonly IGovernanceService _governanceService;
 
-        public ComplianceAssessmentsController(IGovernanceService governanceService)
+        public ComplianceAssessmentsController(IGovernanceService governanceService, ILogger<ComplianceAssessmentsController> logger) : base(logger)
         {
             _governanceService = governanceService;
         }
@@ -21,9 +23,16 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> Index()
         {
-            var assessments = await _governanceService.GetAllAssessmentsAsync();
-            ViewBag.CanPerformAssessments = User.CanUserPerformAssessments();
-            return View(assessments);
+            return await ExecuteWithErrorHandling(
+                async () =>
+                {
+                    var assessments = await _governanceService.GetAllAssessmentsAsync();
+                    ViewBag.CanPerformAssessments = User.CanUserPerformAssessments();
+                    return assessments;
+                },
+                assessments => View(assessments),
+                "loading compliance assessments"
+            );
         }
 
         // UPDATED: All users can view assessment details
@@ -81,58 +90,35 @@ namespace CyberRiskApp.Controllers
         // Only GRC and Admin can create assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RemoveAuditFields]
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(ComplianceAssessmentViewModel model)
         {
-            try
+            if (ModelState.IsValid)
             {
-                Console.WriteLine("=== Create POST Action ===");
-                Console.WriteLine($"Assessment title: {model.Assessment.Title}");
-                Console.WriteLine($"Framework ID: {model.Assessment.ComplianceFrameworkId}");
-                Console.WriteLine($"Organization ID: {model.Assessment.BusinessOrganizationId}");
+                return await ExecuteWithErrorHandling(
+                    async () =>
+                    {
+                        model.Assessment.Assessor = User.GetUserId();
+                        model.Assessment.CreatedAt = DateTime.UtcNow;
 
-                // Remove audit fields from model validation since they're set automatically
-                ModelState.Remove("Assessment.CreatedBy");
-                ModelState.Remove("Assessment.UpdatedBy");
-
-                if (ModelState.IsValid)
-                {
-                    model.Assessment.Assessor = User.Identity?.Name ?? "Current User";
-                    model.Assessment.CreatedAt = DateTime.UtcNow;
-
-                    var createdAssessment = await _governanceService.CreateAssessmentAsync(model.Assessment);
-
-                    Console.WriteLine($"Assessment created with ID: {createdAssessment.Id}");
-
-                    TempData["Success"] = "Compliance assessment created successfully.";
-                    return RedirectToAction(nameof(Details), new { id = createdAssessment.Id });
-                }
-
-                Console.WriteLine("Model validation failed");
-                foreach (var error in ModelState.Where(x => x.Value.Errors.Count > 0))
-                {
-                    Console.WriteLine($"{error.Key}: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
-                }
-
-                // Reload data for the view
-                model.Frameworks = (await _governanceService.GetAllFrameworksAsync()).ToList();
-                model.Organizations = (await _governanceService.GetAllOrganizationsAsync()).ToList();
-
-                return View(model);
+                        var createdAssessment = await _governanceService.CreateAssessmentAsync(model.Assessment);
+                        return createdAssessment;
+                    },
+                    createdAssessment =>
+                    {
+                        TempData["Success"] = "Compliance assessment created successfully.";
+                        return RedirectToAction(nameof(Details), new { id = createdAssessment.Id });
+                    },
+                    "creating compliance assessment"
+                );
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in Create POST: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
 
-                TempData["Error"] = $"Error creating assessment: {ex.Message}";
+            // Reload data for the view
+            model.Frameworks = (await _governanceService.GetAllFrameworksAsync()).ToList();
+            model.Organizations = (await _governanceService.GetAllOrganizationsAsync()).ToList();
 
-                // Reload data for the view
-                model.Frameworks = (await _governanceService.GetAllFrameworksAsync()).ToList();
-                model.Organizations = (await _governanceService.GetAllOrganizationsAsync()).ToList();
-
-                return View(model);
-            }
+            return View(model);
         }
 
         // Only GRC and Admin can edit assessments
@@ -156,6 +142,7 @@ namespace CyberRiskApp.Controllers
         // Only GRC and Admin can edit assessments
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RemoveAuditFields]
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id, ComplianceAssessmentViewModel model)
         {
@@ -164,16 +151,19 @@ namespace CyberRiskApp.Controllers
 
             if (ModelState.IsValid)
             {
-                try
-                {
-                    await _governanceService.UpdateAssessmentAsync(model.Assessment);
-                    TempData["Success"] = "Compliance assessment updated successfully.";
-                    return RedirectToAction(nameof(Details), new { id });
-                }
-                catch (Exception ex)
-                {
-                    TempData["Error"] = $"Error updating assessment: {ex.Message}";
-                }
+                return await ExecuteWithErrorHandling(
+                    async () =>
+                    {
+                        await _governanceService.UpdateAssessmentAsync(model.Assessment);
+                        return model.Assessment;
+                    },
+                    _ =>
+                    {
+                        TempData["Success"] = "Compliance assessment updated successfully.";
+                        return RedirectToAction(nameof(Details), new { id });
+                    },
+                    "updating compliance assessment"
+                );
             }
 
             // Reload data for the view
@@ -189,24 +179,24 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
-            {
-                var success = await _governanceService.DeleteAssessmentAsync(id);
-                if (success)
+            return await ExecuteWithErrorHandling(
+                async () =>
+                {
+                    var success = await _governanceService.DeleteAssessmentAsync(id);
+                    if (!success)
+                    {
+                        throw new InvalidOperationException("Assessment not found or could not be deleted.");
+                    }
+                    return success;
+                },
+                _ =>
                 {
                     TempData["Success"] = "Compliance assessment deleted successfully.";
-                }
-                else
-                {
-                    TempData["Error"] = "Assessment not found or could not be deleted.";
-                }
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Error deleting assessment: {ex.Message}";
-            }
-
-            return RedirectToAction(nameof(Index));
+                    return RedirectToAction(nameof(Index));
+                },
+                "deleting compliance assessment",
+                nameof(Index)
+            );
         }
 
         // UPDATED: All users can view bulk assessment view
@@ -296,7 +286,7 @@ namespace CyberRiskApp.Controllers
                     controlAssessment.EvidenceOfCompliance = data["EvidenceOfCompliance"]?.ToString();
                 }
 
-                controlAssessment.AssessedBy = User.Identity?.Name ?? "Current User";
+                controlAssessment.AssessedBy = User.GetUserId();
                 controlAssessment.AssessmentDate = DateTime.UtcNow;
 
                 await _governanceService.UpdateControlAssessmentAsync(controlAssessment);
@@ -391,7 +381,7 @@ namespace CyberRiskApp.Controllers
                         controlAssessment.EvidenceOfCompliance = update["EvidenceOfCompliance"]?.ToString();
                     }
 
-                    controlAssessment.AssessedBy = User.Identity?.Name ?? "Current User";
+                    controlAssessment.AssessedBy = User.GetUserId();
                     controlAssessment.AssessmentDate = DateTime.UtcNow;
 
                     await _governanceService.UpdateControlAssessmentAsync(controlAssessment);
@@ -472,7 +462,7 @@ namespace CyberRiskApp.Controllers
                         controlAssessment.EvidenceOfCompliance = update.EvidenceOfCompliance;
                     }
 
-                    controlAssessment.AssessedBy = User.Identity?.Name ?? "Current User";
+                    controlAssessment.AssessedBy = User.GetUserId();
                     controlAssessment.AssessmentDate = DateTime.UtcNow;
 
                     await _governanceService.UpdateControlAssessmentAsync(controlAssessment);

@@ -9,11 +9,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using CyberRiskApp.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace CyberRiskApp.Controllers
 {
     // REMOVED: [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)] - controller level authorization
-    public class RiskAssessmentsController : Controller
+    public class RiskAssessmentsController : BaseController
     {
         private readonly IRiskAssessmentService _assessmentService;
         private readonly IRiskService _riskService;
@@ -36,7 +37,8 @@ namespace CyberRiskApp.Controllers
             CyberRiskContext context, // ADDED: Context for control management
             IThreatModelingService threatModelingService, // ADDED: Threat modeling service
             IRiskAssessmentThreatModelService riskAssessmentThreatModelService, // ADDED: Risk assessment threat model service
-            IRiskBacklogService backlogService) // ADDED: Risk backlog service
+            IRiskBacklogService backlogService, // ADDED: Risk backlog service
+            ILogger<RiskAssessmentsController> logger) : base(logger)
         {
             _assessmentService = assessmentService;
             _riskService = riskService;
@@ -54,9 +56,16 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> Index()
         {
-            var assessments = await _assessmentService.GetAllAssessmentsAsync();
-            ViewBag.CanPerformAssessments = User.CanUserPerformAssessments(); // Show/hide create buttons
-            return View(assessments);
+            return await ExecuteWithErrorHandling(
+                async () =>
+                {
+                    var assessments = await _assessmentService.GetAllAssessmentsAsync();
+                    ViewBag.CanPerformAssessments = User.CanUserPerformAssessments(); // Show/hide create buttons
+                    return assessments;
+                },
+                assessments => View(assessments),
+                "loading risk assessments"
+            );
         }
 
         // UPDATED: All users can view assessment details  
@@ -215,6 +224,7 @@ namespace CyberRiskApp.Controllers
         // NEW: POST action for Qualitative Assessment creation
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RemoveAuditFields]
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         [CleanupEmptyRisks]
         public async Task<IActionResult> CreateQualitative(FAIRAssessmentViewModel model)
@@ -222,9 +232,7 @@ namespace CyberRiskApp.Controllers
             // Ensure assessment type is set to Qualitative
             model.Assessment.AssessmentType = AssessmentType.Qualitative;
 
-            // Remove audit fields from model validation since they're set automatically
-            ModelState.Remove("Assessment.CreatedBy");
-            ModelState.Remove("Assessment.UpdatedBy");
+            // Audit fields are now automatically removed by RemoveAuditFields filter
             
             // Remove any nested audit fields from complex objects
             var auditKeys = ModelState.Keys.Where(k => 
@@ -312,12 +320,12 @@ namespace CyberRiskApp.Controllers
                     Console.WriteLine($"🔄 DEBUGGING: Starting CreateQualitative transaction");
                     
                         // Set assessment metadata
-                        model.Assessment.Assessor = User.Identity?.Name ?? "Current User";
+                        model.Assessment.Assessor = User.GetUserId();
                         model.Assessment.Status = AssessmentStatus.Draft; // Set default status
                         model.Assessment.CreatedAt = DateTime.UtcNow;
                         model.Assessment.UpdatedAt = DateTime.UtcNow;
-                        model.Assessment.CreatedBy = User.Identity?.Name ?? "System";
-                        model.Assessment.UpdatedBy = User.Identity?.Name ?? "System";
+                        model.Assessment.CreatedBy = User.GetUserId();
+                        model.Assessment.UpdatedBy = User.GetUserId();
 
                         createdAssessment = await _assessmentService.CreateAssessmentAsync(model.Assessment);
                     Console.WriteLine($"✅ DEBUGGING: Created assessment {createdAssessment.Id} - '{createdAssessment.Title}'");
@@ -374,7 +382,7 @@ namespace CyberRiskApp.Controllers
                                     actionType: RiskBacklogAction.NewRisk,
                                     description: riskDescription,
                                     justification: $"New risk identified from assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}",
-                                    requesterId: User.Identity?.Name ?? "System"
+                                    requesterId: User.GetUserId()
                                 );
                                 Console.WriteLine($"✅ DEBUGGING: Created backlog entry {backlogEntry.BacklogNumber} for risk '{risk.Title}' pending approval");
                             }
@@ -397,8 +405,8 @@ namespace CyberRiskApp.Controllers
                             scenario.RiskAssessmentId = createdAssessment.Id;
                             scenario.CreatedAt = DateTime.UtcNow;
                             scenario.UpdatedAt = DateTime.UtcNow;
-                            scenario.CreatedBy = User.Identity?.Name ?? "System";
-                            scenario.UpdatedBy = User.Identity?.Name ?? "System";
+                            scenario.CreatedBy = User.GetUserId();
+                            scenario.UpdatedBy = User.GetUserId();
                             
                             // RowVersion will be initialized by the model's default value
                             
@@ -465,7 +473,7 @@ namespace CyberRiskApp.Controllers
                                         riskDescription += $"Scenario Risk Score: {scenario.QualitativeRiskScore.Value}\n";
                                     }
                                     
-                                    var requesterId = User.Identity?.Name ?? "System";
+                                    var requesterId = User.GetUserId();
                                     var justification = $"New risk identified from threat scenario in assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}";
                                     
                                     Console.WriteLine($"🔍 CONTROLLER DEBUG: About to create backlog entry");
@@ -566,16 +574,14 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(FAIRAssessmentViewModel model)
         {
-            // Remove audit fields from model validation since they're set automatically
-            ModelState.Remove("Assessment.CreatedBy");
-            ModelState.Remove("Assessment.UpdatedBy");
+            // Audit fields are now automatically removed by RemoveAuditFields filter
             
             if (ModelState.IsValid)
             {
                 try
                 {
                     // Set assessment metadata
-                    model.Assessment.Assessor = User.Identity?.Name ?? "Current User";
+                    model.Assessment.Assessor = User.GetUserId();
                     model.Assessment.CreatedAt = DateTime.UtcNow;
                     model.Assessment.UpdatedAt = DateTime.UtcNow;
 
@@ -636,7 +642,7 @@ namespace CyberRiskApp.Controllers
                                     actionType: RiskBacklogAction.NewRisk,
                                     description: riskDescription,
                                     justification: $"New risk identified from assessment '{createdAssessment.Title}' for asset '{createdAssessment.Asset}'. Risk level: {risk.RiskLevel}",
-                                    requesterId: User.Identity?.Name ?? "System"
+                                    requesterId: User.GetUserId()
                                 );
                             }
                             catch (Exception backlogEx)
@@ -774,7 +780,7 @@ namespace CyberRiskApp.Controllers
                                     actionType: RiskBacklogAction.NewRisk,
                                     description: riskDescription,
                                     justification: $"New risk identified from assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}",
-                                    requesterId: User.Identity?.Name ?? "System"
+                                    requesterId: User.GetUserId()
                                 );
                             }
                             catch (Exception backlogEx)
@@ -801,8 +807,8 @@ namespace CyberRiskApp.Controllers
                             scenario.RiskAssessmentId = id;
                             scenario.CreatedAt = scenario.CreatedAt == DateTime.MinValue ? DateTime.UtcNow : scenario.CreatedAt;
                             scenario.UpdatedAt = DateTime.UtcNow;
-                            scenario.CreatedBy = scenario.CreatedBy ?? User.Identity?.Name ?? "System";
-                            scenario.UpdatedBy = User.Identity?.Name ?? "System";
+                            scenario.CreatedBy = scenario.CreatedBy ?? User.GetUserId();
+                            scenario.UpdatedBy = User.GetUserId();
                             
                             // RowVersion will be initialized by the model's default value
                             
@@ -859,7 +865,7 @@ namespace CyberRiskApp.Controllers
                                     actionType: RiskBacklogAction.NewRisk,
                                     description: riskDescription,
                                     justification: $"New risk identified from assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}",
-                                    requesterId: User.Identity?.Name ?? "System"
+                                    requesterId: User.GetUserId()
                                 );
                             }
                             catch (Exception backlogEx)
@@ -1032,7 +1038,7 @@ namespace CyberRiskApp.Controllers
                                 actionType: RiskBacklogAction.NewRisk,
                                 description: riskDescription,
                                 justification: $"New risk identified from assessment '{assessment.Title}' for asset '{assessment.Asset}'. Risk level: {risk.RiskLevel}",
-                                requesterId: User.Identity?.Name ?? "System"
+                                requesterId: User.GetUserId()
                             );
                             backlogEntriesCreated++;
                             Console.WriteLine($"✅ DEBUGGING: Backlog entry created with number: {backlogEntry.BacklogNumber}");
@@ -1418,7 +1424,7 @@ namespace CyberRiskApp.Controllers
         {
             try
             {
-                var userId = User.Identity?.Name ?? "System";
+                var userId = User.GetUserId();
                 var copiedModels = await _riskAssessmentThreatModelService.CreateThreatModelCopiesAsync(
                     riskAssessmentId, templateIds, userId);
 
@@ -1484,7 +1490,7 @@ namespace CyberRiskApp.Controllers
         {
             try
             {
-                var userId = User.Identity?.Name ?? "System";
+                var userId = User.GetUserId();
                 var success = await _riskAssessmentThreatModelService.DeleteThreatModelAsync(threatModelId, userId);
                 
                 if (success)

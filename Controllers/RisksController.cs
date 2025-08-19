@@ -6,17 +6,20 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OfficeOpenXml;
+using Microsoft.Extensions.Logging;
+using CyberRiskApp.Extensions;
+using CyberRiskApp.Filters;
 
 namespace CyberRiskApp.Controllers
 {
     [Authorize(Policy = PolicyConstants.RequireAnyRole)]
-    public class RisksController : Controller
+    public class RisksController : BaseController
     {
         private readonly IRiskService _riskService;
         private readonly IExportService _exportService;
         private readonly IRiskLevelSettingsService _riskLevelSettingsService;
 
-        public RisksController(IRiskService riskService, IExportService exportService, IRiskLevelSettingsService riskLevelSettingsService)
+        public RisksController(IRiskService riskService, IExportService exportService, IRiskLevelSettingsService riskLevelSettingsService, ILogger<RisksController> logger) : base(logger)
         {
             _riskService = riskService;
             _exportService = exportService;

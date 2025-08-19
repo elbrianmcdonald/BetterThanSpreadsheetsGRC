@@ -1,0 +1,453 @@
+Using launch settings from C:\Dev\CyberRiskPlatform\CyberRiskApp\CyberRiskApp\CyberRiskApp\Properties\launchSettings.json...
+Building...
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (28ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      
+                      ALTER TABLE "RiskAssessments" 
+                      ADD COLUMN IF NOT EXISTS "GenerateRisksForRegister" boolean NOT NULL DEFAULT false;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      
+                      ALTER TABLE "RiskAssessments" 
+                      ADD COLUMN IF NOT EXISTS "RisksGenerated" boolean NOT NULL DEFAULT false;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      
+                      ALTER TABLE "RiskAssessments" 
+                      ADD COLUMN IF NOT EXISTS "RisksGeneratedDate" timestamp with time zone NULL;
+✅ Database schema fixed successfully!
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      
+                      INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion") 
+                      VALUES ('20250816220519_AddRiskGenerationToRiskAssessment', '8.0.18')
+                      ON CONFLICT ("MigrationId") DO NOTHING;
+✅ Fixed migration records
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (31ms) [Parameters=[@__normalizedName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__normalizedName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@__userId_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a0."Name"
+      FROM "AspNetUserRoles" AS a
+      INNER JOIN "AspNetRoles" AS a0 ON a."RoleId" = a0."Id"
+      WHERE a."UserId" = @__userId_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?', @p1='?', @p25='?', @p2='?' (DbType = Int32), @p3='?', @p26='?', @p4='?' (DbType = DateTime), @p5='?', @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = DateTime), @p12='?', @p13='?' (DbType = Boolean), @p14='?' (DbType = DateTime), @p15='?', @p16='?', @p17='?', @p18='?', @p19='?' (DbType = Boolean), @p20='?' (DbType = Int32), @p21='?', @p22='?' (DbType = Boolean), @p23='?' (DbType = DateTime), @p24='?'], CommandType='Text', CommandTimeout='30']
+      DELETE FROM "AspNetUserRoles"
+      WHERE "RoleId" = @p0 AND "UserId" = @p1;
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p2, "ConcurrencyStamp" = @p3, "CreatedAt" = @p4, "Department" = @p5, "Email" = @p6, "EmailConfirmed" = @p7, "FirstName" = @p8, "IsActive" = @p9, "JobTitle" = @p10, "LastLoginDate" = @p11, "LastName" = @p12, "LockoutEnabled" = @p13, "LockoutEnd" = @p14, "NormalizedEmail" = @p15, "NormalizedUserName" = @p16, "PasswordHash" = @p17, "PhoneNumber" = @p18, "PhoneNumberConfirmed" = @p19, "Role" = @p20, "SecurityStamp" = @p21, "TwoFactorEnabled" = @p22, "UpdatedAt" = @p23, "UserName" = @p24
+      WHERE "Id" = @p25 AND "ConcurrencyStamp" = @p26;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@p0='?', @p1='?', @p25='?', @p2='?' (DbType = Int32), @p3='?', @p26='?', @p4='?' (DbType = DateTime), @p5='?', @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = DateTime), @p12='?', @p13='?' (DbType = Boolean), @p14='?' (DbType = DateTime), @p15='?', @p16='?', @p17='?', @p18='?', @p19='?' (DbType = Boolean), @p20='?' (DbType = Int32), @p21='?', @p22='?' (DbType = Boolean), @p23='?' (DbType = DateTime), @p24='?'], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "AspNetUserRoles" ("RoleId", "UserId")
+      VALUES (@p0, @p1);
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p2, "ConcurrencyStamp" = @p3, "CreatedAt" = @p4, "Department" = @p5, "Email" = @p6, "EmailConfirmed" = @p7, "FirstName" = @p8, "IsActive" = @p9, "JobTitle" = @p10, "LastLoginDate" = @p11, "LastName" = @p12, "LockoutEnabled" = @p13, "LockoutEnd" = @p14, "NormalizedEmail" = @p15, "NormalizedUserName" = @p16, "PasswordHash" = @p17, "PhoneNumber" = @p18, "PhoneNumberConfirmed" = @p19, "Role" = @p20, "SecurityStamp" = @p21, "TwoFactorEnabled" = @p22, "UpdatedAt" = @p23, "UserName" = @p24
+      WHERE "Id" = @p25 AND "ConcurrencyStamp" = @p26;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@__user_Id_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ClaimType", a."ClaimValue", a."UserId"
+      FROM "AspNetUserClaims" AS a
+      WHERE a."UserId" = @__user_Id_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__userId_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a0."Name"
+      FROM "AspNetUserRoles" AS a
+      INNER JOIN "AspNetRoles" AS a0 ON a."RoleId" = a0."Id"
+      WHERE a."UserId" = @__userId_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@p0='?', @p1='?', @p2='?', @p3='?', @p27='?', @p4='?' (DbType = Int32), @p5='?', @p28='?', @p6='?' (DbType = DateTime), @p7='?', @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = Boolean), @p12='?', @p13='?' (DbType = DateTime), @p14='?', @p15='?' (DbType = Boolean), @p16='?' (DbType = DateTime), @p17='?', @p18='?', @p19='?', @p20='?', @p21='?' (DbType = Boolean), @p22='?' (DbType = Int32), @p23='?', @p24='?' (DbType = Boolean), @p25='?' (DbType = DateTime), @p26='?'], CommandType='Text', CommandTimeout='30']
+      DELETE FROM "AspNetUserRoles"
+      WHERE "RoleId" = @p0 AND "UserId" = @p1;
+      DELETE FROM "AspNetUserRoles"
+      WHERE "RoleId" = @p2 AND "UserId" = @p3;
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p4, "ConcurrencyStamp" = @p5, "CreatedAt" = @p6, "Department" = @p7, "Email" = @p8, "EmailConfirmed" = @p9, "FirstName" = @p10, "IsActive" = @p11, "JobTitle" = @p12, "LastLoginDate" = @p13, "LastName" = @p14, "LockoutEnabled" = @p15, "LockoutEnd" = @p16, "NormalizedEmail" = @p17, "NormalizedUserName" = @p18, "PasswordHash" = @p19, "PhoneNumber" = @p20, "PhoneNumberConfirmed" = @p21, "Role" = @p22, "SecurityStamp" = @p23, "TwoFactorEnabled" = @p24, "UpdatedAt" = @p25, "UserName" = @p26
+      WHERE "Id" = @p27 AND "ConcurrencyStamp" = @p28;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@p0='?', @p1='?', @p25='?', @p2='?' (DbType = Int32), @p3='?', @p26='?', @p4='?' (DbType = DateTime), @p5='?', @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = DateTime), @p12='?', @p13='?' (DbType = Boolean), @p14='?' (DbType = DateTime), @p15='?', @p16='?', @p17='?', @p18='?', @p19='?' (DbType = Boolean), @p20='?' (DbType = Int32), @p21='?', @p22='?' (DbType = Boolean), @p23='?' (DbType = DateTime), @p24='?'], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "AspNetUserRoles" ("RoleId", "UserId")
+      VALUES (@p0, @p1);
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p2, "ConcurrencyStamp" = @p3, "CreatedAt" = @p4, "Department" = @p5, "Email" = @p6, "EmailConfirmed" = @p7, "FirstName" = @p8, "IsActive" = @p9, "JobTitle" = @p10, "LastLoginDate" = @p11, "LastName" = @p12, "LockoutEnabled" = @p13, "LockoutEnd" = @p14, "NormalizedEmail" = @p15, "NormalizedUserName" = @p16, "PasswordHash" = @p17, "PhoneNumber" = @p18, "PhoneNumberConfirmed" = @p19, "Role" = @p20, "SecurityStamp" = @p21, "TwoFactorEnabled" = @p22, "UpdatedAt" = @p23, "UserName" = @p24
+      WHERE "Id" = @p25 AND "ConcurrencyStamp" = @p26;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__user_Id_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ClaimType", a."ClaimValue", a."UserId"
+      FROM "AspNetUserClaims" AS a
+      WHERE a."UserId" = @__user_Id_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__userId_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a0."Name"
+      FROM "AspNetUserRoles" AS a
+      INNER JOIN "AspNetRoles" AS a0 ON a."RoleId" = a0."Id"
+      WHERE a."UserId" = @__userId_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@p0='?', @p1='?', @p25='?', @p2='?' (DbType = Int32), @p3='?', @p26='?', @p4='?' (DbType = DateTime), @p5='?', @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = DateTime), @p12='?', @p13='?' (DbType = Boolean), @p14='?' (DbType = DateTime), @p15='?', @p16='?', @p17='?', @p18='?', @p19='?' (DbType = Boolean), @p20='?' (DbType = Int32), @p21='?', @p22='?' (DbType = Boolean), @p23='?' (DbType = DateTime), @p24='?'], CommandType='Text', CommandTimeout='30']
+      DELETE FROM "AspNetUserRoles"
+      WHERE "RoleId" = @p0 AND "UserId" = @p1;
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p2, "ConcurrencyStamp" = @p3, "CreatedAt" = @p4, "Department" = @p5, "Email" = @p6, "EmailConfirmed" = @p7, "FirstName" = @p8, "IsActive" = @p9, "JobTitle" = @p10, "LastLoginDate" = @p11, "LastName" = @p12, "LockoutEnabled" = @p13, "LockoutEnd" = @p14, "NormalizedEmail" = @p15, "NormalizedUserName" = @p16, "PasswordHash" = @p17, "PhoneNumber" = @p18, "PhoneNumberConfirmed" = @p19, "Role" = @p20, "SecurityStamp" = @p21, "TwoFactorEnabled" = @p22, "UpdatedAt" = @p23, "UserName" = @p24
+      WHERE "Id" = @p25 AND "ConcurrencyStamp" = @p26;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@p0='?', @p1='?', @p25='?', @p2='?' (DbType = Int32), @p3='?', @p26='?', @p4='?' (DbType = DateTime), @p5='?', @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = DateTime), @p12='?', @p13='?' (DbType = Boolean), @p14='?' (DbType = DateTime), @p15='?', @p16='?', @p17='?', @p18='?', @p19='?' (DbType = Boolean), @p20='?' (DbType = Int32), @p21='?', @p22='?' (DbType = Boolean), @p23='?' (DbType = DateTime), @p24='?'], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "AspNetUserRoles" ("RoleId", "UserId")
+      VALUES (@p0, @p1);
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p2, "ConcurrencyStamp" = @p3, "CreatedAt" = @p4, "Department" = @p5, "Email" = @p6, "EmailConfirmed" = @p7, "FirstName" = @p8, "IsActive" = @p9, "JobTitle" = @p10, "LastLoginDate" = @p11, "LastName" = @p12, "LockoutEnabled" = @p13, "LockoutEnd" = @p14, "NormalizedEmail" = @p15, "NormalizedUserName" = @p16, "PasswordHash" = @p17, "PhoneNumber" = @p18, "PhoneNumberConfirmed" = @p19, "Role" = @p20, "SecurityStamp" = @p21, "TwoFactorEnabled" = @p22, "UpdatedAt" = @p23, "UserName" = @p24
+      WHERE "Id" = @p25 AND "ConcurrencyStamp" = @p26;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__user_Id_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ClaimType", a."ClaimValue", a."UserId"
+      FROM "AspNetUserClaims" AS a
+      WHERE a."UserId" = @__user_Id_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__userId_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a0."Name"
+      FROM "AspNetUserRoles" AS a
+      INNER JOIN "AspNetRoles" AS a0 ON a."RoleId" = a0."Id"
+      WHERE a."UserId" = @__userId_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@p0='?', @p1='?', @p25='?', @p2='?' (DbType = Int32), @p3='?', @p26='?', @p4='?' (DbType = DateTime), @p5='?', @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = DateTime), @p12='?', @p13='?' (DbType = Boolean), @p14='?' (DbType = DateTime), @p15='?', @p16='?', @p17='?', @p18='?', @p19='?' (DbType = Boolean), @p20='?' (DbType = Int32), @p21='?', @p22='?' (DbType = Boolean), @p23='?' (DbType = DateTime), @p24='?'], CommandType='Text', CommandTimeout='30']
+      DELETE FROM "AspNetUserRoles"
+      WHERE "RoleId" = @p0 AND "UserId" = @p1;
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p2, "ConcurrencyStamp" = @p3, "CreatedAt" = @p4, "Department" = @p5, "Email" = @p6, "EmailConfirmed" = @p7, "FirstName" = @p8, "IsActive" = @p9, "JobTitle" = @p10, "LastLoginDate" = @p11, "LastName" = @p12, "LockoutEnabled" = @p13, "LockoutEnd" = @p14, "NormalizedEmail" = @p15, "NormalizedUserName" = @p16, "PasswordHash" = @p17, "PhoneNumber" = @p18, "PhoneNumberConfirmed" = @p19, "Role" = @p20, "SecurityStamp" = @p21, "TwoFactorEnabled" = @p22, "UpdatedAt" = @p23, "UserName" = @p24
+      WHERE "Id" = @p25 AND "ConcurrencyStamp" = @p26;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@p0='?', @p1='?', @p25='?', @p2='?' (DbType = Int32), @p3='?', @p26='?', @p4='?' (DbType = DateTime), @p5='?', @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = DateTime), @p12='?', @p13='?' (DbType = Boolean), @p14='?' (DbType = DateTime), @p15='?', @p16='?', @p17='?', @p18='?', @p19='?' (DbType = Boolean), @p20='?' (DbType = Int32), @p21='?', @p22='?' (DbType = Boolean), @p23='?' (DbType = DateTime), @p24='?'], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "AspNetUserRoles" ("RoleId", "UserId")
+      VALUES (@p0, @p1);
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p2, "ConcurrencyStamp" = @p3, "CreatedAt" = @p4, "Department" = @p5, "Email" = @p6, "EmailConfirmed" = @p7, "FirstName" = @p8, "IsActive" = @p9, "JobTitle" = @p10, "LastLoginDate" = @p11, "LastName" = @p12, "LockoutEnabled" = @p13, "LockoutEnd" = @p14, "NormalizedEmail" = @p15, "NormalizedUserName" = @p16, "PasswordHash" = @p17, "PhoneNumber" = @p18, "PhoneNumberConfirmed" = @p19, "Role" = @p20, "SecurityStamp" = @p21, "TwoFactorEnabled" = @p22, "UpdatedAt" = @p23, "UserName" = @p24
+      WHERE "Id" = @p25 AND "ConcurrencyStamp" = @p26;
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__user_Id_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ClaimType", a."ClaimValue", a."UserId"
+      FROM "AspNetUserClaims" AS a
+      WHERE a."UserId" = @__user_Id_0
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@__normalizedEmail_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedEmail" = @__normalizedEmail_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@p23='?', @p0='?' (DbType = Int32), @p1='?', @p24='?', @p2='?' (DbType = DateTime), @p3='?', @p4='?', @p5='?' (DbType = Boolean), @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = DateTime), @p10='?', @p11='?' (DbType = Boolean), @p12='?' (DbType = DateTime), @p13='?', @p14='?', @p15='?', @p16='?', @p17='?' (DbType = Boolean), @p18='?' (DbType = Int32), @p19='?', @p20='?' (DbType = Boolean), @p21='?' (DbType = DateTime), @p22='?'], CommandType='Text', CommandTimeout='30']
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p0, "ConcurrencyStamp" = @p1, "CreatedAt" = @p2, "Department" = @p3, "Email" = @p4, "EmailConfirmed" = @p5, "FirstName" = @p6, "IsActive" = @p7, "JobTitle" = @p8, "LastLoginDate" = @p9, "LastName" = @p10, "LockoutEnabled" = @p11, "LockoutEnd" = @p12, "NormalizedEmail" = @p13, "NormalizedUserName" = @p14, "PasswordHash" = @p15, "PhoneNumber" = @p16, "PhoneNumberConfirmed" = @p17, "Role" = @p18, "SecurityStamp" = @p19, "TwoFactorEnabled" = @p20, "UpdatedAt" = @p21, "UserName" = @p22
+      WHERE "Id" = @p23 AND "ConcurrencyStamp" = @p24;
+✅ Fixed admin user role
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__p_0='?', @__p_1='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."UserId", a."RoleId"
+      FROM "AspNetUserRoles" AS a
+      WHERE a."UserId" = @__p_0 AND a."RoleId" = @__p_1
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedRoleName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."ConcurrencyStamp", a."Name", a."NormalizedName"
+      FROM "AspNetRoles" AS a
+      WHERE a."NormalizedName" = @__normalizedRoleName_0
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (0ms) [Parameters=[@__normalizedUserName_0='?'], CommandType='Text', CommandTimeout='30']
+      SELECT a."Id", a."AccessFailedCount", a."ConcurrencyStamp", a."CreatedAt", a."Department", a."Email", a."EmailConfirmed", a."FirstName", a."IsActive", a."JobTitle", a."LastLoginDate", a."LastName", a."LockoutEnabled", a."LockoutEnd", a."NormalizedEmail", a."NormalizedUserName", a."PasswordHash", a."PhoneNumber", a."PhoneNumberConfirmed", a."Role", a."SecurityStamp", a."TwoFactorEnabled", a."UpdatedAt", a."UserName"
+      FROM "AspNetUsers" AS a
+      WHERE a."NormalizedUserName" = @__normalizedUserName_0
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@p0='?', @p1='?', @p25='?', @p2='?' (DbType = Int32), @p3='?', @p26='?', @p4='?' (DbType = DateTime), @p5='?', @p6='?', @p7='?' (DbType = Boolean), @p8='?', @p9='?' (DbType = Boolean), @p10='?', @p11='?' (DbType = DateTime), @p12='?', @p13='?' (DbType = Boolean), @p14='?' (DbType = DateTime), @p15='?', @p16='?', @p17='?', @p18='?', @p19='?' (DbType = Boolean), @p20='?' (DbType = Int32), @p21='?', @p22='?' (DbType = Boolean), @p23='?' (DbType = DateTime), @p24='?'], CommandType='Text', CommandTimeout='30']
+      INSERT INTO "AspNetUserRoles" ("RoleId", "UserId")
+      VALUES (@p0, @p1);
+      UPDATE "AspNetUsers" SET "AccessFailedCount" = @p2, "ConcurrencyStamp" = @p3, "CreatedAt" = @p4, "Department" = @p5, "Email" = @p6, "EmailConfirmed" = @p7, "FirstName" = @p8, "IsActive" = @p9, "JobTitle" = @p10, "LastLoginDate" = @p11, "LastName" = @p12, "LockoutEnabled" = @p13, "LockoutEnd" = @p14, "NormalizedEmail" = @p15, "NormalizedUserName" = @p16, "PasswordHash" = @p17, "PhoneNumber" = @p18, "PhoneNumberConfirmed" = @p19, "Role" = @p20, "SecurityStamp" = @p21, "TwoFactorEnabled" = @p22, "UpdatedAt" = @p23, "UserName" = @p24
+      WHERE "Id" = @p25 AND "ConcurrencyStamp" = @p26;
+✅ Added admin user to Admin role
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+          SELECT 1
+          FROM "RiskMatrices" AS r)
+✅ Initialized default risk matrices
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+          SELECT 1
+          FROM "MaturityFrameworks" AS m)
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+          SELECT 1
+          FROM "ComplianceFrameworks" AS c)
+ℹ️  GRC frameworks already exist, skipping seeding
+✅ SSL will be available once certificates are uploaded
+warn: Microsoft.AspNetCore.Server.Kestrel[0]
+      Overriding address(es) 'http://0.0.0.0:5000'. Binding to endpoints defined via IConfiguration and/or UseKestrel() instead.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://[::]:5000
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: https://[::]:7212
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Dev\CyberRiskPlatform\CyberRiskApp\CyberRiskApp\CyberRiskApp

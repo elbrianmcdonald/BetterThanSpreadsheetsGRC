@@ -4,16 +4,19 @@ using Microsoft.AspNetCore.Identity;
 using CyberRiskApp.Models;
 using CyberRiskApp.Services;
 using CyberRiskApp.Authorization;
+using Microsoft.Extensions.Logging;
+using CyberRiskApp.Extensions;
+using CyberRiskApp.Filters;
 
 namespace CyberRiskApp.Controllers
 {
     [Authorize(Policy = PolicyConstants.RequireAdminRole)]
-    public class UserManagementController : Controller
+    public class UserManagementController : BaseController
     {
         private readonly IUserService _userService;
         private readonly UserManager<User> _userManager;
 
-        public UserManagementController(IUserService userService, UserManager<User> userManager)
+        public UserManagementController(IUserService userService, UserManager<User> userManager, ILogger<UserManagementController> logger) : base(logger)
         {
             _userService = userService;
             _userManager = userManager;
@@ -21,8 +24,11 @@ namespace CyberRiskApp.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var viewModel = await _userService.GetUserManagementDataAsync();
-            return View(viewModel);
+            return await ExecuteWithErrorHandling(
+                async () => await _userService.GetUserManagementDataAsync(),
+                viewModel => View(viewModel),
+                "loading user management data"
+            );
         }
 
         public async Task<IActionResult> Details(string id)

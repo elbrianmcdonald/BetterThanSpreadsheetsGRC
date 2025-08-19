@@ -750,80 +750,6 @@ namespace CyberRiskApp.Services
                 .ToListAsync();
         }
 
-        public async Task<BacklogStatistics> GetBacklogStatisticsAsync(string? userId = null, string? role = null)
-        {
-            var query = _context.RiskBacklogEntries.AsQueryable();
-
-            // Filter by user if specified
-            if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(role))
-            {
-                if (role.Contains("Analyst"))
-                {
-                    query = query.Where(b => b.AssignedToAnalyst == userId);
-                }
-                else if (role.Contains("Manager"))
-                {
-                    query = query.Where(b => b.AssignedToManager == userId);
-                }
-            }
-
-            var now = DateTime.UtcNow;
-            var weekStart = now.AddDays(-(int)now.DayOfWeek);
-            var monthStart = new DateTime(now.Year, now.Month, 1);
-
-            var stats = new BacklogStatistics
-            {
-                TotalEntries = await query.CountAsync(),
-                Unassigned = await query.CountAsync(b => b.Status == RiskBacklogStatus.Unassigned),
-                AssignedToAnalyst = await query.CountAsync(b => b.Status == RiskBacklogStatus.AssignedToAnalyst),
-                AssignedToManager = await query.CountAsync(b => b.Status == RiskBacklogStatus.AssignedToManager),
-                OverdueSLA = await query.CountAsync(b => b.IsSLABreached),
-                CompletedThisWeek = await query.CountAsync(b => b.Status == RiskBacklogStatus.Approved && b.CompletedDate >= weekStart),
-                CompletedThisMonth = await query.CountAsync(b => b.Status == RiskBacklogStatus.Approved && b.CompletedDate >= monthStart),
-                RejectedThisMonth = await query.CountAsync(b => b.Status == RiskBacklogStatus.Rejected && b.CompletedDate >= monthStart)
-            };
-
-            // Action type counts
-            var actionTypeCounts = await query
-                .GroupBy(b => b.ActionType)
-                .Select(g => new { ActionType = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.ActionType, x => x.Count);
-            stats.ActionTypeCounts = actionTypeCounts;
-
-            // Priority counts
-            var priorityCounts = await query
-                .GroupBy(b => b.Priority)
-                .Select(g => new { Priority = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.Priority, x => x.Count);
-            stats.PriorityCounts = priorityCounts;
-
-            // Source counts
-            var sourceCounts = await query
-                .Where(b => b.RiskSource.HasValue)
-                .GroupBy(b => b.RiskSource!.Value)
-                .Select(g => new { Source = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.Source, x => x.Count);
-            stats.SourceCounts = sourceCounts;
-
-            // Performance metrics
-            var completedEntries = await query
-                .Where(b => b.Status == RiskBacklogStatus.Approved && b.CompletedDate.HasValue)
-                .Select(b => new { b.CreatedAt, b.CompletedDate })
-                .ToListAsync();
-
-            if (completedEntries.Any())
-            {
-                var avgProcessingTime = completedEntries.Average(e => (e.CompletedDate!.Value - e.CreatedAt).TotalDays);
-                stats.AvgAnalystProcessingDays = avgProcessingTime;
-                stats.AvgManagerProcessingDays = avgProcessingTime; // Simplified for now
-
-                var totalEntries = await query.CountAsync();
-                var slaCompliantEntries = await query.CountAsync(b => !b.IsSLABreached);
-                stats.SLAComplianceRate = totalEntries > 0 ? (double)slaCompliantEntries / totalEntries * 100 : 100;
-            }
-
-            return stats;
-        }
 
         public async Task<List<RiskBacklogEntry>> GetBacklogForUserAsync(string userId, string role)
         {
@@ -1022,6 +948,122 @@ namespace CyberRiskApp.Services
         public async Task<int> GetTotalEntriesCountAsync()
         {
             return await _context.RiskBacklogEntries.CountAsync();
+        }
+
+        /// <summary>
+        /// Optimized statistics calculation using grouped queries to minimize database round trips
+        /// </summary>
+        public async Task<BacklogStatistics> GetBacklogStatisticsAsync(string? userId = null, string? role = null)
+        {
+            var query = _context.RiskBacklogEntries.AsQueryable();
+            
+            // Apply role-based filtering if needed
+            if (!string.IsNullOrEmpty(role) && !role.Contains("Admin"))
+            {
+                if (role.Contains("Manager") && !string.IsNullOrEmpty(userId))
+                {
+                    query = query.Where(b => b.AssignedToManager == userId || b.CreatedBy == userId);
+                }
+                else if (role.Contains("Analyst") && !string.IsNullOrEmpty(userId))
+                {
+                    query = query.Where(b => b.AssignedToAnalyst == userId || b.CreatedBy == userId);
+                }
+            }
+
+            // Single query to get all the data we need
+            var entries = await query.ToListAsync();
+
+            // Calculate statistics from the in-memory collection
+            var now = DateTime.UtcNow;
+            var weekStart = now.AddDays(-(int)now.DayOfWeek);
+            
+            var stats = new BacklogStatistics
+            {
+                // Basic counts
+                TotalEntries = entries.Count,
+                Unassigned = entries.Count(e => e.Status == RiskBacklogStatus.Unassigned),
+                AssignedToAnalyst = entries.Count(e => e.Status == RiskBacklogStatus.AssignedToAnalyst),
+                AssignedToManager = entries.Count(e => e.Status == RiskBacklogStatus.AssignedToManager),
+                
+                // SLA and completion metrics
+                OverdueSLA = entries.Count(e => e.DueDate.HasValue && e.DueDate.Value < now && 
+                                               e.Status != RiskBacklogStatus.Approved && 
+                                               e.Status != RiskBacklogStatus.Rejected),
+                CompletedThisWeek = entries.Count(e => (e.Status == RiskBacklogStatus.Approved || 
+                                                       e.Status == RiskBacklogStatus.Rejected) && 
+                                                       e.UpdatedAt >= weekStart),
+                CompletedThisMonth = entries.Count(e => (e.Status == RiskBacklogStatus.Approved || 
+                                                        e.Status == RiskBacklogStatus.Rejected) && 
+                                                        e.UpdatedAt >= now.AddDays(-30)),
+                RejectedThisMonth = entries.Count(e => e.Status == RiskBacklogStatus.Rejected && 
+                                                      e.UpdatedAt >= now.AddDays(-30)),
+                
+                // Finding vs Risk breakdown
+                TotalFindings = entries.Count(e => e.IsFindingWorkflow()),
+                TotalRisks = entries.Count(e => e.IsRiskWorkflow()),
+                UnassignedFindings = entries.Count(e => e.IsFindingWorkflow() && 
+                                                       e.Status == RiskBacklogStatus.Unassigned),
+                UnassignedRisks = entries.Count(e => e.IsRiskWorkflow() && 
+                                                   e.Status == RiskBacklogStatus.Unassigned),
+                CompletedFindingsThisWeek = entries.Count(e => e.IsFindingWorkflow() && 
+                                                             (e.Status == RiskBacklogStatus.Approved || 
+                                                              e.Status == RiskBacklogStatus.Rejected) && 
+                                                             e.UpdatedAt >= weekStart),
+                CompletedRisksThisWeek = entries.Count(e => e.IsRiskWorkflow() && 
+                                                          (e.Status == RiskBacklogStatus.Approved || 
+                                                           e.Status == RiskBacklogStatus.Rejected) && 
+                                                          e.UpdatedAt >= weekStart),
+
+                // Action type breakdown
+                ActionTypeCounts = entries.GroupBy(e => e.ActionType)
+                                         .ToDictionary(g => g.Key, g => g.Count()),
+                
+                // Priority breakdown
+                PriorityCounts = entries.GroupBy(e => e.Priority)
+                                       .ToDictionary(g => g.Key, g => g.Count()),
+                
+                // Performance metrics (calculated from completed entries)
+                AvgAnalystProcessingDays = CalculateAverageProcessingDays(entries, RiskBacklogStatus.AssignedToAnalyst),
+                AvgManagerProcessingDays = CalculateAverageProcessingDays(entries, RiskBacklogStatus.AssignedToManager),
+                SLAComplianceRate = CalculateSLAComplianceRate(entries),
+                
+                // Top assignees (for workload balancing)
+                TopAnalysts = entries.Where(e => !string.IsNullOrEmpty(e.AssignedToAnalyst))
+                                    .GroupBy(e => e.AssignedToAnalyst!)
+                                    .OrderByDescending(g => g.Count())
+                                    .Take(5)
+                                    .ToDictionary(g => g.Key, g => g.Count()),
+                                    
+                TopManagers = entries.Where(e => !string.IsNullOrEmpty(e.AssignedToManager))
+                                    .GroupBy(e => e.AssignedToManager!)
+                                    .OrderByDescending(g => g.Count())
+                                    .Take(5)
+                                    .ToDictionary(g => g.Key, g => g.Count())
+            };
+
+            return stats;
+        }
+
+        private static double CalculateAverageProcessingDays(List<RiskBacklogEntry> entries, RiskBacklogStatus status)
+        {
+            var relevantEntries = entries.Where(e => e.Status == RiskBacklogStatus.Approved && 
+                                                    e.AssignedDate.HasValue).ToList();
+            
+            if (!relevantEntries.Any()) return 0;
+            
+            var totalDays = relevantEntries.Sum(e => (e.UpdatedAt - e.AssignedDate!.Value).TotalDays);
+            return totalDays / relevantEntries.Count;
+        }
+
+        private static double CalculateSLAComplianceRate(List<RiskBacklogEntry> entries)
+        {
+            var entriesWithSLA = entries.Where(e => e.DueDate.HasValue).ToList();
+            if (!entriesWithSLA.Any()) return 100.0;
+            
+            var compliantEntries = entriesWithSLA.Count(e => 
+                e.Status == RiskBacklogStatus.Approved && e.UpdatedAt <= e.DueDate!.Value);
+                
+            return (compliantEntries / (double)entriesWithSLA.Count) * 100.0;
         }
 
         /// <summary>

@@ -1,4 +1,6 @@
 using CyberRiskApp.Authorization;
+using CyberRiskApp.Extensions;
+using CyberRiskApp.Filters;
 using CyberRiskApp.Models;
 using CyberRiskApp.Services;
 using CyberRiskApp.ViewModels;
@@ -8,45 +10,41 @@ using Microsoft.AspNetCore.Mvc;
 namespace CyberRiskApp.Controllers
 {
     [Authorize(Policy = "RequireGRCAnalystOrAbove")]
-    public class RiskBacklogController : Controller
+    public class RiskBacklogController : BaseController
     {
         private readonly IRiskBacklogService _backlogService;
         private readonly IUserService _userService;
-        private readonly ILogger<RiskBacklogController> _logger;
 
         public RiskBacklogController(
             IRiskBacklogService backlogService, 
             IUserService userService, 
-            ILogger<RiskBacklogController> logger)
+            ILogger<RiskBacklogController> logger) : base(logger)
         {
             _backlogService = backlogService;
             _userService = userService;
-            _logger = logger;
         }
 
         // Dashboard - Main entry point
         public async Task<IActionResult> Index(string? filter = null, string? status = null, string? action = null, string? priority = null)
         {
-            try
-            {
-                var userId = User.Identity?.Name ?? "";
-                var userRoles = User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
-                var isAdmin = User.IsInRole("Admin");
-                var isManager = User.IsInRole("GRCManager") || isAdmin;
-                var isAnalyst = User.IsInRole("GRCAnalyst") || isManager;
+            return await ExecuteWithErrorHandling(
+                async () =>
+                {
+                    // Use extension methods to simplify user identity extraction
+                    var userId = User.GetUserId();
+                    var roleString = User.GetUserRolesForService();
+                    
+                    // Use base controller role checking
+                    var isManager = IsManager;
 
-                // Build role string for service calls - use the actual roles or fall back to checking IsInRole
-                var roleString = userRoles.Any() ? string.Join(",", userRoles) : 
-                    (isAdmin ? "Admin" : isManager ? "GRCManager" : isAnalyst ? "GRCAnalyst" : "");
+                    // Get statistics using the optimized method
+                    var statistics = await _backlogService.GetBacklogStatisticsAsync(userId, roleString);
 
-                // Get statistics
-                var statistics = await _backlogService.GetBacklogStatisticsAsync(userId, roleString);
+                    // Get user's assigned backlog
+                    var myBacklog = await _backlogService.GetBacklogForUserAsync(userId, roleString);
 
-                // Get user's assigned backlog
-                var myBacklog = await _backlogService.GetBacklogForUserAsync(userId, roleString);
-
-                // Get unassigned entries (managers only)
-                var unassignedEntries = isManager ? await _backlogService.GetUnassignedBacklogAsync() : new List<RiskBacklogEntry>();
+                    // Get unassigned entries (managers only)
+                    var unassignedEntries = isManager ? await _backlogService.GetUnassignedBacklogAsync() : new List<RiskBacklogEntry>();
 
                 // Get all entries with filters
                 List<RiskBacklogEntry> allEntries;
@@ -97,53 +95,50 @@ namespace CyberRiskApp.Controllers
                     allEntries = await _backlogService.GetAllBacklogEntriesAsync();
                 }
 
-                // Get all users for assignment dropdowns 
-                var allUsers = isManager ? await _userService.GetAllUsersAsync() : new List<User>();
+                    // Get all users for assignment dropdowns 
+                    var allUsers = isManager ? await _userService.GetAllUsersAsync() : new List<User>();
 
-                var viewModel = new BacklogDashboardViewModel
-                {
-                    Statistics = statistics,
-                    MyBacklogEntries = myBacklog,
-                    UnassignedEntries = unassignedEntries,
-                    AllEntries = allEntries,
-                    CanAssign = isManager,
-                    CanApprove = isAnalyst,
-                    AvailableAnalysts = allUsers,
-                    AvailableManagers = allUsers,
-                    CurrentFilter = filter ?? "all"
-                };
+                    var viewModel = new BacklogDashboardViewModel
+                    {
+                        Statistics = statistics,
+                        MyBacklogEntries = myBacklog,
+                        UnassignedEntries = unassignedEntries,
+                        AllEntries = allEntries,
+                        CanAssign = isManager,
+                        CanApprove = IsAnalyst, // Use base controller property
+                        AvailableAnalysts = allUsers,
+                        AvailableManagers = allUsers,
+                        CurrentFilter = filter ?? "all"
+                    };
 
-                // Pass filter info to view for highlighting active metric cards
-                ViewBag.CurrentFilter = filter;
-                ViewBag.CurrentStatus = status;
-                ViewBag.CurrentAction = action;
+                    // Pass filter info to view for highlighting active metric cards
+                    ViewBag.CurrentFilter = filter;
+                    ViewBag.CurrentStatus = status;
+                    ViewBag.CurrentAction = action;
 
-                // Add admin data to ViewBag if user is admin
-                if (User.IsInRole("Admin"))
-                {
-                    var orphanedEntries = await _backlogService.GetOrphanedEntriesAsync();
-                    var stuckEntries = await _backlogService.GetStuckEntriesAsync();
-                    var recentErrors = await _backlogService.GetRecentErrorsCountAsync();
-                    var totalEntries = await _backlogService.GetTotalEntriesCountAsync();
-                    
-                    ViewBag.OrphanedCount = orphanedEntries.Count;
-                    ViewBag.StuckCount = stuckEntries.Count;
-                    ViewBag.RecentErrors = recentErrors;
-                    
-                    // Calculate system health score
-                    var problemEntries = orphanedEntries.Count + stuckEntries.Count + recentErrors;
-                    var healthScore = totalEntries > 0 ? Math.Max(0, 100 - (problemEntries * 100 / totalEntries)) : 100;
-                    ViewBag.SystemHealth = Math.Min(100, healthScore);
-                }
+                    // Add admin data to ViewBag if user is admin
+                    if (IsAdmin) // Use base controller property
+                    {
+                        var orphanedEntries = await _backlogService.GetOrphanedEntriesAsync();
+                        var stuckEntries = await _backlogService.GetStuckEntriesAsync();
+                        var recentErrors = await _backlogService.GetRecentErrorsCountAsync();
+                        var totalEntries = await _backlogService.GetTotalEntriesCountAsync();
+                        
+                        ViewBag.OrphanedCount = orphanedEntries.Count;
+                        ViewBag.StuckCount = stuckEntries.Count;
+                        ViewBag.RecentErrors = recentErrors;
+                        
+                        // Calculate system health score
+                        var problemEntries = orphanedEntries.Count + stuckEntries.Count + recentErrors;
+                        var healthScore = totalEntries > 0 ? Math.Max(0, 100 - (problemEntries * 100 / totalEntries)) : 100;
+                        ViewBag.SystemHealth = Math.Min(100, healthScore);
+                    }
 
-                return View(viewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error loading backlog dashboard");
-                TempData["Error"] = "Error loading backlog dashboard.";
-                return View(new BacklogDashboardViewModel());
-            }
+                    return View(viewModel);
+                },
+                result => View(result),
+                "loading backlog dashboard"
+            );
         }
 
         // Entry Details
@@ -277,19 +272,17 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = "RequireGRCAnalystOrAbove")]
         public async Task<IActionResult> ManagerApprove(int backlogId, string comments)
         {
-            try
-            {
-                var userId = User.Identity?.Name ?? "";
-                await _backlogService.ManagerApproveAsync(backlogId, comments, userId);
-                TempData["Success"] = "Entry approved and processed.";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error approving backlog entry {BacklogId} as manager", backlogId);
-                TempData["Error"] = "Error approving entry.";
-            }
-
-            return RedirectToAction(nameof(Details), new { id = backlogId });
+            return await ExecuteWithSuccessMessage(
+                async () => 
+                {
+                    var userId = User.GetUserId(); // Use extension method
+                    return await _backlogService.ManagerApproveAsync(backlogId, comments, userId);
+                },
+                entry => "Entry approved and processed.",
+                "approving backlog entry as manager",
+                nameof(Details),
+                new { id = backlogId }
+            );
         }
 
         [HttpPost]

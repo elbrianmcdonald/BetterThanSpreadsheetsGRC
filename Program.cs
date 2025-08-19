@@ -1,6 +1,7 @@
 ﻿using CyberRiskApp.Data;
 using CyberRiskApp.Models;
 using CyberRiskApp.Services;
+using CyberRiskApp.Repositories;
 using CyberRiskApp.Authorization;
 using CyberRiskApp.Middleware;
 using Microsoft.EntityFrameworkCore;
@@ -147,6 +148,9 @@ builder.Services.AddScoped<ISSLService, SSLService>();
 builder.Services.AddScoped<IDomainService, DomainService>();
 // Register App Settings service
 builder.Services.AddScoped<IAppSettingsService, AppSettingsService>();
+
+// STREAMLINING: Register generic repository pattern for code reuse
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 // Register Threat Modeling service
 builder.Services.AddScoped<IThreatModelingService, ThreatModelingService>();
 // Register MITRE Import service

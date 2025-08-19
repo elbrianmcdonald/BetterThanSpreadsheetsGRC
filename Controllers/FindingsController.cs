@@ -4,19 +4,19 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using CyberRiskApp.Authorization;
 using CyberRiskApp.Extensions;
+using CyberRiskApp.Filters;
 using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 
 namespace CyberRiskApp.Controllers
 {
-    public class FindingsController : Controller
+    public class FindingsController : BaseController
     {
         private readonly IFindingService _findingService;
         private readonly IRequestService _requestService;
         private readonly IExportService _exportService;
         private readonly IRiskMatrixService _riskMatrixService;
         private readonly IRiskBacklogService _riskBacklogService;
-        private readonly ILogger<FindingsController> _logger;
 
         public FindingsController(
             IFindingService findingService, 
@@ -24,38 +24,44 @@ namespace CyberRiskApp.Controllers
             IExportService exportService, 
             IRiskMatrixService riskMatrixService, 
             IRiskBacklogService riskBacklogService, 
-            ILogger<FindingsController> logger)
+            ILogger<FindingsController> logger) : base(logger)
         {
             _findingService = findingService;
             _requestService = requestService;
             _exportService = exportService;
             _riskMatrixService = riskMatrixService;
             _riskBacklogService = riskBacklogService;
-            _logger = logger;
         }
 
         // UPDATED: All users can view findings
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> Index(string status = "open")
         {
-            FindingStatus? filterStatus = status.ToLower() switch
-            {
-                "open" => FindingStatus.Open,
-                "closed" => FindingStatus.Closed,
-                "accepted" => FindingStatus.RiskAccepted,
-                "all" => null,
-                _ => FindingStatus.Open
-            };
+            return await ExecuteWithErrorHandling(
+                async () =>
+                {
+                    FindingStatus? filterStatus = status.ToLower() switch
+                    {
+                        "open" => FindingStatus.Open,
+                        "closed" => FindingStatus.Closed,
+                        "accepted" => FindingStatus.RiskAccepted,
+                        "all" => null,
+                        _ => FindingStatus.Open
+                    };
 
-            var findings = await _findingService.GetFindingsAsync(filterStatus);
+                    var findings = await _findingService.GetFindingsAsync(filterStatus);
 
-            ViewBag.CurrentFilter = status;
-            ViewBag.OpenCount = (await _findingService.GetOpenFindingsAsync()).Count();
-            ViewBag.ClosedCount = (await _findingService.GetClosedFindingsAsync()).Count();
-            ViewBag.AllCount = (await _findingService.GetAllFindingsAsync()).Count();
-            ViewBag.CanManageFindings = User.CanUserPerformAssessments(); // Show/hide create/edit buttons
+                    ViewBag.CurrentFilter = status;
+                    ViewBag.OpenCount = (await _findingService.GetOpenFindingsAsync()).Count();
+                    ViewBag.ClosedCount = (await _findingService.GetClosedFindingsAsync()).Count();
+                    ViewBag.AllCount = (await _findingService.GetAllFindingsAsync()).Count();
+                    ViewBag.CanManageFindings = User.CanUserPerformAssessments(); // Show/hide create/edit buttons
 
-            return View(findings);
+                    return findings;
+                },
+                findings => View(findings),
+                "loading findings list"
+            );
         }
 
         // UPDATED: All users can export findings
@@ -109,53 +115,43 @@ namespace CyberRiskApp.Controllers
         // UPDATED: Only GRC and Admin can create findings
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RemoveAuditFields]
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Create(Finding finding)
         {
-            // Remove audit fields from model validation since they're set automatically
-            ModelState.Remove("CreatedBy");
-            ModelState.Remove("UpdatedBy");
             
             if (ModelState.IsValid)
             {
-                try
-                {
-                    // NEW WORKFLOW: Route finding through backlog for approval before creating in register
-                    var userId = User.Identity?.Name ?? "Unknown";
-                    
-                    var backlogEntry = await _riskBacklogService.CreateFindingBacklogEntryAsync(
-                        title: finding.Title,
-                        details: finding.Details,
-                        source: "Manual Creation", // Could be made configurable
-                        impact: finding.Impact,
-                        likelihood: finding.Likelihood,
-                        exposure: finding.Exposure,
-                        asset: finding.Asset ?? "",
-                        businessUnit: finding.BusinessUnit ?? "",
-                        businessOwner: finding.BusinessOwner ?? "",
-                        domain: finding.Domain ?? "",
-                        technicalControl: finding.TechnicalControl ?? "",
-                        requesterId: userId
-                    );
+                return await ExecuteWithErrorHandling(
+                    async () =>
+                    {
+                        // NEW WORKFLOW: Route finding through backlog for approval before creating in register
+                        var userId = User.GetUserId();
+                        
+                        var backlogEntry = await _riskBacklogService.CreateFindingBacklogEntryAsync(
+                            title: finding.Title,
+                            details: finding.Details,
+                            source: "Manual Creation", // Could be made configurable
+                            impact: finding.Impact,
+                            likelihood: finding.Likelihood,
+                            exposure: finding.Exposure,
+                            asset: finding.Asset ?? "",
+                            businessUnit: finding.BusinessUnit ?? "",
+                            businessOwner: finding.BusinessOwner ?? "",
+                            domain: finding.Domain ?? "",
+                            technicalControl: finding.TechnicalControl ?? "",
+                            requesterId: userId
+                        );
 
-                    TempData["Success"] = $"Finding submitted for approval as backlog entry {backlogEntry.BacklogNumber}. It will be added to the findings register once approved.";
-                    
-                    // Redirect to the backlog to see the new entry
-                    return RedirectToAction("Index", "RiskBacklog");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error creating finding");
-                    ModelState.AddModelError("", $"Error creating finding: {ex.Message}");
-                }
-            }
-            else
-            {
-                // Log validation errors
-                foreach (var modelError in ModelState.Values.SelectMany(v => v.Errors))
-                {
-                    _logger.LogWarning($"Validation error: {modelError.ErrorMessage}");
-                }
+                        return backlogEntry;
+                    },
+                    backlogEntry =>
+                    {
+                        TempData["Success"] = $"Finding submitted for approval as backlog entry {backlogEntry.BacklogNumber}. It will be added to the findings register once approved.";
+                        return RedirectToAction("Index", "RiskBacklog");
+                    },
+                    "creating finding"
+                );
             }
 
             return View(finding);
@@ -175,6 +171,7 @@ namespace CyberRiskApp.Controllers
         // UPDATED: Only GRC and Admin can edit findings
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RemoveAuditFields]
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         public async Task<IActionResult> Edit(int id, Finding finding)
         {
@@ -183,39 +180,49 @@ namespace CyberRiskApp.Controllers
 
             if (ModelState.IsValid)
             {
-                // Get the default risk matrix and calculate risk rating using it
-                var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
-                if (defaultMatrix != null)
-                {
-                    // Convert enum values to integers for the risk matrix calculation
-                    int impactLevel = (int)finding.Impact;
-                    int likelihoodLevel = (int)finding.Likelihood;
-                    int? exposureLevel = defaultMatrix.MatrixType == RiskMatrixType.ImpactLikelihoodExposure 
-                        ? (int)finding.Exposure 
-                        : null;
-
-                    var riskLevel = await _riskMatrixService.CalculateRiskLevelAsync(
-                        defaultMatrix.Id, impactLevel, likelihoodLevel, exposureLevel);
-
-                    // Convert RiskLevel back to RiskRating
-                    finding.RiskRating = riskLevel switch
+                return await ExecuteWithErrorHandling(
+                    async () =>
                     {
-                        RiskLevel.Low => RiskRating.Low,
-                        RiskLevel.Medium => RiskRating.Medium,
-                        RiskLevel.High => RiskRating.High,
-                        RiskLevel.Critical => RiskRating.Critical,
-                        _ => RiskRating.Medium
-                    };
-                }
-                else
-                {
-                    // Fallback to original calculation if no matrix is configured
-                    finding.RiskRating = finding.CalculateRiskRating();
-                }
+                        // Get the default risk matrix and calculate risk rating using it
+                        var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                        if (defaultMatrix != null)
+                        {
+                            // Convert enum values to integers for the risk matrix calculation
+                            int impactLevel = (int)finding.Impact;
+                            int likelihoodLevel = (int)finding.Likelihood;
+                            int? exposureLevel = defaultMatrix.MatrixType == RiskMatrixType.ImpactLikelihoodExposure 
+                                ? (int)finding.Exposure 
+                                : null;
 
-                await _findingService.UpdateFindingAsync(finding);
-                TempData["Success"] = "Finding updated successfully with risk rating calculated using configured matrix.";
-                return RedirectToAction(nameof(Index));
+                            var riskLevel = await _riskMatrixService.CalculateRiskLevelAsync(
+                                defaultMatrix.Id, impactLevel, likelihoodLevel, exposureLevel);
+
+                            // Convert RiskLevel back to RiskRating
+                            finding.RiskRating = riskLevel switch
+                            {
+                                RiskLevel.Low => RiskRating.Low,
+                                RiskLevel.Medium => RiskRating.Medium,
+                                RiskLevel.High => RiskRating.High,
+                                RiskLevel.Critical => RiskRating.Critical,
+                                _ => RiskRating.Medium
+                            };
+                        }
+                        else
+                        {
+                            // Fallback to original calculation if no matrix is configured
+                            finding.RiskRating = finding.CalculateRiskRating();
+                        }
+
+                        await _findingService.UpdateFindingAsync(finding);
+                        return finding;
+                    },
+                    _ =>
+                    {
+                        TempData["Success"] = "Finding updated successfully with risk rating calculated using configured matrix.";
+                        return RedirectToAction(nameof(Index));
+                    },
+                    "updating finding"
+                );
             }
 
             return View(finding);
@@ -293,25 +300,26 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = PolicyConstants.RequireAdminRole)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            try
-            {
-                var finding = await _findingService.GetFindingByIdAsync(id);
-                if (finding == null)
+            return await ExecuteWithErrorHandling(
+                async () =>
                 {
-                    TempData["Error"] = "Finding not found.";
-                    return RedirectToAction(nameof(Index));
-                }
+                    var finding = await _findingService.GetFindingByIdAsync(id);
+                    if (finding == null)
+                    {
+                        throw new InvalidOperationException("Finding not found.");
+                    }
 
-                await _findingService.DeleteFindingAsync(id);
-                TempData["Success"] = $"Finding #{finding.FindingNumber} - {finding.Title} deleted successfully.";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting finding with ID: {FindingId}", id);
-                TempData["Error"] = $"Error deleting finding: {ex.Message}";
-                return RedirectToAction(nameof(Index));
-            }
+                    await _findingService.DeleteFindingAsync(id);
+                    return finding;
+                },
+                finding =>
+                {
+                    TempData["Success"] = $"Finding #{finding.FindingNumber} - {finding.Title} deleted successfully.";
+                    return RedirectToAction(nameof(Index));
+                },
+                "deleting finding",
+                nameof(Index)
+            );
         }
 
         // UPDATED: All users can request risk acceptance (but only view the form)
