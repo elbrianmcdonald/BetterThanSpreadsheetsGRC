@@ -3,200 +3,346 @@
     ViewData["Title"] = "Create New Finding";
 }
 
-<div class="container">
+<div class="container-fluid">
     <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-plus-circle me-2"></i>Create New Finding
-                    </h3>
+        <div class="col-12 col-xl-10">
+            <!-- Progress Steps -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0">
+                            <i class="fas fa-plus-circle me-2 text-primary"></i>Create New Security Finding
+                        </h2>
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-light text-dark me-2">Step-by-Step Guide</span>
+                            <div class="progress" style="width: 200px; height: 8px;">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: 0%" id="formProgress"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form asp-action="Create" method="post">
-                        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+            </div>
 
+            <form asp-action="Create" method="post" id="findingForm">
+                <div asp-validation-summary="All" class="alert alert-danger mb-4" style="display: none;" id="validationSummary"></div>
+
+                <!-- Step 1: Basic Information -->
+                <div class="card shadow-sm mb-4" data-step="1">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <span class="badge bg-light text-primary me-2">1</span>
+                            <i class="fas fa-info-circle me-2"></i>Basic Finding Information
+                        </h5>
+                        <small class="opacity-75">Start by providing the essential details about this security finding</small>
+                    </div>
+                    <div class="card-body">
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-8">
                                 <div class="mb-3">
                                     <label asp-for="Title" class="form-label fw-bold">
-                                        Finding Title <span class="text-danger">*</span>
+                                        <i class="fas fa-tag me-1 text-primary"></i>Finding Title <span class="text-danger">*</span>
                                     </label>
-                                    <input asp-for="Title" class="form-control" placeholder="Enter finding title" />
+                                    <input asp-for="Title" class="form-control form-control-lg" 
+                                           placeholder="e.g., Unencrypted Database Connection, Missing Security Headers..." 
+                                           data-bs-toggle="tooltip" 
+                                           title="Provide a clear, descriptive title that identifies the security issue" />
                                     <span asp-validation-for="Title" class="text-danger"></span>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label asp-for="Domain" class="form-label fw-bold">
-                                        Domain
+                                        <i class="fas fa-layer-group me-1 text-primary"></i>Security Domain
                                     </label>
                                     @Html.AssetComboboxFor(m => m.Domain, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
+                                    <small class="text-muted">Security category this finding relates to</small>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label asp-for="Details" class="form-label fw-bold">
-                                Finding Details <span class="text-danger">*</span>
+                                <i class="fas fa-file-alt me-1 text-primary"></i>Finding Details <span class="text-danger">*</span>
                             </label>
-                            <textarea asp-for="Details" class="form-control" rows="4"
-                                      placeholder="Describe the security finding in detail..."></textarea>
+                            <textarea asp-for="Details" class="form-control" rows="5"
+                                      placeholder="Describe the security finding in detail...&#10;• What was discovered?&#10;• Where was it found?&#10;• How does it impact security?&#10;• Steps to reproduce (if applicable)"
+                                      data-bs-toggle="tooltip" 
+                                      title="Provide comprehensive details including location, impact, and reproduction steps"></textarea>
                             <span asp-validation-for="Details" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="fas fa-lightbulb me-1"></i>
+                                <strong>Tip:</strong> Include specific details about the vulnerability, its location, and potential security impact
+                            </div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label asp-for="Impact" class="form-label fw-bold">
-                                        Impact Level <span class="text-danger">*</span>
-                                    </label>
-                                    <select asp-for="Impact" class="form-select" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.ImpactLevel>()">
-                                        <option value="">-- Select Impact --</option>
-                                    </select>
-                                    <span asp-validation-for="Impact" class="text-danger"></span>
-                                    <small class="text-muted">1=Low, 2=Medium, 3=High, 4=Critical</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label asp-for="Likelihood" class="form-label fw-bold">
-                                        Likelihood <span class="text-danger">*</span>
-                                    </label>
-                                    <select asp-for="Likelihood" class="form-select" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.LikelihoodLevel>()">
-                                        <option value="">-- Select Likelihood --</option>
-                                    </select>
-                                    <span asp-validation-for="Likelihood" class="text-danger"></span>
-                                    <small class="text-muted">1=Unlikely, 2=Possible, 3=Likely, 4=Almost Certain</small>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-3">
-                                    <label asp-for="Exposure" class="form-label fw-bold">
-                                        Exposure Level <span class="text-danger">*</span>
-                                    </label>
-                                    <select asp-for="Exposure" class="form-select" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.ExposureLevel>()">
-                                        <option value="">-- Select Exposure --</option>
-                                    </select>
-                                    <span asp-validation-for="Exposure" class="text-danger"></span>
-                                    <small class="text-muted">How exposed is the organization?</small>
+                <!-- Step 2: Risk Assessment -->
+                <div class="card shadow-sm mb-4" data-step="2">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <span class="badge bg-light text-warning me-2">2</span>
+                            <i class="fas fa-shield-alt me-2"></i>Risk Assessment
+                        </h5>
+                        <small class="opacity-75">Evaluate the potential impact and likelihood of this security finding</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info mb-4">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-info-circle me-2 mt-1"></i>
+                                <div>
+                                    <strong>Risk Assessment Guide:</strong><br>
+                                    Rate each factor based on your organization's context. The system will automatically calculate the overall risk level and SLA deadline.
                                 </div>
                             </div>
                         </div>
 
                         <div class="row">
-                            <div class="col-md-12">
-                                <div class="mb-3">
-                                    <label asp-for="Owner" class="form-label fw-bold">
-                                        Finding Owner <span class="text-danger">*</span>
-                                    </label>
-                                    @Html.OwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"), required: true)
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="Asset" class="form-label fw-bold">
-                                Affected Asset
-                            </label>
-                            @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="BusinessUnit" class="form-label fw-bold">
-                                Business Unit
-                            </label>
-                            @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
-                        </div>
-
-                        <div class="mb-3">
-                            <label asp-for="BusinessOwner" class="form-label fw-bold">
-                                Business Owner
-                            </label>
-                            @Html.BusinessOwnerComboboxFor(m => m.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
-                        </div>
-
-                        <!-- Multiple Technical Controls -->
-                        <div class="mb-3">
-                            <label asp-for="TechnicalControl" class="form-label fw-bold">
-                                Technical Controls
-                                <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="addTechnicalControl()">
-                                    <i class="fas fa-plus"></i> Add Control
-                                </button>
-                            </label>
-                            <div id="technicalControlsContainer">
-                                <!-- Controls will be added here dynamically -->
-                            </div>
-                            <input type="hidden" asp-for="TechnicalControl" id="technicalControlsHidden" value="" />
-                            <span asp-validation-for="TechnicalControl" class="text-danger"></span>
-                        </div>
-
-                        <!-- Risk Assessment and SLA Display -->
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card bg-light mb-3">
+                            <div class="col-lg-4 mb-4">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-header bg-primary text-white">
+                                        <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Impact Level</h6>
+                                    </div>
                                     <div class="card-body">
-                                        <h5 class="card-title mb-3">
-                                            <i class="fas fa-tachometer-alt me-2"></i>Risk Assessment & SLA Configuration
-                                        </h5>
-                                        <div class="row text-center">
-                                            <div class="col-md-2">
-                                                <div class="p-2">
-                                                    <small class="text-muted d-block">Impact</small>
-                                                    <strong class="d-block" id="impactDisplay">-</strong>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="p-2">
-                                                    <small class="text-muted d-block">Likelihood</small>
-                                                    <strong class="d-block" id="likelihoodDisplay">-</strong>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="p-2">
-                                                    <small class="text-muted d-block">Exposure</small>
-                                                    <strong class="d-block" id="exposureDisplay">-</strong>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="p-2 border-start">
-                                                    <small class="text-muted d-block">Risk Score</small>
-                                                    <h3 class="mb-0" id="riskScore">-</h3>
-                                                    <span id="riskLevel" class="badge fs-6">-</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="p-2 border-start">
-                                                    <small class="text-muted d-block">Automatic SLA</small>
-                                                    <strong class="d-block text-primary" id="slaHours">-</strong>
-                                                    <small class="text-muted" id="slaDate">-</small>
-                                                </div>
-                                            </div>
+                                        <select asp-for="Impact" class="form-select form-select-lg" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.ImpactLevel>()">
+                                            <option value="">-- Select Impact --</option>
+                                        </select>
+                                        <span asp-validation-for="Impact" class="text-danger"></span>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <strong>Consider:</strong> Financial loss, operational disruption, data compromise, reputation damage
+                                            </small>
                                         </div>
-                                        <div class="mt-3">
-                                            <div class="alert alert-info mb-0">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                <strong>Note:</strong> SLA deadline will be automatically calculated based on risk level. 
-                                                Higher risk findings require faster response times per organizational policy.
-                                            </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 mb-4">
+                                <div class="card h-100 border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Likelihood</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <select asp-for="Likelihood" class="form-select form-select-lg" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.LikelihoodLevel>()">
+                                            <option value="">-- Select Likelihood --</option>
+                                        </select>
+                                        <span asp-validation-for="Likelihood" class="text-danger"></span>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <strong>Consider:</strong> Threat actor motivation, vulnerability complexity, existing controls
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 mb-4">
+                                <div class="card h-100 border-secondary">
+                                    <div class="card-header bg-secondary text-white">
+                                        <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Exposure Level</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <select asp-for="Exposure" class="form-select form-select-lg" asp-items="Html.GetEnumSelectList<CyberRiskApp.Models.ExposureLevel>()">
+                                            <option value="">-- Select Exposure --</option>
+                                        </select>
+                                        <span asp-validation-for="Exposure" class="text-danger"></span>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <strong>Consider:</strong> Asset accessibility, network exposure, user access levels
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="d-flex gap-3">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save me-2"></i>Create Finding
-                                    </button>
-                                    <a asp-action="Index" class="btn btn-secondary">
-                                        <i class="fas fa-times me-2"></i>Cancel
-                                    </a>
+                        <!-- Real-time Risk Calculation Display -->
+                        <div class="card bg-light border-0 mt-4">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-3">
+                                    <i class="fas fa-calculator me-2"></i>Calculated Risk Assessment & SLA
+                                </h6>
+                                <div class="row">
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2">
+                                            <small class="text-muted d-block">Impact</small>
+                                            <strong class="d-block" id="impactDisplay">-</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2">
+                                            <small class="text-muted d-block">Likelihood</small>
+                                            <strong class="d-block" id="likelihoodDisplay">-</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2">
+                                            <small class="text-muted d-block">Exposure</small>
+                                            <strong class="d-block" id="exposureDisplay">-</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-2 border-start">
+                                            <small class="text-muted d-block">Risk Score</small>
+                                            <h4 class="mb-0" id="riskScore">-</h4>
+                                            <span id="riskLevel" class="badge">-</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3 pt-3 border-top">
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-center align-items-center">
+                                            <div class="text-center">
+                                                <small class="text-muted d-block">Automatic SLA Deadline</small>
+                                                <strong class="text-primary d-block" id="slaHours">-</strong>
+                                                <small class="text-muted" id="slaDate">Select risk factors to calculate SLA</small>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Ownership & Context -->
+                <div class="card shadow-sm mb-4" data-step="3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">
+                            <span class="badge bg-light text-success me-2">3</span>
+                            <i class="fas fa-users me-2"></i>Ownership & Organizational Context
+                        </h5>
+                        <small class="opacity-75">Identify who is responsible and what assets/business units are affected</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-6 mb-4">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0 text-primary">
+                                            <i class="fas fa-user-tie me-2"></i>Responsibility Assignment
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label asp-for="Owner" class="form-label fw-bold">
+                                                <i class="fas fa-user-shield me-1 text-primary"></i>Finding Owner <span class="text-danger">*</span>
+                                            </label>
+                                            @Html.OwnerComboboxFor(m => m.Owner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"), required: true)
+                                            <small class="text-muted">Primary person responsible for addressing this finding</small>
+                                        </div>
+                                        <div class="mb-0">
+                                            <label asp-for="BusinessOwner" class="form-label fw-bold">
+                                                <i class="fas fa-briefcase me-1 text-secondary"></i>Business Owner
+                                            </label>
+                                            @Html.BusinessOwnerComboboxFor(m => m.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
+                                            <small class="text-muted">Business stakeholder who owns the affected process/system</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 mb-4">
+                                <div class="card h-100 border-info">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0 text-info">
+                                            <i class="fas fa-building me-2"></i>Asset & Business Context
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label asp-for="Asset" class="form-label fw-bold">
+                                                <i class="fas fa-server me-1 text-info"></i>Affected Asset
+                                            </label>
+                                            @Html.AssetComboboxFor(m => m.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
+                                            <small class="text-muted">System, application, or resource where finding was discovered</small>
+                                        </div>
+                                        <div class="mb-0">
+                                            <label asp-for="BusinessUnit" class="form-label fw-bold">
+                                                <i class="fas fa-sitemap me-1 text-secondary"></i>Business Unit
+                                            </label>
+                                            @Html.BusinessUnitComboboxFor(m => m.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
+                                            <small class="text-muted">Department or division that owns the affected asset</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Technical Controls (Optional) -->
+                <div class="card shadow-sm mb-4" data-step="4">
+                    <div class="card-header bg-info text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="card-title mb-0">
+                                    <span class="badge bg-light text-info me-2">4</span>
+                                    <i class="fas fa-cogs me-2"></i>Technical Controls
+                                </h5>
+                                <small class="opacity-75">Identify existing security controls related to this finding (optional but recommended)</small>
+                            </div>
+                            <button type="button" class="btn btn-outline-light btn-sm" onclick="addTechnicalControl()">
+                                <i class="fas fa-plus me-1"></i>Add Control
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-light border-info mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-lightbulb text-info me-2 mt-1"></i>
+                                <div>
+                                    <strong>Technical Controls Help:</strong><br>
+                                    List security controls that are related to this finding - either controls that failed, controls that could prevent this issue, 
+                                    or controls that need to be implemented. This helps with compliance mapping and remediation planning.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="technicalControlsContainer" class="mb-3">
+                            <div class="text-center text-muted py-3" id="noControlsMessage">
+                                <i class="fas fa-plus-circle fs-1 opacity-25 mb-2"></i>
+                                <p class="mb-0">Click "Add Control" to associate security controls with this finding</p>
+                            </div>
+                        </div>
+                        
+                        <input type="hidden" asp-for="TechnicalControl" id="technicalControlsHidden" value="" />
+                        <span asp-validation-for="TechnicalControl" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- Step 5: Review & Submit -->
+                <div class="card shadow-sm mb-4" data-step="5">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title mb-0">
+                            <span class="badge bg-light text-dark me-2">5</span>
+                            <i class="fas fa-check-circle me-2"></i>Review & Submit
+                        </h5>
+                        <small class="opacity-75">Review your finding details and submit to the system</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success mb-4">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-thumbs-up me-2 mt-1"></i>
+                                <div>
+                                    <strong>Ready to Submit!</strong><br>
+                                    Once submitted, this finding will be entered into the risk management system with automatic SLA tracking. 
+                                    You'll be able to track progress and add remediation activities through the findings dashboard.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex gap-3 justify-content-end">
+                                    <a asp-action="Index" class="btn btn-outline-secondary btn-lg">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary btn-lg px-4" id="submitBtn">
+                                        <i class="fas fa-save me-2"></i>Create Finding
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                     </form>
                 </div>
             </div>
@@ -213,23 +359,42 @@
         let technicalControlIndex = 0;
         const technicalControls = [];
         
-        // Add technical control function
+        // Add technical control function with improved UX
         function addTechnicalControl() {
             const container = document.getElementById('technicalControlsContainer');
+            const noControlsMessage = document.getElementById('noControlsMessage');
             const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
+            
+            // Hide the "no controls" message
+            if (noControlsMessage) {
+                noControlsMessage.style.display = 'none';
+            }
+            
             const controlHtml = `
-                <div class="input-group mb-2" id="control_${technicalControlIndex}">
-                    <select class="form-select technical-control-select" 
-                            data-category="4" 
-                            data-can-add-new="${canAddNew}" 
-                            data-placeholder="Select or type to add control..."
-                            data-index="${technicalControlIndex}"
-                            style="width: calc(100% - 45px);">
-                        <option value="">Select or type to add control...</option>
-                    </select>
-                    <button class="btn btn-outline-danger" type="button" onclick="removeTechnicalControl(${technicalControlIndex})">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <div class="card border-info mb-3" id="control_${technicalControlIndex}">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="flex-grow-1">
+                                <label class="form-label mb-2 fw-bold text-info">
+                                    <i class="fas fa-shield-alt me-1"></i>Security Control ${technicalControlIndex + 1}
+                                </label>
+                                <select class="form-select technical-control-select" 
+                                        data-category="4" 
+                                        data-can-add-new="${canAddNew}" 
+                                        data-placeholder="Select or type to add control..."
+                                        data-index="${technicalControlIndex}">
+                                    <option value="">Select or type to add control...</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button class="btn btn-outline-danger btn-sm" type="button" 
+                                        onclick="removeTechnicalControl(${technicalControlIndex})"
+                                        title="Remove this control">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
             container.insertAdjacentHTML('beforeend', controlHtml);
@@ -246,12 +411,85 @@
             if (newSelect) {
                 newSelect.addEventListener('change', updateTechnicalControlsHidden);
             }
+
+            // Update progress
+            updateFormProgress();
         }
         
-        // Remove technical control function
+        // Remove technical control function with improved UX
         function removeTechnicalControl(index) {
-            document.getElementById(`control_${index}`).remove();
-            updateTechnicalControlsHidden();
+            const controlElement = document.getElementById(`control_${index}`);
+            if (controlElement) {
+                controlElement.remove();
+                updateTechnicalControlsHidden();
+                
+                // Show "no controls" message if no controls remain
+                const container = document.getElementById('technicalControlsContainer');
+                const noControlsMessage = document.getElementById('noControlsMessage');
+                const remainingControls = container.querySelectorAll('[id^="control_"]');
+                
+                if (remainingControls.length === 0 && noControlsMessage) {
+                    noControlsMessage.style.display = 'block';
+                }
+                
+                // Update progress
+                updateFormProgress();
+            }
+        }
+        
+        // Form progress tracking
+        function updateFormProgress() {
+            const requiredFields = [
+                'Title', 'Details', 'Impact', 'Likelihood', 'Exposure', 'Owner'
+            ];
+            
+            let completedFields = 0;
+            let totalFields = requiredFields.length;
+            
+            requiredFields.forEach(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (field && field.value && field.value.trim() !== '') {
+                    completedFields++;
+                }
+            });
+            
+            const progressPercentage = Math.round((completedFields / totalFields) * 100);
+            const progressBar = document.getElementById('formProgress');
+            
+            if (progressBar) {
+                progressBar.style.width = progressPercentage + '%';
+                progressBar.setAttribute('aria-valuenow', progressPercentage);
+                
+                // Update progress bar color based on completion
+                progressBar.className = 'progress-bar';
+                if (progressPercentage === 100) {
+                    progressBar.classList.add('bg-success');
+                } else if (progressPercentage >= 50) {
+                    progressBar.classList.add('bg-primary');
+                } else {
+                    progressBar.classList.add('bg-warning');
+                }
+            }
+            
+            // Enable/disable submit button based on required fields
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                if (progressPercentage === 100) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>Create Finding';
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Complete Required Fields (${completedFields}/${totalFields})`;
+                }
+            }
+        }
+        
+        // Initialize tooltips
+        function initializeTooltips() {
+            const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltips.forEach(function(tooltip) {
+                new bootstrap.Tooltip(tooltip);
+            });
         }
         
         // Update hidden field with all technical controls
@@ -372,11 +610,30 @@
         
         // Initialize form and automatic SLA calculation
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            initializeTooltips();
             
-            // Add risk calculation listeners
-            document.querySelector('[name="Impact"]').addEventListener('change', calculateRisk);
-            document.querySelector('[name="Likelihood"]').addEventListener('change', calculateRisk);
-            document.querySelector('[name="Exposure"]').addEventListener('change', calculateRisk);
+            // Add risk calculation listeners with progress updates
+            const riskFields = ['Impact', 'Likelihood', 'Exposure'];
+            riskFields.forEach(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (field) {
+                    field.addEventListener('change', function() {
+                        calculateRisk();
+                        updateFormProgress();
+                    });
+                }
+            });
+            
+            // Add progress tracking to required fields
+            const requiredFields = ['Title', 'Details', 'Owner'];
+            requiredFields.forEach(fieldName => {
+                const field = document.querySelector(`[name="${fieldName}"]`);
+                if (field) {
+                    field.addEventListener('input', updateFormProgress);
+                    field.addEventListener('change', updateFormProgress);
+                }
+            });
             
             // Initialize smart comboboxes
             if (window.initializeSmartComboboxes) {
@@ -386,11 +643,21 @@
                 console.error('window.initializeSmartComboboxes not available');
             }
             
-            // Initial risk calculation
+            // Initial calculations
             calculateRisk();
-            
-            // Initialize technical controls with a default value
+            updateFormProgress();
             updateTechnicalControlsHidden();
+            
+            // Add smooth scrolling animation for step navigation
+            const stepCards = document.querySelectorAll('[data-step]');
+            stepCards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    // Only scroll if clicking on the card header
+                    if (e.target.closest('.card-header')) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
         });
         
         // Handle form submission
