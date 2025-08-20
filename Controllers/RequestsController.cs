@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Identity;
 using CyberRiskApp.Models;
 using CyberRiskApp.Services;
 using CyberRiskApp.ViewModels;
@@ -15,13 +16,19 @@ namespace CyberRiskApp.Controllers
         private readonly IFindingService _findingService;
         private readonly IUserService _userService;
         private readonly IExportService _exportService;
+        private readonly IRiskBacklogService _riskBacklogService;
+        private readonly IRiskService _riskService;
+        private readonly UserManager<User> _userManager;
 
-        public RequestsController(IRequestService requestService, IFindingService findingService, IUserService userService, IExportService exportService)
+        public RequestsController(IRequestService requestService, IFindingService findingService, IUserService userService, IExportService exportService, IRiskBacklogService riskBacklogService, IRiskService riskService, UserManager<User> userManager)
         {
             _requestService = requestService;
             _findingService = findingService;
             _userService = userService;
             _exportService = exportService;
+            _riskBacklogService = riskBacklogService;
+            _riskService = riskService;
+            _userManager = userManager;
         }
 
         // UPDATED: All users can view all requests
@@ -322,57 +329,102 @@ namespace CyberRiskApp.Controllers
             {
                 try
                 {
-                    // Set additional properties
-                    request.Requester = User.Identity?.Name ?? "Unknown";
-                    request.RequestDate = DateTime.Today;
-                    request.Status = RequestStatus.PendingApproval;
+                    var currentUser = await _userManager.GetUserAsync(User);
+                    var requesterId = currentUser?.Id ?? "Unknown";
+                    
+                    // Determine if this is for a risk or finding
+                    string description;
+                    int? riskId = null;
+                    
+                    if (request.RiskId.HasValue)
+                    {
+                        // Risk acceptance request
+                        var risk = await _riskService.GetRiskByIdAsync(request.RiskId.Value);
+                        if (risk == null)
+                        {
+                            ModelState.AddModelError("RiskId", "Selected risk not found.");
+                            // Reload dropdowns and return view
+                            await LoadAcceptanceDropdowns();
+                            return View(request);
+                        }
+                        description = $"Risk Acceptance Request: {risk.RiskNumber} - {risk.Title}";
+                        riskId = risk.Id;
+                    }
+                    else if (request.FindingId.HasValue)
+                    {
+                        // Finding acceptance request  
+                        var finding = await _findingService.GetFindingByIdAsync(request.FindingId.Value);
+                        if (finding == null)
+                        {
+                            ModelState.AddModelError("FindingId", "Selected finding not found.");
+                            // Reload dropdowns and return view
+                            await LoadAcceptanceDropdowns();
+                            return View(request);
+                        }
+                        description = $"Finding Risk Acceptance Request: {finding.FindingNumber} - {finding.Title}";
+                        // For findings, we don't have a direct risk ID, but we use the same action type
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("", "Please select either a Finding or a Risk.");
+                        await LoadAcceptanceDropdowns();
+                        return View(request);
+                    }
 
-                    var result = await _requestService.CreateAcceptanceRequestAsync(request);
+                    // Create backlog entry using the specialized risk acceptance method
+                    RiskBacklogEntry backlogEntry;
+                    if (riskId.HasValue)
+                    {
+                        backlogEntry = await _riskBacklogService.CreateBacklogForRiskAcceptanceAsync(
+                            riskId.Value,
+                            request.Description ?? "",
+                            requesterId
+                        );
+                    }
+                    else
+                    {
+                        // For finding acceptance, use general method with RiskAcceptance action
+                        backlogEntry = await _riskBacklogService.CreateBacklogEntryAsync(
+                            null, // No risk ID for finding acceptances
+                            RiskBacklogAction.RiskAcceptance,
+                            description,
+                            request.Description ?? "",
+                            requesterId
+                        );
+                    }
 
-                    TempData["Success"] = "Risk acceptance request created successfully.";
-                    return RedirectToAction(nameof(Index));
+                    TempData["Success"] = $"Risk acceptance request submitted successfully and added to Risk Backlog (#{backlogEntry.BacklogNumber}).";
+                    return RedirectToAction("Index", "RiskBacklog");
                 }
                 catch (Exception ex)
                 {
                     TempData["Error"] = $"Error creating request: {ex.Message}";
-
-                    // Reload the dropdowns if there's an error
-                    var openFindings = await _requestService.GetOpenFindingsAsync();
-                    var openRisks = await _requestService.GetOpenRisksAsync();
-                    
-                    ViewBag.OpenFindings = openFindings.Select(f => new SelectListItem
-                    {
-                        Value = f.Id.ToString(),
-                        Text = $"{f.FindingNumber} - {f.Title}"
-                    }).ToList();
-
-                    ViewBag.OpenRisks = openRisks.Select(r => new SelectListItem
-                    {
-                        Value = r.Id.ToString(),
-                        Text = $"{r.RiskNumber} - {r.Title}"
-                    }).ToList();
-
+                    await LoadAcceptanceDropdowns();
                     return View(request);
                 }
             }
 
             // Reload the dropdowns if validation fails
-            var openFindingsForError = await _requestService.GetOpenFindingsAsync();
-            var openRisksForError = await _requestService.GetOpenRisksAsync();
+            await LoadAcceptanceDropdowns();
+            return View(request);
+        }
+
+        private async Task LoadAcceptanceDropdowns()
+        {
+            var openFindings = await _requestService.GetOpenFindingsAsync();
+            var openRisks = await _requestService.GetOpenRisksAsync();
             
-            ViewBag.OpenFindings = openFindingsForError.Select(f => new SelectListItem
+            ViewBag.OpenFindings = openFindings.Select(f => new SelectListItem
             {
                 Value = f.Id.ToString(),
                 Text = $"{f.FindingNumber} - {f.Title}"
             }).ToList();
 
-            ViewBag.OpenRisks = openRisksForError.Select(r => new SelectListItem
+            ViewBag.OpenRisks = openRisks.Select(r => new SelectListItem
             {
                 Value = r.Id.ToString(),
                 Text = $"{r.RiskNumber} - {r.Title}"
             }).ToList();
-
-            return View(request);
         }
 
         // UPDATED: All users can view acceptance request details

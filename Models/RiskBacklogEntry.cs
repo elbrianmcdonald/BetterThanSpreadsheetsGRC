@@ -170,7 +170,8 @@ namespace CyberRiskApp.Models
                    ActionType == RiskBacklogAction.RiskAcceptance || 
                    ActionType == RiskBacklogAction.RiskExtension || 
                    ActionType == RiskBacklogAction.RiskReview || 
-                   ActionType == RiskBacklogAction.RiskReassessment;
+                   ActionType == RiskBacklogAction.RiskReassessment ||
+                   ActionType == RiskBacklogAction.RiskClosure;
         }
 
         public string GetTitle()
@@ -264,6 +265,7 @@ namespace CyberRiskApp.Models
                 RiskBacklogAction.RiskExtension => "⏱️ Risk Extension",
                 RiskBacklogAction.RiskReview => "🔄 Risk Review",
                 RiskBacklogAction.RiskReassessment => "📊 Risk Reassessment",
+                RiskBacklogAction.RiskClosure => "🔒 Risk Closure",
                 _ => ActionType.ToString()
             };
         }

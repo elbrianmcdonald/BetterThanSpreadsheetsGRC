@@ -543,3 +543,26 @@ body {
     50% { opacity: 0.5; }
     100% { opacity: 1; }
 }
+
+/* ========================================
+   Dashboard Card Drilldown Hover Effects
+   ======================================== */
+
+.dashboard-card-hover {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.dashboard-card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-card-hover:active {
+    transform: translateY(-2px);
+}
+
+/* Ensure text color remains readable on hover */
+.dashboard-card-hover:hover .text-gray-800 {
+    color: #495057 !important;
+}

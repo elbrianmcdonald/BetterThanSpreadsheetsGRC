@@ -35,7 +35,7 @@ namespace CyberRiskApp.Controllers
 
         // UPDATED: All users can view findings
         [Authorize(Policy = PolicyConstants.RequireAnyRole)]
-        public async Task<IActionResult> Index(string status = "open")
+        public async Task<IActionResult> Index(string status = "open", string riskRating = null)
         {
             return await ExecuteWithErrorHandling(
                 async () =>
@@ -51,7 +51,27 @@ namespace CyberRiskApp.Controllers
 
                     var findings = await _findingService.GetFindingsAsync(filterStatus);
 
+                    // Apply risk rating filter if specified
+                    if (!string.IsNullOrEmpty(riskRating))
+                    {
+                        RiskRating? filterRiskRating = riskRating.ToLower() switch
+                        {
+                            "high" => RiskRating.High,
+                            "critical" => RiskRating.Critical,
+                            "medium" => RiskRating.Medium,
+                            "low" => RiskRating.Low,
+                            "extreme" => RiskRating.Extreme,
+                            _ => null
+                        };
+
+                        if (filterRiskRating.HasValue)
+                        {
+                            findings = findings.Where(f => f.RiskRating == filterRiskRating.Value);
+                        }
+                    }
+
                     ViewBag.CurrentFilter = status;
+                    ViewBag.CurrentRiskRating = riskRating;
                     ViewBag.OpenCount = (await _findingService.GetOpenFindingsAsync()).Count();
                     ViewBag.ClosedCount = (await _findingService.GetClosedFindingsAsync()).Count();
                     ViewBag.AllCount = (await _findingService.GetAllFindingsAsync()).Count();

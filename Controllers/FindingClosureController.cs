@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using CyberRiskApp.Models;
 using CyberRiskApp.Data;
 using CyberRiskApp.Authorization;
+using CyberRiskApp.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Identity;
@@ -13,11 +14,13 @@ namespace CyberRiskApp.Controllers
     {
         private readonly CyberRiskContext _context;
         private readonly UserManager<User> _userManager;
+        private readonly IRiskBacklogService _riskBacklogService;
 
-        public FindingClosureController(CyberRiskContext context, UserManager<User> userManager)
+        public FindingClosureController(CyberRiskContext context, UserManager<User> userManager, IRiskBacklogService riskBacklogService)
         {
             _context = context;
             _userManager = userManager;
+            _riskBacklogService = riskBacklogService;
         }
 
         // GET: FindingClosure - All users can view closure requests
@@ -79,7 +82,7 @@ namespace CyberRiskApp.Controllers
         {
             try
             {
-                Console.WriteLine("=== Closure Request Submission ===");
+                Console.WriteLine("=== Finding Closure Request Submission ===");
                 Console.WriteLine($"FindingId: {request.FindingId}");
                 Console.WriteLine($"Justification: {request.ClosureJustification}");
                 Console.WriteLine($"ModelState.IsValid: {ModelState.IsValid}");
@@ -99,29 +102,55 @@ namespace CyberRiskApp.Controllers
                 if (ModelState.IsValid)
                 {
                     var currentUser = await _userManager.GetUserAsync(User);
-                    request.Requester = currentUser?.FullName ?? User.Identity?.Name ?? "Current User";
-                    request.RequestDate = DateTime.Today;
-                    request.Status = RequestStatus.Pending;
+                    var requesterId = currentUser?.Id ?? "Unknown";
+                    var finding = await _context.Findings.FindAsync(request.FindingId);
+                    
+                    if (finding == null)
+                    {
+                        ModelState.AddModelError("FindingId", "Selected finding not found.");
+                        // Reload dropdown and return
+                        var openFindings = await _context.Findings
+                            .Where(f => f.Status == FindingStatus.Open)
+                            .OrderBy(f => f.FindingNumber)
+                            .ToListAsync();
 
-                    Console.WriteLine($"Saving request - Requester: {request.Requester}, Date: {request.RequestDate}");
+                        ViewBag.FindingId = new SelectList(
+                            openFindings.Select(f => new
+                            {
+                                Value = f.Id,
+                                Text = $"{f.FindingNumber} - {f.Title}"
+                            }),
+                            "Value",
+                            "Text",
+                            request.FindingId);
 
-                    _context.FindingClosureRequests.Add(request);
-                    await _context.SaveChangesAsync();
+                        return View(request);
+                    }
 
-                    Console.WriteLine("Request saved successfully!");
+                    // Create backlog entry for finding closure using general CreateBacklogEntryAsync method
+                    var description = $"Finding Closure Request: {finding.FindingNumber} - {finding.Title}";
+                    var backlogEntry = await _riskBacklogService.CreateBacklogEntryAsync(
+                        null, // No risk ID for finding closures
+                        RiskBacklogAction.FindingClosure,
+                        description,
+                        request.ClosureJustification ?? "",
+                        requesterId
+                    );
 
-                    TempData["Success"] = "Closure request submitted successfully.";
-                    return RedirectToAction(nameof(Index));
+                    Console.WriteLine("Request routed through Risk Backlog successfully!");
+
+                    TempData["Success"] = $"Finding closure request submitted successfully and added to Risk Backlog (#{backlogEntry.BacklogNumber}).";
+                    return RedirectToAction("Index", "RiskBacklog");
                 }
 
                 // Reload the dropdown for the view
-                var openFindings = await _context.Findings
+                var openFindingsForError = await _context.Findings
                     .Where(f => f.Status == FindingStatus.Open)
                     .OrderBy(f => f.FindingNumber)
                     .ToListAsync();
 
                 ViewBag.FindingId = new SelectList(
-                    openFindings.Select(f => new
+                    openFindingsForError.Select(f => new
                     {
                         Value = f.Id,
                         Text = $"{f.FindingNumber} - {f.Title}"

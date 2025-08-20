@@ -5,6 +5,7 @@ using CyberRiskApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Identity;
 using OfficeOpenXml;
 using Microsoft.Extensions.Logging;
 using CyberRiskApp.Extensions;
@@ -18,12 +19,16 @@ namespace CyberRiskApp.Controllers
         private readonly IRiskService _riskService;
         private readonly IExportService _exportService;
         private readonly IRiskLevelSettingsService _riskLevelSettingsService;
+        private readonly IRiskBacklogService _riskBacklogService;
+        private readonly UserManager<User> _userManager;
 
-        public RisksController(IRiskService riskService, IExportService exportService, IRiskLevelSettingsService riskLevelSettingsService, ILogger<RisksController> logger) : base(logger)
+        public RisksController(IRiskService riskService, IExportService exportService, IRiskLevelSettingsService riskLevelSettingsService, IRiskBacklogService riskBacklogService, UserManager<User> userManager, ILogger<RisksController> logger) : base(logger)
         {
             _riskService = riskService;
             _exportService = exportService;
             _riskLevelSettingsService = riskLevelSettingsService;
+            _riskBacklogService = riskBacklogService;
+            _userManager = userManager;
         }
 
         // GET: Risks
@@ -337,10 +342,10 @@ namespace CyberRiskApp.Controllers
             }
         }
 
-        // POST: Risks/CloseConfirmed
+        // POST: Risks/CloseConfirmed - Route through Risk Backlog for approval workflow
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
+        [Authorize(Policy = PolicyConstants.RequireAnyRole)]
         public async Task<IActionResult> CloseConfirmed(int id, string remediationDetails)
         {
             try
@@ -358,28 +363,27 @@ namespace CyberRiskApp.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                var currentUser = User?.Identity?.Name ?? "Unknown";
-                var success = await _riskService.CloseRiskAsync(id, remediationDetails, currentUser);
+                var currentUser = await _userManager.GetUserAsync(User);
+                var requesterId = currentUser?.Id ?? "Unknown";
+                
+                // Create backlog entry for risk closure
+                var description = $"Risk Closure Request: {risk.RiskNumber} - {risk.Title}";
+                var backlogEntry = await _riskBacklogService.CreateBacklogEntryAsync(
+                    risk.Id,
+                    RiskBacklogAction.RiskClosure,
+                    description,
+                    remediationDetails ?? "",
+                    requesterId
+                );
 
-                if (success)
-                {
-                    var isAdmin = User.IsInRole("Admin");
-                    var message = isAdmin 
-                        ? $"Risk {risk.RiskNumber} '{risk.Title}' has been closed successfully using admin override privileges."
-                        : $"Risk {risk.RiskNumber} '{risk.Title}' has been closed successfully.";
-                    TempData["Success"] = message;
-                }
-                else
-                {
-                    TempData["Error"] = "Failed to close risk. Please try again.";
-                }
+                TempData["Success"] = $"Risk closure request for {risk.RiskNumber} submitted successfully and added to Risk Backlog (#{backlogEntry.BacklogNumber}).";
+                return RedirectToAction("Index", "RiskBacklog");
             }
             catch (Exception ex)
             {
-                TempData["Error"] = $"Error closing risk: {ex.Message}";
+                TempData["Error"] = $"Error submitting risk closure request: {ex.Message}";
+                return RedirectToAction(nameof(Index));
             }
-
-            return RedirectToAction(nameof(Index));
         }
 
         // Admin-only delete action

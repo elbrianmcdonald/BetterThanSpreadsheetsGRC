@@ -273,7 +273,8 @@
         RiskReassessment = 5,
         NewFinding = 6,
         FindingReview = 7,
-        FindingClosure = 8
+        FindingClosure = 8,
+        RiskClosure = 9
     }
 
     public enum BacklogPriority
