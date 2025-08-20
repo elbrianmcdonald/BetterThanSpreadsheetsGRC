@@ -1125,6 +1125,63 @@
                                       rows="2" 
                                       placeholder="Describe what the threat actor does in this step..."></textarea>
                         </div>
+                        
+                        <!-- Controls Section -->
+                        <div class="mt-4">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-shield-alt me-2"></i>Security Controls
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-success">
+                                        <i class="fas fa-shield-alt me-1"></i>Current Protective
+                                    </label>
+                                    <div id="step-current-protective-${scenarioIndex}-${stepIndex}" class="controls-container">
+                                        <!-- Controls will be added here dynamically -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-success mt-2" 
+                                            onclick="addControl('step-current-protective-${scenarioIndex}-${stepIndex}', '${scenarioIndex}', 'ThreatActorSteps[${stepIndex}].CurrentProtectiveControls')">
+                                        <i class="fas fa-plus me-1"></i>Add Control
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-info">
+                                        <i class="fas fa-search me-1"></i>Current Detective
+                                    </label>
+                                    <div id="step-current-detective-${scenarioIndex}-${stepIndex}" class="controls-container">
+                                        <!-- Controls will be added here dynamically -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-info mt-2" 
+                                            onclick="addControl('step-current-detective-${scenarioIndex}-${stepIndex}', '${scenarioIndex}', 'ThreatActorSteps[${stepIndex}].CurrentDetectiveControls')">
+                                        <i class="fas fa-plus me-1"></i>Add Control
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-warning">
+                                        <i class="fas fa-plus-shield me-1"></i>Needed Protective
+                                    </label>
+                                    <div id="step-needed-protective-${scenarioIndex}-${stepIndex}" class="controls-container">
+                                        <!-- Controls will be added here dynamically -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-warning mt-2" 
+                                            onclick="addControl('step-needed-protective-${scenarioIndex}-${stepIndex}', '${scenarioIndex}', 'ThreatActorSteps[${stepIndex}].NeededProtectiveControls')">
+                                        <i class="fas fa-plus me-1"></i>Add Control
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold text-secondary">
+                                        <i class="fas fa-plus-search me-1"></i>Needed Detective
+                                    </label>
+                                    <div id="step-needed-detective-${scenarioIndex}-${stepIndex}" class="controls-container">
+                                        <!-- Controls will be added here dynamically -->
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" 
+                                            onclick="addControl('step-needed-detective-${scenarioIndex}-${stepIndex}', '${scenarioIndex}', 'ThreatActorSteps[${stepIndex}].NeededDetectiveControls')">
+                                        <i class="fas fa-plus me-1"></i>Add Control
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
