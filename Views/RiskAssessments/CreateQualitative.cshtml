@@ -818,6 +818,9 @@
             
             document.getElementById('threat-scenarios-container').insertAdjacentHTML('beforeend', scenarioHtml);
             updateOverallSummary();
+            
+            // Initialize MITRE autocomplete for the new threat scenario
+            initializeAllMitreInputs();
         }
         
         // Create accordion sections for threat scenario
@@ -1188,6 +1191,9 @@
             
             document.getElementById(`threat-actor-steps-${scenarioIndex}`).insertAdjacentHTML('beforeend', stepHtml);
             updateStepCount(scenarioIndex);
+            
+            // Initialize MITRE autocomplete for the new step
+            initializeAllMitreInputs();
         }
         
         // Remove threat actor step
@@ -1737,6 +1743,102 @@
             }
         }
         
+        // MITRE ATT&CK Technique Autocomplete
+        function initializeMitreAutocomplete(inputElement) {
+            let debounceTimer;
+            const suggestionsContainer = document.createElement('div');
+            suggestionsContainer.className = 'mitre-suggestions position-absolute bg-white border rounded shadow-sm';
+            suggestionsContainer.style.cssText = 'max-height: 200px; overflow-y: auto; z-index: 1050; width: 100%; display: none;';
+            
+            // Insert suggestions container after the input
+            inputElement.parentNode.insertBefore(suggestionsContainer, inputElement.nextSibling);
+            
+            inputElement.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(async () => {
+                    if (query.length >= 2) {
+                        try {
+                            const response = await fetch(`/api/mitre-attack/techniques?search=${encodeURIComponent(query)}`);
+                            if (response.ok) {
+                                const techniques = await response.json();
+                                showMitreSuggestions(suggestionsContainer, techniques, inputElement);
+                            }
+                        } catch (error) {
+                            console.error('Error fetching MITRE techniques:', error);
+                        }
+                    } else {
+                        hideMitreSuggestions(suggestionsContainer);
+                    }
+                }, 300);
+            });
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!inputElement.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    hideMitreSuggestions(suggestionsContainer);
+                }
+            });
+        }
+        
+        function showMitreSuggestions(container, techniques, inputElement) {
+            container.innerHTML = '';
+            
+            if (techniques.length === 0) {
+                container.innerHTML = '<div class="p-2 text-muted">No techniques found</div>';
+            } else {
+                techniques.forEach(technique => {
+                    const item = document.createElement('div');
+                    item.className = 'p-2 cursor-pointer mitre-suggestion-item';
+                    item.style.cssText = 'cursor: pointer; border-bottom: 1px solid #eee;';
+                    
+                    item.innerHTML = `
+                        <div class="fw-bold text-primary">${technique.id}</div>
+                        <div class="small">${technique.name}</div>
+                        <div class="small text-muted">${technique.tactic}</div>
+                    `;
+                    
+                    item.addEventListener('mouseenter', function() {
+                        this.style.backgroundColor = '#f8f9fa';
+                    });
+                    
+                    item.addEventListener('mouseleave', function() {
+                        this.style.backgroundColor = '';
+                    });
+                    
+                    item.addEventListener('click', function() {
+                        inputElement.value = `${technique.id} - ${technique.name}`;
+                        hideMitreSuggestions(container);
+                        inputElement.focus();
+                    });
+                    
+                    container.appendChild(item);
+                });
+            }
+            
+            container.style.display = 'block';
+        }
+        
+        function hideMitreSuggestions(container) {
+            container.style.display = 'none';
+        }
+        
+        // Initialize MITRE autocomplete for existing inputs and new ones
+        function initializeAllMitreInputs() {
+            document.querySelectorAll('.mitre-technique-input').forEach(input => {
+                if (!input.hasAttribute('data-mitre-initialized')) {
+                    initializeMitreAutocomplete(input);
+                    input.setAttribute('data-mitre-initialized', 'true');
+                }
+            });
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAllMitreInputs();
+        });
+
         // Make functions globally available
         window.addThreatScenario = addThreatScenario;
         window.removeThreatScenario = removeThreatScenario;
@@ -1748,5 +1850,7 @@
         window.removeControl = removeControl;
         window.calculateRisk = calculateRisk;
         window.checkSlaCompliance = checkSlaCompliance;
+        window.initializeMitreAutocomplete = initializeMitreAutocomplete;
+        window.initializeAllMitreInputs = initializeAllMitreInputs;
     </script>
 }
