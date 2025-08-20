@@ -3,6 +3,7 @@ using System;
 using CyberRiskApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CyberRiskApp.Migrations
 {
     [DbContext(typeof(CyberRiskContext))]
-    partial class CyberRiskContextModelSnapshot : ModelSnapshot
+    [Migration("20250820153320_AddRiskMatrixIntegrationToFinding")]
+    partial class AddRiskMatrixIntegrationToFinding
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1041,9 +1044,6 @@ namespace CyberRiskApp.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
-                    b.Property<DateTime?>("SlaDeadline")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -1883,9 +1883,6 @@ namespace CyberRiskApp.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
 
-                    b.Property<DateTime?>("SlaDeadline")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -2308,9 +2305,6 @@ namespace CyberRiskApp.Migrations
                     b.Property<decimal>("ALE")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime?>("AcceptanceDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("Asset")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -2357,9 +2351,6 @@ namespace CyberRiskApp.Migrations
                     b.Property<int>("InherentRiskLevel")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("LastReviewDate")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<int>("Likelihood")
                         .HasColumnType("integer");
 
@@ -2380,10 +2371,6 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<int>("ResidualRiskLevel")
                         .HasColumnType("integer");
-
-                    b.Property<string>("ReviewedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<int?>("RiskAssessmentId")
                         .HasColumnType("integer")
@@ -2649,9 +2636,6 @@ namespace CyberRiskApp.Migrations
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea");
-
-                    b.Property<DateTime?>("SlaDeadline")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -3062,12 +3046,6 @@ namespace CyberRiskApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("AssessmentApprovalSlaHours")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ComplianceAssessmentSlaHours")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -3078,21 +3056,12 @@ namespace CyberRiskApp.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int>("CriticalRiskReviewSlaHours")
-                        .HasColumnType("integer");
-
                     b.Property<int>("CriticalRiskSlaHours")
                         .HasColumnType("integer");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
-
-                    b.Property<int>("ExceptionRequestApprovalSlaHours")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("HighRiskReviewSlaHours")
-                        .HasColumnType("integer");
 
                     b.Property<int>("HighRiskSlaHours")
                         .HasColumnType("integer");
@@ -3103,9 +3072,6 @@ namespace CyberRiskApp.Migrations
                     b.Property<bool>("IsDefault")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("LowRiskReviewSlaHours")
-                        .HasColumnType("integer");
-
                     b.Property<int>("LowRiskSlaHours")
                         .HasColumnType("integer");
 
@@ -3113,12 +3079,6 @@ namespace CyberRiskApp.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("MatrixType")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MaturityAssessmentSlaHours")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MediumRiskReviewSlaHours")
                         .HasColumnType("integer");
 
                     b.Property<int>("MediumRiskSlaHours")
@@ -3138,14 +3098,8 @@ namespace CyberRiskApp.Migrations
                     b.Property<decimal>("QualitativeMediumThreshold")
                         .HasColumnType("decimal(5,2)");
 
-                    b.Property<int>("RiskAcceptanceApprovalSlaHours")
-                        .HasColumnType("integer");
-
                     b.Property<decimal>("RiskAppetiteThreshold")
                         .HasColumnType("decimal(5,2)");
-
-                    b.Property<int>("RiskAssessmentSlaHours")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -3430,96 +3384,6 @@ namespace CyberRiskApp.Migrations
                     b.HasIndex("AttackScenarioId");
 
                     b.ToTable("ScenarioRecommendations");
-                });
-
-            modelBuilder.Entity("CyberRiskApp.Models.SlaHistory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AssignedTo")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("AssignedToEmail")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("CompletedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<TimeSpan?>("CompletionTime")
-                        .HasColumnType("interval");
-
-                    b.Property<int>("ComplianceStatus")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("ItemDescription")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("ItemId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ItemType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<int>("RiskLevel")
-                        .HasColumnType("integer");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
-
-                    b.Property<DateTime>("SlaDeadline")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("SlaHours")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("SlaStartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("SlaType")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan?>("SlaVariance")
-                        .HasColumnType("interval");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UpdatedBy")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SlaHistories");
                 });
 
             modelBuilder.Entity("CyberRiskApp.Models.StrategyGoal", b =>

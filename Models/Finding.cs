@@ -47,6 +47,15 @@ namespace CyberRiskApp.Models
         [Display(Name = "Risk Rating")]
         public RiskRating RiskRating { get; set; } = RiskRating.Low;
 
+        // NEW: Risk Level calculated from RiskMatrix system
+        [Display(Name = "Risk Level")]
+        public RiskLevel RiskLevel { get; set; } = RiskLevel.Low;
+
+        // NEW: Calculated Risk Score from RiskMatrix
+        [Display(Name = "Risk Score")]
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? RiskScore { get; set; }
+
         public FindingStatus Status { get; set; } = FindingStatus.Open;
 
         [Required(ErrorMessage = "Owner is required")]
@@ -105,6 +114,30 @@ namespace CyberRiskApp.Models
         // Navigation properties for relationships
         public virtual ICollection<Risk> RelatedRisks { get; set; } = new List<Risk>();
         public virtual ICollection<RiskAcceptanceRequest> AcceptanceRequests { get; set; } = new List<RiskAcceptanceRequest>();
+
+        // NEW: Helper method to calculate risk score using Impact × Likelihood × Exposure formula
+        public decimal CalculateRiskScore()
+        {
+            return (decimal)Impact * (decimal)Likelihood * (decimal)Exposure;
+        }
+
+        // NEW: Helper method to calculate automatic SLA date based on risk level
+        public DateTime CalculateAutoSlaDate(RiskMatrix riskMatrix)
+        {
+            var riskScore = RiskScore ?? CalculateRiskScore();
+            var riskLevel = riskMatrix.GetRiskLevel(riskScore);
+            var slaHours = riskMatrix.GetSlaHoursForRiskLevel(riskLevel);
+            return OpenDate.AddHours(slaHours);
+        }
+
+        // NEW: Check if SLA is breached using RiskMatrix configuration  
+        public bool IsSlaBreached(RiskMatrix riskMatrix)
+        {
+            if (Status == FindingStatus.Closed) return false;
+            
+            var riskScore = RiskScore ?? CalculateRiskScore();
+            return riskMatrix.IsSlaBreached(OpenDate, riskMatrix.GetRiskLevel(riskScore));
+        }
 
         // Method to calculate risk rating based on impact, likelihood, and exposure
         public RiskRating CalculateRiskRating()

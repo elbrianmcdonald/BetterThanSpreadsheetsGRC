@@ -82,6 +82,7 @@
                                 <th>Title</th>
                                 <th>Risk Rating</th>
                                 <th>Status</th>
+                                <th>SLA Status</th>
                                 <th>Owner</th>
                                 <th>Business Unit</th>
                                 <th>Open Date</th>
@@ -114,12 +115,6 @@
                                             };
                                         }
                                         <span class="badge @badgeClass">@item.RiskRating</span>
-                                        @if (item.SlaDate.HasValue && item.SlaDate < DateTime.Today)
-                                        {
-                                            <br>
-
-                                            <small class="text-danger"><i class="fas fa-clock me-1"></i>Overdue</small>
-                                        }
                                     </td>
                                     <td>
                                         @{
@@ -140,6 +135,60 @@
                                         }
                                         <span class="badge @statusClass">
                                             <i class="@statusIcon me-1"></i>@item.Status
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @{
+                                            // Enhanced SLA Status using new computed properties
+                                            var isOverdue = item.SlaDate.HasValue && DateTime.Today > item.SlaDate.Value && item.Status != CyberRiskApp.Models.FindingStatus.Closed;
+                                            var slaStatusClass = "badge ";
+                                            var slaIcon = "";
+                                            var slaText = "";
+                                            
+                                            if (item.Status == CyberRiskApp.Models.FindingStatus.Closed)
+                                            {
+                                                slaStatusClass += "bg-success";
+                                                slaIcon = "fas fa-check-circle";
+                                                slaText = "Completed";
+                                            }
+                                            else if (isOverdue)
+                                            {
+                                                slaStatusClass += "bg-danger";
+                                                slaIcon = "fas fa-exclamation-triangle";
+                                                var overdueDays = item.SlaDate.HasValue ? (DateTime.Today - item.SlaDate.Value).Days : 0;
+                                                slaText = $"Overdue ({overdueDays}d)";
+                                            }
+                                            else if (item.SlaDate.HasValue)
+                                            {
+                                                var daysRemaining = (item.SlaDate.Value - DateTime.Today).Days;
+                                                if (daysRemaining <= 1)
+                                                {
+                                                    slaStatusClass += "bg-warning text-dark";
+                                                    slaIcon = "fas fa-clock";
+                                                    slaText = daysRemaining == 0 ? "Due Today" : "Due Tomorrow";
+                                                }
+                                                else if (daysRemaining <= 7)
+                                                {
+                                                    slaStatusClass += "bg-info";
+                                                    slaIcon = "fas fa-calendar";
+                                                    slaText = $"Due in {daysRemaining}d";
+                                                }
+                                                else
+                                                {
+                                                    slaStatusClass += "bg-primary";
+                                                    slaIcon = "fas fa-calendar-check";
+                                                    slaText = "On Track";
+                                                }
+                                            }
+                                            else
+                                            {
+                                                slaStatusClass += "bg-secondary";
+                                                slaIcon = "fas fa-question";
+                                                slaText = "No SLA";
+                                            }
+                                        }
+                                        <span class="@slaStatusClass">
+                                            <i class="@slaIcon me-1"></i>@slaText
                                         </span>
                                     </td>
                                     <td>

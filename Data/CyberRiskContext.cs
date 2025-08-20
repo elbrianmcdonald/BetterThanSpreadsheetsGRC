@@ -25,6 +25,8 @@ namespace CyberRiskApp.Data
         public DbSet<RiskBacklogComment> RiskBacklogComments { get; set; }
         public DbSet<RiskBacklogActivity> RiskBacklogActivities { get; set; }
         
+        // SLA History Tracking DbSet
+        public DbSet<SlaHistory> SlaHistories { get; set; }
 
         // Existing Governance Module DbSets (Compliance)
         public DbSet<ComplianceFramework> ComplianceFrameworks { get; set; }

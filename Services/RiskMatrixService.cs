@@ -560,5 +560,65 @@ namespace CyberRiskApp.Services
 
             return defaultMatrix.GetRiskAppetiteStatus(score);
         }
+
+        // New method to update both thresholds and SLA configuration
+        public async Task<RiskMatrix> UpdateThresholdsAndSlaAsync(int matrixId, decimal mediumThreshold, 
+            decimal highThreshold, decimal criticalThreshold, decimal riskAppetiteThreshold, 
+            int criticalSla, int highSla, int mediumSla, int lowSla)
+        {
+            var matrix = await _context.RiskMatrices.FindAsync(matrixId);
+            if (matrix == null)
+                throw new InvalidOperationException("Matrix not found");
+
+            // Update thresholds
+            matrix.QualitativeMediumThreshold = mediumThreshold;
+            matrix.QualitativeHighThreshold = highThreshold;
+            matrix.QualitativeCriticalThreshold = criticalThreshold;
+            matrix.RiskAppetiteThreshold = riskAppetiteThreshold;
+
+            // Update SLA configuration
+            matrix.CriticalRiskSlaHours = criticalSla;
+            matrix.HighRiskSlaHours = highSla;
+            matrix.MediumRiskSlaHours = mediumSla;
+            matrix.LowRiskSlaHours = lowSla;
+
+            matrix.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return matrix;
+        }
+
+        // SLA Management Methods
+        public async Task<int> GetSlaHoursForRiskLevelAsync(RiskLevel riskLevel)
+        {
+            var defaultMatrix = await GetDefaultMatrixAsync();
+            if (defaultMatrix == null) 
+            {
+                // Fallback defaults if no matrix is found
+                return riskLevel switch
+                {
+                    RiskLevel.Critical => 4,
+                    RiskLevel.High => 24,
+                    RiskLevel.Medium => 168,
+                    RiskLevel.Low => 720,
+                    _ => 720
+                };
+            }
+
+            return defaultMatrix.GetSlaHoursForRiskLevel(riskLevel);
+        }
+
+        public async Task<DateTime> CalculateSlaDeadlineAsync(DateTime fromDate, RiskLevel riskLevel)
+        {
+            var slaHours = await GetSlaHoursForRiskLevelAsync(riskLevel);
+            return fromDate.AddHours(slaHours);
+        }
+
+        public async Task<bool> IsSlaBreachedAsync(DateTime createdDate, RiskLevel riskLevel, DateTime? resolvedDate = null)
+        {
+            var deadline = await CalculateSlaDeadlineAsync(createdDate, riskLevel);
+            var checkDate = resolvedDate ?? DateTime.UtcNow;
+            return checkDate > deadline;
+        }
     }
 }

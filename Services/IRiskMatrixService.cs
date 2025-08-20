@@ -36,8 +36,14 @@ namespace CyberRiskApp.Services
 
         // Threshold management (replaces RiskLevelSettings functionality)
         Task<RiskMatrix> UpdateThresholdsAsync(int matrixId, decimal mediumThreshold, decimal highThreshold, decimal criticalThreshold, decimal riskAppetiteThreshold);
+        Task<RiskMatrix> UpdateThresholdsAndSlaAsync(int matrixId, decimal mediumThreshold, decimal highThreshold, decimal criticalThreshold, decimal riskAppetiteThreshold, int criticalSla, int highSla, int mediumSla, int lowSla);
         Task<RiskLevel> GetRiskLevelFromScoreAsync(decimal score);
         Task<bool> IsWithinRiskAppetiteAsync(decimal score);
         Task<string> GetRiskAppetiteStatusAsync(decimal score);
+        
+        // SLA management
+        Task<int> GetSlaHoursForRiskLevelAsync(RiskLevel riskLevel);
+        Task<DateTime> CalculateSlaDeadlineAsync(DateTime fromDate, RiskLevel riskLevel);
+        Task<bool> IsSlaBreachedAsync(DateTime createdDate, RiskLevel riskLevel, DateTime? resolvedDate = null);
     }
 }

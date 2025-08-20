@@ -322,13 +322,17 @@ namespace CyberRiskApp.Controllers
         {
             try
             {
-                await _riskMatrixService.UpdateThresholdsAsync(id, 
+                await _riskMatrixService.UpdateThresholdsAndSlaAsync(id, 
                     request.QualitativeMediumThreshold, 
                     request.QualitativeHighThreshold, 
                     request.QualitativeCriticalThreshold, 
-                    request.RiskAppetiteThreshold);
+                    request.RiskAppetiteThreshold,
+                    request.CriticalRiskSlaHours,
+                    request.HighRiskSlaHours,
+                    request.MediumRiskSlaHours,
+                    request.LowRiskSlaHours);
                 
-                return Json(new { success = true, message = "Risk thresholds updated successfully!" });
+                return Json(new { success = true, message = "Risk thresholds and SLA configuration updated successfully!" });
             }
             catch (Exception ex)
             {
@@ -398,12 +402,18 @@ namespace CyberRiskApp.Controllers
         }
     }
 
-    // Request model for threshold updates
+    // Request model for threshold and SLA updates
     public class ThresholdUpdateRequest
     {
         public decimal QualitativeMediumThreshold { get; set; }
         public decimal QualitativeHighThreshold { get; set; }
         public decimal QualitativeCriticalThreshold { get; set; }
         public decimal RiskAppetiteThreshold { get; set; }
+        
+        // SLA Configuration
+        public int CriticalRiskSlaHours { get; set; } = 4;
+        public int HighRiskSlaHours { get; set; } = 24;
+        public int MediumRiskSlaHours { get; set; } = 168;
+        public int LowRiskSlaHours { get; set; } = 720;
     }
 }

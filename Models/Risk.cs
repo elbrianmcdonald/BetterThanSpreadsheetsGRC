@@ -64,9 +64,21 @@ namespace CyberRiskApp.Models
         [DataType(DataType.Date)]
         public DateTime OpenDate { get; set; }
 
-        [Display(Name = "Last Reviewed")]
+        [Display(Name = "Next Review Date")]
         [DataType(DataType.Date)]
         public DateTime? NextReviewDate { get; set; }
+
+        [Display(Name = "Last Review Date")]
+        [DataType(DataType.Date)]
+        public DateTime? LastReviewDate { get; set; }
+
+        [Display(Name = "Risk Acceptance Date")]
+        [DataType(DataType.Date)]
+        public DateTime? AcceptanceDate { get; set; }
+
+        [Display(Name = "Reviewed By")]
+        [StringLength(100)]
+        public string? ReviewedBy { get; set; }
 
         [Display(Name = "Date Closed")]
         [DataType(DataType.Date)]
@@ -88,6 +100,41 @@ namespace CyberRiskApp.Models
         public RiskLevel RiskLevel { get; set; }
 
         public RiskStatus Status { get; set; }
+
+        // SLA-related computed properties
+        [NotMapped]
+        public bool IsReviewOverdue
+        {
+            get
+            {
+                if (Status != RiskStatus.Accepted || !NextReviewDate.HasValue)
+                    return false;
+                return DateTime.UtcNow > NextReviewDate.Value;
+            }
+        }
+
+        [NotMapped]
+        public TimeSpan? TimeUntilReview
+        {
+            get
+            {
+                if (!NextReviewDate.HasValue || Status != RiskStatus.Accepted)
+                    return null;
+                var timeSpan = NextReviewDate.Value - DateTime.UtcNow;
+                return timeSpan.TotalSeconds > 0 ? timeSpan : null;
+            }
+        }
+
+        [NotMapped]
+        public TimeSpan? OverdueBy
+        {
+            get
+            {
+                if (!IsReviewOverdue || !NextReviewDate.HasValue)
+                    return null;
+                return DateTime.UtcNow - NextReviewDate.Value;
+            }
+        }
 
         // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }

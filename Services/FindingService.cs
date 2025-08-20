@@ -8,11 +8,13 @@ namespace CyberRiskApp.Services
     {
         private readonly CyberRiskContext _context;
         private readonly IAuditService _auditService;
+        private readonly IRiskMatrixService _riskMatrixService;
 
-        public FindingService(CyberRiskContext context, IAuditService auditService)
+        public FindingService(CyberRiskContext context, IAuditService auditService, IRiskMatrixService riskMatrixService)
         {
             _context = context;
             _auditService = auditService;
+            _riskMatrixService = riskMatrixService;
         }
 
         public async Task<IEnumerable<Finding>> GetAllFindingsAsync()
@@ -70,6 +72,9 @@ namespace CyberRiskApp.Services
                 finding.OpenDate = DateTime.Today;
                 finding.Status = FindingStatus.Open; // Always start as Open
                 
+                // Calculate RiskScore and RiskLevel using RiskMatrix system
+                await ApplyRiskMatrixCalculationsAsync(finding);
+                
                 // Set audit fields using AuditService
                 _auditService.SetAuditFields(finding, _auditService.GetCurrentUser());
 
@@ -92,6 +97,9 @@ namespace CyberRiskApp.Services
         {
             try
             {
+                // Recalculate RiskScore and RiskLevel if risk factors changed
+                await ApplyRiskMatrixCalculationsAsync(finding);
+                
                 // Set audit fields for update
                 _auditService.SetAuditFields(finding, _auditService.GetCurrentUser(), true);
                 
@@ -214,6 +222,61 @@ namespace CyberRiskApp.Services
             catch
             {
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Applies RiskMatrix calculations to a Finding: RiskScore, RiskLevel, and automatic SLA date
+        /// </summary>
+        private async Task ApplyRiskMatrixCalculationsAsync(Finding finding)
+        {
+            try
+            {
+                // Calculate RiskScore using the Finding's helper method
+                var riskScore = finding.CalculateRiskScore();
+                finding.RiskScore = riskScore;
+                
+                // Get RiskLevel from RiskMatrix system
+                var riskLevel = await _riskMatrixService.GetRiskLevelFromScoreAsync(riskScore);
+                finding.RiskLevel = riskLevel;
+                
+                // Calculate automatic SLA date using RiskMatrix SLA configuration (only if not already set)
+                if (!finding.SlaDate.HasValue)
+                {
+                    var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                    if (defaultMatrix != null)
+                    {
+                        var slaHours = defaultMatrix.GetSlaHoursForRiskLevel(riskLevel);
+                        finding.SlaDate = finding.OpenDate.AddHours(slaHours);
+                    }
+                    else
+                    {
+                        // Fallback to default 30-day SLA if no matrix found
+                        finding.SlaDate = finding.OpenDate.AddDays(30);
+                    }
+                }
+
+                // Update legacy RiskRating for backward compatibility
+                finding.RiskRating = riskLevel switch
+                {
+                    RiskLevel.Critical => RiskRating.Critical,
+                    RiskLevel.High => RiskRating.High,
+                    RiskLevel.Medium => RiskRating.Medium,
+                    RiskLevel.Low => RiskRating.Low,
+                    _ => RiskRating.Medium
+                };
+            }
+            catch (Exception)
+            {
+                // Fallback to default values if RiskMatrix calculation fails
+                finding.RiskScore ??= finding.CalculateRiskScore();
+                finding.RiskLevel = RiskLevel.Medium;
+                finding.RiskRating = RiskRating.Medium;
+                
+                if (!finding.SlaDate.HasValue)
+                {
+                    finding.SlaDate = finding.OpenDate.AddDays(30);
+                }
             }
         }
     }

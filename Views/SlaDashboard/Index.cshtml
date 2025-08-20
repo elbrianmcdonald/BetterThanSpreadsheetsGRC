@@ -1,0 +1,367 @@
+@using CyberRiskApp.Extensions
+@using CyberRiskApp.Controllers
+@model SlaDashboardViewModel
+@{
+    ViewData["Title"] = "SLA Dashboard";
+}
+
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-clock text-primary me-2"></i>
+                SLA Dashboard
+            </h2>
+            <p class="text-muted mb-0">Monitor service level agreement compliance and upcoming deadlines</p>
+        </div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary" id="refreshDashboard">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <a href="@Url.Action("Performance")" class="btn btn-outline-success">
+                <i class="fas fa-chart-line me-1"></i>Performance
+            </a>
+        </div>
+    </div>
+
+    <!-- SLA Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-danger mb-2">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                    <h3 class="text-danger mb-1">@Model.DashboardData.TotalRemediationBreaches</h3>
+                    <p class="text-muted mb-0">Remediation SLA Breaches</p>
+                    <small class="text-muted">
+                        <a href="@Url.Action("Breaches", new { slaType = "remediation" })" class="text-decoration-none">
+                            View Details <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-search fa-2x"></i>
+                    </div>
+                    <h3 class="text-warning mb-1">@Model.DashboardData.TotalReviewBreaches</h3>
+                    <p class="text-muted mb-0">Review SLA Breaches</p>
+                    <small class="text-muted">
+                        <a href="@Url.Action("Breaches", new { slaType = "review" })" class="text-decoration-none">
+                            View Details <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-info mb-2">
+                        <i class="fas fa-clipboard-list fa-2x"></i>
+                    </div>
+                    <h3 class="text-info mb-1">@Model.DashboardData.TotalAssessmentBreaches</h3>
+                    <p class="text-muted mb-0">Assessment SLA Breaches</p>
+                    <small class="text-muted">
+                        <a href="@Url.Action("Breaches", new { slaType = "assessment" })" class="text-decoration-none">
+                            View Details <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="fas fa-percentage fa-2x"></i>
+                    </div>
+                    <h3 class="text-success mb-1">@Model.DashboardData.OverallCompliancePercentage%</h3>
+                    <p class="text-muted mb-0">Overall Compliance</p>
+                    <small class="text-muted">
+                        @Model.DashboardData.TotalActiveItems total active items
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- SLA Compliance by Type Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>SLA Compliance by Type
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="complianceByTypeChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming SLA Deadlines -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>Upcoming Deadlines (Next 7 Days)
+                    </h5>
+                    <a href="@Url.Action("UpcomingDeadlines")" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    @if (Model.UpcomingDeadlines.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Type</th>
+                                        <th>Due</th>
+                                        <th>Risk</th>
+                                        <th>Assigned</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var deadline in Model.UpcomingDeadlines.Take(5))
+                                    {
+                                        <tr class="@GetDeadlineRowClass(deadline.UrgencyLevel)">
+                                            <td>
+                                                <small class="fw-medium">@deadline.ItemDescription.Truncate(30)</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">@deadline.SlaType</span>
+                                            </td>
+                                            <td>
+                                                <small>@deadline.SlaDeadline.ToString("MMM dd")</small><br>
+                                                <small class="text-muted">@deadline.HoursUntilDue hours</small>
+                                            </td>
+                                            <td>
+                                                @if (deadline.RiskLevel.HasValue)
+                                                {
+                                                    <span class="badge @GetRiskLevelClass(deadline.RiskLevel.Value)">
+                                                        @deadline.RiskLevel.Value
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <small>@deadline.AssignedTo</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                            <p class="text-muted">No upcoming deadlines in the next 7 days</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLA Breach Summary -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-circle me-2"></i>SLA Breach Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var summary in Model.DashboardData.BreachSummaryByType)
+                        {
+                            <div class="col-md-4 mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-medium">@summary.Category</span>
+                                    <span class="badge @GetComplianceBadgeClass(summary.CompliancePercentage)">
+                                        @summary.CompliancePercentage%
+                                    </span>
+                                </div>
+                                <div class="progress mt-2" style="height: 8px;">
+                                    <div class="progress-bar @GetComplianceProgressClass(summary.CompliancePercentage)" 
+                                         role="progressbar" 
+                                         style="width: @summary.CompliancePercentage%"></div>
+                                </div>
+                                <small class="text-muted">
+                                    @summary.BreachCount breaches out of @summary.TotalCount items
+                                </small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="@Url.Action("Breaches")" class="btn btn-outline-danger w-100">
+                                <i class="fas fa-exclamation-triangle me-2"></i>View All Breaches
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="@Url.Action("UpcomingDeadlines", new { days = 30 })" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-calendar-alt me-2"></i>30-Day Outlook
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="@Url.Action("Performance")" class="btn btn-outline-success w-100">
+                                <i class="fas fa-chart-line me-2"></i>Performance Report
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="@Url.Action("Configure", "RiskMatrix")" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-cog me-2"></i>Configure SLAs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetDeadlineRowClass(string urgencyLevel)
+    {
+        return urgencyLevel switch
+        {
+            "Critical" => "table-danger",
+            "High" => "table-warning",
+            "Medium" => "table-info",
+            _ => ""
+        };
+    }
+
+    private string GetRiskLevelClass(RiskLevel riskLevel)
+    {
+        return riskLevel switch
+        {
+            RiskLevel.Critical => "bg-danger",
+            RiskLevel.High => "bg-warning text-dark",
+            RiskLevel.Medium => "bg-info",
+            RiskLevel.Low => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetComplianceBadgeClass(decimal percentage)
+    {
+        return percentage switch
+        {
+            >= 90 => "bg-success",
+            >= 75 => "bg-warning text-dark",
+            >= 50 => "bg-warning",
+            _ => "bg-danger"
+        };
+    }
+
+    private string GetComplianceProgressClass(decimal percentage)
+    {
+        return percentage switch
+        {
+            >= 90 => "bg-success",
+            >= 75 => "bg-info",
+            >= 50 => "bg-warning",
+            _ => "bg-danger"
+        };
+    }
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize SLA Compliance by Type Chart
+            const ctx = document.getElementById('complianceByTypeChart').getContext('2d');
+            
+            const complianceData = @Html.Raw(Json.Serialize(Model.DashboardData.BreachSummaryByType));
+            
+            const chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: complianceData.map(item => item.category),
+                    datasets: [{
+                        label: 'Compliance %',
+                        data: complianceData.map(item => item.compliancePercentage),
+                        backgroundColor: [
+                            '#dc3545', // Remediation - Red
+                            '#ffc107', // Review - Yellow  
+                            '#17a2b8', // Assessment - Blue
+                            '#28a745'  // Approval - Green
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const item = complianceData[context.dataIndex];
+                                    return context.label + ': ' + context.parsed + '% (' + 
+                                           (item.totalCount - item.breachCount) + ' of ' + item.totalCount + ')';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Refresh Dashboard Button
+            document.getElementById('refreshDashboard').addEventListener('click', function() {
+                const button = this;
+                const originalContent = button.innerHTML;
+                
+                button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+                button.disabled = true;
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            });
+
+            // Auto-refresh every 5 minutes
+            setInterval(function() {
+                location.reload();
+            }, 300000);
+        });
+    </script>
+}

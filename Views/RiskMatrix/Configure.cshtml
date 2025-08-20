@@ -291,13 +291,266 @@
 
                 <div class="mt-4">
                     <button type="button" class="btn btn-warning" id="saveThresholds">
-                        <i class="fas fa-save me-2"></i>Save Risk Thresholds to Matrix
+                        <i class="fas fa-save me-2"></i>Save Risk Thresholds & SLAs to Matrix
                     </button>
                     <button type="button" class="btn btn-outline-secondary" id="loadCurrentThresholds">
-                        <i class="fas fa-sync me-2"></i>Load Matrix Thresholds
+                        <i class="fas fa-sync me-2"></i>Load Matrix Configuration
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- SLA Configuration Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-success bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-clock me-2"></i>Comprehensive Service Level Agreement (SLA) Configuration
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-success">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Comprehensive SLA System:</strong> Configure SLAs for all workflow types - remediation, risk acceptance reviews, assessments, and approvals. Each SLA type serves different business processes.
+            </div>
+            
+            <!-- SLA Type Tabs -->
+            <ul class="nav nav-tabs mb-4" id="slaTypeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="remediation-tab" data-bs-toggle="tab" data-bs-target="#remediation-sla" type="button" role="tab">
+                        <i class="fas fa-tools me-2"></i>Remediation SLAs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="review-tab" data-bs-toggle="tab" data-bs-target="#review-sla" type="button" role="tab">
+                        <i class="fas fa-search me-2"></i>Review SLAs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="assessment-tab" data-bs-toggle="tab" data-bs-target="#assessment-sla" type="button" role="tab">
+                        <i class="fas fa-clipboard-list me-2"></i>Assessment SLAs
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="approval-tab" data-bs-toggle="tab" data-bs-target="#approval-sla" type="button" role="tab">
+                        <i class="fas fa-check-circle me-2"></i>Approval SLAs
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="slaTypeTabContent">
+                <!-- REMEDIATION SLAs TAB -->
+                <div class="tab-pane fade show active" id="remediation-sla" role="tabpanel">
+                    <div class="alert alert-primary">
+                        <i class="fas fa-tools me-2"></i>
+                        <strong>Remediation SLAs:</strong> Time limits for addressing and resolving findings based on risk level. These apply to fixing security issues, vulnerabilities, and compliance gaps.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-danger">Critical Risk Remediation</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="criticalRemediationSla" value="4" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">≥ Critical threshold</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-warning">High Risk Remediation</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="highRemediationSla" value="24" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">High threshold range</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-success">Medium Risk Remediation</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="mediumRemediationSla" value="168" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">Medium threshold range</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-info">Low Risk Remediation</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="lowRemediationSla" value="720" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">Below medium threshold</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REVIEW SLAs TAB -->
+                <div class="tab-pane fade" id="review-sla" role="tabpanel">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-search me-2"></i>
+                        <strong>Risk Acceptance Review SLAs:</strong> How often accepted risks must be reassessed. Regular review ensures accepted risks remain within tolerance and haven't changed.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-danger">Critical Risk Review</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="criticalReviewSla" value="720" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">30 days (monthly review)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-warning">High Risk Review</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="highReviewSla" value="2160" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">90 days (quarterly review)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-success">Medium Risk Review</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="mediumReviewSla" value="4380" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">6 months (semi-annual)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-info">Low Risk Review</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="lowReviewSla" value="8760" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">12 months (annual review)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASSESSMENT SLAs TAB -->
+                <div class="tab-pane fade" id="assessment-sla" role="tabpanel">
+                    <div class="alert alert-info">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        <strong>Assessment Completion SLAs:</strong> Time limits for completing different types of assessments. These ensure timely completion of risk evaluation processes.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-danger">Risk Assessment Completion</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="riskAssessmentSla" value="168" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">7 days to complete risk assessment</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-warning">Compliance Assessment</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="complianceAssessmentSla" value="336" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">14 days for compliance assessment</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-success">Maturity Assessment</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="maturityAssessmentSla" value="504" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">21 days for maturity assessment</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- APPROVAL SLAs TAB -->
+                <div class="tab-pane fade" id="approval-sla" role="tabpanel">
+                    <div class="alert alert-secondary">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Approval Process SLAs:</strong> Time limits for approval workflows. These ensure timely decision-making and prevent bottlenecks in governance processes.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">Assessment Approval</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="assessmentApprovalSla" value="72" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">3 days for assessment approval</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-warning">Risk Acceptance Approval</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="riskAcceptanceApprovalSla" value="120" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">5 days for risk acceptance</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-danger">Exception Request Approval</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="exceptionRequestApprovalSla" value="168" min="1" max="8760" />
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <small class="text-muted">7 days for exception requests</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLA Summary and Reference -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="alert alert-light border">
+                        <h6><i class="fas fa-calculator me-2"></i>Quick Time Reference:</h6>
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <strong>Hours to Days:</strong><br>
+                                <small class="text-muted">24h = 1 day<br>72h = 3 days<br>168h = 7 days</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Weeks to Months:</strong><br>
+                                <small class="text-muted">720h = 30 days<br>2160h = 90 days<br>4380h = 6 months</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Common Business Days:</strong><br>
+                                <small class="text-muted">Business week = 5 days<br>Month = ~22 business days</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Live Preview:</strong><br>
+                                <small id="slaPreview">Critical Remediation: <span id="criticalDisplay">4 hours</span><br>
+                                Critical Review: <span id="criticalReviewDisplay">30 days</span></small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -457,6 +710,8 @@
                     
                     if (data.success && data.matrix) {
                         const matrix = data.matrix;
+                        
+                        // Load Risk Thresholds
                         const mediumElement = document.getElementById('mediumThreshold');
                         const highElement = document.getElementById('highThreshold');
                         const criticalElement = document.getElementById('criticalThreshold');
@@ -467,7 +722,50 @@
                         if (criticalElement) criticalElement.value = matrix.qualitativeCriticalThreshold || 16;
                         if (appetiteElement) appetiteElement.value = matrix.riskAppetiteThreshold || 6;
                         
-                        showAlert('Matrix thresholds loaded successfully!', 'info');
+                        // Load Remediation SLA Configuration
+                        const criticalRemediationSlaElement = document.getElementById('criticalRemediationSla');
+                        const highRemediationSlaElement = document.getElementById('highRemediationSla');
+                        const mediumRemediationSlaElement = document.getElementById('mediumRemediationSla');
+                        const lowRemediationSlaElement = document.getElementById('lowRemediationSla');
+                        
+                        if (criticalRemediationSlaElement) criticalRemediationSlaElement.value = matrix.criticalRiskSlaHours || 4;
+                        if (highRemediationSlaElement) highRemediationSlaElement.value = matrix.highRiskSlaHours || 24;
+                        if (mediumRemediationSlaElement) mediumRemediationSlaElement.value = matrix.mediumRiskSlaHours || 168;
+                        if (lowRemediationSlaElement) lowRemediationSlaElement.value = matrix.lowRiskSlaHours || 720;
+                        
+                        // Load Review SLA Configuration
+                        const criticalReviewSlaElement = document.getElementById('criticalReviewSla');
+                        const highReviewSlaElement = document.getElementById('highReviewSla');
+                        const mediumReviewSlaElement = document.getElementById('mediumReviewSla');
+                        const lowReviewSlaElement = document.getElementById('lowReviewSla');
+                        
+                        if (criticalReviewSlaElement) criticalReviewSlaElement.value = matrix.criticalRiskReviewSlaHours || 720;
+                        if (highReviewSlaElement) highReviewSlaElement.value = matrix.highRiskReviewSlaHours || 2160;
+                        if (mediumReviewSlaElement) mediumReviewSlaElement.value = matrix.mediumRiskReviewSlaHours || 4380;
+                        if (lowReviewSlaElement) lowReviewSlaElement.value = matrix.lowRiskReviewSlaHours || 8760;
+                        
+                        // Load Assessment SLA Configuration
+                        const riskAssessmentSlaElement = document.getElementById('riskAssessmentSla');
+                        const complianceAssessmentSlaElement = document.getElementById('complianceAssessmentSla');
+                        const maturityAssessmentSlaElement = document.getElementById('maturityAssessmentSla');
+                        
+                        if (riskAssessmentSlaElement) riskAssessmentSlaElement.value = matrix.riskAssessmentSlaHours || 168;
+                        if (complianceAssessmentSlaElement) complianceAssessmentSlaElement.value = matrix.complianceAssessmentSlaHours || 336;
+                        if (maturityAssessmentSlaElement) maturityAssessmentSlaElement.value = matrix.maturityAssessmentSlaHours || 504;
+                        
+                        // Load Approval SLA Configuration
+                        const assessmentApprovalSlaElement = document.getElementById('assessmentApprovalSla');
+                        const riskAcceptanceApprovalSlaElement = document.getElementById('riskAcceptanceApprovalSla');
+                        const exceptionRequestApprovalSlaElement = document.getElementById('exceptionRequestApprovalSla');
+                        
+                        if (assessmentApprovalSlaElement) assessmentApprovalSlaElement.value = matrix.assessmentApprovalSlaHours || 72;
+                        if (riskAcceptanceApprovalSlaElement) riskAcceptanceApprovalSlaElement.value = matrix.riskAcceptanceApprovalSlaHours || 120;
+                        if (exceptionRequestApprovalSlaElement) exceptionRequestApprovalSlaElement.value = matrix.exceptionRequestApprovalSlaHours || 168;
+                        
+                        // Update SLA display
+                        updateSlaDisplay();
+                        
+                        showAlert('Matrix configuration loaded successfully!', 'info');
                     } else {
                         showAlert('No matrix thresholds found. Using default values.', 'warning');
                     }
@@ -484,16 +782,40 @@
                 const criticalElement = document.getElementById('criticalThreshold');
                 const appetiteElement = document.getElementById('riskAppetiteThreshold');
                 
+                // Validate that all core elements are present (we'll check SLA elements individually)
                 if (!mediumElement || !highElement || !criticalElement || !appetiteElement) {
-                    showAlert('Error: Could not find all threshold input fields. Please refresh the page.', 'danger');
+                    showAlert('Error: Could not find risk threshold input fields. Please refresh the page.', 'danger');
                     return;
                 }
                 
-                const thresholds = {
+                const configuration = {
+                    // Risk Thresholds
                     QualitativeMediumThreshold: parseFloat(mediumElement.value) || 4,
                     QualitativeHighThreshold: parseFloat(highElement.value) || 10,
                     QualitativeCriticalThreshold: parseFloat(criticalElement.value) || 16,
-                    RiskAppetiteThreshold: parseFloat(appetiteElement.value) || 6
+                    RiskAppetiteThreshold: parseFloat(appetiteElement.value) || 6,
+                    
+                    // Remediation SLA Configuration
+                    CriticalRiskSlaHours: parseInt(document.getElementById('criticalRemediationSla')?.value) || 4,
+                    HighRiskSlaHours: parseInt(document.getElementById('highRemediationSla')?.value) || 24,
+                    MediumRiskSlaHours: parseInt(document.getElementById('mediumRemediationSla')?.value) || 168,
+                    LowRiskSlaHours: parseInt(document.getElementById('lowRemediationSla')?.value) || 720,
+                    
+                    // Review SLA Configuration
+                    CriticalRiskReviewSlaHours: parseInt(document.getElementById('criticalReviewSla')?.value) || 720,
+                    HighRiskReviewSlaHours: parseInt(document.getElementById('highReviewSla')?.value) || 2160,
+                    MediumRiskReviewSlaHours: parseInt(document.getElementById('mediumReviewSla')?.value) || 4380,
+                    LowRiskReviewSlaHours: parseInt(document.getElementById('lowReviewSla')?.value) || 8760,
+                    
+                    // Assessment SLA Configuration
+                    RiskAssessmentSlaHours: parseInt(document.getElementById('riskAssessmentSla')?.value) || 168,
+                    ComplianceAssessmentSlaHours: parseInt(document.getElementById('complianceAssessmentSla')?.value) || 336,
+                    MaturityAssessmentSlaHours: parseInt(document.getElementById('maturityAssessmentSla')?.value) || 504,
+                    
+                    // Approval SLA Configuration
+                    AssessmentApprovalSlaHours: parseInt(document.getElementById('assessmentApprovalSla')?.value) || 72,
+                    RiskAcceptanceApprovalSlaHours: parseInt(document.getElementById('riskAcceptanceApprovalSla')?.value) || 120,
+                    ExceptionRequestApprovalSlaHours: parseInt(document.getElementById('exceptionRequestApprovalSla')?.value) || 168
                 };
 
                 const token = document.querySelector('#thresholdsForm input[name="__RequestVerificationToken"]').value;
@@ -504,25 +826,64 @@
                         'Content-Type': 'application/json',
                         'RequestVerificationToken': token
                     },
-                    body: JSON.stringify(thresholds)
+                    body: JSON.stringify(configuration)
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showAlert('Risk thresholds saved successfully to this matrix!', 'success');
+                        showAlert('Risk thresholds and SLA configuration saved successfully to this matrix!', 'success');
                         // Refresh matrix preview with new thresholds
                         previewMatrix();
+                        // Update SLA display
+                        updateSlaDisplay();
                     } else {
-                        showAlert('Error saving thresholds: ' + data.message, 'danger');
+                        showAlert('Error saving configuration: ' + data.message, 'danger');
                     }
                 })
                 .catch(error => {
-                    showAlert('Error saving thresholds: ' + error.message, 'danger');
+                    showAlert('Error saving configuration: ' + error.message, 'danger');
                 });
             });
 
             // Load Current Settings button
             document.getElementById('loadCurrentThresholds').addEventListener('click', loadCurrentThresholds);
+
+            // SLA Display Update Function
+            function updateSlaDisplay() {
+                const criticalRemediationSla = parseInt(document.getElementById('criticalRemediationSla')?.value) || 4;
+                const criticalReviewSla = parseInt(document.getElementById('criticalReviewSla')?.value) || 720;
+
+                function formatSlaTime(hours) {
+                    if (hours < 24) return hours + ' hours';
+                    if (hours < 168) return Math.round(hours / 24) + ' days';
+                    if (hours < 720) return Math.round(hours / 168) + ' weeks';
+                    return Math.round(hours / 720) + ' months';
+                }
+
+                const criticalDisplayElement = document.getElementById('criticalDisplay');
+                const criticalReviewDisplayElement = document.getElementById('criticalReviewDisplay');
+                
+                if (criticalDisplayElement) criticalDisplayElement.textContent = formatSlaTime(criticalRemediationSla);
+                if (criticalReviewDisplayElement) criticalReviewDisplayElement.textContent = formatSlaTime(criticalReviewSla);
+            }
+
+            // Real-time SLA preview updates for all SLA inputs
+            const slaInputIds = [
+                'criticalRemediationSla', 'highRemediationSla', 'mediumRemediationSla', 'lowRemediationSla',
+                'criticalReviewSla', 'highReviewSla', 'mediumReviewSla', 'lowReviewSla',
+                'riskAssessmentSla', 'complianceAssessmentSla', 'maturityAssessmentSla',
+                'assessmentApprovalSla', 'riskAcceptanceApprovalSla', 'exceptionRequestApprovalSla'
+            ];
+            
+            slaInputIds.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', updateSlaDisplay);
+                }
+            });
+
+            // Initialize SLA display
+            updateSlaDisplay();
 
             // Reset Levels
             document.getElementById('resetLevels').addEventListener('click', function() {

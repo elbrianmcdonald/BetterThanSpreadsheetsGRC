@@ -53,7 +53,7 @@ namespace CyberRiskApp.Controllers
                             return RedirectToAction("Profile");
                         }
 
-                        return RedirectToAction("Index", "Dashboard");
+                        return RedirectToAction("Index", "RiskBacklog");
                     }
                 }
 
@@ -217,7 +217,7 @@ namespace CyberRiskApp.Controllers
             if (result.Succeeded)
             {
                 TempData["Success"] = "Password changed successfully!";
-                return RedirectToAction("Index", "Dashboard");
+                return RedirectToAction("Index", "RiskBacklog");
             }
 
             ViewBag.Error = "Failed to change password: " + string.Join(", ", result.Errors.Select(e => e.Description));

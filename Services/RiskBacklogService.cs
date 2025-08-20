@@ -10,12 +10,14 @@ namespace CyberRiskApp.Services
         private readonly CyberRiskContext _context;
         private readonly ILogger<RiskBacklogService> _logger;
         private readonly IRiskService _riskService;
+        private readonly IRiskMatrixService _riskMatrixService;
 
-        public RiskBacklogService(CyberRiskContext context, ILogger<RiskBacklogService> logger, IRiskService riskService)
+        public RiskBacklogService(CyberRiskContext context, ILogger<RiskBacklogService> logger, IRiskService riskService, IRiskMatrixService riskMatrixService)
         {
             _context = context;
             _logger = logger;
             _riskService = riskService;
+            _riskMatrixService = riskMatrixService;
         }
 
         public async Task<RiskBacklogEntry> CreateBacklogEntryAsync(int? riskId, RiskBacklogAction actionType, string description, string justification, string requesterId)
@@ -113,8 +115,8 @@ namespace CyberRiskApp.Services
                 Domain = domain,
                 TechnicalControl = technicalControl,
                 
-                // Calculate risk rating for the finding
-                RiskRating = CalculateFindingRiskRating(impact, likelihood, exposure),
+                // Calculate risk rating for the finding using RiskMatrix system
+                RiskRating = await CalculateFindingRiskRatingAsync(impact, likelihood, exposure),
                 
                 // Audit fields
                 AnalystComments = string.Empty,
@@ -893,24 +895,31 @@ namespace CyberRiskApp.Services
             return RiskSource.ManualImport;
         }
 
-        private RiskRating CalculateFindingRiskRating(ImpactLevel impact, LikelihoodLevel likelihood, ExposureLevel exposure)
+        private async Task<RiskRating> CalculateFindingRiskRatingAsync(ImpactLevel impact, LikelihoodLevel likelihood, ExposureLevel exposure)
         {
-            // Convert enum values to integers for calculation
-            int impactScore = (int)impact;
-            int likelihoodScore = (int)likelihood;
-            int exposureScore = (int)exposure;
-
-            // Calculate average score
-            double averageScore = (impactScore + likelihoodScore + exposureScore) / 3.0;
-
-            // Map average score to risk rating
-            return averageScore switch
+            try
             {
-                >= 4.0 => RiskRating.Critical,
-                >= 3.0 => RiskRating.High,
-                >= 2.0 => RiskRating.Medium,
-                _ => RiskRating.Low
-            };
+                // Calculate risk score using Impact × Likelihood × Exposure formula
+                decimal riskScore = (decimal)impact * (decimal)likelihood * (decimal)exposure;
+                
+                // Get risk level from RiskMatrix system
+                var riskLevel = await _riskMatrixService.GetRiskLevelFromScoreAsync(riskScore);
+                
+                // Map RiskLevel to legacy RiskRating for backward compatibility
+                return riskLevel switch
+                {
+                    RiskLevel.Critical => RiskRating.Critical,
+                    RiskLevel.High => RiskRating.High,
+                    RiskLevel.Medium => RiskRating.Medium,
+                    RiskLevel.Low => RiskRating.Low,
+                    _ => RiskRating.Low
+                };
+            }
+            catch
+            {
+                // Fallback to Low risk if calculation fails
+                return RiskRating.Low;
+            }
         }
 
         // Admin Methods Implementation
@@ -1192,7 +1201,6 @@ namespace CyberRiskApp.Services
                     // Set status to Open since it's approved
                     Status = FindingStatus.Open,
                     OpenDate = DateTime.UtcNow,
-                    SlaDate = DateTime.UtcNow.AddDays(30), // Default 30-day remediation period
                     
                     // Audit fields
                     CreatedBy = approverId,
@@ -1200,6 +1208,43 @@ namespace CyberRiskApp.Services
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
+
+                // Calculate RiskScore and RiskLevel using RiskMatrix system
+                try
+                {
+                    var riskScore = finding.CalculateRiskScore();
+                    finding.RiskScore = riskScore;
+                    
+                    // Get RiskLevel from RiskMatrix system
+                    var riskLevel = await _riskMatrixService.GetRiskLevelFromScoreAsync(riskScore);
+                    finding.RiskLevel = riskLevel;
+                    
+                    // Calculate automatic SLA date using RiskMatrix SLA configuration
+                    var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                    if (defaultMatrix != null)
+                    {
+                        var slaHours = defaultMatrix.GetSlaHoursForRiskLevel(riskLevel);
+                        finding.SlaDate = finding.OpenDate.AddHours(slaHours);
+                        
+                        _logger.LogInformation("Finding {FindingId} assigned SLA of {SlaHours} hours ({RiskLevel} risk), due {SlaDate}", 
+                            finding.Id, slaHours, riskLevel, finding.SlaDate);
+                    }
+                    else
+                    {
+                        // Fallback to default 30-day SLA if no matrix found
+                        finding.SlaDate = finding.OpenDate.AddDays(30);
+                        _logger.LogWarning("No default RiskMatrix found, using 30-day SLA fallback for finding");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Fallback to default values if RiskMatrix calculation fails
+                    finding.RiskScore = finding.CalculateRiskScore();
+                    finding.RiskLevel = RiskLevel.Medium;
+                    finding.SlaDate = finding.OpenDate.AddDays(30);
+                    
+                    _logger.LogWarning(ex, "Failed to calculate RiskMatrix values for finding, using defaults");
+                }
 
                 _context.Findings.Add(finding);
                 await _context.SaveChangesAsync();

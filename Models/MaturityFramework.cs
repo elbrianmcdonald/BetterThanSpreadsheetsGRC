@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CyberRiskApp.Models
 {
@@ -100,6 +101,10 @@ namespace CyberRiskApp.Models
         public DateTime? CompletedDate { get; set; }
         public DateTime? DueDate { get; set; }
 
+        [Display(Name = "SLA Deadline")]
+        [DataType(DataType.DateTime)]
+        public DateTime? SlaDeadline { get; set; }
+
         // Overall maturity score (average of all control assessments)
         public decimal OverallMaturityScore { get; set; }
 
@@ -130,6 +135,41 @@ namespace CyberRiskApp.Models
         
         [Timestamp]
         public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+        // SLA-related computed properties
+        [NotMapped]
+        public bool IsOverdue
+        {
+            get
+            {
+                if (Status == AssessmentStatus.Completed || Status == AssessmentStatus.Approved || !SlaDeadline.HasValue)
+                    return false;
+                return DateTime.UtcNow > SlaDeadline.Value;
+            }
+        }
+
+        [NotMapped]
+        public TimeSpan? TimeUntilDeadline
+        {
+            get
+            {
+                if (!SlaDeadline.HasValue || Status == AssessmentStatus.Completed || Status == AssessmentStatus.Approved)
+                    return null;
+                var timeSpan = SlaDeadline.Value - DateTime.UtcNow;
+                return timeSpan.TotalSeconds > 0 ? timeSpan : null;
+            }
+        }
+
+        [NotMapped]
+        public TimeSpan? OverdueBy
+        {
+            get
+            {
+                if (!IsOverdue || !SlaDeadline.HasValue)
+                    return null;
+                return DateTime.UtcNow - SlaDeadline.Value;
+            }
+        }
 
         // Navigation properties
         public virtual MaturityFramework? Framework { get; set; }

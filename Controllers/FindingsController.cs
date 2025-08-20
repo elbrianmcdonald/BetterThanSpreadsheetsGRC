@@ -294,6 +294,27 @@ namespace CyberRiskApp.Controllers
                     ? (exposureLevels.ElementAtOrDefault(exposureLevel.Value - 1)?.LevelName ?? "Unknown")
                     : null;
 
+                // Get SLA information for the calculated risk level
+                var slaHours = defaultMatrix.GetSlaHoursForRiskLevel(riskLevel);
+                var slaDeadline = DateTime.Today.AddHours(slaHours);
+                
+                // Format SLA hours display
+                string slaHoursDisplay;
+                if (slaHours < 24)
+                {
+                    slaHoursDisplay = $"{slaHours} hours";
+                }
+                else if (slaHours < 168) // Less than a week
+                {
+                    var days = slaHours / 24;
+                    slaHoursDisplay = $"{days} day{(days == 1 ? "" : "s")}";
+                }
+                else
+                {
+                    var days = slaHours / 24;
+                    slaHoursDisplay = $"{days} day{(days == 1 ? "" : "s")}";
+                }
+
                 return Json(new
                 {
                     success = true,
@@ -302,7 +323,11 @@ namespace CyberRiskApp.Controllers
                     impactName,
                     likelihoodName,
                     exposureName,
-                    matrixType = defaultMatrix.MatrixType.ToString()
+                    matrixType = defaultMatrix.MatrixType.ToString(),
+                    slaHours = slaHours,
+                    slaHoursDisplay = slaHoursDisplay,
+                    slaDate = slaDeadline.ToString("yyyy-MM-dd"),
+                    slaDateDisplay = slaDeadline.ToString("MMM dd, yyyy")
                 });
             }
             catch (Exception ex)

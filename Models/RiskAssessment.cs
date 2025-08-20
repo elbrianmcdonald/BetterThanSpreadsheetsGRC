@@ -50,6 +50,10 @@ namespace CyberRiskApp.Models
         [DataType(DataType.Date)]
         public DateTime? DateCompleted { get; set; }
 
+        [Display(Name = "SLA Deadline")]
+        [DataType(DataType.DateTime)]
+        public DateTime? SlaDeadline { get; set; }
+
         [Display(Name = "Assessor")]
         public string Assessor { get; set; } = string.Empty;
 
@@ -105,6 +109,41 @@ namespace CyberRiskApp.Models
         
         [Timestamp]
         public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+        // SLA-related computed properties
+        [NotMapped]
+        public bool IsOverdue
+        {
+            get
+            {
+                if (Status == AssessmentStatus.Completed || Status == AssessmentStatus.Approved || !SlaDeadline.HasValue)
+                    return false;
+                return DateTime.UtcNow > SlaDeadline.Value;
+            }
+        }
+
+        [NotMapped]
+        public TimeSpan? TimeUntilDeadline
+        {
+            get
+            {
+                if (!SlaDeadline.HasValue || Status == AssessmentStatus.Completed || Status == AssessmentStatus.Approved)
+                    return null;
+                var timeSpan = SlaDeadline.Value - DateTime.UtcNow;
+                return timeSpan.TotalSeconds > 0 ? timeSpan : null;
+            }
+        }
+
+        [NotMapped]
+        public TimeSpan? OverdueBy
+        {
+            get
+            {
+                if (!IsOverdue || !SlaDeadline.HasValue)
+                    return null;
+                return DateTime.UtcNow - SlaDeadline.Value;
+            }
+        }
 
         // ADDED: Navigation property for the linked finding
         [ForeignKey("FindingId")]

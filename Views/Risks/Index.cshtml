@@ -302,6 +302,7 @@
                                 <th>Date Opened</th>
                                 <th>Last Reviewed</th>
                                 <th>Status</th>
+                                <th>SLA Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -327,6 +328,79 @@
                                     <td>@risk.OpenDate.ToString("MM/dd/yyyy")</td>
                                     <td>@(risk.NextReviewDate?.ToString("MM/dd/yyyy") ?? "N/A")</td>
                                     <td><span class="badge bg-@GetStatusColor(risk.Status)">@risk.Status</span></td>
+                                    <td>
+                                        @{
+                                            // Enhanced SLA Status for Risks (focused on review SLAs for accepted risks)
+                                            var slaStatusClass = "badge ";
+                                            var slaIcon = "";
+                                            var slaText = "";
+                                            
+                                            if (risk.Status == CyberRiskApp.Models.RiskStatus.Closed)
+                                            {
+                                                slaStatusClass += "bg-secondary";
+                                                slaIcon = "fas fa-check-circle";
+                                                slaText = "Closed";
+                                            }
+                                            else if (risk.Status == CyberRiskApp.Models.RiskStatus.Accepted)
+                                            {
+                                                // Use computed properties for review SLA status
+                                                var isReviewOverdue = risk.IsReviewOverdue;
+                                                var timeUntilReview = risk.TimeUntilReview;
+                                                var overdueBy = risk.OverdueBy;
+                                                
+                                                if (isReviewOverdue)
+                                                {
+                                                    slaStatusClass += "bg-danger";
+                                                    slaIcon = "fas fa-exclamation-triangle";
+                                                    var overdueDays = overdueBy?.Days ?? 0;
+                                                    slaText = $"Review Overdue ({overdueDays}d)";
+                                                }
+                                                else if (timeUntilReview.HasValue)
+                                                {
+                                                    var daysUntilReview = timeUntilReview.Value.Days;
+                                                    if (daysUntilReview <= 7)
+                                                    {
+                                                        slaStatusClass += "bg-warning text-dark";
+                                                        slaIcon = "fas fa-clock";
+                                                        slaText = daysUntilReview == 0 ? "Review Due Today" : $"Review Due ({daysUntilReview}d)";
+                                                    }
+                                                    else if (daysUntilReview <= 30)
+                                                    {
+                                                        slaStatusClass += "bg-info";
+                                                        slaIcon = "fas fa-calendar";
+                                                        slaText = "Review Upcoming";
+                                                    }
+                                                    else
+                                                    {
+                                                        slaStatusClass += "bg-success";
+                                                        slaIcon = "fas fa-calendar-check";
+                                                        slaText = "Review On Track";
+                                                    }
+                                                }
+                                                else if (risk.NextReviewDate.HasValue)
+                                                {
+                                                    slaStatusClass += "bg-primary";
+                                                    slaIcon = "fas fa-hourglass-half";
+                                                    slaText = $"Review {risk.NextReviewDate.Value:MMM dd}";
+                                                }
+                                                else
+                                                {
+                                                    slaStatusClass += "bg-light text-dark";
+                                                    slaIcon = "fas fa-question";
+                                                    slaText = "No Review Date";
+                                                }
+                                            }
+                                            else
+                                            {
+                                                slaStatusClass += "bg-primary";
+                                                slaIcon = "fas fa-hourglass-half";
+                                                slaText = "In Progress";
+                                            }
+                                        }
+                                        <span class="@slaStatusClass">
+                                            <i class="@slaIcon me-1"></i>@slaText
+                                        </span>
+                                    </td>
                                     <td>
                                         <div class="btn-group" role="group">
                                             <a asp-action="Details" asp-route-id="@risk.Id" class="btn btn-sm btn-outline-primary" title="View Details">

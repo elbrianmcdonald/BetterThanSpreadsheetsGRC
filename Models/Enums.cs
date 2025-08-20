@@ -291,4 +291,37 @@
         ManualImport = 2,
         RiskAssessment = 3
     }
+
+    // SLA History Tracking Enums
+    public enum SlaComplianceStatus
+    {
+        OnTrack = 0,
+        DueSoon = 1,      // Within warning threshold (e.g., 24 hours)
+        Overdue = 2,      // Past deadline but still open
+        Breached = 3,     // Completed after deadline
+        Completed = 4     // Completed within SLA
+    }
+
+    // SLA Type Enums
+    public enum SlaType
+    {
+        Remediation = 1,  // For finding remediation SLAs
+        Review = 2,       // For risk review SLAs
+        Assessment = 3,   // For assessment completion SLAs
+        Approval = 4      // For approval process SLAs
+    }
+
+    public enum SlaAssessmentType
+    {
+        Risk = 1,
+        Compliance = 2,
+        Maturity = 3
+    }
+
+    public enum SlaApprovalType
+    {
+        AssessmentApproval = 1,     // For AssessmentRequest approvals - maps to AssessmentApprovalSlaHours
+        RiskAcceptanceApproval = 2, // For RiskAcceptanceRequest approvals - maps to RiskAcceptanceApprovalSlaHours
+        FindingClosureApproval = 3  // For FindingClosureRequest approvals - maps to ExceptionRequestApprovalSlaHours
+    }
 }

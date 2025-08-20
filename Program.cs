@@ -146,6 +146,11 @@ builder.Services.AddScoped<ITechnicalControlMappingService, TechnicalControlMapp
 // Monte Carlo Simulation service removed (FAIR functionality deprecated)
 // Register Risk Matrix Management service
 builder.Services.AddScoped<IRiskMatrixService, RiskMatrixService>();
+
+// Register SLA Tracking Service
+builder.Services.AddScoped<ISlaTrackingService, SlaTrackingServiceSimple>();
+// Register SLA History Service
+builder.Services.AddScoped<ISlaHistoryService, SlaHistoryService>();
 // Register MITRE ATT&CK service for enhanced threat modeling
 builder.Services.AddScoped<IMitreAttackService, MitreAttackService>();
 // Register Strategy Planning service

@@ -15,10 +15,10 @@ namespace CyberRiskApp.Controllers
 
         public IActionResult Index()
         {
-            // If user is already authenticated, redirect to dashboard
+            // If user is already authenticated, redirect to risk backlog
             if (User.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("Index", "Dashboard");
+                return RedirectToAction("Index", "RiskBacklog");
             }
 
             // Show welcome page for unauthenticated users
