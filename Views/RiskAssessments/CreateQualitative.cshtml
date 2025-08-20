@@ -1461,6 +1461,21 @@
             const container = document.getElementById(containerId);
             const controlIndex = container.children.length;
             
+            // Check if this is a "Needed" control (future/planned controls don't need implementation status)
+            const isNeededControl = fieldPath.includes('Needed');
+            
+            // Build implementation status dropdown only for current controls
+            const implementationStatusHtml = isNeededControl ? '' : `
+                        <div class="col-12 mt-2">
+                            <select name="ThreatScenarios[${scenarioIndex}].${fieldPath}[${controlIndex}].ImplementationStatus" 
+                                    class="form-select form-select-sm implementation-status-select">
+                                <option value="0">Not Implemented</option>
+                                <option value="1">Partially Implemented</option>
+                                <option value="2">Fully Implemented</option>
+                                <option value="3">Planned</option>
+                            </select>
+                        </div>`;
+            
             const controlHtml = `
                 <div class="control-item mb-3 p-2 border rounded">
                     <div class="row">
@@ -1485,15 +1500,7 @@
                                       rows="2"
                                       placeholder="Optional: Describe how this control works..."></textarea>
                         </div>
-                        <div class="col-12 mt-2">
-                            <select name="ThreatScenarios[${scenarioIndex}].${fieldPath}[${controlIndex}].ImplementationStatus" 
-                                    class="form-select form-select-sm implementation-status-select">
-                                <option value="0">Not Implemented</option>
-                                <option value="1">Partially Implemented</option>
-                                <option value="2">Fully Implemented</option>
-                                <option value="3">Planned</option>
-                            </select>
-                        </div>
+                        ${implementationStatusHtml}
                     </div>
                 </div>
             `;
