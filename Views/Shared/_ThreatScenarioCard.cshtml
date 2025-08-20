@@ -1,0 +1,200 @@
+@model CyberRiskApp.ViewModels.ComprehensiveThreatScenario
+@{
+    var scenarioIndex = ViewData["ScenarioIndex"]?.ToString() ?? "0";
+    var cardId = $"threat-scenario-{scenarioIndex}";
+}
+
+<div class="card shadow-sm threat-scenario-card mb-4" id="@cardId" data-scenario-index="@scenarioIndex">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Threat Scenario @(int.Parse(scenarioIndex) + 1)
+            </h6>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-light toggle-scenario" 
+                        data-bs-toggle="collapse" data-bs-target="#scenario-content-@scenarioIndex">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-light remove-scenario" 
+                        onclick="removeThreatScenario(@scenarioIndex)">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="collapse show" id="scenario-content-@scenarioIndex">
+        <div class="card-body">
+            <!-- Scenario Header Information -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-hashtag me-1"></i>Scenario ID <span class="text-danger">*</span>
+                    </label>
+                    <input name="ThreatScenarios[@scenarioIndex].ScenarioId" 
+                           value="@Model.ScenarioId" 
+                           class="form-control" 
+                           placeholder="e.g., TS-001" 
+                           required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-tag me-1"></i>Scenario Name <span class="text-danger">*</span>
+                    </label>
+                    <input name="ThreatScenarios[@scenarioIndex].ScenarioName" 
+                           value="@Model.ScenarioName" 
+                           class="form-control" 
+                           placeholder="e.g., Phishing Attack on Email System" 
+                           required />
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="form-label fw-bold">
+                    <i class="fas fa-file-alt me-1"></i>Scenario Description
+                </label>
+                <textarea name="ThreatScenarios[@scenarioIndex].Description" 
+                          class="form-control" 
+                          rows="3" 
+                          placeholder="Describe the overall threat scenario...">@Model.Description</textarea>
+            </div>
+
+            <!-- Scenario Sections -->
+            <div class="accordion" id="scenario-accordion-@scenarioIndex">
+                
+                <!-- Initial Threat Vector Section -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="vector-heading-@scenarioIndex">
+                        <button class="accordion-button" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#vector-collapse-@scenarioIndex">
+                            <i class="fas fa-arrow-right text-danger me-2"></i>
+                            <strong>Initial Threat Vector</strong>
+                        </button>
+                    </h2>
+                    <div id="vector-collapse-@scenarioIndex" 
+                         class="accordion-collapse collapse show" 
+                         data-bs-parent="#scenario-accordion-@scenarioIndex">
+                        <div class="accordion-body">
+                            @Html.Partial("_ThreatVectorForm", Model.ThreatVector, new ViewDataDictionary(ViewData) 
+                            { 
+                                ["ScenarioIndex"] = scenarioIndex 
+                            })
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Threat Actor Steps Section -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="steps-heading-@scenarioIndex">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#steps-collapse-@scenarioIndex">
+                            <i class="fas fa-list-ol text-warning me-2"></i>
+                            <strong>Threat Actor Steps</strong>
+                            <span class="badge bg-secondary ms-2" id="steps-count-@scenarioIndex">@Model.ThreatActorSteps.Count</span>
+                        </button>
+                    </h2>
+                    <div id="steps-collapse-@scenarioIndex" 
+                         class="accordion-collapse collapse" 
+                         data-bs-parent="#scenario-accordion-@scenarioIndex">
+                        <div class="accordion-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <p class="text-muted mb-0">Define the sequence of steps the threat actor takes</p>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="addThreatActorStep(@scenarioIndex)">
+                                    <i class="fas fa-plus me-1"></i>Add Step
+                                </button>
+                            </div>
+                            <div id="threat-actor-steps-@scenarioIndex">
+                                @for (int i = 0; i < Model.ThreatActorSteps.Count; i++)
+                                {
+                                    @Html.Partial("_ThreatActorStepForm", Model.ThreatActorSteps[i], new ViewDataDictionary(ViewData) 
+                                    { 
+                                        ["ScenarioIndex"] = scenarioIndex,
+                                        ["StepIndex"] = i.ToString()
+                                    })
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Threat Actor Objective Section -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="objective-heading-@scenarioIndex">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#objective-collapse-@scenarioIndex">
+                            <i class="fas fa-bullseye text-info me-2"></i>
+                            <strong>Threat Actor Objective</strong>
+                        </button>
+                    </h2>
+                    <div id="objective-collapse-@scenarioIndex" 
+                         class="accordion-collapse collapse" 
+                         data-bs-parent="#scenario-accordion-@scenarioIndex">
+                        <div class="accordion-body">
+                            @Html.Partial("_ThreatActorObjectiveForm", Model.ThreatActorObjective, new ViewDataDictionary(ViewData) 
+                            { 
+                                ["ScenarioIndex"] = scenarioIndex 
+                            })
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Identified Risks Section -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="risks-heading-@scenarioIndex">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#risks-collapse-@scenarioIndex">
+                            <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                            <strong>Identified Risks</strong>
+                            <span class="badge bg-danger ms-2" id="risks-count-@scenarioIndex">@Model.ScenarioRisks.Count</span>
+                        </button>
+                    </h2>
+                    <div id="risks-collapse-@scenarioIndex" 
+                         class="accordion-collapse collapse" 
+                         data-bs-parent="#scenario-accordion-@scenarioIndex">
+                        <div class="accordion-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <p class="text-muted mb-0">Add multiple risks that could emerge from this threat scenario</p>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="addScenarioRisk(@scenarioIndex)">
+                                    <i class="fas fa-plus me-1"></i>Add Risk
+                                </button>
+                            </div>
+                            
+                            <!-- Overall Scenario Risk Summary -->
+                            <div class="alert alert-light border mb-3" id="scenario-risk-summary-@scenarioIndex">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="text-muted">Overall Scenario Risk Level:</strong>
+                                        <span class="badge ms-2" id="overall-risk-badge-@scenarioIndex">@Model.OverallRiskLevel</span>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">Highest individual risk: 
+                                            <strong id="overall-risk-score-@scenarioIndex">@(Model.OverallRiskScore?.ToString("F1") ?? "-")</strong>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="scenario-risks-@scenarioIndex">
+                                @for (int i = 0; i < Model.ScenarioRisks.Count; i++)
+                                {
+                                    @Html.Partial("_ScenarioRiskForm", Model.ScenarioRisks[i], new ViewDataDictionary(ViewData) 
+                                    { 
+                                        ["ScenarioIndex"] = scenarioIndex,
+                                        ["RiskIndex"] = i.ToString()
+                                    })
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

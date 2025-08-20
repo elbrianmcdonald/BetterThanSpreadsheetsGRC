@@ -348,11 +348,11 @@
                                             </div>
                                             <div class="metric-item">
                                                 <span class="metric-label">Highest Risk Score:</span>
-                                                <span class="metric-value">@(Model.ThreatScenarios.Max(ts => ts.QualitativeRiskScore)?.ToString("F1") ?? "N/A")</span>
+                                                <span class="metric-value">@(Model.ThreatScenarios.Select(ts => ts.CalculateOverallRiskScore()).Where(s => s.HasValue).DefaultIfEmpty(0).Max()?.ToString("F1") ?? "N/A")</span>
                                             </div>
                                             <div class="metric-item">
                                                 <span class="metric-label">Lowest Risk Score:</span>
-                                                <span class="metric-value">@(Model.ThreatScenarios.Min(ts => ts.QualitativeRiskScore)?.ToString("F1") ?? "N/A")</span>
+                                                <span class="metric-value">@(Model.ThreatScenarios.Select(ts => ts.CalculateOverallRiskScore()).Where(s => s.HasValue).DefaultIfEmpty(0).Min()?.ToString("F1") ?? "N/A")</span>
                                             </div>
                                             <div class="metric-item">
                                                 <span class="metric-label">Total Scenarios:</span>
@@ -379,7 +379,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var scenario in Model.ThreatScenarios.OrderByDescending(ts => ts.QualitativeRiskScore))
+                                            @foreach (var scenario in Model.ThreatScenarios.OrderByDescending(ts => ts.CalculateOverallRiskScore()))
                                             {
                                                 <tr>
                                                     <td>
@@ -389,12 +389,12 @@
                                                             <br><small class="text-muted">@scenario.Description.Substring(0, Math.Min(scenario.Description.Length, 50))@(scenario.Description.Length > 50 ? "..." : "")</small>
                                                         }
                                                     </td>
-                                                    <td><span class="badge bg-info">@scenario.QualitativeLikelihood</span></td>
-                                                    <td><span class="badge bg-warning">@scenario.QualitativeImpact</span></td>
-                                                    <td><span class="badge bg-secondary">@scenario.QualitativeExposure?.ToString("F2")</span></td>
-                                                    <td><span class="badge bg-primary">@scenario.QualitativeRiskScore?.ToString("F1")</span></td>
+                                                    <td><span class="badge bg-info">@("N/A" /* Legacy property removed */)</span></td>
+                                                    <td><span class="badge bg-warning">@("N/A" /* Legacy property removed */)</span></td>
+                                                    <td><span class="badge bg-secondary">@("N/A" /* Legacy property removed */)</span></td>
+                                                    <td><span class="badge bg-primary">@scenario.CalculateOverallRiskScore()?.ToString("F1") ?? "N/A"</span></td>
                                                     <td>
-                                                        <span class="badge bg-@(scenario.CalculateRiskLevel().ToLower() switch 
+                                                        <span class="badge bg-@(scenario.CalculateOverallRiskLevel().ToLower() switch 
                                                         { 
                                                             "low" => "success",
                                                             "medium" => "warning", 
@@ -403,7 +403,7 @@
                                                             "extreme" => "dark",
                                                             _ => "secondary"
                                                         })">
-                                                            @scenario.CalculateRiskLevel()
+                                                            @scenario.CalculateOverallRiskLevel()
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -477,7 +477,7 @@
                                 <i class="fas fa-exclamation-triangle me-2"></i>Threat Scenarios (@Model.ThreatScenarios.Count)
                             </h5>
 
-                            @foreach (var scenario in Model.ThreatScenarios.OrderByDescending(ts => ts.QualitativeRiskScore))
+                            @foreach (var scenario in Model.ThreatScenarios.OrderByDescending(ts => ts.CalculateOverallRiskScore()))
                             {
                                 <div class="threat-scenario-card mb-4">
                                     <div class="card-header">
@@ -493,67 +493,49 @@
                                                 }
                                             </div>
                                             <div class="text-end">
-                                                @if (scenario.QualitativeRiskScore.HasValue)
-                                                {
-                                                    <span class="badge bg-@(scenario.CalculateRiskLevel().ToLower() switch 
-                                                    { 
-                                                        "low" => "success",
-                                                        "medium" => "warning", 
-                                                        "high" => "danger",
-                                                        "critical" => "dark",
-                                                        "extreme" => "dark",
-                                                        _ => "secondary"
-                                                    }) fs-6">
-                                                        @scenario.CalculateRiskLevel()
-                                                    </span>
-                                                }
+                                                @* TODO: Update to use new comprehensive threat scenario model *@
+                                                <span class="badge bg-warning fs-6">
+                                                    @scenario.CalculateOverallRiskLevel()
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="card-body">
                                         <div class="row g-2 mb-3">
-                                            @if (scenario.QualitativeLikelihood.HasValue)
-                                            {
-                                                <div class="col-lg-2 col-md-4">
-                                                    <div class="small-metric-card bg-info">
-                                                        <div class="small-metric-value">@scenario.QualitativeLikelihood</div>
-                                                        <div class="small-metric-label">Likelihood</div>
-                                                    </div>
+                                            @* Legacy risk properties removed - showing placeholder for now *@
+                                            <div class="col-lg-2 col-md-4">
+                                                <div class="small-metric-card bg-info">
+                                                    <div class="small-metric-value">N/A</div>
+                                                    <div class="small-metric-label">Likelihood</div>
                                                 </div>
-                                            }
+                                            </div>
                                             
-                                            @if (scenario.QualitativeImpact.HasValue)
-                                            {
-                                                <div class="col-lg-2 col-md-4">
-                                                    <div class="small-metric-card bg-warning">
-                                                        <div class="small-metric-value">@scenario.QualitativeImpact</div>
-                                                        <div class="small-metric-label">Impact</div>
-                                                    </div>
+                                            <div class="col-lg-2 col-md-4">
+                                                <div class="small-metric-card bg-warning">
+                                                    <div class="small-metric-value">N/A</div>
+                                                    <div class="small-metric-label">Impact</div>
                                                 </div>
-                                            }
+                                            </div>
 
-                                            @if (scenario.QualitativeExposure.HasValue)
-                                            {
-                                                <div class="col-lg-2 col-md-4">
-                                                    <div class="small-metric-card bg-secondary">
-                                                        <div class="small-metric-value">@scenario.QualitativeExposure.Value.ToString("F2")</div>
-                                                        <div class="small-metric-label">Exposure</div>
-                                                    </div>
+                                            <div class="col-lg-2 col-md-4">
+                                                <div class="small-metric-card bg-secondary">
+                                                    <div class="small-metric-value">N/A</div>
+                                                    <div class="small-metric-label">Exposure</div>
                                                 </div>
-                                            }
+                                            </div>
 
-                                            @if (scenario.QualitativeRiskScore.HasValue)
+                                            @if (scenario.CalculateOverallRiskScore().HasValue)
                                             {
                                                 <div class="col-lg-3 col-md-6">
                                                     <div class="small-metric-card bg-primary">
-                                                        <div class="small-metric-value">@scenario.QualitativeRiskScore.Value.ToString("F1")</div>
+                                                        <div class="small-metric-value">@scenario.CalculateOverallRiskScore().Value.ToString("F1")</div>
                                                         <div class="small-metric-label">Risk Score</div>
                                                     </div>
                                                 </div>
                                             }
 
                                             <div class="col-lg-3 col-md-6">
-                                                <div class="small-metric-card bg-@(scenario.CalculateRiskLevel().ToLower() switch 
+                                                <div class="small-metric-card bg-@(scenario.CalculateOverallRiskLevel().ToLower() switch 
                                                 { 
                                                     "low" => "success",
                                                     "medium" => "warning", 
@@ -562,7 +544,7 @@
                                                     "extreme" => "dark",
                                                     _ => "secondary"
                                                 })">
-                                                    <div class="small-metric-value">@scenario.CalculateRiskLevel()</div>
+                                                    <div class="small-metric-value">@scenario.CalculateOverallRiskLevel()</div>
                                                     <div class="small-metric-label">Risk Level</div>
                                                 </div>
                                             </div>

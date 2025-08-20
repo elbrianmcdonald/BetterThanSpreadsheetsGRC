@@ -10,25 +10,18 @@ namespace CyberRiskApp.Models
         [Required]
         public int RiskAssessmentId { get; set; }
 
+        [Required]
+        [StringLength(50)]
+        [Display(Name = "Scenario ID")]
+        public string ScenarioId { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(200)]
+        [Display(Name = "Scenario Name")]
+        public string ScenarioName { get; set; } = string.Empty;
+
         [Display(Name = "Threat Scenario Description")]
         public string Description { get; set; } = string.Empty;
-
-        [Display(Name = "Likelihood Level")]
-        [Column(TypeName = "decimal(5,2)")]
-        public decimal? QualitativeLikelihood { get; set; }
-
-        [Display(Name = "Impact Level")]
-        [Column(TypeName = "decimal(5,2)")]
-        public decimal? QualitativeImpact { get; set; }
-
-        [Display(Name = "Exposure Level")]
-        [Column(TypeName = "decimal(5,2)")]
-        public decimal? QualitativeExposure { get; set; }
-
-        // Calculated Qualitative Risk Score for this scenario
-        [Display(Name = "Risk Score")]
-        [Column(TypeName = "decimal(5,2)")]
-        public decimal? QualitativeRiskScore { get; set; }
 
         // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
@@ -51,48 +44,95 @@ namespace CyberRiskApp.Models
         [ForeignKey("RiskAssessmentId")]
         public virtual RiskAssessment RiskAssessment { get; set; } = null!;
 
-        // Collection of identified risks for this threat scenario
+        // One-to-one relationship with threat vector
+        public virtual ThreatVector? ThreatVector { get; set; }
+
+        // One-to-many relationship with threat actor steps
+        public virtual ICollection<ThreatActorStep> ThreatActorSteps { get; set; } = new List<ThreatActorStep>();
+
+        // One-to-one relationship with threat actor objective
+        public virtual ThreatActorObjective? ThreatActorObjective { get; set; }
+
+        // One-to-many relationship with scenario risks
+        public virtual ICollection<ScenarioRisk> ScenarioRisks { get; set; } = new List<ScenarioRisk>();
+
+        // Collection of identified risks for this threat scenario (legacy)
         public virtual ICollection<Risk> IdentifiedRisks { get; set; } = new List<Risk>();
 
-        // Collection of threat events for threat modeling
+        // Collection of threat events for threat modeling (legacy)
         public virtual ICollection<ThreatEvent> ThreatEvents { get; set; } = new List<ThreatEvent>();
 
-        // Collection of loss events for threat modeling
+        // Collection of loss events for threat modeling (legacy)
         public virtual ICollection<LossEvent> LossEvents { get; set; } = new List<LossEvent>();
 
-        // Method to calculate risk level for this scenario
-        public string CalculateRiskLevel()
+        // Method to calculate overall risk level for this scenario based on highest individual risk
+        public string CalculateOverallRiskLevel()
         {
-            if (QualitativeRiskScore.HasValue)
+            if (ScenarioRisks?.Any() == true)
             {
-                return QualitativeRiskScore.Value switch
+                var riskScores = ScenarioRisks
+                    .Where(r => r.CurrentRiskScore.HasValue)
+                    .Select(r => r.CurrentRiskScore!.Value)
+                    .ToList();
+
+                if (riskScores.Any())
                 {
-                    >= 16 => "Critical",
-                    >= 10 => "High",
-                    >= 4 => "Medium",
-                    _ => "Low"
-                };
+                    var maxRiskScore = riskScores.Max();
+                    return maxRiskScore switch
+                    {
+                        >= 16 => "Critical",
+                        >= 10 => "High",
+                        >= 4 => "Medium",
+                        _ => "Low"
+                    };
+                }
             }
 
             return "Unknown";
         }
 
-        // Method to calculate risk score based on likelihood, impact, and exposure
-        public void CalculateRiskScore()
+        // Method to calculate overall risk score for this scenario (highest individual risk)
+        public decimal? CalculateOverallRiskScore()
         {
-            if (QualitativeLikelihood.HasValue && QualitativeImpact.HasValue && QualitativeExposure.HasValue)
+            if (ScenarioRisks?.Any() == true)
             {
-                // Use decimal values directly from RiskMatrixLevel system
-                var likelihood = QualitativeLikelihood.Value;
-                var impact = QualitativeImpact.Value;
-                var exposureMultiplier = QualitativeExposure.Value;
-                
-                QualitativeRiskScore = (likelihood * impact) * exposureMultiplier;
+                var riskScores = ScenarioRisks
+                    .Where(r => r.CurrentRiskScore.HasValue)
+                    .Select(r => r.CurrentRiskScore!.Value)
+                    .ToList();
+
+                if (riskScores.Any())
+                {
+                    return riskScores.Max();
+                }
             }
-            else
+
+            return null;
+        }
+
+        // Method to get count of risks by level
+        public Dictionary<string, int> GetRiskCountsByLevel()
+        {
+            var counts = new Dictionary<string, int>
             {
-                QualitativeRiskScore = null;
+                ["Critical"] = 0,
+                ["High"] = 0,
+                ["Medium"] = 0,
+                ["Low"] = 0
+            };
+
+            if (ScenarioRisks?.Any() == true)
+            {
+                foreach (var risk in ScenarioRisks.Where(r => !string.IsNullOrEmpty(r.CurrentRiskLevel)))
+                {
+                    if (counts.ContainsKey(risk.CurrentRiskLevel))
+                    {
+                        counts[risk.CurrentRiskLevel]++;
+                    }
+                }
             }
+
+            return counts;
         }
     }
 }

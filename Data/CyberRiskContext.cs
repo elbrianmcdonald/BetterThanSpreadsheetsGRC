@@ -16,6 +16,17 @@ namespace CyberRiskApp.Data
         public DbSet<Risk> Risks { get; set; }
         public DbSet<RiskAssessment> RiskAssessments { get; set; }
         public DbSet<ThreatScenario> ThreatScenarios { get; set; }
+        
+        // Comprehensive Threat Scenario Models
+        public DbSet<ThreatVector> ThreatVectors { get; set; }
+        public DbSet<ThreatActorStep> ThreatActorSteps { get; set; }
+        public DbSet<ThreatActorObjective> ThreatActorObjectives { get; set; }
+        public DbSet<ScenarioRisk> ScenarioRisks { get; set; }
+        public DbSet<ThreatControl> ThreatControls { get; set; }
+        public DbSet<ThreatVectorControl> ThreatVectorControls { get; set; }
+        public DbSet<ThreatActorStepControl> ThreatActorStepControls { get; set; }
+        public DbSet<ThreatActorObjectiveControl> ThreatActorObjectiveControls { get; set; }
+        
         public DbSet<AssessmentRequest> AssessmentRequests { get; set; }
         public DbSet<RiskAcceptanceRequest> RiskAcceptanceRequests { get; set; }
         public DbSet<FindingClosureRequest> FindingClosureRequests { get; set; }

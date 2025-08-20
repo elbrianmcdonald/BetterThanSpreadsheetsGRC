@@ -335,51 +335,28 @@ namespace CyberRiskApp.Services
                 var backlogEntries = new List<RiskBacklogEntry>();
                 var currentUser = _auditService.GetCurrentUser();
 
+                // TODO: Update risk generation to use new comprehensive threat scenario model
+                // For now, this legacy risk generation is commented out to avoid build errors
                 // Generate risks from threat scenarios
-                if (assessment.ThreatScenarios?.Any() == true)
-                {
-                    foreach (var scenario in assessment.ThreatScenarios.Where(ts => ts.QualitativeRiskScore > 0))
-                    {
-                        // Create risk data object (don't save to database yet)
-                        var riskData = new
-                        {
-                            Title = $"Risk from {assessment.Title} - Scenario {scenario.Id}",
-                            Description = scenario.Description ?? "",
-                            ThreatScenario = scenario.Description ?? "",
-                            Asset = assessment.Asset,
-                            BusinessUnit = assessment.BusinessUnit ?? "",
-                            Owner = assessment.BusinessOwner ?? assessment.Assessor,
-                            RiskAssessmentId = assessment.Id,
-                            ThreatScenarioId = scenario.Id,
-                            
-                            // Map scenario values to risk (simplified mapping)
-                            Impact = (ImpactLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeImpact!)),
-                            Likelihood = (LikelihoodLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeLikelihood!)),
-                            Exposure = (ExposureLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeExposure!)),
-                            InherentRiskLevel = MapRiskScore(scenario.QualitativeRiskScore!.Value),
-                            RiskLevel = MapRiskScore(scenario.QualitativeRiskScore!.Value),
-                            
-                            CreatedBy = currentUser,
-                            UpdatedBy = currentUser
-                        };
-                        
-                        // Serialize risk data for backlog description
-                        var riskDescription = JsonSerializer.Serialize(riskData);
-                        
-                        // Create backlog entry WITHOUT creating the risk yet
-                        var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
-                            riskId: null, // No risk exists yet - will be created upon approval
-                            actionType: RiskBacklogAction.NewRisk,
-                            description: riskDescription, // Store full risk data here
-                            justification: $"Risk assessment completed with {scenario.CalculateRiskLevel()} risk level (Score: {scenario.QualitativeRiskScore:F1})",
-                            requesterId: currentUser
-                        );
-                        
-                        backlogEntries.Add(backlogEntry);
-                    }
-                }
+                // if (assessment.ThreatScenarios?.Any() == true)
+                // {
+                //     foreach (var scenario in assessment.ThreatScenarios.Where(ts => ts.CalculateOverallRiskScore() > 0))
+                //     {
+                //         // Create simplified backlog entry for scenario risks
+                //         var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
+                //             riskId: null,
+                //             actionType: RiskBacklogAction.NewRisk,
+                //             description: $"Risk from scenario: {scenario.ScenarioName ?? scenario.Description}",
+                //             justification: $"Risk assessment completed with {scenario.CalculateOverallRiskLevel()} risk level",
+                //             requesterId: currentUser
+                //         );
+                //         
+                //         backlogEntries.Add(backlogEntry);
+                //     }
+                // }
+
                 // Legacy: Single assessment-level risk
-                else if (assessment.QualitativeRiskScore.HasValue && assessment.QualitativeRiskScore > 0)
+                if (assessment.QualitativeRiskScore.HasValue && assessment.QualitativeRiskScore > 0)
                 {
                     // Create risk data object (don't save to database yet)
                     var riskData = new

@@ -1,0 +1,168 @@
+@model CyberRiskApp.ViewModels.ThreatVectorViewModel
+@{
+    var scenarioIndex = ViewData["ScenarioIndex"]?.ToString() ?? "0";
+}
+
+<div class="threat-vector-form">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold">
+                    <i class="fas fa-tag me-1"></i>Threat Vector Name <span class="text-danger">*</span>
+                </label>
+                <input name="ThreatScenarios[@scenarioIndex].ThreatVector.Name" 
+                       value="@Model.Name" 
+                       class="form-control" 
+                       placeholder="e.g., Phishing Email" 
+                       required />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold">
+                    <i class="fas fa-shield-alt me-1"></i>MITRE ATT&CK Technique
+                </label>
+                <input name="ThreatScenarios[@scenarioIndex].ThreatVector.MitreTechnique" 
+                       value="@Model.MitreTechnique" 
+                       class="form-control mitre-technique-input" 
+                       placeholder="e.g., T1566.001 - Spearphishing Attachment" />
+            </div>
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label fw-bold">
+            <i class="fas fa-file-alt me-1"></i>Description <span class="text-danger">*</span>
+        </label>
+        <textarea name="ThreatScenarios[@scenarioIndex].ThreatVector.Description" 
+                  class="form-control" 
+                  rows="3" 
+                  placeholder="Describe the initial entry point used by the threat actor..."
+                  required>@Model.Description</textarea>
+    </div>
+
+    <!-- Controls Section -->
+    <div class="row">
+        <!-- Current Protective Controls -->
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold text-success">
+                    <i class="fas fa-shield me-1"></i>Current Protective Controls
+                </label>
+                <div class="controls-container" id="vector-current-protective-@scenarioIndex">
+                    @for (int i = 0; i < Model.CurrentProtectiveControls.Count; i++)
+                    {
+                        <div class="control-item mb-2">
+                            <div class="input-group">
+                                <input name="ThreatScenarios[@scenarioIndex].ThreatVector.CurrentProtectiveControls[@i].ControlName" 
+                                       value="@Model.CurrentProtectiveControls[i].ControlName" 
+                                       class="form-control control-name-input" 
+                                       placeholder="Control name..." />
+                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                        onclick="removeControl(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-success" 
+                        onclick="addControl('vector-current-protective-@scenarioIndex', '@scenarioIndex', 'ThreatVector.CurrentProtectiveControls')">
+                    <i class="fas fa-plus me-1"></i>Add Control
+                </button>
+            </div>
+        </div>
+
+        <!-- Current Detective Controls -->
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold text-info">
+                    <i class="fas fa-search me-1"></i>Current Detective Controls
+                </label>
+                <div class="controls-container" id="vector-current-detective-@scenarioIndex">
+                    @for (int i = 0; i < Model.CurrentDetectiveControls.Count; i++)
+                    {
+                        <div class="control-item mb-2">
+                            <div class="input-group">
+                                <input name="ThreatScenarios[@scenarioIndex].ThreatVector.CurrentDetectiveControls[@i].ControlName" 
+                                       value="@Model.CurrentDetectiveControls[i].ControlName" 
+                                       class="form-control control-name-input" 
+                                       placeholder="Control name..." />
+                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                        onclick="removeControl(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-info" 
+                        onclick="addControl('vector-current-detective-@scenarioIndex', '@scenarioIndex', 'ThreatVector.CurrentDetectiveControls')">
+                    <i class="fas fa-plus me-1"></i>Add Control
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Needed Protective Controls -->
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold text-warning">
+                    <i class="fas fa-shield me-1"></i>Needed Protective Controls
+                </label>
+                <div class="controls-container" id="vector-needed-protective-@scenarioIndex">
+                    @for (int i = 0; i < Model.NeededProtectiveControls.Count; i++)
+                    {
+                        <div class="control-item mb-2">
+                            <div class="input-group">
+                                <input name="ThreatScenarios[@scenarioIndex].ThreatVector.NeededProtectiveControls[@i].ControlName" 
+                                       value="@Model.NeededProtectiveControls[i].ControlName" 
+                                       class="form-control control-name-input" 
+                                       placeholder="Control name..." />
+                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                        onclick="removeControl(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-warning" 
+                        onclick="addControl('vector-needed-protective-@scenarioIndex', '@scenarioIndex', 'ThreatVector.NeededProtectiveControls')">
+                    <i class="fas fa-plus me-1"></i>Add Control
+                </button>
+            </div>
+        </div>
+
+        <!-- Needed Detective Controls -->
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold text-secondary">
+                    <i class="fas fa-search me-1"></i>Needed Detective Controls
+                </label>
+                <div class="controls-container" id="vector-needed-detective-@scenarioIndex">
+                    @for (int i = 0; i < Model.NeededDetectiveControls.Count; i++)
+                    {
+                        <div class="control-item mb-2">
+                            <div class="input-group">
+                                <input name="ThreatScenarios[@scenarioIndex].ThreatVector.NeededDetectiveControls[@i].ControlName" 
+                                       value="@Model.NeededDetectiveControls[i].ControlName" 
+                                       class="form-control control-name-input" 
+                                       placeholder="Control name..." />
+                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                        onclick="removeControl(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                        onclick="addControl('vector-needed-detective-@scenarioIndex', '@scenarioIndex', 'ThreatVector.NeededDetectiveControls')">
+                    <i class="fas fa-plus me-1"></i>Add Control
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

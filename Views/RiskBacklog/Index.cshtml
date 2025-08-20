@@ -73,21 +73,9 @@
 
                 <!-- Action Buttons -->
                 <div class="btn-group" role="group" aria-label="Actions">
-                    @if (Model?.CanAssign == true)
-                    {
-                        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkActionsModal" title="Perform bulk operations">
-                            <i class="fas fa-tasks me-1"></i>Bulk Actions
-                        </button>
-                    }
                     <a asp-controller="RiskBacklog" asp-action="Reports" class="btn btn-outline-info" title="View detailed reports">
                         <i class="fas fa-chart-bar me-1"></i>Reports
                     </a>
-                    @if (User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager") || User.IsInRole("Admin"))
-                    {
-                        <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#createFindingModal" title="Create new finding entry">
-                            <i class="fas fa-plus me-1"></i>New Finding
-                        </button>
-                    }
                 </div>
             </div>
         </div>
@@ -2035,8 +2023,45 @@
                 return;
             }
             
-            // Use the existing bulk assign function
-            bulkAssignAnalyst();
+            // Get anti-forgery token
+            const tokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (!tokenElement || !tokenElement.value) {
+                alert('Security token not found. Please refresh the page and try again.');
+                return;
+            }
+            
+            if (confirm(`Assign ${selectedIds.length} backlog entries to the selected analyst?`)) {
+                fetch('/api/backlog/bulk-assign-analyst', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': tokenElement.value
+                    },
+                    body: JSON.stringify({
+                        backlogIds: selectedIds,
+                        assigneeId: analystId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Close the modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('quickAssignModal'));
+                        if (modal) {
+                            modal.hide();
+                        }
+                        
+                        // Refresh the page to show updated assignments
+                        location.reload();
+                    } else {
+                        alert('Error assigning entries: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error assigning entries. Please try again.');
+                });
+            }
         }
 
         // Enhanced update selected count with quick assign modal sync

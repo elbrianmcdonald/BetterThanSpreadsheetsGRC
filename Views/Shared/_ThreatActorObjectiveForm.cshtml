@@ -1,0 +1,85 @@
+@model CyberRiskApp.ViewModels.ThreatActorObjectiveViewModel
+@{
+    var scenarioIndex = ViewData["ScenarioIndex"]?.ToString() ?? "0";
+}
+
+<div class="threat-actor-objective-form">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold">
+                    <i class="fas fa-bullseye me-1"></i>Objective Name
+                </label>
+                <input name="ThreatScenarios[@scenarioIndex].ThreatActorObjective.Name" 
+                       value="@Model.Name" 
+                       class="form-control" 
+                       placeholder="e.g., Data Exfiltration" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold">
+                    <i class="fas fa-shield-alt me-1"></i>MITRE ATT&CK Technique
+                </label>
+                <input name="ThreatScenarios[@scenarioIndex].ThreatActorObjective.MitreTechnique" 
+                       value="@Model.MitreTechnique" 
+                       class="form-control mitre-technique-input" 
+                       placeholder="e.g., T1041 - Exfiltration Over C2 Channel" />
+            </div>
+        </div>
+    </div>
+    
+    <div class="mb-3">
+        <label class="form-label fw-bold">
+            <i class="fas fa-file-alt me-1"></i>Description
+        </label>
+        <textarea name="ThreatScenarios[@scenarioIndex].ThreatActorObjective.Description" 
+                  class="form-control" 
+                  rows="3" 
+                  placeholder="Describe the end goal or objective of the threat actor...">@Model.Description</textarea>
+    </div>
+
+    <!-- Simplified Controls Section -->
+    <div class="row">
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-success">Current Protective</label>
+            <div id="objective-current-protective-@scenarioIndex" class="controls-container">
+                <!-- Controls will be added dynamically -->
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-success" 
+                    onclick="addControl('objective-current-protective-@scenarioIndex', '@scenarioIndex', 'ThreatActorObjective.CurrentProtectiveControls')">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-info">Current Detective</label>
+            <div id="objective-current-detective-@scenarioIndex" class="controls-container">
+                <!-- Controls will be added dynamically -->
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-info" 
+                    onclick="addControl('objective-current-detective-@scenarioIndex', '@scenarioIndex', 'ThreatActorObjective.CurrentDetectiveControls')">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-warning">Needed Protective</label>
+            <div id="objective-needed-protective-@scenarioIndex" class="controls-container">
+                <!-- Controls will be added dynamically -->
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-warning" 
+                    onclick="addControl('objective-needed-protective-@scenarioIndex', '@scenarioIndex', 'ThreatActorObjective.NeededProtectiveControls')">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-bold text-secondary">Needed Detective</label>
+            <div id="objective-needed-detective-@scenarioIndex" class="controls-container">
+                <!-- Controls will be added dynamically -->
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary" 
+                    onclick="addControl('objective-needed-detective-@scenarioIndex', '@scenarioIndex', 'ThreatActorObjective.NeededDetectiveControls')">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </div>
+</div>

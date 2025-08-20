@@ -1,0 +1,286 @@
+@model CyberRiskApp.ViewModels.ScenarioRiskViewModel
+@{
+    var scenarioIndex = ViewData["ScenarioIndex"]?.ToString() ?? "0";
+    var riskIndex = ViewData["RiskIndex"]?.ToString() ?? "0";
+    var riskId = $"scenario-risk-{scenarioIndex}-{riskIndex}";
+}
+
+<div class="card mb-3 scenario-risk-card" id="@riskId" data-risk-index="@riskIndex">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                Risk @(int.Parse(riskIndex) + 1)
+            </h6>
+            <button type="button" class="btn btn-sm btn-outline-danger" 
+                    onclick="removeScenarioRisk(@scenarioIndex, @riskIndex)">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <!-- Risk Basic Information -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">
+                    <i class="fas fa-tag me-1"></i>Risk Name <span class="text-danger">*</span>
+                </label>
+                <input name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].RiskName" 
+                       value="@Model.RiskName" 
+                       class="form-control" 
+                       placeholder="e.g., Credential Theft" 
+                       required />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Risk Treatment Status</label>
+                <select name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].TreatmentPlanStatus" 
+                        class="form-select">
+                    <option value="0" selected="@(Model.TreatmentPlanStatus == CyberRiskApp.Models.TreatmentPlanStatus.NotStarted)">Not Started</option>
+                    <option value="1" selected="@(Model.TreatmentPlanStatus == CyberRiskApp.Models.TreatmentPlanStatus.InProgress)">In Progress</option>
+                    <option value="2" selected="@(Model.TreatmentPlanStatus == CyberRiskApp.Models.TreatmentPlanStatus.OnHold)">On Hold</option>
+                    <option value="3" selected="@(Model.TreatmentPlanStatus == CyberRiskApp.Models.TreatmentPlanStatus.Completed)">Completed</option>
+                    <option value="4" selected="@(Model.TreatmentPlanStatus == CyberRiskApp.Models.TreatmentPlanStatus.Cancelled)">Cancelled</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label fw-bold">
+                <i class="fas fa-file-alt me-1"></i>Risk Description <span class="text-danger">*</span>
+            </label>
+            <textarea name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].RiskDescription" 
+                      class="form-control" 
+                      rows="2" 
+                      placeholder="Describe what could go wrong..."
+                      required>@Model.RiskDescription</textarea>
+        </div>
+
+        <!-- Current Risk Assessment -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card border-primary mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Current Risk (Before Treatment)
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Impact</label>
+                                <select name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].CurrentImpact" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="current"
+                                        data-scenario="@scenarioIndex" 
+                                        data-risk="@riskIndex"
+                                        onchange="calculateRisk('@scenarioIndex', '@riskIndex', 'current')">
+                                    <option value="">--</option>
+                                    <option value="1" selected="@(Model.CurrentImpact == 1)">1 - Very Low</option>
+                                    <option value="2" selected="@(Model.CurrentImpact == 2)">2 - Low</option>
+                                    <option value="3" selected="@(Model.CurrentImpact == 3)">3 - Medium</option>
+                                    <option value="4" selected="@(Model.CurrentImpact == 4)">4 - High</option>
+                                    <option value="5" selected="@(Model.CurrentImpact == 5)">5 - Very High</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Likelihood</label>
+                                <select name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].CurrentLikelihood" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="current"
+                                        data-scenario="@scenarioIndex" 
+                                        data-risk="@riskIndex"
+                                        onchange="calculateRisk('@scenarioIndex', '@riskIndex', 'current')">
+                                    <option value="">--</option>
+                                    <option value="1" selected="@(Model.CurrentLikelihood == 1)">1 - Very Low</option>
+                                    <option value="2" selected="@(Model.CurrentLikelihood == 2)">2 - Low</option>
+                                    <option value="3" selected="@(Model.CurrentLikelihood == 3)">3 - Medium</option>
+                                    <option value="4" selected="@(Model.CurrentLikelihood == 4)">4 - High</option>
+                                    <option value="5" selected="@(Model.CurrentLikelihood == 5)">5 - Very High</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Exposure</label>
+                                <select name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].CurrentExposure" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="current"
+                                        data-scenario="@scenarioIndex" 
+                                        data-risk="@riskIndex"
+                                        onchange="calculateRisk('@scenarioIndex', '@riskIndex', 'current')">
+                                    <option value="">--</option>
+                                    <option value="1" selected="@(Model.CurrentExposure == 1)">1 - Very Low</option>
+                                    <option value="2" selected="@(Model.CurrentExposure == 2)">2 - Low</option>
+                                    <option value="3" selected="@(Model.CurrentExposure == 3)">3 - Medium</option>
+                                    <option value="4" selected="@(Model.CurrentExposure == 4)">4 - High</option>
+                                    <option value="5" selected="@(Model.CurrentExposure == 5)">5 - Very High</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-light border text-center" id="current-risk-display-@scenarioIndex-@riskIndex">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Risk Score:</strong>
+                                            <span class="h5 mb-0" id="current-risk-score-@scenarioIndex-@riskIndex">@(Model.CurrentRiskScore?.ToString("F1") ?? "-")</span>
+                                        </div>
+                                        <div>
+                                            <span class="badge" id="current-risk-level-@scenarioIndex-@riskIndex">@Model.CurrentRiskLevel</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2" id="current-appetite-status-@scenarioIndex-@riskIndex">
+                                        @if (Model.IsCurrentRiskAboveAppetite)
+                                        {
+                                            <span class="badge bg-warning">Above Risk Appetite</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Within Risk Appetite</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card border-success mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Residual Risk (After Treatment)
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Impact</label>
+                                <select name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].ResidualImpact" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="residual"
+                                        data-scenario="@scenarioIndex" 
+                                        data-risk="@riskIndex"
+                                        onchange="calculateRisk('@scenarioIndex', '@riskIndex', 'residual')">
+                                    <option value="">--</option>
+                                    <option value="1" selected="@(Model.ResidualImpact == 1)">1 - Very Low</option>
+                                    <option value="2" selected="@(Model.ResidualImpact == 2)">2 - Low</option>
+                                    <option value="3" selected="@(Model.ResidualImpact == 3)">3 - Medium</option>
+                                    <option value="4" selected="@(Model.ResidualImpact == 4)">4 - High</option>
+                                    <option value="5" selected="@(Model.ResidualImpact == 5)">5 - Very High</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Likelihood</label>
+                                <select name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].ResidualLikelihood" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="residual"
+                                        data-scenario="@scenarioIndex" 
+                                        data-risk="@riskIndex"
+                                        onchange="calculateRisk('@scenarioIndex', '@riskIndex', 'residual')">
+                                    <option value="">--</option>
+                                    <option value="1" selected="@(Model.ResidualLikelihood == 1)">1 - Very Low</option>
+                                    <option value="2" selected="@(Model.ResidualLikelihood == 2)">2 - Low</option>
+                                    <option value="3" selected="@(Model.ResidualLikelihood == 3)">3 - Medium</option>
+                                    <option value="4" selected="@(Model.ResidualLikelihood == 4)">4 - High</option>
+                                    <option value="5" selected="@(Model.ResidualLikelihood == 5)">5 - Very High</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Exposure</label>
+                                <select name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].ResidualExposure" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="residual"
+                                        data-scenario="@scenarioIndex" 
+                                        data-risk="@riskIndex"
+                                        onchange="calculateRisk('@scenarioIndex', '@riskIndex', 'residual')">
+                                    <option value="">--</option>
+                                    <option value="1" selected="@(Model.ResidualExposure == 1)">1 - Very Low</option>
+                                    <option value="2" selected="@(Model.ResidualExposure == 2)">2 - Low</option>
+                                    <option value="3" selected="@(Model.ResidualExposure == 3)">3 - Medium</option>
+                                    <option value="4" selected="@(Model.ResidualExposure == 4)">4 - High</option>
+                                    <option value="5" selected="@(Model.ResidualExposure == 5)">5 - Very High</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-light border text-center" id="residual-risk-display-@scenarioIndex-@riskIndex">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Risk Score:</strong>
+                                            <span class="h5 mb-0" id="residual-risk-score-@scenarioIndex-@riskIndex">@(Model.ResidualRiskScore?.ToString("F1") ?? "-")</span>
+                                        </div>
+                                        <div>
+                                            <span class="badge" id="residual-risk-level-@scenarioIndex-@riskIndex">@Model.ResidualRiskLevel</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2" id="residual-appetite-status-@scenarioIndex-@riskIndex">
+                                        @if (Model.IsResidualRiskAboveAppetite)
+                                        {
+                                            <span class="badge bg-warning">Above Risk Appetite</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Within Risk Appetite</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Treatment Plan -->
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>Risk Treatment Plan
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Treatment Plan Description</label>
+                    <textarea name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].RiskTreatmentPlan" 
+                              class="form-control" 
+                              rows="3" 
+                              placeholder="Describe what actions will be taken to reduce this risk...">@Model.RiskTreatmentPlan</textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Expected Completion Date</label>
+                        <input name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@riskIndex].ExpectedCompletionDate" 
+                               value="@(Model.ExpectedCompletionDate?.ToString("yyyy-MM-dd"))" 
+                               type="date" 
+                               class="form-control treatment-completion-date"
+                               data-scenario="@scenarioIndex" 
+                               data-risk="@riskIndex"
+                               onchange="checkSlaCompliance('@scenarioIndex', '@riskIndex')" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">SLA Compliance Status</label>
+                        <div class="mt-2" id="sla-status-@scenarioIndex-@riskIndex">
+                            @if (Model.IsTreatmentPastSla)
+                            {
+                                <span class="badge bg-danger fs-6">Past SLA Deadline</span>
+                            }
+                            else if (Model.IsTreatmentOverdue)
+                            {
+                                <span class="badge bg-warning fs-6">Overdue</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success fs-6">On Track</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -3432,6 +3432,105 @@ namespace CyberRiskApp.Migrations
                     b.ToTable("ScenarioRecommendations");
                 });
 
+            modelBuilder.Entity("CyberRiskApp.Models.ScenarioRisk", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("CurrentExposure")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("CurrentImpact")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("CurrentLikelihood")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("CurrentRiskLevel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal?>("CurrentRiskScore")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime?>("ExpectedCompletionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsCurrentRiskAboveAppetite")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsResidualRiskAboveAppetite")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("ResidualExposure")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("ResidualImpact")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("ResidualLikelihood")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("ResidualRiskLevel")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal?>("ResidualRiskScore")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("RiskDescription")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RiskName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RiskTreatmentPlan")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("ThreatScenarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TreatmentPlanStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreatScenarioId");
+
+                    b.ToTable("ScenarioRisks");
+                });
+
             modelBuilder.Entity("CyberRiskApp.Models.SlaHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -3811,6 +3910,220 @@ namespace CyberRiskApp.Migrations
                     b.ToTable("ThirdParties");
                 });
 
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorObjective", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MitreTechnique")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("ThreatScenarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreatScenarioId")
+                        .IsUnique();
+
+                    b.ToTable("ThreatActorObjectives");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorObjectiveControl", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ImplementationStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThreatActorObjectiveId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThreatControlId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreatActorObjectiveId");
+
+                    b.HasIndex("ThreatControlId");
+
+                    b.ToTable("ThreatActorObjectiveControls");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorStep", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MitreTechnique")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("StepOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThreatScenarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreatScenarioId");
+
+                    b.ToTable("ThreatActorSteps");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorStepControl", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ImplementationStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThreatActorStepId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThreatControlId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreatActorStepId");
+
+                    b.HasIndex("ThreatControlId");
+
+                    b.ToTable("ThreatActorStepControls");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatControl", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ControlCategory")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ControlDescription")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ControlName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("ControlType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ThreatControls");
+                });
+
             modelBuilder.Entity("CyberRiskApp.Models.ThreatEnvironment", b =>
                 {
                     b.Property<int>("Id")
@@ -4070,18 +4383,6 @@ namespace CyberRiskApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<decimal?>("QualitativeExposure")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal?>("QualitativeImpact")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal?>("QualitativeLikelihood")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<decimal?>("QualitativeRiskScore")
-                        .HasColumnType("decimal(5,2)");
-
                     b.Property<int>("RiskAssessmentId")
                         .HasColumnType("integer")
                         .HasColumnName("RiskAssessmentId");
@@ -4092,6 +4393,16 @@ namespace CyberRiskApp.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea")
                         .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+
+                    b.Property<string>("ScenarioId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ScenarioName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -4106,6 +4417,87 @@ namespace CyberRiskApp.Migrations
                     b.HasIndex("RiskAssessmentId");
 
                     b.ToTable("ThreatScenarios", (string)null);
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatVector", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MitreTechnique")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("ThreatScenarioId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreatScenarioId")
+                        .IsUnique();
+
+                    b.ToTable("ThreatVectors");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatVectorControl", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ImplementationStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThreatControlId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ThreatVectorId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreatControlId");
+
+                    b.HasIndex("ThreatVectorId");
+
+                    b.ToTable("ThreatVectorControls");
                 });
 
             modelBuilder.Entity("CyberRiskApp.Models.User", b =>
@@ -4927,6 +5319,17 @@ namespace CyberRiskApp.Migrations
                     b.Navigation("AttackScenario");
                 });
 
+            modelBuilder.Entity("CyberRiskApp.Models.ScenarioRisk", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.ThreatScenario", "ThreatScenario")
+                        .WithMany("ScenarioRisks")
+                        .HasForeignKey("ThreatScenarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ThreatScenario");
+                });
+
             modelBuilder.Entity("CyberRiskApp.Models.StrategyGoal", b =>
                 {
                     b.HasOne("CyberRiskApp.Models.MaturityFramework", "MaturityFramework")
@@ -4995,6 +5398,66 @@ namespace CyberRiskApp.Migrations
                     b.Navigation("MitreTechnique");
                 });
 
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorObjective", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.ThreatScenario", "ThreatScenario")
+                        .WithOne("ThreatActorObjective")
+                        .HasForeignKey("CyberRiskApp.Models.ThreatActorObjective", "ThreatScenarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ThreatScenario");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorObjectiveControl", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.ThreatActorObjective", "ThreatActorObjective")
+                        .WithMany("Controls")
+                        .HasForeignKey("ThreatActorObjectiveId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CyberRiskApp.Models.ThreatControl", "ThreatControl")
+                        .WithMany("ThreatActorObjectiveControls")
+                        .HasForeignKey("ThreatControlId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ThreatActorObjective");
+
+                    b.Navigation("ThreatControl");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorStep", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.ThreatScenario", "ThreatScenario")
+                        .WithMany("ThreatActorSteps")
+                        .HasForeignKey("ThreatScenarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ThreatScenario");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorStepControl", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.ThreatActorStep", "ThreatActorStep")
+                        .WithMany("Controls")
+                        .HasForeignKey("ThreatActorStepId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CyberRiskApp.Models.ThreatControl", "ThreatControl")
+                        .WithMany("ThreatActorStepControls")
+                        .HasForeignKey("ThreatControlId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ThreatActorStep");
+
+                    b.Navigation("ThreatControl");
+                });
+
             modelBuilder.Entity("CyberRiskApp.Models.ThreatEnvironment", b =>
                 {
                     b.HasOne("CyberRiskApp.Models.ThreatModel", "ThreatModel")
@@ -5048,6 +5511,36 @@ namespace CyberRiskApp.Migrations
                         .HasConstraintName("FK_ThreatScenarios_RiskAssessments_RiskAssessmentId");
 
                     b.Navigation("RiskAssessment");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatVector", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.ThreatScenario", "ThreatScenario")
+                        .WithOne("ThreatVector")
+                        .HasForeignKey("CyberRiskApp.Models.ThreatVector", "ThreatScenarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ThreatScenario");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatVectorControl", b =>
+                {
+                    b.HasOne("CyberRiskApp.Models.ThreatControl", "ThreatControl")
+                        .WithMany("ThreatVectorControls")
+                        .HasForeignKey("ThreatControlId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CyberRiskApp.Models.ThreatVector", "ThreatVector")
+                        .WithMany("Controls")
+                        .HasForeignKey("ThreatVectorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ThreatControl");
+
+                    b.Navigation("ThreatVector");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -5238,6 +5731,25 @@ namespace CyberRiskApp.Migrations
                     b.Navigation("Milestones");
                 });
 
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorObjective", b =>
+                {
+                    b.Navigation("Controls");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatActorStep", b =>
+                {
+                    b.Navigation("Controls");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatControl", b =>
+                {
+                    b.Navigation("ThreatActorObjectiveControls");
+
+                    b.Navigation("ThreatActorStepControls");
+
+                    b.Navigation("ThreatVectorControls");
+                });
+
             modelBuilder.Entity("CyberRiskApp.Models.ThreatEnvironment", b =>
                 {
                     b.Navigation("SourcePaths");
@@ -5265,7 +5777,20 @@ namespace CyberRiskApp.Migrations
 
                     b.Navigation("LossEvents");
 
+                    b.Navigation("ScenarioRisks");
+
+                    b.Navigation("ThreatActorObjective");
+
+                    b.Navigation("ThreatActorSteps");
+
                     b.Navigation("ThreatEvents");
+
+                    b.Navigation("ThreatVector");
+                });
+
+            modelBuilder.Entity("CyberRiskApp.Models.ThreatVector", b =>
+                {
+                    b.Navigation("Controls");
                 });
 #pragma warning restore 612, 618
         }

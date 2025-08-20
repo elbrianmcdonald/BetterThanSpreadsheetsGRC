@@ -184,10 +184,11 @@ namespace CyberRiskApp.Models
             // Check if we have threat scenarios (new approach)
             if (ThreatScenarios?.Any() == true)
             {
-                // Calculate overall risk as the highest scenario risk
+                // Calculate overall risk as the highest scenario risk using new comprehensive model
                 var scenarioRiskScores = ThreatScenarios
-                    .Where(ts => ts.QualitativeRiskScore.HasValue)
-                    .Select(ts => ts.QualitativeRiskScore!.Value)
+                    .Select(ts => ts.CalculateOverallRiskScore())
+                    .Where(score => score.HasValue)
+                    .Select(score => score!.Value)
                     .ToList();
                 
                 if (scenarioRiskScores.Any())
@@ -223,8 +224,9 @@ namespace CyberRiskApp.Models
             if (ThreatScenarios?.Any() == true)
             {
                 var scenarioRiskScores = ThreatScenarios
-                    .Where(ts => ts.QualitativeRiskScore.HasValue)
-                    .Select(ts => ts.QualitativeRiskScore!.Value)
+                    .Select(ts => ts.CalculateOverallRiskScore())
+                    .Where(score => score.HasValue)
+                    .Select(score => score!.Value)
                     .ToList();
                 
                 if (scenarioRiskScores.Any())

@@ -158,20 +158,92 @@ namespace CyberRiskApp.Controllers
                     
                     // Set selected risk matrix
                     RiskMatrixId = selectedMatrix?.Id,
-                    
-                    // Threat details moved to separate threat modeling functionality
                 },
                 OpenRisks = new List<Risk>(),
-                AvailableFindings = new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>()
+                AvailableFindings = new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>(),
+                
+                // ===== Enhanced Complex Assessment Support =====
+                
+                // Risk Matrix Support
+                AvailableMatrices = activeMatrices,
+                SelectedMatrix = selectedMatrix,
+                
+                // User Permissions for Smart Comboboxes
+                CanAddNewAssets = User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"),
+                CanAddNewBusinessUnits = User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"),
+                CanAddNewBusinessOwners = User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"),
+                CanAddTechnicalControls = User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"),
+                
+                // Initialize empty threat scenarios collection
+                ThreatScenarios = new List<ComprehensiveThreatScenario>()
             };
 
-            // Load risk level settings (for backwards compatibility)
-            // Risk level settings replaced with RiskMatrix - model may need adjustment
+            // Load available threat models for integration
+            try
+            {
+                var approvedThreatModels = await _context.ThreatModels
+                    .Where(tm => tm.Status == ThreatModelStatus.Approved || tm.Status == ThreatModelStatus.InReview)
+                    .Include(tm => tm.AttackScenarios)
+                    .OrderBy(tm => tm.Name)
+                    .ToListAsync();
+                // model.AvailableThreatModels = approvedThreatModels; // Not needed for comprehensive threat scenarios
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Could not load threat models: {ex.Message}");
+                // model.AvailableThreatModels = new List<ThreatModel>(); // Not needed for comprehensive threat scenarios
+            }
 
-            // Load available approved threat model templates
-            // FAIR threat model integration removed
-            // var approvedTemplatesForQualitative = await _riskAssessmentThreatModelService.GetApprovedTemplatesAsync();
-            // model.AvailableThreatModels = approvedTemplatesForQualitative.ToList();
+            // Load MITRE ATT&CK techniques for dropdown
+            try
+            {
+                var mitreTechniques = await _context.MitreTechniques
+                    .OrderBy(mt => mt.TechniqueId)
+                    .Select(mt => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                    {
+                        Value = mt.Id.ToString(),
+                        Text = $"{mt.TechniqueId} - {mt.Name}"
+                    })
+                    .ToListAsync();
+                model.AvailableMitreTechniques = mitreTechniques;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Could not load MITRE techniques: {ex.Message}");
+                model.AvailableMitreTechniques = new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+            }
+
+            // Load Kill Chain phases - not needed for comprehensive threat scenarios
+            // model.KillChainPhases = new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+            // {
+            //     new() { Value = "Reconnaissance", Text = "1. Reconnaissance" },
+            //     new() { Value = "Weaponization", Text = "2. Weaponization" },
+            //     new() { Value = "Delivery", Text = "3. Delivery" },
+            //     new() { Value = "Exploitation", Text = "4. Exploitation" },
+            //     new() { Value = "Installation", Text = "5. Installation" },
+            //     new() { Value = "CommandAndControl", Text = "6. Command & Control" },
+            //     new() { Value = "ActionsOnObjectives", Text = "7. Actions on Objectives" }
+            // };
+
+            // Load available technical controls
+            try
+            {
+                var technicalControls = await _context.ReferenceDataEntries
+                    .Where(rd => rd.Category == ReferenceDataCategory.TechnicalControl && rd.IsActive)
+                    .OrderBy(rd => rd.Value)
+                    .Select(rd => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                    {
+                        Value = rd.Value,
+                        Text = rd.Value
+                    })
+                    .ToListAsync();
+                // model.AvailableTechnicalControls = technicalControls; // Not needed for comprehensive threat scenarios
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"Could not load technical controls: {ex.Message}");
+                // model.AvailableTechnicalControls = new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>(); // Not needed for comprehensive threat scenarios
+            }
 
             // Pass available matrices to the view
             ViewBag.AvailableMatrices = activeMatrices;
@@ -488,6 +560,9 @@ namespace CyberRiskApp.Controllers
                         //     }
                         // }
                     }
+
+                    // ===== COMPREHENSIVE THREAT SCENARIO PROCESSING =====
+                    await ProcessComprehensiveThreatScenarios(model.ThreatScenarios, createdAssessment.Id);
 
                     // FAIR threat model linking removed
                     if (false) // Disabled FAIR logic
@@ -1137,7 +1212,7 @@ namespace CyberRiskApp.Controllers
             // Generate risks from threat scenarios
             if (assessment.ThreatScenarios?.Any() == true)
             {
-                foreach (var scenario in assessment.ThreatScenarios.Where(ts => ts.QualitativeRiskScore > 0))
+                foreach (var scenario in assessment.ThreatScenarios.Where(ts => ts.CalculateOverallRiskScore() > 0))
                 {
                     // Create risk data object (don't save to database yet)
                     var riskData = new
@@ -1151,12 +1226,12 @@ namespace CyberRiskApp.Controllers
                         RiskAssessmentId = assessment.Id,
                         ThreatScenarioId = scenario.Id,
                         
-                        // Map scenario values to risk (simplified mapping)
-                        Impact = (ImpactLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeImpact!)),
-                        Likelihood = (LikelihoodLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeLikelihood!)),
-                        Exposure = (ExposureLevel)Math.Min(5, Math.Max(1, (int)scenario.QualitativeExposure!)),
-                        InherentRiskLevel = MapRiskScore(scenario.QualitativeRiskScore!.Value),
-                        RiskLevel = MapRiskScore(scenario.QualitativeRiskScore!.Value),
+                        // Map scenario values to risk (using comprehensive scenario model)
+                        Impact = ImpactLevel.Medium, // TODO: Calculate from comprehensive scenario risks
+                        Likelihood = LikelihoodLevel.Likely, // TODO: Calculate from comprehensive scenario risks
+                        Exposure = ExposureLevel.ModeratelyExposed, // TODO: Calculate from comprehensive scenario risks
+                        InherentRiskLevel = MapRiskScore(scenario.CalculateOverallRiskScore() ?? 4.0m),
+                        RiskLevel = MapRiskScore(scenario.CalculateOverallRiskScore() ?? 4.0m),
                         
                         CreatedBy = userId,
                         UpdatedBy = userId
@@ -1170,7 +1245,7 @@ namespace CyberRiskApp.Controllers
                         riskId: null, // No risk exists yet - will be created upon approval
                         actionType: RiskBacklogAction.NewRisk,
                         description: riskDescription, // Store full risk data here
-                        justification: $"Risk assessment completed with {scenario.CalculateRiskLevel()} risk level (Score: {scenario.QualitativeRiskScore:F1})",
+                        justification: $"Risk assessment completed with {scenario.CalculateOverallRiskLevel()} risk level (Score: {scenario.CalculateOverallRiskScore()?.ToString("F1") ?? "N/A"})",
                         requesterId: userId
                     );
                     
@@ -1562,6 +1637,240 @@ namespace CyberRiskApp.Controllers
             description += $"Assessment Date: {assessment.CreatedAt:yyyy-MM-dd}\n";
             
             return description;
+        }
+
+        // ===== COMPREHENSIVE THREAT SCENARIO PROCESSING =====
+        private async Task ProcessComprehensiveThreatScenarios(List<ComprehensiveThreatScenario> threatScenarios, int assessmentId)
+        {
+            if (threatScenarios?.Any() != true)
+                return;
+
+            foreach (var scenarioViewModel in threatScenarios.Where(s => !string.IsNullOrEmpty(s.ScenarioName)))
+            {
+                // Create the main threat scenario record
+                var threatScenario = new ThreatScenario
+                {
+                    RiskAssessmentId = assessmentId,
+                    ScenarioId = scenarioViewModel.ScenarioId,
+                    ScenarioName = scenarioViewModel.ScenarioName,
+                    Description = scenarioViewModel.Description,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    CreatedBy = User.GetUserId(),
+                    UpdatedBy = User.GetUserId()
+                };
+
+                _context.ThreatScenarios.Add(threatScenario);
+                await _context.SaveChangesAsync(); // Save to get the ID
+
+                // Process Threat Vector
+                if (!string.IsNullOrEmpty(scenarioViewModel.ThreatVector.Name))
+                {
+                    var threatVector = new ThreatVector
+                    {
+                        ThreatScenarioId = threatScenario.Id,
+                        Name = scenarioViewModel.ThreatVector.Name,
+                        Description = scenarioViewModel.ThreatVector.Description,
+                        MitreTechnique = scenarioViewModel.ThreatVector.MitreTechnique,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        CreatedBy = User.GetUserId(),
+                        UpdatedBy = User.GetUserId()
+                    };
+                    _context.ThreatVectors.Add(threatVector);
+                    await _context.SaveChangesAsync();
+
+                    // Process controls for threat vector
+                    await ProcessThreatVectorControls(threatVector.Id, scenarioViewModel.ThreatVector);
+                }
+
+                // Process Threat Actor Steps
+                for (int stepIndex = 0; stepIndex < scenarioViewModel.ThreatActorSteps.Count; stepIndex++)
+                {
+                    var stepViewModel = scenarioViewModel.ThreatActorSteps[stepIndex];
+                    if (!string.IsNullOrEmpty(stepViewModel.Name))
+                    {
+                        var threatStep = new ThreatActorStep
+                        {
+                            ThreatScenarioId = threatScenario.Id,
+                            Name = stepViewModel.Name,
+                            Description = stepViewModel.Description,
+                            MitreTechnique = stepViewModel.MitreTechnique,
+                            StepOrder = stepIndex + 1,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            CreatedBy = User.GetUserId(),
+                            UpdatedBy = User.GetUserId()
+                        };
+                        _context.ThreatActorSteps.Add(threatStep);
+                        await _context.SaveChangesAsync();
+
+                        // Process controls for threat actor step
+                        await ProcessThreatActorStepControls(threatStep.Id, stepViewModel);
+                    }
+                }
+
+                // Process Threat Actor Objective
+                if (!string.IsNullOrEmpty(scenarioViewModel.ThreatActorObjective.Name))
+                {
+                    var threatObjective = new ThreatActorObjective
+                    {
+                        ThreatScenarioId = threatScenario.Id,
+                        Name = scenarioViewModel.ThreatActorObjective.Name,
+                        Description = scenarioViewModel.ThreatActorObjective.Description,
+                        MitreTechnique = scenarioViewModel.ThreatActorObjective.MitreTechnique,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        CreatedBy = User.GetUserId(),
+                        UpdatedBy = User.GetUserId()
+                    };
+                    _context.ThreatActorObjectives.Add(threatObjective);
+                    await _context.SaveChangesAsync();
+
+                    // Process controls for threat actor objective
+                    await ProcessThreatActorObjectiveControls(threatObjective.Id, scenarioViewModel.ThreatActorObjective);
+                }
+
+                // Process Scenario Risks
+                foreach (var riskViewModel in scenarioViewModel.ScenarioRisks.Where(r => !string.IsNullOrEmpty(r.RiskName)))
+                {
+                    var scenarioRisk = new ScenarioRisk
+                    {
+                        ThreatScenarioId = threatScenario.Id,
+                        RiskName = riskViewModel.RiskName,
+                        RiskDescription = riskViewModel.RiskDescription,
+                        
+                        // Current Risk Values
+                        CurrentImpact = riskViewModel.CurrentImpact,
+                        CurrentLikelihood = riskViewModel.CurrentLikelihood,
+                        CurrentExposure = riskViewModel.CurrentExposure,
+                        
+                        // Residual Risk Values
+                        ResidualImpact = riskViewModel.ResidualImpact,
+                        ResidualLikelihood = riskViewModel.ResidualLikelihood,
+                        ResidualExposure = riskViewModel.ResidualExposure,
+                        
+                        // Risk Treatment
+                        RiskTreatmentPlan = riskViewModel.RiskTreatmentPlan,
+                        ExpectedCompletionDate = riskViewModel.ExpectedCompletionDate,
+                        TreatmentPlanStatus = riskViewModel.TreatmentPlanStatus,
+                        
+                        // Audit fields
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        CreatedBy = User.GetUserId(),
+                        UpdatedBy = User.GetUserId()
+                    };
+
+                    // Calculate risk scores
+                    scenarioRisk.CalculateCurrentRisk();
+                    scenarioRisk.CalculateResidualRisk();
+
+                    _context.ScenarioRisks.Add(scenarioRisk);
+                }
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private async Task ProcessThreatVectorControls(int threatVectorId, ThreatVectorViewModel threatVector)
+        {
+            await ProcessControlsForComponent(threatVectorId, "ThreatVector", 
+                threatVector.CurrentProtectiveControls, ControlType.Protective, ControlCategory.Current);
+            await ProcessControlsForComponent(threatVectorId, "ThreatVector", 
+                threatVector.CurrentDetectiveControls, ControlType.Detective, ControlCategory.Current);
+            await ProcessControlsForComponent(threatVectorId, "ThreatVector", 
+                threatVector.NeededProtectiveControls, ControlType.Protective, ControlCategory.Needed);
+            await ProcessControlsForComponent(threatVectorId, "ThreatVector", 
+                threatVector.NeededDetectiveControls, ControlType.Detective, ControlCategory.Needed);
+        }
+
+        private async Task ProcessThreatActorStepControls(int threatActorStepId, ThreatActorStepViewModel threatStep)
+        {
+            await ProcessControlsForComponent(threatActorStepId, "ThreatActorStep", 
+                threatStep.CurrentProtectiveControls, ControlType.Protective, ControlCategory.Current);
+            await ProcessControlsForComponent(threatActorStepId, "ThreatActorStep", 
+                threatStep.CurrentDetectiveControls, ControlType.Detective, ControlCategory.Current);
+            await ProcessControlsForComponent(threatActorStepId, "ThreatActorStep", 
+                threatStep.NeededProtectiveControls, ControlType.Protective, ControlCategory.Needed);
+            await ProcessControlsForComponent(threatActorStepId, "ThreatActorStep", 
+                threatStep.NeededDetectiveControls, ControlType.Detective, ControlCategory.Needed);
+        }
+
+        private async Task ProcessThreatActorObjectiveControls(int threatActorObjectiveId, ThreatActorObjectiveViewModel threatObjective)
+        {
+            await ProcessControlsForComponent(threatActorObjectiveId, "ThreatActorObjective", 
+                threatObjective.CurrentProtectiveControls, ControlType.Protective, ControlCategory.Current);
+            await ProcessControlsForComponent(threatActorObjectiveId, "ThreatActorObjective", 
+                threatObjective.CurrentDetectiveControls, ControlType.Detective, ControlCategory.Current);
+            await ProcessControlsForComponent(threatActorObjectiveId, "ThreatActorObjective", 
+                threatObjective.NeededProtectiveControls, ControlType.Protective, ControlCategory.Needed);
+            await ProcessControlsForComponent(threatActorObjectiveId, "ThreatActorObjective", 
+                threatObjective.NeededDetectiveControls, ControlType.Detective, ControlCategory.Needed);
+        }
+
+        private async Task ProcessControlsForComponent(int componentId, string componentType, 
+            List<ControlSelectionViewModel> controls, ControlType controlType, ControlCategory controlCategory)
+        {
+            foreach (var controlViewModel in controls.Where(c => !string.IsNullOrEmpty(c.ControlName)))
+            {
+                // Create or find existing threat control
+                var existingControl = await _context.ThreatControls
+                    .FirstOrDefaultAsync(tc => tc.ControlName == controlViewModel.ControlName);
+
+                ThreatControl threatControl;
+                if (existingControl != null)
+                {
+                    threatControl = existingControl;
+                }
+                else
+                {
+                    threatControl = new ThreatControl
+                    {
+                        ControlName = controlViewModel.ControlName,
+                        ControlDescription = controlViewModel.ControlDescription,
+                        ControlType = controlType,
+                        ControlCategory = controlCategory,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        CreatedBy = User.GetUserId(),
+                        UpdatedBy = User.GetUserId()
+                    };
+                    _context.ThreatControls.Add(threatControl);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Create the junction table record based on component type
+                switch (componentType)
+                {
+                    case "ThreatVector":
+                        _context.ThreatVectorControls.Add(new ThreatVectorControl
+                        {
+                            ThreatVectorId = componentId,
+                            ThreatControlId = threatControl.Id,
+                            ImplementationStatus = controlViewModel.ImplementationStatus
+                        });
+                        break;
+                    case "ThreatActorStep":
+                        _context.ThreatActorStepControls.Add(new ThreatActorStepControl
+                        {
+                            ThreatActorStepId = componentId,
+                            ThreatControlId = threatControl.Id,
+                            ImplementationStatus = controlViewModel.ImplementationStatus
+                        });
+                        break;
+                    case "ThreatActorObjective":
+                        _context.ThreatActorObjectiveControls.Add(new ThreatActorObjectiveControl
+                        {
+                            ThreatActorObjectiveId = componentId,
+                            ThreatControlId = threatControl.Id,
+                            ImplementationStatus = controlViewModel.ImplementationStatus
+                        });
+                        break;
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
     }
 }

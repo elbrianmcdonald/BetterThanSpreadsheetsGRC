@@ -30,10 +30,37 @@ namespace CyberRiskApp.Services
 
         public async Task<List<User>> GetAllUsersAsync()
         {
-            return await _context.Users
+            var users = await _context.Users
                 .OrderBy(u => u.LastName)
                 .ThenBy(u => u.FirstName)
                 .ToListAsync();
+
+            // Populate the Role property from Identity roles for each user
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                if (roles.Any())
+                {
+                    // Map Identity role name back to UserRole enum
+                    var primaryRole = roles.First();
+                    user.Role = primaryRole switch
+                    {
+                        "Admin" => UserRole.Admin,
+                        "GRCManager" => UserRole.GRCManager,
+                        "GRCAnalyst" => UserRole.GRCAnalyst,
+                        "ITUser" => UserRole.ITUser,
+                        "GRCUser" => UserRole.GRCAnalyst, // Backward compatibility
+                        _ => UserRole.ITUser
+                    };
+                }
+                else
+                {
+                    // If no roles assigned, default to ITUser
+                    user.Role = UserRole.ITUser;
+                }
+            }
+
+            return users;
         }
 
         public async Task<bool> CreateUserAsync(UserRegistrationViewModel model)
