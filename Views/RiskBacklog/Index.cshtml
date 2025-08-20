@@ -1,4 +1,5 @@
 @model CyberRiskApp.ViewModels.BacklogDashboardViewModel
+@using System.Collections.Generic
 @{
     ViewData["Title"] = "Risk & Finding Workflow Dashboard";
 
@@ -7,8 +8,8 @@
     {
         if (string.IsNullOrEmpty(userId)) return "Unassigned";
         
-        var user = Model.AvailableAnalysts.FirstOrDefault(a => a.Id == userId) ?? 
-                   Model.AvailableManagers.FirstOrDefault(m => m.Id == userId);
+        var user = Model?.AvailableAnalysts?.FirstOrDefault(a => a.Id == userId) ?? 
+                   Model?.AvailableManagers?.FirstOrDefault(m => m.Id == userId);
         
         return user != null ? $"{user.FirstName} {user.LastName}" : userId;
     }
@@ -60,7 +61,7 @@
 
                 <!-- Action Buttons -->
                 <div class="btn-group" role="group" aria-label="Actions">
-                    @if (Model.CanAssign)
+                    @if (Model?.CanAssign == true)
                     {
                         <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkActionsModal" title="Perform bulk operations">
                             <i class="fas fa-tasks me-1"></i>Bulk Actions
@@ -147,13 +148,13 @@
                         <i class="fas fa-inbox"></i>
                     </div>
                     <div class="metric-content">
-                        <div class="metric-value">@Model.Statistics.TotalEntries</div>
+                        <div class="metric-value">@(Model?.Statistics?.TotalEntries ?? 0)</div>
                         <div class="metric-label">Total Entries</div>
                         <small class="metric-hint">
                             <i class="fas fa-mouse-pointer me-1"></i>Click to view all
                             <div class="metric-breakdown mt-1">
-                                <span class="badge badge-finding me-1">🔍 @(Model.Statistics.TotalFindings)</span>
-                                <span class="badge badge-risk">⚠️ @(Model.Statistics.TotalRisks)</span>
+                                <span class="badge badge-finding me-1">🔍 @(Model?.Statistics?.TotalFindings ?? 0)</span>
+                                <span class="badge badge-risk">⚠️ @(Model?.Statistics?.TotalRisks ?? 0)</span>
                             </div>
                         </small>
                     </div>
@@ -173,7 +174,7 @@
                         🔍
                     </div>
                     <div class="metric-content">
-                        <div class="metric-value">@(Model.Statistics.TotalFindings)</div>
+                        <div class="metric-value">@(Model?.Statistics?.TotalFindings ?? 0)</div>
                         <div class="metric-label">Findings</div>
                         <small class="metric-hint">
                             <i class="fas fa-mouse-pointer me-1"></i>Click to view findings only
@@ -195,7 +196,7 @@
                         ⚠️
                     </div>
                     <div class="metric-content">
-                        <div class="metric-value">@(Model.Statistics.TotalRisks)</div>
+                        <div class="metric-value">@(Model?.Statistics?.TotalRisks ?? 0)</div>
                         <div class="metric-label">Risks</div>
                         <small class="metric-hint">
                             <i class="fas fa-mouse-pointer me-1"></i>Click to view risks only
@@ -216,7 +217,7 @@
                         <i class="fas fa-user-clock"></i>
                     </div>
                     <div class="metric-content">
-                        <div class="metric-value">@Model.Statistics.Unassigned</div>
+                        <div class="metric-value">@(Model?.Statistics?.Unassigned ?? 0)</div>
                         <div class="metric-label">Unassigned</div>
                         <small class="metric-hint">
                             <i class="fas fa-mouse-pointer me-1"></i>Click to view unassigned
@@ -237,7 +238,7 @@
                         <i class="fas fa-exclamation-triangle"></i>
                     </div>
                     <div class="metric-content">
-                        <div class="metric-value">@Model.Statistics.OverdueSLA</div>
+                        <div class="metric-value">@(Model?.Statistics?.OverdueSLA ?? 0)</div>
                         <div class="metric-label">Overdue SLA</div>
                         <small class="metric-hint">
                             <i class="fas fa-mouse-pointer me-1"></i>Click to view overdue
@@ -258,7 +259,7 @@
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <div class="metric-content">
-                        <div class="metric-value">@Model.Statistics.CompletedThisWeek</div>
+                        <div class="metric-value">@(Model?.Statistics?.CompletedThisWeek ?? 0)</div>
                         <div class="metric-label">Completed This Week</div>
                         <small class="metric-hint">
                             <i class="fas fa-mouse-pointer me-1"></i>Click to view completed
@@ -351,7 +352,7 @@
                     <div>
                         <i class="fas fa-filter me-2"></i>
                         <strong>Active Filter:</strong> @filterDescription
-                        <small class="text-muted ms-2">(@Model.AllEntries.Count() entries shown)</small>
+                        <small class="text-muted ms-2">(@(Model?.AllEntries?.Count() ?? 0) entries shown)</small>
                     </div>
                     <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
                         <i class="fas fa-times me-1"></i>Clear Filter
@@ -425,11 +426,11 @@
     </div>
 
     <!-- My Backlog Section -->
-    @if (Model.MyBacklogEntries.Any())
+    @if (Model?.MyBacklogEntries?.Any() == true)
     {
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="card-title mb-0"><i class="fas fa-user me-2"></i>My Assignments (@Model.MyBacklogEntries.Count)</h5>
+                <h5 class="card-title mb-0"><i class="fas fa-user me-2"></i>My Assignments (@(Model?.MyBacklogEntries?.Count ?? 0))</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
@@ -448,7 +449,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var entry in Model.MyBacklogEntries)
+                            @foreach (var entry in Model?.MyBacklogEntries ?? new List<CyberRiskApp.Models.RiskBacklogEntry>())
                             {
                                 <tr class="@(entry.IsOverdue() ? "table-danger" : "")">
                                     <td>
@@ -543,7 +544,7 @@
                                             <a asp-action="Details" asp-route-id="@entry.Id" class="btn btn-outline-primary btn-sm">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            @if (Model.CanApprove && (entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
+                                            @if (Model?.CanApprove == true && (entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
                                             {
                                                 <a asp-action="Details" asp-route-id="@entry.Id" class="btn btn-outline-success btn-sm">
                                                     <i class="fas fa-check"></i>
@@ -561,11 +562,11 @@
     }
 
     <!-- Unassigned Entries (Managers Only) -->
-    @if (Model.CanAssign && Model.UnassignedEntries.Any())
+    @if (Model?.CanAssign == true && Model?.UnassignedEntries?.Any() == true)
     {
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0"><i class="fas fa-user-times me-2"></i>Unassigned Entries (@Model.UnassignedEntries.Count)</h5>
+                <h5 class="card-title mb-0"><i class="fas fa-user-times me-2"></i>Unassigned Entries (@(Model?.UnassignedEntries?.Count ?? 0))</h5>
                 <div class="btn-group btn-group-sm">
                     <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#quickAssignModal" title="Quick Assign Selected">
                         <i class="fas fa-bolt me-1"></i>Quick Assign
@@ -578,7 +579,7 @@
             <div class="card-body p-0">
                 <!-- Simplified List View -->
                 <div id="simpleView">
-                    @foreach (var entry in Model.UnassignedEntries.Take(10))
+                    @foreach (var entry in (Model?.UnassignedEntries ?? new List<CyberRiskApp.Models.RiskBacklogEntry>()).Take(10))
                     {
                         <div class="assignment-item p-3 border-bottom @entry.GetRowClass()" data-entry-id="@entry.Id" data-entry-type="@(entry.IsFindingWorkflow() ? "finding" : "risk")">
                             <div class="d-flex align-items-start gap-3">
@@ -664,7 +665,7 @@
                                         <div class="d-flex gap-2 align-items-center">
                                             <select class="form-select form-select-sm analyst-select" data-entry-id="@entry.Id" style="max-width: 200px;">
                                                 <option value="">Select Analyst...</option>
-                                                @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                                                @foreach (var analyst in (Model?.AvailableAnalysts ?? new List<CyberRiskApp.Models.User>()).Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
                                                 {
                                                     <option value="@analyst.Id">@analyst.FirstName @analyst.LastName</option>
                                                 }
@@ -681,11 +682,11 @@
                             </div>
                         </div>
                     }
-                    @if (Model.UnassignedEntries.Count > 10)
+                    @if ((Model?.UnassignedEntries?.Count ?? 0) > 10)
                     {
                         <div class="p-3 text-center border-top bg-light">
                             <button class="btn btn-outline-primary" onclick="loadMoreUnassigned()">
-                                <i class="fas fa-plus me-1"></i>Load More (@(Model.UnassignedEntries.Count - 10) remaining)
+                                <i class="fas fa-plus me-1"></i>Load More (@((Model?.UnassignedEntries?.Count ?? 0) - 10) remaining)
                             </button>
                         </div>
                     }
@@ -709,7 +710,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var entry in Model.UnassignedEntries)
+                                @foreach (var entry in Model?.UnassignedEntries ?? new List<CyberRiskApp.Models.RiskBacklogEntry>())
                                 {
                                     <tr class="@entry.GetRowClass()" data-entry-type="@(entry.IsFindingWorkflow() ? "finding" : "risk")">
                                         <td>
@@ -786,7 +787,7 @@
                                             <div class="quick-assign-controls">
                                                 <select class="form-select form-select-sm mb-1 analyst-select" data-entry-id="@entry.Id">
                                                     <option value="">Select Analyst...</option>
-                                                    @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                                                    @foreach (var analyst in (Model?.AvailableAnalysts ?? new List<CyberRiskApp.Models.User>()).Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
                                                     {
                                                         <option value="@analyst.Id">@analyst.FirstName @analyst.LastName</option>
                                                     }
@@ -809,7 +810,7 @@
     <!-- All Entries -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>All Backlog Entries (@Model.AllEntries.Count)</h5>
+            <h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>All Backlog Entries (@(Model?.AllEntries?.Count ?? 0))</h5>
             <div class="btn-group btn-group-sm">
                 <button class="btn btn-outline-primary" onclick="filterEntries('all')" id="filterAll">
                     <i class="fas fa-list me-1"></i>All
@@ -827,7 +828,7 @@
         </div>
         <div class="card-body p-0">
             <div id="allEntriesView">
-                @foreach (var entry in Model.AllEntries.Take(20))
+                @foreach (var entry in (Model?.AllEntries ?? new List<CyberRiskApp.Models.RiskBacklogEntry>()).Take(20))
                 {
                     <div class="backlog-entry-item p-3 border-bottom @(entry.IsOverdue() ? "overdue" : "")" 
                          data-entry-id="@entry.Id" data-status="@entry.Status.ToString().ToLower()">
@@ -923,7 +924,7 @@
                                 </div>
                                 
                                 <!-- Assignment/Re-assignment Controls -->
-                                @if (Model.CanAssign)
+                                @if (Model?.CanAssign == true)
                                 {
                                     <div class="assignment-controls-advanced">
                                         <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -932,7 +933,7 @@
                                                 <!-- Initial Assignment -->
                                                 <select class="form-select form-select-sm analyst-select" data-entry-id="@entry.Id" style="max-width: 200px;">
                                                     <option value="">Select Analyst...</option>
-                                                    @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                                                    @foreach (var analyst in (Model?.AvailableAnalysts ?? new List<CyberRiskApp.Models.User>()).Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
                                                     {
                                                         <option value="@analyst.Id">@analyst.FirstName @analyst.LastName</option>
                                                     }
@@ -946,7 +947,7 @@
                                                 <!-- Re-assignment -->
                                                 <select class="form-select form-select-sm analyst-select" data-entry-id="@entry.Id" style="max-width: 200px;">
                                                     <option value="">Reassign to...</option>
-                                                    @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                                                    @foreach (var analyst in (Model?.AvailableAnalysts ?? new List<CyberRiskApp.Models.User>()).Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
                                                     {
                                                         <option value="@analyst.Id">
                                                             @analyst.FirstName @analyst.LastName
@@ -992,11 +993,11 @@
                         </div>
                     </div>
                 }
-                @if (Model.AllEntries.Count > 20)
+                @if ((Model?.AllEntries?.Count ?? 0) > 20)
                 {
                     <div class="p-3 text-center border-top bg-light">
                         <button class="btn btn-outline-primary" onclick="loadMoreAllEntries()">
-                            <i class="fas fa-plus me-1"></i>Load More (@(Model.AllEntries.Count - 20) remaining)
+                            <i class="fas fa-plus me-1"></i>Load More (@((Model?.AllEntries?.Count ?? 0) - 20) remaining)
                         </button>
                     </div>
                 }
@@ -1019,7 +1020,7 @@
                         <h6><i class="fas fa-user-plus me-2"></i>Assign to Analyst</h6>
                         <select id="bulkAnalystSelect" class="form-select mb-3">
                             <option value="">Select Analyst...</option>
-                            @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                            @foreach (var analyst in (Model?.AvailableAnalysts ?? new List<CyberRiskApp.Models.User>()).Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
                             {
                                 <option value="@analyst.Id">@analyst.FirstName @analyst.LastName</option>
                             }
@@ -1032,7 +1033,7 @@
                         <h6><i class="fas fa-user-tie me-2"></i>Assign to Manager</h6>
                         <select id="bulkManagerSelect" class="form-select mb-3">
                             <option value="">Select Manager...</option>
-                            @foreach (var manager in Model.AvailableManagers.Where(u => u.Role == CyberRiskApp.Models.UserRole.Admin))
+                            @foreach (var manager in (Model?.AvailableManagers ?? new List<CyberRiskApp.Models.User>()).Where(u => u.Role == CyberRiskApp.Models.UserRole.Admin))
                             {
                                 <option value="@manager.Id">@manager.FirstName @manager.LastName</option>
                             }
@@ -1095,7 +1096,7 @@
                     <label class="form-label fw-bold">Assign to Analyst</label>
                     <select id="quickAssignAnalystSelect" class="form-select">
                         <option value="">Select Analyst...</option>
-                        @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                        @foreach (var analyst in (Model?.AvailableAnalysts ?? new List<CyberRiskApp.Models.User>()).Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
                         {
                             <option value="@analyst.Id">@analyst.FirstName @analyst.LastName</option>
                         }
@@ -1131,7 +1132,7 @@
                     <label class="form-label">Assign to Analyst</label>
                     <select id="assignmentAnalystSelect" class="form-select">
                         <option value="">Select Analyst...</option>
-                        @foreach (var analyst in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
+                        @foreach (var analyst in (Model?.AvailableAnalysts ?? new List<CyberRiskApp.Models.User>()).Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager || u.Role == CyberRiskApp.Models.UserRole.Admin))
                         {
                             <option value="@analyst.Id">@analyst.FirstName @analyst.LastName</option>
                         }
