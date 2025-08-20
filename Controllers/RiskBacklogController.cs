@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CyberRiskApp.Controllers
 {
-    [Authorize(Policy = "RequireGRCAnalystOrAbove")]
+    [Authorize(Policy = "RequireAnyRole")] // Allow IT users view access
     public partial class RiskBacklogController : BaseController
     {
         private readonly IRiskBacklogService _backlogService;
@@ -98,14 +98,17 @@ namespace CyberRiskApp.Controllers
                     // Get all users for assignment dropdowns 
                     var allUsers = isManager ? await _userService.GetAllUsersAsync() : new List<User>();
 
+                    // IT users get view-only access - no assign/approve capabilities
+                    var isITUser = User.IsInRole("ITUser");
+                    
                     var viewModel = new BacklogDashboardViewModel
                     {
                         Statistics = statistics,
                         MyBacklogEntries = myBacklog,
                         UnassignedEntries = unassignedEntries,
                         AllEntries = allEntries,
-                        CanAssign = isManager,
-                        CanApprove = IsAnalyst, // Use base controller property
+                        CanAssign = isManager && !isITUser, // IT users cannot assign
+                        CanApprove = IsAnalyst && !isITUser, // IT users cannot approve
                         AvailableAnalysts = allUsers,
                         AvailableManagers = allUsers,
                         CurrentFilter = filter ?? "all"
@@ -161,14 +164,17 @@ namespace CyberRiskApp.Controllers
                 var comments = await _backlogService.GetCommentsAsync(id, User.IsInRole("Admin") || User.IsInRole("GRCManager"));
                 var activities = await _backlogService.GetActivitiesAsync(id);
 
+                // IT users get view-only access - no approve/assign/comment capabilities
+                var isITUser = User.IsInRole("ITUser");
+                
                 var viewModel = new BacklogDetailsViewModel
                 {
                     Entry = entry,
                     Comments = comments,
                     Activities = activities,
-                    CanApprove = await _backlogService.CanUserApproveBacklogEntryAsync(id, userId, userRoles),
-                    CanAssign = User.IsInRole("GRCManager") || User.IsInRole("Admin"),
-                    CanComment = true
+                    CanApprove = !isITUser && await _backlogService.CanUserApproveBacklogEntryAsync(id, userId, userRoles),
+                    CanAssign = !isITUser && (User.IsInRole("GRCManager") || User.IsInRole("Admin")),
+                    CanComment = !isITUser // IT users cannot comment
                 };
 
                 return View(viewModel);
@@ -219,6 +225,7 @@ namespace CyberRiskApp.Controllers
 
         // Workflow Actions
         [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
         public async Task<IActionResult> AnalystApprove(int backlogId, string comments)
         {
             try
@@ -244,6 +251,7 @@ namespace CyberRiskApp.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
         public async Task<IActionResult> AnalystReject(int backlogId, string reason)
         {
             try
@@ -305,6 +313,7 @@ namespace CyberRiskApp.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
         public async Task<IActionResult> Escalate(int backlogId, string reason)
         {
             try
@@ -323,6 +332,7 @@ namespace CyberRiskApp.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
         public async Task<IActionResult> SetPriority(int backlogId, BacklogPriority priority)
         {
             try
@@ -341,6 +351,7 @@ namespace CyberRiskApp.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
         public async Task<IActionResult> AddComment(int backlogId, string comment, bool isInternal = false)
         {
             try
@@ -415,6 +426,7 @@ namespace CyberRiskApp.Controllers
 
         [HttpPost]
         [Route("api/backlog/bulk-priority")]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
         public async Task<IActionResult> BulkSetPriority([FromBody] BulkPriorityRequest request)
         {
             try
