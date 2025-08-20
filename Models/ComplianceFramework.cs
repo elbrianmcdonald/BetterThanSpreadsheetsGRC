@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CyberRiskApp.Models
 {
-    public class ComplianceFramework
+    public class ComplianceFramework : IEntity
     {
         public int Id { get; set; }
 
@@ -49,7 +49,7 @@ namespace CyberRiskApp.Models
                    .ToDictionary(g => g.Key, g => g.Count()) ?? new Dictionary<string, int>();
     }
 
-    public class ComplianceControl
+    public class ComplianceControl : IEntity
     {
         public int Id { get; set; }
 
@@ -115,7 +115,7 @@ namespace CyberRiskApp.Models
         public virtual ICollection<CapabilityControlMapping> CapabilityMappings { get; set; } = new List<CapabilityControlMapping>();
     }
 
-    public class BusinessOrganization
+    public class BusinessOrganization : IEntity
     {
         public int Id { get; set; }
 

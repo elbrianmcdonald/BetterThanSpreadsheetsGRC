@@ -18,7 +18,6 @@ namespace CyberRiskApp.Controllers
     {
         private readonly IRiskAssessmentService _assessmentService;
         private readonly IRiskService _riskService;
-        private readonly IRiskLevelSettingsService _settingsService;
         private readonly IFindingService _findingService; // ADDED: Findings service
         private readonly IPdfExportService _pdfExportService;
         private readonly IRiskMatrixService _riskMatrixService; // ADDED: Risk matrix service
@@ -30,7 +29,6 @@ namespace CyberRiskApp.Controllers
         public RiskAssessmentsController(
             IRiskAssessmentService assessmentService,
             IRiskService riskService,
-            IRiskLevelSettingsService settingsService,
             IFindingService findingService, // ADDED: Findings service
             IPdfExportService pdfExportService,
             IRiskMatrixService riskMatrixService, // ADDED: Risk matrix service
@@ -42,7 +40,6 @@ namespace CyberRiskApp.Controllers
         {
             _assessmentService = assessmentService;
             _riskService = riskService;
-            _settingsService = settingsService;
             _findingService = findingService; // ADDED: Findings service
             _pdfExportService = pdfExportService;
             _riskMatrixService = riskMatrixService; // ADDED: Risk matrix service
@@ -93,8 +90,8 @@ namespace CyberRiskApp.Controllers
             ViewBag.AttackScenarios = attackScenariosDict;
 
             // Load risk level settings for risk appetite line on chart
-            var riskLevelSettings = await _settingsService.GetActiveSettingsAsync();
-            ViewBag.RiskLevelSettings = riskLevelSettings;
+            var riskMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+            ViewBag.RiskMatrix = riskMatrix;
 
             return View(assessment);
         }
@@ -147,7 +144,7 @@ namespace CyberRiskApp.Controllers
                 System.Diagnostics.Debug.WriteLine($"Selected Matrix ID: {selectedMatrix.Id}, Name: {selectedMatrix.Name}");
             }
 
-            var model = new FAIRAssessmentViewModel
+            var model = new RiskAssessmentViewModel
             {
                 Assessment = new RiskAssessment
                 {
@@ -164,15 +161,17 @@ namespace CyberRiskApp.Controllers
                     
                     // Threat details moved to separate threat modeling functionality
                 },
-                QualitativeControls = new List<QualitativeControl>()
+                OpenRisks = new List<Risk>(),
+                AvailableFindings = new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>()
             };
 
             // Load risk level settings (for backwards compatibility)
-            model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
+            // Risk level settings replaced with RiskMatrix - model may need adjustment
 
             // Load available approved threat model templates
-            var approvedTemplatesForQualitative = await _riskAssessmentThreatModelService.GetApprovedTemplatesAsync();
-            model.AvailableThreatModels = approvedTemplatesForQualitative.ToList();
+            // FAIR threat model integration removed
+            // var approvedTemplatesForQualitative = await _riskAssessmentThreatModelService.GetApprovedTemplatesAsync();
+            // model.AvailableThreatModels = approvedTemplatesForQualitative.ToList();
 
             // Pass available matrices to the view
             ViewBag.AvailableMatrices = activeMatrices;
@@ -227,7 +226,7 @@ namespace CyberRiskApp.Controllers
         [RemoveAuditFields]
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
         [CleanupEmptyRisks]
-        public async Task<IActionResult> CreateQualitative(FAIRAssessmentViewModel model)
+        public async Task<IActionResult> CreateQualitative(RiskAssessmentViewModel model)
         {
             // Ensure assessment type is set to Qualitative
             model.Assessment.AssessmentType = AssessmentType.Qualitative;
@@ -330,186 +329,178 @@ namespace CyberRiskApp.Controllers
                         createdAssessment = await _assessmentService.CreateAssessmentAsync(model.Assessment);
                     Console.WriteLine($"✅ DEBUGGING: Created assessment {createdAssessment.Id} - '{createdAssessment.Title}'");
                     
-                    // Save qualitative controls if any were provided
-                    if (model.QualitativeControls != null && model.QualitativeControls.Any())
+                    // Qualitative controls functionality removed with FAIR
+                    // Risk assessment now focuses on standard risk scoring via RiskMatrix
+
+                    // FAIR IdentifiedRisks functionality removed
+                    // Standard risk assessments now use OpenRisks property
+                    if (false) // Disabled FAIR logic
                     {
-                        foreach (var control in model.QualitativeControls.Where(c => !string.IsNullOrEmpty(c.ControlName)))
-                        {
-                            control.RiskAssessmentId = createdAssessment.Id;
-                            control.CreatedAt = DateTime.UtcNow;
-                            control.UpdatedAt = DateTime.UtcNow;
-                            _context.QualitativeControls.Add(control);
-                        }
-                        await _context.SaveChangesAsync();
+                        // foreach (var risk in model.IdentifiedRisks.Where(r => !string.IsNullOrEmpty(r.Title))) // FAIR logic disabled
+                        // {
+                        //     risk.RiskAssessmentId = createdAssessment.Id;
+                        //     risk.Asset = model.Assessment.Asset;
+                        //     risk.BusinessUnit = model.Assessment.BusinessUnit ?? "Unknown";
+                        //     risk.ThreatScenario = model.Assessment.ThreatScenario;
+                        //     risk.CIATriad = model.Assessment.CIATriad ?? CIATriad.All;
+                        //     risk.Status = RiskStatus.Open;
+                        //     risk.OpenDate = DateTime.Today;
+                        //     risk.NextReviewDate = DateTime.Today.AddMonths(3);
+                        //     risk.CreatedAt = DateTime.UtcNow;
+                        //     risk.UpdatedAt = DateTime.UtcNow;
+                        //     
+                        //     // Set default enum values if not provided (to avoid value '0' errors)
+                        //     if (risk.Impact == 0) risk.Impact = ImpactLevel.Medium;
+                        //     if (risk.Likelihood == 0) risk.Likelihood = LikelihoodLevel.Possible;
+                        //     if (risk.Exposure == 0) risk.Exposure = ExposureLevel.ModeratelyExposed;
+                        //     if (risk.InherentRiskLevel == 0) risk.InherentRiskLevel = RiskLevel.Medium;
+                        //     if (risk.ResidualRiskLevel == 0) risk.ResidualRiskLevel = RiskLevel.Medium;
+                        //     if (risk.RiskLevel == 0) risk.RiskLevel = RiskLevel.Medium;
+                        //     
+                        //     // Set default treatment if not provided
+                        //     if (risk.Treatment == 0)
+                        //     {
+                        //         risk.Treatment = TreatmentStrategy.Mitigate;
+                        //     }
+                        //     
+                        //     // Create backlog entry for risk approval (don't create the risk yet)
+                        //     try
+                        //     {
+                        //         var riskDescription = BuildRiskDescriptionForBacklog(risk, model.Assessment);
+                        //         var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
+                        //             riskId: null, // No risk created yet - will be created upon approval
+                        //             actionType: RiskBacklogAction.NewRisk,
+                        //             description: riskDescription,
+                        //             justification: $"New risk identified from assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}",
+                        //             requesterId: User.GetUserId()
+                        //         );
+                        //         Console.WriteLine($"✅ DEBUGGING: Created backlog entry {backlogEntry.BacklogNumber} for risk '{risk.Title}' pending approval");
+                        //     }
+                        //     catch (Exception backlogEx)
+                        //     {
+                        //         // Log error but don't fail the assessment creation
+                        //         Console.WriteLine($"❌ DEBUGGING: Failed to create backlog entry for risk '{risk.Title}': {backlogEx.Message}");
+                        //     }
+                        // }
                     }
 
-                    // Save identified risks and create backlog entries using proper service calls
-                    if (model.IdentifiedRisks != null && model.IdentifiedRisks.Any())
+                    // FAIR ThreatScenarios functionality removed  
+                    // Standard risk assessments use simplified risk scoring
+                    if (false) // Disabled FAIR logic
                     {
-                        foreach (var risk in model.IdentifiedRisks.Where(r => !string.IsNullOrEmpty(r.Title)))
-                        {
-                            risk.RiskAssessmentId = createdAssessment.Id;
-                            risk.Asset = model.Assessment.Asset;
-                            risk.BusinessUnit = model.Assessment.BusinessUnit ?? "Unknown";
-                            risk.ThreatScenario = model.Assessment.ThreatScenario;
-                            risk.CIATriad = model.Assessment.CIATriad ?? CIATriad.All;
-                            risk.Status = RiskStatus.Open;
-                            risk.OpenDate = DateTime.Today;
-                            risk.NextReviewDate = DateTime.Today.AddMonths(3);
-                            risk.CreatedAt = DateTime.UtcNow;
-                            risk.UpdatedAt = DateTime.UtcNow;
-                            
-                            // Set default enum values if not provided (to avoid value '0' errors)
-                            if (risk.Impact == 0) risk.Impact = ImpactLevel.Medium;
-                            if (risk.Likelihood == 0) risk.Likelihood = LikelihoodLevel.Possible;
-                            if (risk.Exposure == 0) risk.Exposure = ExposureLevel.ModeratelyExposed;
-                            if (risk.InherentRiskLevel == 0) risk.InherentRiskLevel = RiskLevel.Medium;
-                            if (risk.ResidualRiskLevel == 0) risk.ResidualRiskLevel = RiskLevel.Medium;
-                            if (risk.RiskLevel == 0) risk.RiskLevel = RiskLevel.Medium;
-                            
-                            // Set default treatment if not provided
-                            if (risk.Treatment == 0)
-                            {
-                                risk.Treatment = TreatmentStrategy.Mitigate;
-                            }
-                            
-                            // Create backlog entry for risk approval (don't create the risk yet)
-                            try
-                            {
-                                var riskDescription = BuildRiskDescriptionForBacklog(risk, model.Assessment);
-                                var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
-                                    riskId: null, // No risk created yet - will be created upon approval
-                                    actionType: RiskBacklogAction.NewRisk,
-                                    description: riskDescription,
-                                    justification: $"New risk identified from assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}",
-                                    requesterId: User.GetUserId()
-                                );
-                                Console.WriteLine($"✅ DEBUGGING: Created backlog entry {backlogEntry.BacklogNumber} for risk '{risk.Title}' pending approval");
-                            }
-                            catch (Exception backlogEx)
-                            {
-                                // Log error but don't fail the assessment creation
-                                Console.WriteLine($"❌ DEBUGGING: Failed to create backlog entry for risk '{risk.Title}': {backlogEx.Message}");
-                            }
-                        }
-                    }
-
-                    // Save threat scenarios and their risks if any were provided
-                    if (model.ThreatScenarios != null && model.ThreatScenarios.Any())
-                    {
-                        // First collect all the risks from scenarios before clearing navigation properties
-                        var allScenarioRisks = new List<(ThreatScenario scenario, List<Risk> risks)>();
+                        // // First collect all the risks from scenarios before clearing navigation properties
+                        // var allScenarioRisks = new List<(ThreatScenario scenario, List<Risk> risks)>();
+                        // 
+                        // foreach (var scenario in model.ThreatScenarios.Where(s => !string.IsNullOrEmpty(s.Description)))
+                        // {
+                        //     scenario.RiskAssessmentId = createdAssessment.Id;
+                        //     scenario.CreatedAt = DateTime.UtcNow;
+                        //     scenario.UpdatedAt = DateTime.UtcNow;
+                        //     scenario.CreatedBy = User.GetUserId();
+                        //     scenario.UpdatedBy = User.GetUserId();
+                        //     
+                        //     // RowVersion will be initialized by the model's default value
+                        //     
+                        //     // Calculate risk score for the scenario
+                        //     scenario.CalculateRiskScore();
+                        //     
+                        //     // Collect the risks before clearing navigation property
+                        //     var scenarioRisks = scenario.IdentifiedRisks?.Where(r => !string.IsNullOrEmpty(r.Title)).ToList() ?? new List<Risk>();
+                        //     // allScenarioRisks.Add((scenario, scenarioRisks)); // FAIR logic disabled
+                        //     
+                        //     // Clear the navigation property to avoid EF confusion
+                        //     scenario.IdentifiedRisks.Clear();
+                        //     
+                        //     _context.ThreatScenarios.Add(scenario);
+                        // }
+                        // await _context.SaveChangesAsync();
                         
-                        foreach (var scenario in model.ThreatScenarios.Where(s => !string.IsNullOrEmpty(s.Description)))
-                        {
-                            scenario.RiskAssessmentId = createdAssessment.Id;
-                            scenario.CreatedAt = DateTime.UtcNow;
-                            scenario.UpdatedAt = DateTime.UtcNow;
-                            scenario.CreatedBy = User.GetUserId();
-                            scenario.UpdatedBy = User.GetUserId();
-                            
-                            // RowVersion will be initialized by the model's default value
-                            
-                            // Calculate risk score for the scenario
-                            scenario.CalculateRiskScore();
-                            
-                            // Collect the risks before clearing navigation property
-                            var scenarioRisks = scenario.IdentifiedRisks?.Where(r => !string.IsNullOrEmpty(r.Title)).ToList() ?? new List<Risk>();
-                            allScenarioRisks.Add((scenario, scenarioRisks));
-                            
-                            // Clear the navigation property to avoid EF confusion
-                            scenario.IdentifiedRisks.Clear();
-                            
-                            _context.ThreatScenarios.Add(scenario);
-                        }
-                        await _context.SaveChangesAsync();
-                        
-                        // Save all collected risks from scenarios using proper service calls
-                        foreach (var (scenario, risks) in allScenarioRisks)
-                        {
-                            foreach (var risk in risks)
-                            {
-                                risk.RiskAssessmentId = createdAssessment.Id;
-                                risk.ThreatScenarioId = scenario.Id; // Link to the specific threat scenario
-                                risk.Asset = model.Assessment.Asset;
-                                risk.BusinessUnit = model.Assessment.BusinessUnit ?? "Unknown";
-                                risk.ThreatScenario = scenario.Description; // Use scenario description as threat scenario
-                                risk.CIATriad = model.Assessment.CIATriad ?? CIATriad.All;
-                                risk.Status = RiskStatus.Open;
-                                risk.OpenDate = DateTime.Today;
-                                risk.NextReviewDate = DateTime.Today.AddMonths(3);
-                                risk.CreatedAt = DateTime.UtcNow;
-                                risk.UpdatedAt = DateTime.UtcNow;
-                                
-                                // Set default enum values if not provided
-                                if (risk.Impact == 0) risk.Impact = ImpactLevel.Medium;
-                                if (risk.Likelihood == 0) risk.Likelihood = LikelihoodLevel.Possible;
-                                if (risk.Exposure == 0) risk.Exposure = ExposureLevel.ModeratelyExposed;
-                                if (risk.InherentRiskLevel == 0) risk.InherentRiskLevel = RiskLevel.Medium;
-                                if (risk.ResidualRiskLevel == 0) risk.ResidualRiskLevel = RiskLevel.Medium;
-                                if (risk.RiskLevel == 0) risk.RiskLevel = RiskLevel.Medium;
-                                
-                                // Set default treatment if not provided
-                                if (risk.Treatment == 0)
-                                {
-                                    risk.Treatment = TreatmentStrategy.Mitigate;
-                                }
-                                
-                                // Create backlog entry for risk approval (don't create the risk yet)
-                                try
-                                {
-                                    var riskDescription = BuildRiskDescriptionForBacklog(risk, model.Assessment);
-                                    riskDescription += $"\nThreat Scenario: {scenario.Description}\n";
-                                    if (scenario.QualitativeLikelihood.HasValue)
-                                    {
-                                        riskDescription += $"Scenario Likelihood: {scenario.QualitativeLikelihood.Value}\n";
-                                    }
-                                    if (scenario.QualitativeImpact.HasValue)
-                                    {
-                                        riskDescription += $"Scenario Impact: {scenario.QualitativeImpact.Value}\n";
-                                    }
-                                    if (scenario.QualitativeRiskScore.HasValue)
-                                    {
-                                        riskDescription += $"Scenario Risk Score: {scenario.QualitativeRiskScore.Value}\n";
-                                    }
-                                    
-                                    var requesterId = User.GetUserId();
-                                    var justification = $"New risk identified from threat scenario in assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}";
-                                    
-                                    Console.WriteLine($"🔍 CONTROLLER DEBUG: About to create backlog entry");
-                                    Console.WriteLine($"🔍 CONTROLLER DEBUG: riskId=null, actionType=NewRisk, requesterId='{requesterId}'");
-                                    Console.WriteLine($"🔍 CONTROLLER DEBUG: description length={riskDescription?.Length}, justification length={justification?.Length}");
-                                    
-                                    var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
-                                        riskId: null, // No risk created yet - will be created upon approval
-                                        actionType: RiskBacklogAction.NewRisk,
-                                        description: riskDescription,
-                                        justification: justification,
-                                        requesterId: requesterId
-                                    );
-                                    Console.WriteLine($"✅ DEBUGGING: Created backlog entry {backlogEntry.BacklogNumber} for threat scenario risk '{risk.Title}' pending approval");
-                                }
-                                catch (Exception backlogEx)
-                                {
-                                    // Log error but don't fail the assessment creation
-                                    Console.WriteLine($"❌ DEBUGGING: Failed to create backlog entry for threat scenario risk '{risk.Title}': {backlogEx.Message}");
-                                }
-                            }
-                        }
+                        // // Save all collected risks from scenarios using proper service calls
+                        // foreach (var (scenario, risks) in allScenarioRisks)
+                        // {
+                        //     foreach (var risk in risks)
+                        //     {
+                        //         risk.RiskAssessmentId = createdAssessment.Id;
+                        //         risk.ThreatScenarioId = scenario.Id; // Link to the specific threat scenario
+                        //         risk.Asset = model.Assessment.Asset;
+                        //         risk.BusinessUnit = model.Assessment.BusinessUnit ?? "Unknown";
+                        //         risk.ThreatScenario = scenario.Description; // Use scenario description as threat scenario
+                        //         risk.CIATriad = model.Assessment.CIATriad ?? CIATriad.All;
+                        //         risk.Status = RiskStatus.Open;
+                        //         risk.OpenDate = DateTime.Today;
+                        //         risk.NextReviewDate = DateTime.Today.AddMonths(3);
+                        //         risk.CreatedAt = DateTime.UtcNow;
+                        //         risk.UpdatedAt = DateTime.UtcNow;
+                        //         
+                        //         // Set default enum values if not provided
+                        //         if (risk.Impact == 0) risk.Impact = ImpactLevel.Medium;
+                        //         if (risk.Likelihood == 0) risk.Likelihood = LikelihoodLevel.Possible;
+                        //         if (risk.Exposure == 0) risk.Exposure = ExposureLevel.ModeratelyExposed;
+                        //         if (risk.InherentRiskLevel == 0) risk.InherentRiskLevel = RiskLevel.Medium;
+                        //         if (risk.ResidualRiskLevel == 0) risk.ResidualRiskLevel = RiskLevel.Medium;
+                        //         if (risk.RiskLevel == 0) risk.RiskLevel = RiskLevel.Medium;
+                        //         
+                        //         // Set default treatment if not provided
+                        //         if (risk.Treatment == 0)
+                        //         {
+                        //             risk.Treatment = TreatmentStrategy.Mitigate;
+                        //         }
+                        //         
+                        //         // Create backlog entry for risk approval (don't create the risk yet)
+                        //         try
+                        //         {
+                        //             var riskDescription = BuildRiskDescriptionForBacklog(risk, model.Assessment);
+                        //             riskDescription += $"\nThreat Scenario: {scenario.Description}\n";
+                        //             if (scenario.QualitativeLikelihood.HasValue)
+                        //             {
+                        //                 riskDescription += $"Scenario Likelihood: {scenario.QualitativeLikelihood.Value}\n";
+                        //             }
+                        //             if (scenario.QualitativeImpact.HasValue)
+                        //             {
+                        //                 riskDescription += $"Scenario Impact: {scenario.QualitativeImpact.Value}\n";
+                        //             }
+                        //             if (scenario.QualitativeRiskScore.HasValue)
+                        //             {
+                        //                 riskDescription += $"Scenario Risk Score: {scenario.QualitativeRiskScore.Value}\n";
+                        //             }
+                        //             
+                        //             var requesterId = User.GetUserId();
+                        //             var justification = $"New risk identified from threat scenario in assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}";
+                        //             
+                        //             Console.WriteLine($"🔍 CONTROLLER DEBUG: About to create backlog entry");
+                        //             Console.WriteLine($"🔍 CONTROLLER DEBUG: riskId=null, actionType=NewRisk, requesterId='{requesterId}'");
+                        //             Console.WriteLine($"🔍 CONTROLLER DEBUG: description length={riskDescription?.Length}, justification length={justification?.Length}");
+                        //             
+                        //             var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
+                        //                 riskId: null, // No risk created yet - will be created upon approval
+                        //                 actionType: RiskBacklogAction.NewRisk,
+                        //                 description: riskDescription,
+                        //                 justification: justification,
+                        //                 requesterId: requesterId
+                        //             );
+                        //             Console.WriteLine($"✅ DEBUGGING: Created backlog entry {backlogEntry.BacklogNumber} for threat scenario risk '{risk.Title}' pending approval");
+                        //         }
+                        //         catch (Exception backlogEx)
+                        //         {
+                        //             // Log error but don't fail the assessment creation
+                        //             Console.WriteLine($"❌ DEBUGGING: Failed to create backlog entry for threat scenario risk '{risk.Title}': {backlogEx.Message}");
+                        //         }
+                        //     }
+                        // }
                     }
 
-                    // Link selected threat models to the risk assessment
-                    if (model.SelectedThreatModelIds != null && model.SelectedThreatModelIds.Any())
+                    // FAIR threat model linking removed
+                    if (false) // Disabled FAIR logic
                     {
-                        foreach (var threatModelId in model.SelectedThreatModelIds)
-                        {
-                            var threatModel = await _threatModelingService.GetThreatModelByIdAsync(threatModelId);
-                            if (threatModel != null)
-                            {
-                                threatModel.RiskAssessmentId = createdAssessment.Id;
-                                await _threatModelingService.UpdateThreatModelAsync(threatModel);
-                            }
-                        }
+                        // // foreach (var threatModelId in model.SelectedThreatModelIds) // FAIR logic disabled
+                        // {
+                        //     var threatModel = await _threatModelingService.GetThreatModelByIdAsync(threatModelId);
+                        //     if (threatModel != null)
+                        //     {
+                        //         threatModel.RiskAssessmentId = createdAssessment.Id;
+                        //         await _threatModelingService.UpdateThreatModelAsync(threatModel);
+                        //     }
+                        // }
                     }
 
                         // Commit the transaction if everything succeeded
@@ -545,7 +536,7 @@ namespace CyberRiskApp.Controllers
                     
                     // Need to reload the model data and return the view
                     var approvedTemplatesReloadError = await _riskAssessmentThreatModelService.GetApprovedTemplatesAsync();
-                    model.AvailableThreatModels = approvedTemplatesReloadError.ToList();
+                    // model.AvailableThreatModels = approvedTemplatesReloadError.ToList(); // FAIR logic disabled
                     
                     var allMatricesError = await _riskMatrixService.GetAllMatricesAsync();
                     ViewBag.AvailableMatrices = allMatricesError.Where(m => m.IsActive).ToList();
@@ -556,9 +547,9 @@ namespace CyberRiskApp.Controllers
             }
 
             // Reload risk level settings and threat models if validation fails
-            model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
+            // Risk level settings replaced with RiskMatrix - model may need adjustment
             var approvedTemplatesReloadQualitative = await _riskAssessmentThreatModelService.GetApprovedTemplatesAsync();
-            model.AvailableThreatModels = approvedTemplatesReloadQualitative.ToList();
+            // model.AvailableThreatModels = approvedTemplatesReloadQualitative.ToList(); // FAIR logic disabled
             
             // Also reload matrices for qualitative assessments
             var allMatrices = await _riskMatrixService.GetAllMatricesAsync();
@@ -572,7 +563,7 @@ namespace CyberRiskApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
-        public async Task<IActionResult> Create(FAIRAssessmentViewModel model)
+        public async Task<IActionResult> Create(RiskAssessmentViewModel model)
         {
             // Audit fields are now automatically removed by RemoveAuditFields filter
             
@@ -588,23 +579,13 @@ namespace CyberRiskApp.Controllers
                     var createdAssessment = await _assessmentService.CreateAssessmentAsync(model.Assessment);
                     
 
-                    // Save qualitative controls if any were provided
-                    if (model.QualitativeControls != null && model.QualitativeControls.Any())
-                    {
-                        foreach (var control in model.QualitativeControls.Where(c => !string.IsNullOrEmpty(c.ControlName)))
-                        {
-                            control.RiskAssessmentId = createdAssessment.Id;
-                            control.CreatedAt = DateTime.UtcNow;
-                            control.UpdatedAt = DateTime.UtcNow;
-                            _context.QualitativeControls.Add(control);
-                        }
-                        await _context.SaveChangesAsync();
-                    }
+                    // Qualitative controls functionality removed with FAIR
+                    // Risk assessment now focuses on standard risk scoring via RiskMatrix
 
-                    // Save identified risks if any were provided
+                    /* FAIR IdentifiedRisks functionality removed (Create method)
                     if (model.IdentifiedRisks != null && model.IdentifiedRisks.Any())
                     {
-                        foreach (var risk in model.IdentifiedRisks.Where(r => !string.IsNullOrEmpty(r.Title)))
+                        // foreach (var risk in model.IdentifiedRisks.Where(r => !string.IsNullOrEmpty(r.Title))) // FAIR logic disabled
                         {
                             risk.RiskAssessmentId = createdAssessment.Id;
                             risk.Asset = model.Assessment.Asset;
@@ -652,8 +633,9 @@ namespace CyberRiskApp.Controllers
                             }
                         }
                     }
+                    */ // End FAIR IdentifiedRisks block (Create method)
 
-                    TempData["Success"] = "Risk assessment created successfully! Identified risks have been submitted to the backlog for GRC review and approval.";
+                    TempData["Success"] = "Risk assessment created successfully!";
                     return RedirectToAction(nameof(Details), new { id = createdAssessment.Id });
                 }
                 catch (Exception ex)
@@ -663,7 +645,7 @@ namespace CyberRiskApp.Controllers
             }
 
             // Reload risk level settings if validation fails
-            model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
+            // Risk level settings replaced with RiskMatrix - model may need adjustment
             return View(model);
         }
 
@@ -675,17 +657,15 @@ namespace CyberRiskApp.Controllers
             if (assessment == null)
                 return NotFound();
 
-            var model = new FAIRAssessmentViewModel
+            var model = new RiskAssessmentViewModel
             {
                 Assessment = assessment,
-                // Qualitative and identified risks
-                QualitativeControls = assessment.QualitativeControls?.ToList() ?? new List<QualitativeControl>(),
-                IdentifiedRisks = assessment.IdentifiedRisks?.ToList() ?? new List<Risk>(),
-                ThreatScenarios = assessment.ThreatScenarios?.ToList() ?? new List<ThreatScenario>()
+                // Load related risks (if any)
+                OpenRisks = assessment.IdentifiedRisks?.Where(r => r.Status != RiskStatus.Closed).ToList() ?? new List<Risk>()
             };
 
             // Load risk level settings
-            model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
+            // Risk level settings replaced with RiskMatrix - model may need adjustment
 
             return View(model);
         }
@@ -694,7 +674,7 @@ namespace CyberRiskApp.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
-        public async Task<IActionResult> Edit(int id, FAIRAssessmentViewModel model)
+        public async Task<IActionResult> Edit(int id, RiskAssessmentViewModel model)
         {
             if (id != model.Assessment.Id)
                 return NotFound();
@@ -716,11 +696,11 @@ namespace CyberRiskApp.Controllers
                     await _assessmentService.UpdateAssessmentAsync(model.Assessment);
 
 
-                    // Update qualitative controls
+                    /* FAIR QualitativeControls functionality removed - block commented out
                     if (model.QualitativeControls != null)
                     {
-                        // Remove existing qualitative controls
-                        var existingQualControls = _context.QualitativeControls.Where(c => c.RiskAssessmentId == id);
+                        // FAIR qualitative controls removed
+                        // var existingQualControls = _context.QualitativeControls.Where(c => c.RiskAssessmentId == id);
                         _context.QualitativeControls.RemoveRange(existingQualControls);
 
                         // Add updated qualitative controls
@@ -733,16 +713,17 @@ namespace CyberRiskApp.Controllers
                         }
                         await _context.SaveChangesAsync();
                     }
+                    */ // End FAIR qualitative controls block
 
-                    // Update identified risks
-                    if (model.IdentifiedRisks != null)
+                    /* FAIR IdentifiedRisks functionality removed - block commented out
+                    if (model.IdentifiedRisks != null && model.IdentifiedRisks.Any())
                     {
-                        // Remove existing identified risks
-                        var existingRisks = _context.Risks.Where(r => r.RiskAssessmentId == id);
+                        // FAIR identified risks removed  
+                        // var existingRisks = _context.Risks.Where(r => r.RiskAssessmentId == id);
                         _context.Risks.RemoveRange(existingRisks);
 
                         // Add updated identified risks
-                        foreach (var risk in model.IdentifiedRisks.Where(r => !string.IsNullOrEmpty(r.Title)))
+                        // foreach (var risk in model.IdentifiedRisks.Where(r => !string.IsNullOrEmpty(r.Title))) // FAIR logic disabled
                         {
                             risk.RiskAssessmentId = id;
                             risk.Asset = model.Assessment.Asset;
@@ -790,91 +771,92 @@ namespace CyberRiskApp.Controllers
                             }
                         }
                     }
+                    */ // End FAIR IdentifiedRisks block
 
-                    // Update threat scenarios and their risks
-                    if (model.ThreatScenarios != null)
+                    // FAIR ThreatScenarios functionality removed (Edit method)  
+                    if (false) // FAIR logic disabled
                     {
-                        // Remove existing threat scenarios
-                        var existingScenarios = _context.ThreatScenarios.Where(s => s.RiskAssessmentId == id);
-                        _context.ThreatScenarios.RemoveRange(existingScenarios);
+                        // FAIR threat scenarios removed
+                        // var existingScenarios = _context.ThreatScenarios.Where(s => s.RiskAssessmentId == id);
+                        // _context.ThreatScenarios.RemoveRange(existingScenarios);
 
                         // Collect all risks before clearing navigation properties
                         var allScenarioRisks = new List<(ThreatScenario scenario, List<Risk> risks)>();
                         
                         // Add updated threat scenarios
-                        foreach (var scenario in model.ThreatScenarios.Where(s => !string.IsNullOrEmpty(s.Description)))
-                        {
-                            scenario.RiskAssessmentId = id;
-                            scenario.CreatedAt = scenario.CreatedAt == DateTime.MinValue ? DateTime.UtcNow : scenario.CreatedAt;
-                            scenario.UpdatedAt = DateTime.UtcNow;
-                            scenario.CreatedBy = scenario.CreatedBy ?? User.GetUserId();
-                            scenario.UpdatedBy = User.GetUserId();
-                            
-                            // RowVersion will be initialized by the model's default value
-                            
-                            // Calculate risk score for the scenario
-                            scenario.CalculateRiskScore();
-                            
-                            // Collect the risks before clearing navigation property
-                            var scenarioRisks = scenario.IdentifiedRisks?.Where(r => !string.IsNullOrEmpty(r.Title)).ToList() ?? new List<Risk>();
-                            allScenarioRisks.Add((scenario, scenarioRisks));
-                            
-                            // Clear the navigation property to avoid EF confusion
-                            scenario.IdentifiedRisks.Clear();
-                            
-                            _context.ThreatScenarios.Add(scenario);
-                        }
-                        await _context.SaveChangesAsync();
-                        
-                        // Now save all collected risks from scenarios
-                        foreach (var (scenario, risks) in allScenarioRisks)
-                        {
-                            foreach (var risk in risks)
-                            {
-                                risk.RiskAssessmentId = id;
-                                risk.Asset = model.Assessment.Asset;
-                                risk.BusinessUnit = model.Assessment.BusinessUnit ?? "Unknown";
-                                risk.ThreatScenario = scenario.Description; // Use scenario description as threat scenario
-                                risk.CIATriad = model.Assessment.CIATriad ?? CIATriad.All;
-                                risk.Status = risk.Status == 0 ? RiskStatus.Open : risk.Status;
-                                risk.OpenDate = risk.OpenDate == DateTime.MinValue ? DateTime.Today : risk.OpenDate;
-                                risk.NextReviewDate = risk.NextReviewDate ?? DateTime.Today.AddMonths(3);
-                                risk.CreatedAt = risk.CreatedAt == DateTime.MinValue ? DateTime.UtcNow : risk.CreatedAt;
-                                risk.UpdatedAt = DateTime.UtcNow;
-                                
-                                // Set default enum values if not provided
-                                if (risk.Impact == 0) risk.Impact = ImpactLevel.Medium;
-                                if (risk.Likelihood == 0) risk.Likelihood = LikelihoodLevel.Possible;
-                                if (risk.Exposure == 0) risk.Exposure = ExposureLevel.ModeratelyExposed;
-                                if (risk.InherentRiskLevel == 0) risk.InherentRiskLevel = RiskLevel.Medium;
-                                if (risk.ResidualRiskLevel == 0) risk.ResidualRiskLevel = RiskLevel.Medium;
-                                if (risk.RiskLevel == 0) risk.RiskLevel = RiskLevel.Medium;
-                                
-                                // Set default treatment if not provided
-                                if (risk.Treatment == 0)
-                                {
-                                    risk.Treatment = TreatmentStrategy.Mitigate;
-                                }
-                                
-                                // Create backlog entry for risk approval (don't create the risk yet)
-                            try
-                            {
-                                var riskDescription = BuildRiskDescriptionForBacklog(risk, model.Assessment);
-                                await _backlogService.CreateBacklogEntryAsync(
-                                    riskId: null, // No risk created yet - will be created upon approval
-                                    actionType: RiskBacklogAction.NewRisk,
-                                    description: riskDescription,
-                                    justification: $"New risk identified from assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}",
-                                    requesterId: User.GetUserId()
-                                );
-                            }
-                            catch (Exception backlogEx)
-                            {
-                                // Log error but don't fail the assessment creation
-                                Console.WriteLine($"Warning: Failed to create backlog entry for risk '{risk.Title}': {backlogEx.Message}");
-                            }
-                            }
-                        }
+                        // foreach (var scenario in model.ThreatScenarios.Where(s => !string.IsNullOrEmpty(s.Description)))
+                        // {
+                        //     scenario.RiskAssessmentId = id;
+                        //     scenario.CreatedAt = scenario.CreatedAt == DateTime.MinValue ? DateTime.UtcNow : scenario.CreatedAt;
+                        //     scenario.UpdatedAt = DateTime.UtcNow;
+                        //     scenario.CreatedBy = scenario.CreatedBy ?? User.GetUserId();
+                        //     scenario.UpdatedBy = User.GetUserId();
+                        //     
+                        //     // RowVersion will be initialized by the model's default value
+                        //     
+                        //     // Calculate risk score for the scenario
+                        //     scenario.CalculateRiskScore();
+                        //     
+                        //     // Collect the risks before clearing navigation property
+                        //     var scenarioRisks = scenario.IdentifiedRisks?.Where(r => !string.IsNullOrEmpty(r.Title)).ToList() ?? new List<Risk>();
+                        //     // allScenarioRisks.Add((scenario, scenarioRisks)); // FAIR logic disabled
+                        //     
+                        //     // Clear the navigation property to avoid EF confusion
+                        //     scenario.IdentifiedRisks.Clear();
+                        //     
+                        //     _context.ThreatScenarios.Add(scenario);
+                        // }
+                        // await _context.SaveChangesAsync();
+                        // 
+                        // // Now save all collected risks from scenarios
+                        // foreach (var (scenario, risks) in allScenarioRisks)
+                        // {
+                        //     foreach (var risk in risks)
+                        //     {
+                        //         risk.RiskAssessmentId = id;
+                        //         risk.Asset = model.Assessment.Asset;
+                        //         risk.BusinessUnit = model.Assessment.BusinessUnit ?? "Unknown";
+                        //         risk.ThreatScenario = scenario.Description; // Use scenario description as threat scenario
+                        //         risk.CIATriad = model.Assessment.CIATriad ?? CIATriad.All;
+                        //         risk.Status = risk.Status == 0 ? RiskStatus.Open : risk.Status;
+                        //         risk.OpenDate = risk.OpenDate == DateTime.MinValue ? DateTime.Today : risk.OpenDate;
+                        //         risk.NextReviewDate = risk.NextReviewDate ?? DateTime.Today.AddMonths(3);
+                        //         risk.CreatedAt = risk.CreatedAt == DateTime.MinValue ? DateTime.UtcNow : risk.CreatedAt;
+                        //         risk.UpdatedAt = DateTime.UtcNow;
+                        //         
+                        //         // Set default enum values if not provided
+                        //         if (risk.Impact == 0) risk.Impact = ImpactLevel.Medium;
+                        //         if (risk.Likelihood == 0) risk.Likelihood = LikelihoodLevel.Possible;
+                        //         if (risk.Exposure == 0) risk.Exposure = ExposureLevel.ModeratelyExposed;
+                        //         if (risk.InherentRiskLevel == 0) risk.InherentRiskLevel = RiskLevel.Medium;
+                        //         if (risk.ResidualRiskLevel == 0) risk.ResidualRiskLevel = RiskLevel.Medium;
+                        //         if (risk.RiskLevel == 0) risk.RiskLevel = RiskLevel.Medium;
+                        //         
+                        //         // Set default treatment if not provided
+                        //         if (risk.Treatment == 0)
+                        //         {
+                        //             risk.Treatment = TreatmentStrategy.Mitigate;
+                        //         }
+                        //         
+                        //         // Create backlog entry for risk approval (don't create the risk yet)
+                        //     try
+                        //     {
+                        //         var riskDescription = BuildRiskDescriptionForBacklog(risk, model.Assessment);
+                        //         await _backlogService.CreateBacklogEntryAsync(
+                        //             riskId: null, // No risk created yet - will be created upon approval
+                        //             actionType: RiskBacklogAction.NewRisk,
+                        //             description: riskDescription,
+                        //             justification: $"New risk identified from assessment '{model.Assessment.Title}' for asset '{model.Assessment.Asset}'. Risk level: {risk.RiskLevel}",
+                        //             requesterId: User.GetUserId()
+                        //         );
+                        //     }
+                        //     catch (Exception backlogEx)
+                        //     {
+                        //         // Log error but don't fail the assessment creation
+                        //         Console.WriteLine($"Warning: Failed to create backlog entry for risk '{risk.Title}': {backlogEx.Message}");
+                        //     }
+                        //     }
+                        // }
                     }
 
                     TempData["Success"] = "Risk assessment updated successfully! Any new identified risks have been submitted to the backlog for GRC review and approval.";
@@ -887,9 +869,10 @@ namespace CyberRiskApp.Controllers
             }
 
             // Reload risk level settings if validation fails
-            model.RiskLevelSettings = await _settingsService.GetSettingsByIdAsync(1);
+            // Risk level settings replaced with RiskMatrix - model may need adjustment
             return View(model);
         }
+        // FAIR ThreatScenarios block completed
 
         // UPDATED: Only GRC and Admin can complete assessments
         [HttpPost]
@@ -977,8 +960,8 @@ namespace CyberRiskApp.Controllers
                 if (assessment.Status == AssessmentStatus.Completed && allRisks.Any())
                 {
                     Console.WriteLine("✅ DEBUGGING: Entering risk creation loop");
-                    var currentSettings = await _settingsService.GetActiveSettingsAsync();
-                    Console.WriteLine($"   DEBUGGING: Risk level settings loaded: {currentSettings != null}");
+                    var riskMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                    Console.WriteLine($"   DEBUGGING: Risk matrix loaded: {riskMatrix != null}");
                     
                     foreach (var identifiedRisk in allRisks)
                     {
@@ -1533,12 +1516,12 @@ namespace CyberRiskApp.Controllers
         {
             try
             {
-                var settings = await _settingsService.GetActiveSettingsAsync();
+                var riskMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
                 var riskLevels = new[]
                 {
-                    new { value = "Critical", label = "Critical", threshold = settings.QualitativeCriticalThreshold },
-                    new { value = "High", label = "High", threshold = settings.QualitativeHighThreshold },
-                    new { value = "Medium", label = "Medium", threshold = settings.QualitativeMediumThreshold },
+                    new { value = "Critical", label = "Critical", threshold = riskMatrix?.QualitativeCriticalThreshold ?? 16m },
+                    new { value = "High", label = "High", threshold = riskMatrix?.QualitativeHighThreshold ?? 10m },
+                    new { value = "Medium", label = "Medium", threshold = riskMatrix?.QualitativeMediumThreshold ?? 4m },
                     new { value = "Low", label = "Low", threshold = 0m }
                 };
                 

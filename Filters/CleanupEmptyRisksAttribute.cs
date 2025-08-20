@@ -7,20 +7,20 @@ namespace CyberRiskApp.Filters
     {
         public override void OnActionExecuting(ActionExecutingContext context)
         {
-            // Find the FAIRAssessmentViewModel parameter
+            // Find the RiskAssessmentViewModel parameter
             foreach (var parameter in context.ActionArguments.Values)
             {
-                if (parameter is FAIRAssessmentViewModel model)
+                if (parameter is RiskAssessmentViewModel model)
                 {
-                    // Remove any identified risks that don't have a title
-                    if (model.IdentifiedRisks != null)
+                    // Remove any open risks that don't have a title
+                    if (model.OpenRisks != null)
                     {
-                        model.IdentifiedRisks = model.IdentifiedRisks.Where(r => !string.IsNullOrEmpty(r.Title)).ToList();
+                        model.OpenRisks = model.OpenRisks.Where(r => !string.IsNullOrEmpty(r.Title)).ToList();
                         
                         // If no valid risks remain, clear the list entirely
-                        if (!model.IdentifiedRisks.Any())
+                        if (!model.OpenRisks.Any())
                         {
-                            model.IdentifiedRisks = new List<CyberRiskApp.Models.Risk>();
+                            model.OpenRisks = new List<CyberRiskApp.Models.Risk>();
                         }
                     }
 
@@ -29,7 +29,7 @@ namespace CyberRiskApp.Filters
                     if (controller != null)
                     {
                         var keysToRemove = controller.ModelState.Keys
-                            .Where(k => k.Contains("IdentifiedRisks"))
+                            .Where(k => k.Contains("OpenRisks"))
                             .ToList();
 
                         foreach (var key in keysToRemove)
@@ -38,8 +38,8 @@ namespace CyberRiskApp.Filters
                             var parts = key.Split('[', ']');
                             if (parts.Length >= 2 && int.TryParse(parts[1], out int index))
                             {
-                                if (model.IdentifiedRisks == null || index >= model.IdentifiedRisks.Count ||
-                                    string.IsNullOrEmpty(model.IdentifiedRisks[index]?.Title))
+                                if (model.OpenRisks == null || index >= model.OpenRisks.Count ||
+                                    string.IsNullOrEmpty(model.OpenRisks[index]?.Title))
                                 {
                                     controller.ModelState.Remove(key);
                                 }

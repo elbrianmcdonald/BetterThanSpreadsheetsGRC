@@ -55,62 +55,230 @@
         </div>
     </nav>
 
-    <!-- Quick Info Cards -->
+    <!-- Enhanced Compliance Metrics Dashboard -->
+    @{
+        var totalControls = Model.ControlAssessments.Count(ca => ca.Status != CyberRiskApp.Models.ComplianceStatus.NotApplicable);
+        var fullyCompliant = Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.FullyCompliant);
+        var majorlyCompliant = Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant);
+        var partiallyCompliant = Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant);
+        var nonCompliant = Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.NonCompliant);
+        var notApplicable = Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.NotApplicable);
+        
+        // Weighted compliance calculation (Full=100%, Majorly=80%, Partially=50%, Non=0%)
+        var weightedScore = (fullyCompliant * 100) + (majorlyCompliant * 80) + (partiallyCompliant * 50);
+        var maxPossibleScore = totalControls * 100;
+        var weightedCompliancePercentage = maxPossibleScore > 0 ? Math.Round((decimal)weightedScore / maxPossibleScore * 100, 1) : 0;
+        
+        // Binary compliance percentage (only fully compliant = 100%)
+        var binaryCompliancePercentage = totalControls > 0 ? Math.Round((decimal)fullyCompliant / totalControls * 100, 1) : 0;
+        
+        var complianceGrade = weightedCompliancePercentage >= 90 ? "A" : 
+                              weightedCompliancePercentage >= 80 ? "B" : 
+                              weightedCompliancePercentage >= 70 ? "C" : 
+                              weightedCompliancePercentage >= 60 ? "D" : "F";
+    }
+
+    <!-- Compliance Scoring Overview -->
     <div class="row mb-4">
-        <div class="col-md-2 col-6">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center py-3">
-                    <small class="text-muted d-block">Assessor</small>
-                    <strong>@Model.Assessor</strong>
+        <div class="col-12">
+            <div class="card border-0 bg-gradient-primary text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center">
+                                <div class="display-4 me-3">@weightedCompliancePercentage%</div>
+                                <div>
+                                    <h5 class="mb-1">Weighted Compliance Score</h5>
+                                    <small class="opacity-75">Based on weighted assessment methodology</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="display-6 mb-2">@complianceGrade</div>
+                            <div class="small">Compliance Grade</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="h4 mb-1">@fullyCompliant/@totalControls</div>
+                                    <small class="opacity-75">Fully Compliant</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="h4 mb-1">@binaryCompliancePercentage%</div>
+                                    <small class="opacity-75">Binary Compliance</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2 col-6">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center py-3">
-                    <small class="text-muted d-block">Status</small>
-                    <span class="badge bg-@(Model.Status switch
-                    {
-                        CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
-                        CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
-                        CyberRiskApp.Models.AssessmentStatus.Completed => "success",
-                        CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
-                        _ => "secondary"
-                    })">
-                        @Model.Status
-                    </span>
+    </div>
+
+    <!-- Detailed Compliance Breakdown -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <!-- Compliance Status Distribution -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Compliance Status Distribution</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <canvas id="complianceDistributionChart" height="200"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="compliance-breakdown">
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div class="d-flex align-items-center">
+                                        <div class="compliance-color-indicator bg-success me-2"></div>
+                                        <span>Fully Compliant</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong>@fullyCompliant</strong>
+                                        <small class="text-muted">(@(totalControls > 0 ? Math.Round((decimal)fullyCompliant / totalControls * 100, 1) : 0)%)</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div class="d-flex align-items-center">
+                                        <div class="compliance-color-indicator bg-info me-2"></div>
+                                        <span>Majorly Compliant</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong>@majorlyCompliant</strong>
+                                        <small class="text-muted">(@(totalControls > 0 ? Math.Round((decimal)majorlyCompliant / totalControls * 100, 1) : 0)%)</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div class="d-flex align-items-center">
+                                        <div class="compliance-color-indicator bg-warning me-2"></div>
+                                        <span>Partially Compliant</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong>@partiallyCompliant</strong>
+                                        <small class="text-muted">(@(totalControls > 0 ? Math.Round((decimal)partiallyCompliant / totalControls * 100, 1) : 0)%)</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div class="d-flex align-items-center">
+                                        <div class="compliance-color-indicator bg-danger me-2"></div>
+                                        <span>Non-Compliant</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <strong>@nonCompliant</strong>
+                                        <small class="text-muted">(@(totalControls > 0 ? Math.Round((decimal)nonCompliant / totalControls * 100, 1) : 0)%)</small>
+                                    </div>
+                                </div>
+                                @if (notApplicable > 0)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center py-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="compliance-color-indicator bg-secondary me-2"></div>
+                                            <span>Not Applicable</span>
+                                        </div>
+                                        <div class="text-end">
+                                            <strong>@notApplicable</strong>
+                                            <small class="text-muted">(Excluded from scoring)</small>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2 col-6">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center py-3">
-                    <small class="text-muted d-block">Due Date</small>
-                    <strong>@(Model.DueDate?.ToString("MMM dd") ?? "Not set")</strong>
+        <div class="col-md-4">
+            <!-- Assessment Info Cards -->
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <small class="text-muted d-block">Assessor</small>
+                            <strong>@Model.Assessor</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 mb-3">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <small class="text-muted d-block">Status</small>
+                            <span class="badge bg-@(Model.Status switch
+                            {
+                                CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+                                CyberRiskApp.Models.AssessmentStatus.InProgress => "warning",
+                                CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+                                CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
+                                _ => "secondary"
+                            })">
+                                @Model.Status
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 mb-3">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <small class="text-muted d-block">Due Date</small>
+                            <strong>@(Model.DueDate?.ToString("MMM dd") ?? "Not set")</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 mb-3">
+                    <div class="card border-0 bg-light h-100">
+                        <div class="card-body text-center">
+                            <small class="text-muted d-block">Projects Needed</small>
+                            <strong class="text-info">@Model.ControlAssessments.Count(ca => ca.ProjectNeeded)</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2 col-6">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center py-3">
-                    <small class="text-muted d-block">Controls</small>
-                    <strong>@Model.ControlAssessments.Count</strong>
+    </div>
+
+    <!-- Scoring Methodology Explanation -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Compliance Scoring Methodology</h6>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-2 col-6">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center py-3">
-                    <small class="text-muted d-block">Non-Compliant</small>
-                    <strong class="text-danger">@Model.ControlAssessments.Count(ca => ca.Status == CyberRiskApp.Models.ComplianceStatus.NonCompliant)</strong>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-2 col-6">
-            <div class="card border-0 bg-light">
-                <div class="card-body text-center py-3">
-                    <small class="text-muted d-block">Projects</small>
-                    <strong class="text-info">@Model.ControlAssessments.Count(ca => ca.ProjectNeeded)</strong>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <p class="mb-3">Our weighted compliance scoring system provides a nuanced view of organizational compliance maturity:</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Weighted Scoring Values:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><span class="badge bg-success me-2">100%</span> Fully Compliant</li>
+                                        <li><span class="badge bg-info me-2">80%</span> Majorly Compliant</li>
+                                        <li><span class="badge bg-warning me-2">50%</span> Partially Compliant</li>
+                                        <li><span class="badge bg-danger me-2">0%</span> Non-Compliant</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Current Score Calculation:</h6>
+                                    <div class="small font-monospace bg-light p-3 rounded">
+                                        <div>(@fullyCompliant × 100) + (@majorlyCompliant × 80) + (@partiallyCompliant × 50) + (@nonCompliant × 0)</div>
+                                        <div>= @weightedScore points out of @maxPossibleScore possible</div>
+                                        <div>= <strong>@weightedCompliancePercentage%</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Grade Scale:</h6>
+                            <div class="progress mb-2" style="height: 8px;">
+                                <div class="progress-bar bg-@(weightedCompliancePercentage >= 80 ? "success" : weightedCompliancePercentage >= 60 ? "warning" : "danger")" 
+                                     style="width: @weightedCompliancePercentage%;"></div>
+                            </div>
+                            <small class="text-muted">
+                                A: 90-100% | B: 80-89% | C: 70-79% | D: 60-69% | F: <60%
+                            </small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -216,25 +384,46 @@
                                                 </div>
                                             </div>
                                             <div class="col-lg-3 col-md-3 col-sm-10 mb-1 mb-md-0 ps-2">
-                                                <span class="badge bg-@(ca.Status switch
-                                                {
-                                                    CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "success",
-                                                    CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "info",
-                                                    CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "warning",
-                                                    CyberRiskApp.Models.ComplianceStatus.NonCompliant => "danger",
-                                                    CyberRiskApp.Models.ComplianceStatus.NotApplicable => "secondary",
-                                                    _ => "secondary"
-                                                }) text-wrap">
-                                                    @(ca.Status switch
+                                                @{
+                                                    var controlScore = ca.Status switch
                                                     {
-                                                        CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "Fully Compliant",
-                                                        CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "Majorly Compliant",
-                                                        CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "Partially Compliant",
-                                                        CyberRiskApp.Models.ComplianceStatus.NonCompliant => "Non-Compliant",
-                                                        CyberRiskApp.Models.ComplianceStatus.NotApplicable => "N/A",
-                                                        _ => "Unknown"
-                                                    })
-                                                </span>
+                                                        CyberRiskApp.Models.ComplianceStatus.FullyCompliant => 100,
+                                                        CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => 80,
+                                                        CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => 50,
+                                                        CyberRiskApp.Models.ComplianceStatus.NonCompliant => 0,
+                                                        CyberRiskApp.Models.ComplianceStatus.NotApplicable => -1,
+                                                        _ => 0
+                                                    };
+                                                    var contributionPercentage = totalControls > 0 && controlScore >= 0 ? Math.Round((decimal)controlScore / totalControls, 2) : 0;
+                                                }
+                                                <div class="d-flex flex-column align-items-start">
+                                                    <span class="badge bg-@(ca.Status switch
+                                                    {
+                                                        CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "success",
+                                                        CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "info",
+                                                        CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "warning",
+                                                        CyberRiskApp.Models.ComplianceStatus.NonCompliant => "danger",
+                                                        CyberRiskApp.Models.ComplianceStatus.NotApplicable => "secondary",
+                                                        _ => "secondary"
+                                                    }) text-wrap mb-1">
+                                                        @(ca.Status switch
+                                                        {
+                                                            CyberRiskApp.Models.ComplianceStatus.FullyCompliant => "Fully Compliant",
+                                                            CyberRiskApp.Models.ComplianceStatus.MajorlyCompliant => "Majorly Compliant",
+                                                            CyberRiskApp.Models.ComplianceStatus.PartiallyCompliant => "Partially Compliant",
+                                                            CyberRiskApp.Models.ComplianceStatus.NonCompliant => "Non-Compliant",
+                                                            CyberRiskApp.Models.ComplianceStatus.NotApplicable => "N/A",
+                                                            _ => "Unknown"
+                                                        })
+                                                    </span>
+                                                    @if (controlScore >= 0)
+                                                    {
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calculator me-1"></i>@controlScore pts
+                                                            <span class="text-primary">(@contributionPercentage% of total)</span>
+                                                        </small>
+                                                    }
+                                                </div>
                                             </div>
                                             <div class="col-lg-1 col-md-1 col-sm-2 text-end">
                                                 <i class="fas fa-chevron-down card-toggle-icon transition-all" id="toggle-icon-@ca.Id"></i>
@@ -493,6 +682,22 @@
             .control-header .col-lg-5 {
                 margin-bottom: 0.5rem;
             }
+        }
+
+        /* Compliance breakdown styling */
+        .compliance-color-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        
+        .compliance-breakdown .py-2 {
+            border-bottom-color: rgba(0,0,0,0.1) !important;
+        }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         }
     </style>
     <script>
@@ -828,7 +1033,61 @@
                     e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
                 }
             });
+
+            // Initialize compliance distribution chart
+            initializeComplianceChart();
         });
+
+        function initializeComplianceChart() {
+            const ctx = document.getElementById('complianceDistributionChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Fully Compliant', 'Majorly Compliant', 'Partially Compliant', 'Non-Compliant'],
+                        datasets: [{
+                            data: [@fullyCompliant, @majorlyCompliant, @partiallyCompliant, @nonCompliant],
+                            backgroundColor: [
+                                '#28a745', // Success green
+                                '#17a2b8', // Info blue
+                                '#ffc107', // Warning yellow
+                                '#dc3545'  // Danger red
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff',
+                            hoverBorderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const total = @totalControls;
+                                        const value = context.parsed;
+                                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                        return context.label + ': ' + value + ' (' + percentage + '%)';
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '60%'
+                    }
+                });
+            }
+        }
     </script>
 }
 

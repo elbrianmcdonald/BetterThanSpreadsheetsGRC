@@ -273,6 +273,49 @@
         </div>
     </div>
 
+    <!-- Enhanced SLA Status Breakdown -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>SLA Status Overview
+                        <small class="ms-2 opacity-75">Real-time tracking of service level agreements</small>
+                    </h6>
+                </div>
+                <div class="card-body py-3">
+                    <div class="row g-2" id="slaStatusBreakdown">
+                        <!-- SLA Status widgets will be loaded here via JavaScript -->
+                        <div class="col text-center">
+                            <div class="d-flex align-items-center justify-content-center">
+                                <div class="spinner-border spinner-border-sm text-info me-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <small class="text-muted">Loading SLA status...</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-danger" style="width: 0%" id="slaOverdueBar"></div>
+                                <div class="progress-bar bg-warning" style="width: 0%" id="slaDueSoonBar"></div>
+                                <div class="progress-bar bg-info" style="width: 0%" id="slaApproachingBar"></div>
+                                <div class="progress-bar bg-success" style="width: 0%" id="slaOnTrackBar"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="text-danger">Overdue</small>
+                                <small class="text-warning">Due Soon</small>
+                                <small class="text-info">Approaching</small>
+                                <small class="text-success">On Track</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Active Filter Status -->
     @{
         var hasActiveFilter = !string.IsNullOrEmpty(ViewBag.CurrentFilter as string) || 
@@ -366,7 +409,8 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <div class="d-flex align-items-end">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex">
                             <button type="submit" class="btn btn-primary me-2">
                                 <i class="fas fa-search me-1"></i>Filter
                             </button>
@@ -397,7 +441,8 @@
                                 <th>Priority</th>
                                 <th>Description</th>
                                 <th>Source</th>
-                                <th>Due Date</th>
+                                <th>SLA Status</th>
+                                <th>Aging</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -457,16 +502,30 @@
                                         }
                                     </td>
                                     <td>
+                                        <!-- SLA Status with visual indicators -->
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-1">@entry.GetSLAIcon()</span>
+                                            <span class="@entry.GetSLAStatusBadgeClass()">@entry.GetSLAStatus()</span>
+                                            @if (entry.RequiresEscalation())
+                                            {
+                                                <span class="ms-2 text-danger" title="@entry.GetEscalationReason()">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </span>
+                                            }
+                                        </div>
                                         @if (entry.DueDate.HasValue)
                                         {
-                                            <span class="@(entry.IsOverdue() ? "text-danger fw-bold" : "")">
-                                                @entry.DueDate.Value.ToString("MMM dd, yyyy")
+                                            <small class="text-muted d-block">Due: @entry.DueDate.Value.ToString("MMM dd")</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <!-- Aging Information -->
+                                        <div class="text-center">
+                                            <span class="@(entry.GetDaysOverdue() > 0 ? "text-danger fw-bold" : (entry.GetDaysOld() > 7 ? "text-warning" : "text-muted"))">
+                                                @entry.GetAgingDisplayText()
                                             </span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">No due date</span>
-                                        }
+                                            <small class="text-muted d-block">(@entry.GetDaysOld() days old)</small>
+                                        </div>
                                     </td>
                                     <td>
                                         <span class="badge bg-@(entry.Status switch 
@@ -812,16 +871,16 @@
                                                     <i class="fas fa-user-tag me-1"></i>Assigned: @GetUserDisplayName(entry.GetCurrentAssignee())
                                                 </span>
                                             }
-                                            @if (entry.DueDate.HasValue)
-                                            {
-                                                <span class="@(entry.IsOverdue() ? "text-danger fw-bold" : "")">
-                                                    <i class="fas fa-clock me-1"></i>Due: @entry.DueDate.Value.ToString("MMM dd")
-                                                    @if (entry.IsOverdue())
-                                                    {
-                                                        <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
-                                                    }
-                                                </span>
-                                            }
+                                            <!-- SLA Status Information -->
+                                            <span class="d-flex align-items-center">
+                                                <span class="me-1">@entry.GetSLAIcon()</span>
+                                                <span class="@entry.GetSLAStatusBadgeClass() me-2">@entry.GetSLAStatus()</span>
+                                                <small class="text-muted">@entry.GetAgingDisplayText()</small>
+                                                @if (entry.RequiresEscalation())
+                                                {
+                                                    <i class="fas fa-exclamation-triangle ms-1 text-danger" title="@entry.GetEscalationReason()"></i>
+                                                }
+                                            </span>
                                         </small>
                                     </div>
                                 </div>
@@ -1536,6 +1595,76 @@
 
 @section Scripts {
     <script>
+        // Load SLA Status Breakdown on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSLAStatusBreakdown();
+        });
+
+        function loadSLAStatusBreakdown() {
+            fetch('/RiskBacklog/GetSLAStatusBreakdown')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateSLAStatusDisplay(data.breakdown);
+                    } else {
+                        console.error('Failed to load SLA status breakdown');
+                        document.getElementById('slaStatusBreakdown').innerHTML = 
+                            '<div class="col text-center"><small class="text-muted">Failed to load SLA status</small></div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading SLA status breakdown:', error);
+                    document.getElementById('slaStatusBreakdown').innerHTML = 
+                        '<div class="col text-center"><small class="text-muted">Error loading SLA status</small></div>';
+                });
+        }
+
+        function updateSLAStatusDisplay(breakdown) {
+            const total = Object.values(breakdown).reduce((sum, count) => sum + count, 0);
+            
+            // Build the status cards HTML
+            let html = '';
+            const statusConfig = [
+                { key: 'Overdue', icon: '🔴', class: 'text-danger', bgClass: 'bg-danger' },
+                { key: 'Due Soon', icon: '🟠', class: 'text-warning', bgClass: 'bg-warning' },
+                { key: 'Approaching', icon: '🟡', class: 'text-info', bgClass: 'bg-info' },
+                { key: 'On Track', icon: '🟢', class: 'text-success', bgClass: 'bg-success' },
+                { key: 'No SLA', icon: '⚪', class: 'text-muted', bgClass: 'bg-secondary' }
+            ];
+
+            statusConfig.forEach(config => {
+                const count = breakdown[config.key] || 0;
+                const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+                
+                html += `
+                    <div class="col">
+                        <div class="text-center">
+                            <div class="h4 mb-1 ${config.class}">
+                                ${config.icon} ${count}
+                            </div>
+                            <small class="text-muted">${config.key}</small>
+                            <div class="small text-muted">${percentage}%</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('slaStatusBreakdown').innerHTML = html;
+
+            // Update progress bars
+            if (total > 0) {
+                const overduePercent = Math.round((breakdown['Overdue'] || 0) / total * 100);
+                const dueSoonPercent = Math.round((breakdown['Due Soon'] || 0) / total * 100);
+                const approachingPercent = Math.round((breakdown['Approaching'] || 0) / total * 100);
+                const onTrackPercent = Math.round((breakdown['On Track'] || 0) / total * 100);
+
+                document.getElementById('slaOverdueBar').style.width = overduePercent + '%';
+                document.getElementById('slaDueSoonBar').style.width = dueSoonPercent + '%';
+                document.getElementById('slaApproachingBar').style.width = approachingPercent + '%';
+                document.getElementById('slaOnTrackBar').style.width = onTrackPercent + '%';
+            }
+        }
+
         // Select all checkbox functionality
         document.getElementById('selectAllUnassigned')?.addEventListener('change', function() {
             const checkboxes = document.querySelectorAll('.entry-checkbox');

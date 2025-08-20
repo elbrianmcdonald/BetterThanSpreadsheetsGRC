@@ -1,1269 +1,697 @@
-﻿@{
+@model CyberRiskApp.ViewModels.DashboardViewModel
+@{
     ViewData["Title"] = "CISO Executive Dashboard";
 }
 
-<!-- Include Chart.js for graphs -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-
+<!-- Dashboard CSS -->
 <style>
-    /* Professional Executive Dashboard Styling - Business Conservative */
-    :root {
-        --primary-color: #2c3e50;
-        --secondary-color: #34495e;
-        --accent-color: #3498db;
-        --success-color: #27ae60;
-        --warning-color: #f39c12;
-        --danger-color: #e74c3c;
-        --info-color: #8e9aac;
-        --light-gray: #ecf0f1;
-        --medium-gray: #bdc3c7;
-        --dark-gray: #7f8c8d;
-        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        --card-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
-        --border-radius-card: 12px;
-        --border-radius-small: 6px;
-    }
-
-    body {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .executive-dashboard {
-        background: transparent;
-        min-height: 100vh;
-    }
-
-    .executive-card {
-        border: none;
-        box-shadow: var(--card-shadow);
-        border-radius: var(--border-radius-card);
+    .dashboard-card-hover {
         transition: all 0.3s ease;
-        background: var(--primary-color);
-        color: white;
-        position: relative;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        text-decoration: none !important;
+        display: block;
     }
-
-    .executive-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.05);
-        opacity: 0;
-        transition: opacity 0.3s ease;
+    
+    .dashboard-card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        text-decoration: none !important;
     }
-
-    .executive-card:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--card-shadow-hover);
-    }
-
-    .executive-card:hover::before {
-        opacity: 1;
-    }
-
-    .metric-critical {
-        background: var(--danger-color);
-        background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
-    }
-
-    .metric-high {
-        background: var(--warning-color);
-        background: linear-gradient(135deg, #d68910 0%, #f39c12 100%);
-    }
-
-    .metric-medium {
-        background: var(--info-color);
-        background: linear-gradient(135deg, #7d8ca3 0%, #8e9aac 100%);
-    }
-
-    .metric-warning {
-        background: var(--warning-color);
-        background: linear-gradient(135deg, #d68910 0%, #f39c12 100%);
-    }
-
-    .metric-good {
-        background: var(--accent-color);
-        background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
-    }
-
-    .metric-success {
-        background: var(--success-color);
-        background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
-    }
-
-    .chart-executive {
-        background: #ffffff;
-        border-radius: var(--border-radius-card);
-        padding: 2rem;
-        box-shadow: var(--card-shadow);
-        border: 1px solid var(--light-gray);
+    
+    .dashboard-card-hover .card {
         transition: all 0.3s ease;
     }
-
-    .chart-executive:hover {
-        box-shadow: var(--card-shadow-hover);
-        transform: translateY(-2px);
+    
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
     }
-
-    .chart-executive h5 {
-        color: var(--primary-color);
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        font-size: 1.125rem;
-        display: flex;
-        align-items: center;
-        border-bottom: 2px solid var(--light-gray);
-        padding-bottom: 0.75rem;
+    
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
     }
-
-    .chart-executive h5 i {
-        margin-right: 0.75rem;
-        font-size: 1.25rem;
-        color: var(--accent-color);
+    
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
     }
-
-    .chart-container {
-        position: relative;
-        height: 350px !important;
-        width: 100%;
-        overflow: hidden;
-        border-radius: var(--border-radius-small);
+    
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
     }
-
-    .chart-container canvas {
-        position: absolute !important;
-        top: 0;
-        left: 0;
-        width: 100% !important;
-        height: 100% !important;
-        max-height: 350px !important;
+    
+    .border-left-danger {
+        border-left: 0.25rem solid #e74a3b !important;
     }
-
-    .kpi-container {
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        height: 100%;
-        padding: 1.5rem;
+    
+    .border-left-dark {
+        border-left: 0.25rem solid #5a5c69 !important;
     }
-
-    .kpi-icon {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-        opacity: 0.9;
+    
+    .text-xs {
+        font-size: 0.7rem;
     }
-
-    .kpi-number {
-        font-size: 2.75rem;
-        font-weight: 700;
-        line-height: 1;
-        margin: 0.5rem 0;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .kpi-label {
-        font-size: 0.95rem;
-        margin: 0;
-        opacity: 0.9;
-        font-weight: 500;
-        line-height: 1.3;
-    }
-
-    .dashboard-header {
-        background: #ffffff;
-        border-radius: var(--border-radius-card);
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: var(--card-shadow);
-        border: 1px solid var(--light-gray);
-    }
-
-    .dashboard-title {
-        color: var(--primary-color);
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        font-size: 2.5rem;
-    }
-
-    .dashboard-subtitle {
-        color: var(--dark-gray);
-        font-weight: 400;
-        margin-bottom: 0;
-        font-size: 1.125rem;
-    }
-
-    .status-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        border-radius: 25px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        background: var(--light-gray);
-        color: var(--primary-color);
-        border: 1px solid var(--medium-gray);
-    }
-
-    .status-badge i {
-        margin-right: 0.5rem;
-        color: var(--accent-color);
-    }
-
-    .refresh-button {
-        background: var(--accent-color);
-        border: none;
-        border-radius: 25px;
-        padding: 0.75rem 1.5rem;
-        color: white;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 10px rgba(52, 152, 219, 0.3);
-    }
-
-    .refresh-button:hover {
-        background: var(--primary-color);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(44, 62, 80, 0.3);
-        color: white;
-    }
-
-    .table-modern {
-        background: white;
-        border-radius: var(--border-radius-small);
-        overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        border: 1px solid var(--light-gray);
-    }
-
-    .table-modern thead th {
-        background: var(--primary-color);
-        color: white;
-        border: none;
-        font-weight: 600;
-        padding: 1rem;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .table-modern tbody td {
-        padding: 1rem;
-        border: none;
-        border-bottom: 1px solid var(--light-gray);
-        vertical-align: middle;
-    }
-
-    .table-modern tbody tr:hover {
-        background: rgba(236, 240, 241, 0.5);
-    }
-
-    .badge-modern {
-        padding: 0.5rem 1rem;
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    /* New Dashboard Components */
-    .metric-info {
-        background: var(--info-color);
-        background: linear-gradient(135deg, #7d8ca3 0%, #8e9aac 100%);
-    }
-
-    .metric-mini {
-        text-align: center;
-        padding: 1rem;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .metric-mini-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        margin-bottom: 0.5rem;
-    }
-
-    .metric-mini-label {
-        font-size: 0.75rem;
-        color: var(--dark-gray);
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .threat-category-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        background: var(--light-gray);
-        border-radius: 8px;
-        margin-bottom: 0.75rem;
-        border-left: 4px solid var(--accent-color);
-    }
-
-    .threat-category-name {
-        font-weight: 600;
-        color: var(--primary-color);
-    }
-
-    .threat-category-count {
-        background: var(--accent-color);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 15px;
-        font-size: 0.875rem;
-        font-weight: 600;
-    }
-
-    .compliance-framework-item {
-        padding: 1rem;
-        background: var(--light-gray);
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        border-left: 4px solid;
-    }
-
-    .compliance-framework-item.high-compliance {
-        border-left-color: var(--success-color);
-    }
-
-    .compliance-framework-item.medium-compliance {
-        border-left-color: var(--warning-color);
-    }
-
-    .compliance-framework-item.low-compliance {
-        border-left-color: var(--danger-color);
-    }
-
-    .compliance-rate {
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-
-    .compliance-framework-name {
-        font-size: 0.875rem;
-        color: var(--dark-gray);
-        margin-bottom: 0.5rem;
-    }
-
-    .compliance-gap-count {
-        font-size: 0.75rem;
-        color: var(--danger-color);
-    }
-
-    .investment-priority-item {
-        display: flex;
-        justify-content: between;
-        align-items: center;
-        padding: 1rem;
-        background: var(--light-gray);
-        border-radius: 8px;
-        margin-bottom: 0.75rem;
-        border-left: 4px solid;
-    }
-
-    .investment-priority-item.high-priority {
-        border-left-color: var(--danger-color);
-    }
-
-    .investment-priority-item.medium-priority {
-        border-left-color: var(--warning-color);
-    }
-
-    .investment-priority-item.low-priority {
-        border-left-color: var(--success-color);
-    }
-
-    .maturity-domain-item {
-        padding: 0.75rem;
-        background: var(--light-gray);
-        border-radius: 6px;
-        margin-bottom: 0.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .maturity-score {
-        font-weight: 600;
-        color: var(--primary-color);
-    }
-
-    .maturity-progress {
-        width: 100%;
-        height: 8px;
-        background: rgba(0,0,0,0.1);
-        border-radius: 4px;
-        margin: 0.5rem 0;
-        overflow: hidden;
-    }
-
-    .maturity-progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, var(--danger-color) 0%, var(--warning-color) 50%, var(--success-color) 100%);
-        transition: width 0.3s ease;
-    }
-
-    .no-data-message {
-        text-align: center;
-        color: #95a5a6;
-        font-style: italic;
-        padding: 3rem 2rem;
-    }
-
-    .no-data-message i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.5;
-    }
-
-    .assessment-selector {
-        background: #ffffff;
-        border-radius: var(--border-radius-card);
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: var(--card-shadow);
-        border: 1px solid var(--light-gray);
-    }
-
-    .form-select-modern {
-        border: 2px solid var(--medium-gray);
-        border-radius: var(--border-radius-small);
-        padding: 0.75rem 1rem;
-        transition: all 0.3s ease;
-        background: white;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    }
-
-    .form-select-modern:focus {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
-    }
-
-    .risk-appetite-controls {
-        background: var(--light-gray);
-        border-radius: var(--border-radius-small);
-        padding: 1rem;
-        margin-top: 1rem;
-        border: 1px solid var(--medium-gray);
-    }
-
-    .config-button {
-        background: var(--light-gray);
-        border: 1px solid var(--medium-gray);
-        border-radius: 25px;
-        padding: 0.5rem 1rem;
-        color: var(--primary-color);
-        font-size: 0.875rem;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        font-weight: 500;
-    }
-
-    .config-button:hover {
-        background: var(--accent-color);
-        color: white;
-        text-decoration: none;
-        transform: translateY(-1px);
-        border-color: var(--accent-color);
-    }
-
-    /* Responsive Design */
-    @@media (max-width: 768px) {
-        .dashboard-title {
-            font-size: 1.75rem;
-        }
-        
-        .kpi-number {
-            font-size: 2rem;
-        }
-        
-        .chart-container {
-            height: 250px !important;
-        }
-        
-        .chart-executive {
-            padding: 1.5rem;
-        }
-        
-        .dashboard-header {
-            padding: 1.5rem;
-        }
-    }
-
-    @@media (max-width: 576px) {
-        .kpi-container {
-            padding: 1rem;
-        }
-        
-        .kpi-number {
-            font-size: 1.75rem;
-        }
-        
-        .kpi-label {
-            font-size: 0.875rem;
-        }
+    
+    .shadow {
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
     }
 </style>
 
-<div class="executive-dashboard">
-<div class="container-fluid py-4">
-    <!-- Executive Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="dashboard-header">
-                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                    <div class="mb-3 mb-lg-0">
-                        <h1 class="dashboard-title">
-                            <i class="fas fa-shield-alt me-3" style="color: #3498db;"></i>CISO Executive Dashboard
-                        </h1>
-                        <p class="dashboard-subtitle">Enterprise Security Risk Posture & Key Performance Indicators</p>
-                    </div>
-                    <div class="text-end">
-                        <div class="status-badge mb-3">
-                            <i class="fas fa-clock"></i>Last Updated: <span id="lastUpdated">Loading...</span>
-                        </div>
-                        <div>
-                            <button class="refresh-button" id="refreshButton">
-                                <i class="fas fa-sync-alt me-2"></i>Refresh Data
-                            </button>
-                            @if (User.IsInRole("Admin"))
-                            {
-                                <button class="btn btn-outline-info ms-2" id="checkDatabaseButton" style="border-radius: 25px;">
-                                    <i class="fas fa-database me-2"></i>Check Database
-                                </button>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
+<div class="container-fluid">
+
+    @if (!string.IsNullOrEmpty(ViewBag.Error))
+    {
+        <div class="alert alert-danger">
+            @ViewBag.Error
+        </div>
+    }
+
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">CISO Executive Dashboard</h1>
+        <div class="d-none d-sm-inline-block">
+            <small class="text-muted">@ViewBag.CurrentUserInfo</small>
         </div>
     </div>
 
-
-    <!-- Executive Summary KPIs -->
-    <div class="row mb-5">
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="executive-card metric-critical h-100">
-                <div class="kpi-container">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <i class="fas fa-exclamation-triangle kpi-icon"></i>
-                            <div class="kpi-number" id="totalCriticalHighFindings">--</div>
-                            <div class="kpi-label">Critical & High Findings</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="executive-card metric-warning h-100">
-                <div class="kpi-container">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <i class="fas fa-crosshairs kpi-icon"></i>
-                            <div class="kpi-number" id="risksAboveAppetite">--</div>
-                            <div class="kpi-label">Above Risk Appetite</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="executive-card metric-info h-100">
-                <div class="kpi-container">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <i class="fas fa-chart-line kpi-icon"></i>
-                            <div class="kpi-number" id="riskVelocity">--</div>
-                            <div class="kpi-label">Risk Velocity (30d)</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-4">
-            <div class="executive-card metric-success h-100">
-                <div class="kpi-container">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <i class="fas fa-shield-check kpi-icon"></i>
-                            <div class="kpi-number" id="overallComplianceRate">--</div>
-                            <div class="kpi-label">Compliance Rate</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Strategic Metrics Row -->
-    <div class="row mb-5">
-        <div class="col-lg-6 mb-4">
-            <div class="executive-card metric-good h-100">
-                <div class="kpi-container">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <i class="fas fa-bullseye kpi-icon"></i>
-                            <div class="kpi-number" id="maturityScore">--</div>
-                            <div class="kpi-label">Security Maturity Score</div>
-                            <small class="text-muted mt-1" id="maturityLevel">--</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6 mb-4">
-            <div class="executive-card metric-info h-100">
-                <div class="kpi-container">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <i class="fas fa-clock kpi-icon"></i>
-                            <div class="kpi-number" id="avgResolutionTime">--</div>
-                            <div class="kpi-label">Avg Resolution Time</div>
-                            <small class="text-muted mt-1">days</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Strategic Dashboard Sections -->
-    
-    <!-- Charts Row -->
-    <div class="row mb-5">
-        <!-- Risk Distribution Chart -->
-        <div class="col-lg-6 mb-4">
-            <div class="chart-executive">
-                <h5>
-                    <i class="fas fa-chart-pie"></i>Risk Distribution by Level
-                </h5>
-                <div class="chart-container">
-                    <canvas id="riskDistributionChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Security Maturity Assessment -->
-        <div class="col-lg-6 mb-4">
-            <div class="chart-executive">
-                <h5>
-                    <i class="fas fa-bullseye"></i>Security Maturity Assessment
-                </h5>
-                <div class="maturity-overview" id="maturityOverview">
-                    <div class="no-data-message">
-                        <i class="fas fa-bullseye"></i>
-                        Loading maturity data...
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Business Unit Analysis & Compliance -->
-    <div class="row mb-5">
-        <!-- Business Unit Risk Analysis -->
-        <div class="col-lg-8 mb-4">
-            <div class="chart-executive h-100">
-                <h5>
-                    <i class="fas fa-building"></i>Business Unit Risk Analysis
-                </h5>
-                <div class="table-responsive">
-                    <table class="table table-modern">
-                        <thead>
-                            <tr>
-                                <th>Business Unit</th>
-                                <th class="text-center">Critical</th>
-                                <th class="text-center">High</th>
-                                <th class="text-center">Medium</th>
-                                <th class="text-center">Low</th>
-                            </tr>
-                        </thead>
-                        <tbody id="businessUnitAnalysis">
-                            <tr>
-                                <td colspan="5" class="no-data-message">
-                                    <i class="fas fa-building"></i>
-                                    Loading business unit analysis...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Compliance Framework Status -->
-        <div class="col-lg-4 mb-4">
-            <div class="chart-executive h-100">
-                <h5>
-                    <i class="fas fa-clipboard-check"></i>Compliance Frameworks
-                </h5>
-                <div class="compliance-frameworks" id="complianceFrameworks">
-                    <div class="no-data-message">
-                        <i class="fas fa-clipboard-check"></i>
-                        Loading compliance data...
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Financial Risks and Assets Analysis -->
-    <div class="row mb-5">
-        <div class="col-lg-6 mb-4">
-            <div class="chart-executive h-100">
-                <h5>
-                    <i class="fas fa-money-bill-wave"></i>Top Financial Risks
-                </h5>
-                <div class="table-responsive">
-                    <table class="table table-modern">
-                        <thead>
-                            <tr>
-                                <th>Risk Description</th>
-                                <th class="text-end">Risk Score</th>
-                                <th class="text-center">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="topFinancialRisks">
-                            <tr>
-                                <td colspan="3" class="no-data-message">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                    Loading financial risk data...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top Assets with High Risks -->
-        <div class="col-lg-6 mb-4">
-            <div class="chart-executive h-100">
-                <h5>
-                    <i class="fas fa-server"></i>Top Assets - High Risk
-                </h5>
-                <div class="table-responsive">
-                    <table class="table table-modern">
-                        <thead>
-                            <tr>
-                                <th>Asset</th>
-                                <th class="text-center">Above Appetite</th>
-                                <th class="text-center">Total Risks</th>
-                                <th class="text-center">Risk Profile</th>
-                            </tr>
-                        </thead>
-                        <tbody id="topAssetsWithHighRisks">
-                            <tr>
-                                <td colspan="4" class="no-data-message">
-                                    <i class="fas fa-server"></i>
-                                    Loading high-risk assets...
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-</div>
-
-@section Scripts {
-    <script>
-        // CISO Executive Dashboard JavaScript
-        // FIXED: Added comprehensive null checks to prevent null reference exceptions
-
-        let riskDistributionChart = null;
-
-        // Dashboard initialization
-        document.addEventListener('DOMContentLoaded', function () {
-            console.log('🚀 CISO Dashboard initializing...');
-            loadDashboardData();
-
-            // Set up refresh button - with null check
-            const refreshButton = document.getElementById('refreshButton');
-            if (refreshButton) {
-                refreshButton.addEventListener('click', function () {
-                    console.log('🔄 Manual refresh triggered');
-                    loadDashboardData();
-                });
-            }
-
-
-            // Set up check database button - with null check
-            const checkDatabaseButton = document.getElementById('checkDatabaseButton');
-            if (checkDatabaseButton) {
-                checkDatabaseButton.addEventListener('click', function () {
-                    console.log('🔄 Checking database status...');
-                    checkDatabaseStatus();
-                });
-            }
-
-
-            // Load available assessments
-            loadAvailableAssessments();
-        });
-
-
-        // Check database status to debug data issues
-        function checkDatabaseStatus() {
-            fetch('/CISOExecutive/GetDatabaseStatus')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('📊 DATABASE STATUS:', data);
-                    
-                    // Show alert with database status
-                    const message = `
-Database Status:
-- Total Risks: ${data.totalRisks || 0}
-- Open Risks: ${data.openRisks || 0}
-- Risks with Score > 0: ${data.risksWithQualitativeScoring || 0}
-- Total Risk Score: ${(data.totalRiskScore || 0).toLocaleString()}
-- Total Findings: ${data.totalFindings || 0}
-- Open Findings: ${data.openFindings || 0}
-- Total Assessments: ${data.totalAssessments || 0}
-- Completed Assessments: ${data.completedAssessments || 0}
-- Qualitative Assessments: ${data.qualitativeAssessments || 0}
-
-Risk Levels: ${JSON.stringify(data.risksByLevel || {})}
-Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
-                    `;
-                    
-                    alert(message);
-                    
-                    // If no data exists, suggest creating sample data
-                    if (!data.totalRisks && !data.totalFindings) {
-                        if (confirm('No data found in database. Would you like to create sample data?')) {
-                            createSampleFAIRAssessments();
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('❌ Error checking database:', error);
-                    alert('Error checking database: ' + error.message);
-                });
-        }
-
-
-
-
-        // Load dashboard data with comprehensive error handling
-        function loadDashboardData() {
-            console.log('🔄 Loading dashboard data...');
-
-            const url = '/CISOExecutive/GetExecutiveDashboardData';
-
-            fetch(url)
-                .then(response => {
-                    console.log('📡 Dashboard API response status:', response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('✅ Dashboard data received:', data);
-
-                    if (data && data.error) {
-                        console.error('❌ Dashboard API returned error:', data.error);
-                        showErrorMessage('Error loading dashboard data: ' + data.error);
-                        return;
-                    }
-
-                    // Update all sections with comprehensive dashboard data
-                    updateLastUpdated();
-                    updateExecutiveSummaryKPIs(data);
-                    updateStrategicMetrics(data);
-                    updateRiskDistributionChart(data);
-                    updateMaturityOverview(data);
-                    updateBusinessUnitAnalysis(data);
-                    updateComplianceFrameworks(data);
-                    updateFinancialRisksTable(data);
-                    updateTopAssetsTable(data);
-
-                    console.log('✅ Dashboard update completed');
-                })
-                .catch(error => {
-                    console.error('❌ Error loading dashboard data:', error);
-                    showErrorMessage('Failed to load dashboard data. Please try again.');
-                });
-        }
-
-        // Show error message to user
-        function showErrorMessage(message) {
-            // Update last updated time to show error
-            const lastUpdatedElement = document.getElementById('lastUpdated');
-            if (lastUpdatedElement) {
-                lastUpdatedElement.textContent = 'Error loading data';
-                lastUpdatedElement.className = 'text-danger';
-            }
-
-            // You could also show a toast notification here if you have that implemented
-            console.error('Showing error to user:', message);
-        }
-
-        // Update last updated timestamp
-        function updateLastUpdated() {
-            const lastUpdatedElement = document.getElementById('lastUpdated');
-            if (lastUpdatedElement) {
-                lastUpdatedElement.textContent = new Date().toLocaleString();
-                lastUpdatedElement.className = ''; // Remove any error styling
-            }
-        }
-
-        // Update Executive Summary KPIs
-        function updateExecutiveSummaryKPIs(data) {
-            console.log('🔄 Updating Executive Summary KPIs with data:', data);
-
-            if (data && data.executiveSummary) {
-                const summary = data.executiveSummary;
-
-                // Update primary KPIs
-                updateElement('totalCriticalHighFindings', summary.totalCriticalHighFindings || 0);
-                updateElement('risksAboveAppetite', summary.risksAboveAppetite || 0);
-                updateElement('riskVelocity', summary.riskVelocity || 0);
-                updateElement('overallComplianceRate', (summary.assessmentCompletionRate || 0) + '%');
-
-                console.log('✅ Updated Executive Summary KPIs');
-            } else {
-                console.log('⚠️ No executive summary data available');
-                setDefaultKPIValues();
-            }
-        }
-
-        // Update Strategic Metrics
-        function updateStrategicMetrics(data) {
-            if (data && data.maturityInsights) {
-                const maturity = data.maturityInsights;
-                updateElement('maturityScore', (maturity.maturityScore || 0) + '%');
-                updateElement('maturityLevel', maturity.overallMaturityLevel || 'Not Assessed');
-            }
-
-            if (data && data.executiveSummary) {
-                updateElement('avgResolutionTime', (data.executiveSummary.avgResolutionTimeDays || 0).toFixed(1));
-            }
-        }
-
-
-        function updateMaturityOverview(data) {
-            const container = document.getElementById('maturityOverview');
-            if (!container) return;
-
-            if (data && data.maturityInsights && data.maturityInsights.domainMaturityBreakdown) {
-                const domains = data.maturityInsights.domainMaturityBreakdown;
-                let html = '';
-                
-                if (domains.length > 0) {
-                    domains.slice(0, 6).forEach(domain => {
-                        const progressWidth = (domain.currentMaturity / 4) * 100;
-                        html += `
-                            <div class="maturity-domain-item">
-                                <div>
-                                    <div style="font-size: 0.875rem; font-weight: 600;">${escapeHtml(domain.domain)}</div>
-                                    <div class="maturity-progress">
-                                        <div class="maturity-progress-fill" style="width: ${progressWidth}%"></div>
-                                    </div>
-                                    <div style="font-size: 0.75rem; color: #7f8c8d;">Current: ${domain.currentMaturity}/4 | Target: ${domain.targetMaturity}/4</div>
+    <!-- Summary Cards Row -->
+    <div class="row">
+        <!-- Open Findings Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="@Url.Action("Index", "Findings", new { status = "open" })" class="text-decoration-none">
+                <div class="card border-left-primary shadow h-100 py-2 dashboard-card-hover">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Open Findings
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.OpenFindings
                                 </div>
                             </div>
-                        `;
-                    });
-                } else {
-                    html = '<div class="no-data-message"><i class="fas fa-bullseye"></i>No maturity assessments completed</div>';
-                }
-                
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = '<div class="no-data-message"><i class="fas fa-bullseye"></i>No maturity data available</div>';
-            }
-        }
-
-        function updateBusinessUnitAnalysis(data) {
-            const tableBody = document.getElementById('businessUnitAnalysis');
-            if (!tableBody) return;
-
-            if (data && data.businessUnitAnalysis && data.businessUnitAnalysis.businessUnits) {
-                const units = data.businessUnitAnalysis.businessUnits;
-                let html = '';
-                
-                units.forEach(unit => {
-                    html += `
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">${escapeHtml(unit.businessUnit)}</div>
-                                <small class="text-muted">${unit.totalRisks} total risks</small>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge badge-modern bg-danger">${unit.criticalCount || 0}</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge badge-modern bg-warning text-dark">${unit.highCount || 0}</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge badge-modern bg-info">${unit.mediumCount || 0}</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge badge-modern bg-secondary">${unit.lowCount || 0}</span>
-                            </td>
-                        </tr>
-                    `;
-                });
-                
-                tableBody.innerHTML = html;
-            } else {
-                tableBody.innerHTML = '<tr><td colspan="5" class="no-data-message"><i class="fas fa-building"></i>No business unit data available</td></tr>';
-            }
-        }
-
-        function updateComplianceFrameworks(data) {
-            const container = document.getElementById('complianceFrameworks');
-            if (!container) return;
-
-            if (data && data.complianceMetrics && data.complianceMetrics.frameworkCompliance) {
-                const frameworks = data.complianceMetrics.frameworkCompliance;
-                let html = '';
-                
-                if (frameworks.length > 0) {
-                    frameworks.forEach(framework => {
-                        const complianceClass = getComplianceClass(framework.complianceRate);
-                        html += `
-                            <div class="compliance-framework-item ${complianceClass}">
-                                <div class="compliance-rate text-${getComplianceColor(framework.complianceRate)}">${framework.complianceRate}%</div>
-                                <div class="compliance-framework-name">${escapeHtml(framework.framework)}</div>
-                                <div class="compliance-gap-count">${framework.gapsCount} gaps identified</div>
+                            <div class="col-auto">
+                                <i class="fas fa-bug fa-2x text-gray-300"></i>
                             </div>
-                        `;
-                    });
-                } else {
-                    html = '<div class="no-data-message"><i class="fas fa-clipboard-check"></i>No compliance frameworks assessed</div>';
-                }
-                
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = '<div class="no-data-message"><i class="fas fa-clipboard-check"></i>No compliance data available</div>';
-            }
-        }
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
 
+        <!-- High Risk Findings Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="@Url.Action("Index", "Findings", new { status = "open", riskRating = "high" })" class="text-decoration-none">
+                <div class="card border-left-danger shadow h-100 py-2 dashboard-card-hover">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                    High Risk Findings
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.HighRiskFindings
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
 
-        // Helper functions for the new dashboard
-        function updateElement(id, value) {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = value;
-            }
-        }
+        <!-- Total Risks Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="@Url.Action("Index", "Risks")" class="text-decoration-none">
+                <div class="card border-left-info shadow h-100 py-2 dashboard-card-hover">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Total Risks
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.TotalRisks
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-shield-alt fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
 
-        function setDefaultKPIValues() {
-            const defaultKPIs = [
-                { id: 'totalCriticalHighFindings', value: 0 },
-                { id: 'risksAboveAppetite', value: 0 },
-                { id: 'riskVelocity', value: 0 },
-                { id: 'overallComplianceRate', value: '0%' }
-            ];
+        <!-- Critical Risk Findings Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="@Url.Action("Index", "Findings", new { status = "open", riskRating = "critical" })" class="text-decoration-none">
+                <div class="card border-left-danger shadow h-100 py-2 dashboard-card-hover" style="border-left: 0.25rem solid #e74c3c !important;">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                    Critical Risk Findings
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.CriticalRiskFindings
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-exclamation-circle fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
 
-            defaultKPIs.forEach(kpi => updateElement(kpi.id, kpi.value));
-        }
+    <!-- Second Row of Cards -->
+    <div class="row">
+        <!-- Pending Requests Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="@Url.Action("Index", "RiskBacklog", new { status = "unassigned" })" class="text-decoration-none">
+                <div class="card border-left-success shadow h-100 py-2 dashboard-card-hover">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Pending Requests
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.PendingRequests
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
 
-        function getTrendIcon(trend) {
-            switch (trend) {
-                case 'increasing': return '<i class="fas fa-arrow-up text-danger"></i>';
-                case 'decreasing': return '<i class="fas fa-arrow-down text-success"></i>';
-                default: return '<i class="fas fa-arrow-right text-info"></i>';
-            }
-        }
+        <!-- Overdue Items Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="@Url.Action("Index", "RiskBacklog", new { filter = "overdue" })" class="text-decoration-none">
+                <div class="card border-left-dark shadow h-100 py-2 dashboard-card-hover">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                                    Overdue Items
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.OverdueItems
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clock fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
 
-        function getComplianceClass(rate) {
-            if (rate >= 80) return 'high-compliance';
-            if (rate >= 60) return 'medium-compliance';
-            return 'low-compliance';
-        }
+        <!-- Critical Risks Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="@Url.Action("Index", "Risks", new { InherentRiskLevel = 4 })" class="text-decoration-none">
+                <div class="card border-left-danger shadow h-100 py-2 dashboard-card-hover" style="border-left: 0.25rem solid #8B0000 !important;">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                    Critical Risks
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.CriticalRisks
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-radiation fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
 
-        function getComplianceColor(rate) {
-            if (rate >= 80) return 'success';
-            if (rate >= 60) return 'warning';
-            return 'danger';
-        }
+        <!-- High Risks Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <a href="@Url.Action("Index", "Risks", new { InherentRiskLevel = 3 })" class="text-decoration-none">
+                <div class="card border-left-warning shadow h-100 py-2 dashboard-card-hover">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    High Risks
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.HighRisks
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-fire fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
 
+    <!-- Third Row - Compliance Cards -->
+    @if (Model.ComplianceBreakdowns?.Any() == true)
+    {
+        <div class="row mb-4">
+            <!-- Average Compliance Card -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Average Compliance
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Math.Round(Model.AverageCompliancePercentage, 1)%
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-chart-pie fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        // Keep the existing business units table function for compatibility
-        function updateBusinessUnitsTable(data) {
-            // This function kept for backward compatibility with existing charts
-            return updateBusinessUnitAnalysis(data);
-        }
+            <!-- Total Frameworks Card -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <a href="@Url.Action("Index", "Governance")" class="text-decoration-none">
+                    <div class="card border-left-info shadow h-100 py-2 dashboard-card-hover">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Active Frameworks
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                        @Model.TotalFrameworks
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-shield-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
 
+            <!-- Fully Compliant Frameworks Card -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Fully Compliant
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @Model.FullyCompliantFrameworks
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        // FIXED: Update financial risks table with null checks
-        function updateFinancialRisksTable(data) {
-            const tableBody = document.getElementById('topFinancialRisks');
-            if (!tableBody) {
-                console.error('❌ Financial risks table not found');
-                return;
-            }
+            <!-- Empty slot for symmetry -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <!-- This space intentionally left empty for balanced layout -->
+            </div>
 
-            if (data && data.topFinancialRisks && Array.isArray(data.topFinancialRisks) && data.topFinancialRisks.length > 0) {
-                let html = '';
-                data.topFinancialRisks.forEach(risk => {
-                    if (risk) {
-                        const riskDescription = risk.riskDescription || 'Unknown Risk';
-                        const asset = risk.asset || 'Unknown Asset';
-                        const riskScore = risk.riskScore || 0;
-                        const status = risk.status || 'Unknown';
+        </div>
 
-                        html += `
-                            <tr>
-                                <td>
-                                    <div class="fw-semibold text-dark">${escapeHtml(riskDescription)}</div>
-                                    <small class="text-muted">${escapeHtml(asset)}</small>
-                                </td>
-                                <td class="text-end">
-                                    <span class="fw-bold" style="color: #27ae60; font-size: 1.1rem;">${riskScore}</span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-modern bg-${getStatusClass(status.toLowerCase())}">${status.toUpperCase()}</span>
-                                </td>
-                            </tr>
-                        `;
+    }
+
+    <!-- Executive Trend Analytics Dashboard -->
+    @if (Model.TrendAnalytics != null)
+    {
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="m-0 font-weight-bold">
+                            <i class="fas fa-chart-line me-2"></i>Executive Trend Analytics
+                        </h6>
+                    </div>
+                    <div class="card-body">
+
+                        <!-- First Row: Findings and Risks Trends -->
+                        <div class="row">
+                            <!-- Findings Trend Chart -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 text-primary">Findings Trend (12 Months)</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="findingsTrendChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Risks Trend Chart -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 text-primary">Risks Trend (12 Months)</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="risksTrendChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Second Row: Risk Distribution and SLA Performance -->
+                        <div class="row">
+                            <!-- Risk Distribution by Severity -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 text-primary">Risk Distribution by Severity</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="riskHeatMapChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SLA Performance Chart -->
+                            <div class="col-lg-6 mb-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="m-0 text-primary">SLA Performance (12 Months)</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="slaTrendChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Third Row: Findings by Domain -->
+                        <div class="row">
+                            <!-- Domain Distribution -->
+                            <div class="col-lg-6 mb-4">
+                                @if (Model.TrendAnalytics.RiskHeatMapData.DomainDistribution.Any())
+                                {
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="m-0 text-primary">Findings by Domain</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="domainDistributionChart" width="400" height="200"></canvas>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6 class="m-0 text-muted">Findings by Domain</h6>
+                                        </div>
+                                        <div class="card-body text-center text-muted py-5">
+                                            <i class="fas fa-sitemap fa-3x mb-3 opacity-25"></i>
+                                            <p>No domain data available</p>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Recent Findings -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Findings</h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.RecentFindings.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Finding #</th>
+                                        <th>Title</th>
+                                        <th>Risk</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var finding in Model.RecentFindings)
+                                    {
+                                        <tr>
+                                            <td>@finding.FindingNumber</td>
+                                            <td>@finding.Title</td>
+                                            <td><span class="badge badge-@GetRiskColor(finding.RiskRating)">@finding.RiskRating</span></td>
+                                            <td>@finding.Status</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     }
-                });
-                tableBody.innerHTML = html;
-                console.log(`✅ Updated financial risks table with ${data.topFinancialRisks.length} risks`);
-            } else {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="3" class="no-data-message">
-                            <i class="fas fa-money-bill-wave fa-2x mb-2 text-muted d-block"></i>
-                            No financial risk data available
-                        </td>
-                    </tr>`;
-                console.log('⚠️ No financial risks data available');
-            }
-        }
+                    else
+                    {
+                        <p class="text-muted">No recent findings</p>
+                    }
+                </div>
+            </div>
+        </div>
 
-        // Update top assets with high risks table
-        function updateTopAssetsTable(data) {
-            const tableBody = document.getElementById('topAssetsWithHighRisks');
-            if (!tableBody) {
-                console.error('❌ Top assets table not found');
-                return;
-            }
+        <!-- Pending Assessment Requests -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Pending Assessment Requests</h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.PendingAssessments.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Scope</th>
+                                        <th>Priority</th>
+                                        <th>Submitted</th>
+                                        <th>Days Pending</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var request in Model.PendingAssessments)
+                                    {
+                                        <tr>
+                                            <td>@request.Scope</td>
+                                            <td><span class="badge badge-@GetPriorityColor(request.Priority)">@request.Priority</span></td>
+                                            <td>@request.RequestDate.ToString("MMM dd")</td>
+                                            <td>@((DateTime.UtcNow - request.RequestDate).Days)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No pending assessment requests</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-            if (data && data.topAssetsWithHighRisks && Array.isArray(data.topAssetsWithHighRisks) && data.topAssetsWithHighRisks.length > 0) {
-                let html = '';
-                data.topAssetsWithHighRisks.forEach(asset => {
-                    if (asset) {
-                        const assetName = asset.asset || 'Unknown Asset';
-                        const risksAboveAppetite = asset.risksAboveAppetite || 0;
-                        const totalRisks = asset.totalRisks || 0;
-                        const criticalCount = asset.criticalCount || 0;
-                        const highCount = asset.highCount || 0;
-                        const businessUnit = asset.businessUnit || 'Unknown';
-                        const totalRiskScore = asset.totalRiskScore || 0;
+<!-- Include Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
-                        // Create risk profile indicator
-                        let profileClass = 'success';
-                        let profileText = 'Low';
-                        if (risksAboveAppetite >= 3 || criticalCount >= 2) {
-                            profileClass = 'danger';
-                            profileText = 'Critical';
-                        } else if (risksAboveAppetite >= 2 || criticalCount >= 1 || highCount >= 3) {
-                            profileClass = 'warning';
-                            profileText = 'High';
-                        } else if (risksAboveAppetite >= 1 || highCount >= 1) {
-                            profileClass = 'info';
-                            profileText = 'Medium';
+<script>
+    @if (Model.TrendAnalytics != null)
+    {
+        <text>
+        // Initialize trend charts when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTrendCharts();
+        });
+
+        function initializeTrendCharts() {
+            // Findings Trend Chart
+            const findingsCtx = document.getElementById('findingsTrendChart');
+            if (findingsCtx) {
+                new Chart(findingsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [@Html.Raw(Model.TrendAnalytics.FindingsTrendLabels)],
+                        datasets: [{
+                            label: 'Findings',
+                            data: [@Html.Raw(Model.TrendAnalytics.FindingsTrendData)],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            }
                         }
-
-                        html += `
-                            <tr>
-                                <td>
-                                    <div class="fw-semibold text-dark">${escapeHtml(assetName)}</div>
-                                    <small class="text-muted">${escapeHtml(businessUnit)} • ${totalRiskScore || 0} risk score</small>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-modern bg-danger">${risksAboveAppetite}</span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-modern bg-secondary">${totalRisks}</span>
-                                    ${criticalCount > 0 ? `<span class="badge badge-modern bg-danger ms-1">${criticalCount}C</span>` : ''}
-                                    ${highCount > 0 ? `<span class="badge badge-modern bg-warning text-dark ms-1">${highCount}H</span>` : ''}
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-modern bg-${profileClass}">${profileText}</span>
-                                </td>
-                            </tr>
-                        `;
                     }
                 });
-                tableBody.innerHTML = html;
-                console.log(`✅ Updated top assets table with ${data.topAssetsWithHighRisks.length} assets`);
-            } else {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="no-data-message">
-                            <i class="fas fa-server fa-2x mb-2 text-muted d-block"></i>
-                            No high-risk assets found
-                        </td>
-                    </tr>`;
-                console.log('⚠️ No top assets data available');
-            }
-        }
-
-        // FIXED: Update risk distribution chart with null checks
-        function updateRiskDistributionChart(data) {
-            const ctx = document.getElementById('riskDistributionChart');
-            if (!ctx) {
-                console.error('❌ Risk distribution chart canvas not found');
-                return;
             }
 
-            // Destroy existing chart if it exists
-            if (riskDistributionChart) {
-                riskDistributionChart.destroy();
-                riskDistributionChart = null;
+            // Risks Trend Chart
+            const risksCtx = document.getElementById('risksTrendChart');
+            if (risksCtx) {
+                new Chart(risksCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [@Html.Raw(Model.TrendAnalytics.RisksTrendLabels)],
+                        datasets: [{
+                            label: 'Risks',
+                            data: [@Html.Raw(Model.TrendAnalytics.RisksTrendData)],
+                            borderColor: '#f39c12',
+                            backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
             }
 
-            // Set default data
-            let chartData = {
-                labels: ['Critical', 'High', 'Medium', 'Low'],
-                datasets: [{
-                    data: [0, 0, 0, 0],
-                    backgroundColor: ['#dc3545', '#fd7e14', '#ffc107', '#6c757d']
-                }]
-            };
-
-            // Use real data if available
-            if (data && data.riskDistribution) {
-                const dist = data.riskDistribution;
-                chartData.datasets[0].data = [
-                    dist.critical || 0,
-                    dist.high || 0,
-                    dist.medium || 0,
-                    dist.low || 0
-                ];
+            // SLA Performance Chart
+            const slaCtx = document.getElementById('slaTrendChart');
+            if (slaCtx) {
+                new Chart(slaCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [@Html.Raw(Model.TrendAnalytics.SLATrendLabels)],
+                        datasets: [{
+                            label: 'SLA Performance %',
+                            data: [@Html.Raw(Model.TrendAnalytics.SLATrendData)],
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
             }
 
-            try {
-                riskDistributionChart = new Chart(ctx, {
+            // Risk Heat Map Chart
+            const riskHeatMapCtx = document.getElementById('riskHeatMapChart');
+            if (riskHeatMapCtx) {
+                new Chart(riskHeatMapCtx, {
                     type: 'doughnut',
-                    data: chartData,
+                    data: {
+                        labels: ['Critical', 'High', 'Medium', 'Low'],
+                        datasets: [{
+                            data: [
+                                @Model.TrendAnalytics.RiskHeatMapData.CriticalFindings,
+                                @Model.TrendAnalytics.RiskHeatMapData.HighFindings,
+                                @Model.TrendAnalytics.RiskHeatMapData.MediumFindings,
+                                @Model.TrendAnalytics.RiskHeatMapData.LowFindings
+                            ],
+                            backgroundColor: [
+                                '#8B0000', // Critical - Dark Red
+                                '#e74c3c', // High - Red
+                                '#f39c12', // Medium - Orange
+                                '#27ae60'  // Low - Green
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
@@ -1274,63 +702,79 @@ Finding Ratings: ${JSON.stringify(data.findingsByRating || {})}
                         }
                     }
                 });
-                console.log('✅ Updated risk distribution chart');
-            } catch (error) {
-                console.error('❌ Error creating risk distribution chart:', error);
+            }
+
+            // Domain Distribution Chart
+            @if (Model.TrendAnalytics.RiskHeatMapData.DomainDistribution.Any())
+            {
+                <text>
+                const domainCtx = document.getElementById('domainDistributionChart');
+                if (domainCtx) {
+                    new Chart(domainCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: [@Html.Raw(Model.TrendAnalytics.RiskHeatMapData.HeatMapLabels)],
+                            datasets: [{
+                                label: 'Findings',
+                                data: [@Html.Raw(Model.TrendAnalytics.RiskHeatMapData.HeatMapData)],
+                                backgroundColor: 'rgba(52, 152, 219, 0.8)',
+                                borderColor: '#3498db',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(0,0,0,0.1)'
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        color: 'rgba(0,0,0,0.1)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                </text>
             }
         }
+        </text>
+    }
+</script>
 
+@functions {
+    private string GetRiskColor(RiskRating rating)
+    {
+        return rating switch
+        {
+            RiskRating.Critical => "danger",
+            RiskRating.High => "warning",
+            RiskRating.Medium => "info",
+            RiskRating.Low => "success",
+            _ => "secondary"
+        };
+    }
 
-        // Utility functions with null checks
-        function formatCurrency(amount) {
-            if (amount === null || amount === undefined || isNaN(amount)) {
-                return '$0';
-            }
-            try {
-                return new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                }).format(amount);
-            } catch (error) {
-                console.error('Error formatting currency:', error);
-                return '$0';
-            }
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function getStatusClass(status) {
-            if (!status) return 'secondary';
-            const statusLower = status.toLowerCase();
-            switch (statusLower) {
-                case 'critical': return 'danger';
-                case 'warning': return 'warning';
-                case 'good': return 'success';
-                case 'excellent': return 'primary';
-                case 'open': return 'danger';
-                case 'closed': return 'success';
-                case 'in progress': return 'warning';
-                default: return 'secondary';
-            }
-        }
-
-        function getRiskBadgeClass(riskRating) {
-            if (!riskRating) return 'secondary';
-            const riskLower = riskRating.toLowerCase();
-            switch (riskLower) {
-                case 'critical': return 'danger';
-                case 'high': return 'warning';
-                case 'medium': return 'info';
-                case 'low': return 'success';
-                default: return 'secondary';
-            }
-        }
-    </script>
+    private string GetPriorityColor(Priority priority)
+    {
+        return priority switch
+        {
+            Priority.Urgent => "danger",
+            Priority.High => "warning",
+            Priority.Medium => "info",
+            Priority.Low => "success",
+            _ => "secondary"
+        };
+    }
 }

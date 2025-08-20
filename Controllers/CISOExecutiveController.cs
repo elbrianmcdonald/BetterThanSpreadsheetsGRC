@@ -1,7 +1,9 @@
 ﻿using CyberRiskApp.Models;
 using CyberRiskApp.Services;
+using CyberRiskApp.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using CyberRiskApp.Authorization;
 
 namespace CyberRiskApp.Controllers
@@ -13,25 +15,98 @@ namespace CyberRiskApp.Controllers
         private readonly IFindingService _findingService;
         private readonly IRiskService _riskService;
         private readonly IGovernanceService _governanceService;
-        private readonly IRiskLevelSettingsService _riskLevelSettingsService;
+        private readonly IRiskMatrixService _riskMatrixService;
         private readonly IRiskAssessmentService _riskAssessmentService;
         private readonly IMaturityService _maturityService;
         private readonly IUserService _userService;
+        private readonly IRequestService _requestService;
+        private readonly UserManager<User> _userManager;
 
-        public CISOExecutiveController(IFindingService findingService, IRiskService riskService, IGovernanceService governanceService, IRiskLevelSettingsService riskLevelSettingsService, IRiskAssessmentService riskAssessmentService, IMaturityService maturityService, IUserService userService)
+        public CISOExecutiveController(IFindingService findingService, IRiskService riskService, IGovernanceService governanceService, IRiskMatrixService riskMatrixService, IRiskAssessmentService riskAssessmentService, IMaturityService maturityService, IUserService userService, IRequestService requestService, UserManager<User> userManager)
         {
             _findingService = findingService;
             _riskService = riskService;
             _governanceService = governanceService;
-            _riskLevelSettingsService = riskLevelSettingsService;
+            _riskMatrixService = riskMatrixService;
             _riskAssessmentService = riskAssessmentService;
             _maturityService = maturityService;
             _userService = userService;
+            _requestService = requestService;
+            _userManager = userManager;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View();
+            try
+            {
+                // Get current user info
+                var currentUser = await _userManager.GetUserAsync(User);
+                if (currentUser != null)
+                {
+                    ViewBag.CurrentUserInfo = $"Logged in as: {currentUser.Email} ({currentUser.Role})";
+                }
+
+                // Get all data for dashboard
+                var allFindings = await _findingService.GetAllFindingsAsync();
+                var allRisks = await _riskService.GetAllRisksAsync();
+                var pendingRequests = await _requestService.GetPendingAssessmentRequestsAsync();
+                
+                // Get compliance metrics
+                var complianceBreakdowns = await _governanceService.GetComplianceBreakdownByFrameworkAsync();
+                var averageCompliance = complianceBreakdowns.Any() ? complianceBreakdowns.Average(c => c.CompliancePercentage) : 0;
+                var fullyCompliantFrameworks = complianceBreakdowns.Count(c => c.CompliancePercentage >= 95);
+                
+                // Get comprehensive trend analysis data for charts
+                var trendAnalytics = await GetDashboardTrendAnalyticsAsync(complianceBreakdowns);
+
+                // Calculate dashboard metrics
+                var filteredFindings = allFindings;
+                var filteredRisks = allRisks;
+
+                // Build view model
+                var model = new DashboardViewModel
+                {
+                    // Basic metrics
+                    OpenFindings = filteredFindings.Count(f => f.Status != FindingStatus.Closed),
+                    HighRiskFindings = filteredFindings.Count(f => f.RiskRating == RiskRating.High && f.Status != FindingStatus.Closed),
+                    CriticalRiskFindings = filteredFindings.Count(f => f.RiskRating == RiskRating.Critical && f.Status != FindingStatus.Closed),
+                    TotalRisks = filteredRisks.Count(),
+                    CriticalRisks = filteredRisks.Count(r => r.RiskLevel == RiskLevel.Critical),
+                    HighRisks = filteredRisks.Count(r => r.RiskLevel == RiskLevel.High),
+                    PendingRequests = pendingRequests.Count(),
+                    OverdueItems = filteredFindings.Count(f => f.IsOverdue),
+                    
+                    // Collections for tables
+                    RecentFindings = filteredFindings
+                        .Where(f => f.Status != FindingStatus.Closed)
+                        .OrderByDescending(f => f.CreatedAt)
+                        .Take(10)
+                        .ToList(),
+                    
+                    PendingAssessments = pendingRequests.Take(10).ToList(),
+                    
+                    // Compliance data
+                    ComplianceBreakdowns = complianceBreakdowns.ToList(),
+                    AverageCompliancePercentage = averageCompliance,
+                    TotalFrameworks = complianceBreakdowns.Count(),
+                    FullyCompliantFrameworks = fullyCompliantFrameworks,
+                    
+                    // Trend analytics
+                    TrendAnalytics = trendAnalytics
+                };
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                // Log error and return empty model
+                var emptyModel = new DashboardViewModel
+                {
+                    TrendAnalytics = new DashboardTrendAnalytics()
+                };
+                ViewBag.Error = $"Error loading dashboard data: {ex.Message}";
+                return View(emptyModel);
+            }
         }
 
         [HttpGet]
@@ -236,7 +311,9 @@ namespace CyberRiskApp.Controllers
         {
             try
             {
-                var appetiteThreshold = await _riskLevelSettingsService.GetRiskAppetiteThresholdAsync();
+                // Get appetite threshold from default risk matrix
+                var defaultMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                var appetiteThreshold = defaultMatrix?.RiskAppetiteThreshold ?? 6.0m;
                 var allRisks = await _riskService.GetAllRisksAsync();
                 var openRisks = allRisks.Where(r => r.Status == RiskStatus.Open).ToList();
 
@@ -249,7 +326,7 @@ namespace CyberRiskApp.Controllers
                     decimal riskScore = GetQualitativeRiskScore(risk);
                     AssessmentType assessmentType = AssessmentType.Qualitative; // Only qualitative supported
                     
-                    if (await _riskLevelSettingsService.IsRiskAboveAppetiteAsync(riskScore, assessmentType))
+                    if (!await _riskMatrixService.IsWithinRiskAppetiteAsync(riskScore))
                     {
                         currentAboveAppetite++;
                     }
@@ -333,7 +410,7 @@ namespace CyberRiskApp.Controllers
                         totalRiskScore += riskScore;
                         AssessmentType assessmentType = AssessmentType.Qualitative;
                         
-                        if (await _riskLevelSettingsService.IsRiskAboveAppetiteAsync(riskScore, assessmentType))
+                        if (!await _riskMatrixService.IsWithinRiskAppetiteAsync(riskScore))
                         {
                             risksAboveAppetite++;
                         }
@@ -1022,5 +1099,203 @@ namespace CyberRiskApp.Controllers
         #endregion
 
         #endregion
+
+        // DASHBOARD TREND ANALYTICS METHODS
+        // ========================================
+
+        private async Task<DashboardTrendAnalytics> GetDashboardTrendAnalyticsAsync(IEnumerable<ComplianceBreakdown> complianceBreakdowns)
+        {
+            try
+            {
+                var analytics = new DashboardTrendAnalytics();
+                
+                // Get findings trend data (last 12 months)
+                var findingsTrend = await GetFindingsTrendDataAsync(12);
+                analytics.FindingsTrendLabels = string.Join(",", findingsTrend.Select(t => $"\"{t.Date:MMM yyyy}\""));
+                analytics.FindingsTrendData = string.Join(",", findingsTrend.Select(t => t.Count.ToString()));
+                
+                // Get risks trend data
+                var risksTrend = await GetRisksTrendDataAsync(12);
+                analytics.RisksTrendLabels = string.Join(",", risksTrend.Select(t => $"\"{t.Date:MMM yyyy}\""));
+                analytics.RisksTrendData = string.Join(",", risksTrend.Select(t => t.Count.ToString()));
+                
+                // Get compliance trend data (aggregate all frameworks)
+                if (complianceBreakdowns.Any())
+                {
+                    var complianceTrend = await GetAggregateComplianceTrendAsync(complianceBreakdowns.Select(c => c.FrameworkId).ToList());
+                    analytics.ComplianceTrendLabels = string.Join(",", complianceTrend.Select(t => $"\"{t.Date:MMM yyyy}\""));
+                    analytics.ComplianceTrendData = string.Join(",", complianceTrend.Select(t => t.AverageCompliance.ToString("F1")));
+                }
+                
+                // Get SLA performance trend
+                var slaTrend = await GetSLAPerformanceTrendAsync(12);
+                analytics.SLATrendLabels = string.Join(",", slaTrend.Select(t => $"\"{t.Date:MMM yyyy}\""));
+                analytics.SLATrendData = string.Join(",", slaTrend.Select(t => t.OnTimePercentage.ToString("F1")));
+                
+                // Calculate executive KPIs
+                analytics.ExecutiveKPIs = new DashboardExecutiveKPIs
+                {
+                    RiskTrend = CalculateTrendDirection(risksTrend.Select(t => (decimal)t.Count).ToList()),
+                    FindingsTrend = CalculateTrendDirection(findingsTrend.Select(t => (decimal)t.Count).ToList()),
+                    ComplianceTrend = analytics.ComplianceTrendData.Any() ? "Stable" : "No Data",
+                    SLAPerformanceTrend = CalculateTrendDirection(slaTrend.Select(t => t.OnTimePercentage).ToList()),
+                    OverallHealthScore = CalculateOverallHealthScore(complianceBreakdowns, findingsTrend, risksTrend, slaTrend)
+                };
+                
+                // Risk heat map data
+                analytics.RiskHeatMapData = await GetRiskHeatMapDataAsync();
+                
+                return analytics;
+            }
+            catch
+            {
+                return new DashboardTrendAnalytics(); // Return empty analytics on error
+            }
+        }
+
+        private async Task<List<TrendDataPoint>> GetFindingsTrendDataAsync(int months)
+        {
+            var findings = await _findingService.GetAllFindingsAsync();
+            var startDate = DateTime.UtcNow.AddMonths(-months);
+            
+            return findings
+                .Where(f => f.CreatedAt >= startDate)
+                .GroupBy(f => new { f.CreatedAt.Year, f.CreatedAt.Month })
+                .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+                .Select(g => new TrendDataPoint
+                {
+                    Date = new DateTime(g.Key.Year, g.Key.Month, 1),
+                    Count = g.Count()
+                }).ToList();
+        }
+
+        private async Task<List<TrendDataPoint>> GetRisksTrendDataAsync(int months)
+        {
+            var risks = await _riskService.GetAllRisksAsync();
+            var startDate = DateTime.UtcNow.AddMonths(-months);
+            
+            return risks
+                .Where(r => r.CreatedAt >= startDate)
+                .GroupBy(r => new { r.CreatedAt.Year, r.CreatedAt.Month })
+                .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+                .Select(g => new TrendDataPoint
+                {
+                    Date = new DateTime(g.Key.Year, g.Key.Month, 1),
+                    Count = g.Count()
+                }).ToList();
+        }
+
+        private async Task<List<ComplianceTrendDataPoint>> GetAggregateComplianceTrendAsync(List<int> frameworkIds)
+        {
+            var trendPoints = new List<ComplianceTrendDataPoint>();
+            
+            foreach (var frameworkId in frameworkIds.Take(5)) // Limit to top 5 frameworks for performance
+            {
+                try
+                {
+                    var frameworkTrend = await _governanceService.GetComplianceTrendDataAsync(frameworkId, 12);
+                    
+                    // Aggregate by month
+                    foreach (var point in frameworkTrend)
+                    {
+                        var existing = trendPoints.FirstOrDefault(t => t.Date.Year == point.Date.Year && t.Date.Month == point.Date.Month);
+                        if (existing != null)
+                        {
+                            existing.TotalCompliance += point.CompliancePercentage;
+                            existing.FrameworkCount++;
+                            existing.AverageCompliance = existing.TotalCompliance / existing.FrameworkCount;
+                        }
+                        else
+                        {
+                            trendPoints.Add(new ComplianceTrendDataPoint
+                            {
+                                Date = new DateTime(point.Date.Year, point.Date.Month, 1),
+                                TotalCompliance = point.CompliancePercentage,
+                                FrameworkCount = 1,
+                                AverageCompliance = point.CompliancePercentage
+                            });
+                        }
+                    }
+                }
+                catch
+                {
+                    // Skip framework if error occurs
+                    continue;
+                }
+            }
+            
+            return trendPoints.OrderBy(t => t.Date).ToList();
+        }
+
+        private async Task<List<SLATrendDataPoint>> GetSLAPerformanceTrendAsync(int months)
+        {
+            // This would integrate with RiskBacklogService for SLA data
+            // For now, return simulated data based on findings and risks
+            var findings = await _findingService.GetAllFindingsAsync();
+            var startDate = DateTime.UtcNow.AddMonths(-months);
+            
+            return Enumerable.Range(0, months)
+                .Select(i => 
+                {
+                    var monthDate = DateTime.UtcNow.AddMonths(-months + i);
+                    var monthFindings = findings.Where(f => f.CreatedAt.Year == monthDate.Year && f.CreatedAt.Month == monthDate.Month);
+                    var onTimeCount = monthFindings.Count(f => !f.IsOverdue);
+                    var totalCount = monthFindings.Count();
+                    
+                    return new SLATrendDataPoint
+                    {
+                        Date = new DateTime(monthDate.Year, monthDate.Month, 1),
+                        OnTimePercentage = totalCount > 0 ? (decimal)onTimeCount / totalCount * 100 : 100,
+                        TotalItems = totalCount,
+                        OnTimeItems = onTimeCount
+                    };
+                })
+                .OrderBy(t => t.Date)
+                .ToList();
+        }
+
+        private string CalculateTrendDirection(List<decimal> values)
+        {
+            if (values.Count < 2) return "Stable";
+            
+            var first = values.Take(values.Count / 2).Average();
+            var second = values.Skip(values.Count / 2).Average();
+            var change = ((second - first) / first) * 100;
+            
+            if (change > 10) return "Increasing";
+            if (change < -10) return "Decreasing";
+            return "Stable";
+        }
+
+        private decimal CalculateOverallHealthScore(IEnumerable<ComplianceBreakdown> compliance, 
+                                                   List<TrendDataPoint> findings, 
+                                                   List<TrendDataPoint> risks, 
+                                                   List<SLATrendDataPoint> sla)
+        {
+            var complianceScore = compliance.Any() ? compliance.Average(c => c.CompliancePercentage) : 50;
+            var findingsScore = 100 - Math.Min(100, findings.LastOrDefault()?.Count ?? 0);
+            var risksScore = 100 - Math.Min(100, (risks.LastOrDefault()?.Count ?? 0) * 2);
+            var slaScore = sla.LastOrDefault()?.OnTimePercentage ?? 80;
+            
+            return (complianceScore * 0.4m) + (findingsScore * 0.2m) + (risksScore * 0.2m) + (slaScore * 0.2m);
+        }
+
+        private async Task<RiskHeatMapData> GetRiskHeatMapDataAsync()
+        {
+            var allFindings = await _findingService.GetAllFindingsAsync();
+            
+            return new RiskHeatMapData
+            {
+                CriticalFindings = allFindings.Count(f => f.RiskRating == RiskRating.Critical),
+                HighFindings = allFindings.Count(f => f.RiskRating == RiskRating.High),
+                MediumFindings = allFindings.Count(f => f.RiskRating == RiskRating.Medium),
+                LowFindings = allFindings.Count(f => f.RiskRating == RiskRating.Low),
+                // Domain distribution
+                DomainDistribution = allFindings
+                    .Where(f => !string.IsNullOrEmpty(f.Domain))
+                    .GroupBy(f => f.Domain)
+                    .ToDictionary(g => g.Key, g => g.Count())
+            };
+        }
     }
 }

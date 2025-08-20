@@ -318,21 +318,17 @@ namespace CyberRiskApp.Controllers
 
         // POST: RiskMatrix/SaveThresholds/5
         [HttpPost]
-        public async Task<IActionResult> SaveThresholds(int id, [FromBody] dynamic thresholds)
+        public async Task<IActionResult> SaveThresholds(int id, [FromBody] ThresholdUpdateRequest request)
         {
             try
             {
-                // For now, we'll save these as matrix properties
-                // In a real implementation, you might want a separate table for thresholds
-                var matrix = await _riskMatrixService.GetMatrixByIdAsync(id);
-                if (matrix != null)
-                {
-                    // You could add threshold properties to the RiskMatrix model
-                    // or create a separate RiskThreshold entity
-                    await _riskMatrixService.UpdateMatrixAsync(matrix);
-                }
+                await _riskMatrixService.UpdateThresholdsAsync(id, 
+                    request.QualitativeMediumThreshold, 
+                    request.QualitativeHighThreshold, 
+                    request.QualitativeCriticalThreshold, 
+                    request.RiskAppetiteThreshold);
                 
-                return Json(new { success = true });
+                return Json(new { success = true, message = "Risk thresholds updated successfully!" });
             }
             catch (Exception ex)
             {
@@ -400,5 +396,14 @@ namespace CyberRiskApp.Controllers
 
             return View(matrix);
         }
+    }
+
+    // Request model for threshold updates
+    public class ThresholdUpdateRequest
+    {
+        public decimal QualitativeMediumThreshold { get; set; }
+        public decimal QualitativeHighThreshold { get; set; }
+        public decimal QualitativeCriticalThreshold { get; set; }
+        public decimal RiskAppetiteThreshold { get; set; }
     }
 }

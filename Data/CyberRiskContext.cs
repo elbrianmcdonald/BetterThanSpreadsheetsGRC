@@ -39,8 +39,8 @@ namespace CyberRiskApp.Data
         public DbSet<MaturityAssessment> MaturityAssessments { get; set; }
         public DbSet<MaturityControlAssessment> MaturityControlAssessments { get; set; }
 
-        // Risk Level Settings DbSet
-        public DbSet<RiskLevelSettings> RiskLevelSettings { get; set; }
+        // Risk Level Settings DbSet - REMOVED: Using RiskMatrix instead
+        // public DbSet<RiskLevelSettings> RiskLevelSettings { get; set; }
 
         // Third Party Risk Management DbSet
         public DbSet<ThirdParty> ThirdParties { get; set; }

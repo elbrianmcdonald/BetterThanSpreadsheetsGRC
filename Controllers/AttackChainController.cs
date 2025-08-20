@@ -15,7 +15,7 @@ namespace CyberRiskApp.Controllers
         private readonly CyberRiskContext _context;
         private readonly IMitreAttackService _mitreService;
         private readonly IMitreImportService _mitreImportService;
-        private readonly IRiskLevelSettingsService _riskLevelService;
+        private readonly IRiskMatrixService _riskMatrixService;
         private readonly IRiskAssessmentThreatModelService _riskAssessmentThreatModelService;
         private readonly ILogger<AttackChainController> _logger;
 
@@ -23,14 +23,14 @@ namespace CyberRiskApp.Controllers
             CyberRiskContext context, 
             IMitreAttackService mitreService,
             IMitreImportService mitreImportService,
-            IRiskLevelSettingsService riskLevelService,
+            IRiskMatrixService riskMatrixService,
             IRiskAssessmentThreatModelService riskAssessmentThreatModelService,
             ILogger<AttackChainController> logger)
         {
             _context = context;
             _mitreService = mitreService;
             _mitreImportService = mitreImportService;
-            _riskLevelService = riskLevelService;
+            _riskMatrixService = riskMatrixService;
             _riskAssessmentThreatModelService = riskAssessmentThreatModelService;
             _logger = logger;
         }
@@ -382,13 +382,14 @@ namespace CyberRiskApp.Controllers
             ViewData["ReadOnly"] = readOnly;
             
             // Load insurance settings from active risk level threshold
-            var riskSettings = await _riskLevelService.GetActiveSettingsAsync();
+            var riskMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+            // Insurance settings removed - using defaults since FAIR is being phased out
             ViewData["InsuranceSettings"] = new
             {
-                CoverageLimit = riskSettings.InsuranceCoverageLimit,
-                Deductible = riskSettings.InsuranceDeductible,
-                CoveragePercentage = riskSettings.InsuranceCoveragePercentage,
-                EnabledByDefault = riskSettings.InsuranceEnabledByDefault
+                CoverageLimit = 1000000m,
+                Deductible = 10000m,
+                CoveragePercentage = 80m,
+                EnabledByDefault = false
             };
             
             return View(attackChain);
@@ -1685,12 +1686,13 @@ namespace CyberRiskApp.Controllers
                 ViewBag.ReadOnly = readOnly;
 
                 // Get risk level settings for insurance configuration
-                var riskSettings = await _riskLevelService.GetSettingsByIdAsync(1);
+                var riskMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
+                // Insurance settings removed - using defaults since FAIR is being phased out
                 ViewBag.InsuranceSettings = new {
-                    CoverageLimit = riskSettings.InsuranceCoverageLimit,
-                    Deductible = riskSettings.InsuranceDeductible,
-                    CoveragePercentage = riskSettings.InsuranceCoveragePercentage,
-                    EnabledByDefault = riskSettings.InsuranceEnabledByDefault
+                    CoverageLimit = 1000000m,
+                    Deductible = 10000m,
+                    CoveragePercentage = 80m,
+                    EnabledByDefault = false
                 };
 
                 return View("FlowchartDesigner", attackChain);

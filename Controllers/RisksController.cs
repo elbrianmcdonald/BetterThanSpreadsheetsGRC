@@ -18,15 +18,15 @@ namespace CyberRiskApp.Controllers
     {
         private readonly IRiskService _riskService;
         private readonly IExportService _exportService;
-        private readonly IRiskLevelSettingsService _riskLevelSettingsService;
+        private readonly IRiskMatrixService _riskMatrixService;
         private readonly IRiskBacklogService _riskBacklogService;
         private readonly UserManager<User> _userManager;
 
-        public RisksController(IRiskService riskService, IExportService exportService, IRiskLevelSettingsService riskLevelSettingsService, IRiskBacklogService riskBacklogService, UserManager<User> userManager, ILogger<RisksController> logger) : base(logger)
+        public RisksController(IRiskService riskService, IExportService exportService, IRiskMatrixService riskMatrixService, IRiskBacklogService riskBacklogService, UserManager<User> userManager, ILogger<RisksController> logger) : base(logger)
         {
             _riskService = riskService;
             _exportService = exportService;
-            _riskLevelSettingsService = riskLevelSettingsService;
+            _riskMatrixService = riskMatrixService;
             _riskBacklogService = riskBacklogService;
             _userManager = userManager;
         }
@@ -35,7 +35,7 @@ namespace CyberRiskApp.Controllers
         public async Task<IActionResult> Index(RiskFilterViewModel? filter)
         {
             var allRisks = await _riskService.GetAllRisksAsync();
-            var riskLevelSettings = await _riskLevelSettingsService.GetActiveSettingsAsync();
+            var defaultRiskMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
             
             // Apply filters
             var filteredRisks = allRisks.AsEnumerable();
@@ -162,8 +162,8 @@ namespace CyberRiskApp.Controllers
                 AssetOptions = new SelectList(allRisks.Where(r => !string.IsNullOrEmpty(r.Asset))
                     .Select(r => r.Asset).Distinct().OrderBy(x => x)),
 
-                // Risk level settings for heatmap calculation
-                RiskLevelSettings = riskLevelSettings
+                // Risk matrix for risk level calculation
+                RiskMatrix = defaultRiskMatrix
             };
 
             return View(viewModel);

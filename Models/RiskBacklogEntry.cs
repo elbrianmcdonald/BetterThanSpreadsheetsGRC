@@ -350,5 +350,134 @@ namespace CyberRiskApp.Models
                 _ => "badge badge-secondary"
             };
         }
+
+        // SLA Tracking and Escalation Methods
+        public int GetDaysOld()
+        {
+            return (DateTime.UtcNow - CreatedAt).Days;
+        }
+
+        public int? GetDaysUntilDue()
+        {
+            if (!DueDate.HasValue) return null;
+            return (DueDate.Value - DateTime.UtcNow).Days;
+        }
+
+        public int GetDaysOverdue()
+        {
+            if (!DueDate.HasValue || DueDate.Value >= DateTime.UtcNow) return 0;
+            return (DateTime.UtcNow - DueDate.Value).Days;
+        }
+
+        public string GetSLAStatus()
+        {
+            if (!DueDate.HasValue) return "No SLA";
+            
+            var daysUntilDue = GetDaysUntilDue();
+            var daysOverdue = GetDaysOverdue();
+
+            if (daysOverdue > 0) return "Overdue";
+            if (daysUntilDue <= 1) return "Due Soon";
+            if (daysUntilDue <= 3) return "Approaching";
+            return "On Track";
+        }
+
+        public string GetSLAStatusBadgeClass()
+        {
+            return GetSLAStatus() switch
+            {
+                "Overdue" => "badge badge-danger",
+                "Due Soon" => "badge badge-warning", 
+                "Approaching" => "badge badge-info",
+                "On Track" => "badge badge-success",
+                "No SLA" => "badge badge-secondary",
+                _ => "badge badge-secondary"
+            };
+        }
+
+        public string GetSLAIcon()
+        {
+            return GetSLAStatus() switch
+            {
+                "Overdue" => "🔴",
+                "Due Soon" => "🟠",
+                "Approaching" => "🟡", 
+                "On Track" => "🟢",
+                "No SLA" => "⚪",
+                _ => "⚪"
+            };
+        }
+
+        public bool RequiresEscalation()
+        {
+            var daysOverdue = GetDaysOverdue();
+            var daysOld = GetDaysOld();
+
+            // Escalation rules based on priority and age
+            return Priority switch
+            {
+                BacklogPriority.Critical => daysOverdue >= 1 || daysOld >= 3,
+                BacklogPriority.High => daysOverdue >= 2 || daysOld >= 7,
+                BacklogPriority.Medium => daysOverdue >= 5 || daysOld >= 14,
+                BacklogPriority.Low => daysOverdue >= 10 || daysOld >= 30,
+                _ => daysOverdue >= 7 || daysOld >= 21
+            };
+        }
+
+        public string GetEscalationReason()
+        {
+            if (!RequiresEscalation()) return "";
+
+            var daysOverdue = GetDaysOverdue();
+            var daysOld = GetDaysOld();
+
+            if (daysOverdue > 0)
+                return $"SLA breached - {daysOverdue} days overdue";
+            
+            return $"Long pending - {daysOld} days old";
+        }
+
+        public string GetAgingDisplayText()
+        {
+            var daysOld = GetDaysOld();
+            if (!DueDate.HasValue)
+                return $"{daysOld} days old";
+
+            var daysOverdue = GetDaysOverdue();
+            var daysUntilDue = GetDaysUntilDue();
+
+            if (daysOverdue > 0)
+                return $"{daysOverdue} days overdue";
+            else if (daysUntilDue.HasValue)
+                return $"{daysUntilDue} days remaining";
+            
+            return $"{daysOld} days old";
+        }
+
+        public int GetSLAPriorityScore()
+        {
+            // Higher score = higher priority for sorting
+            var baseScore = Priority switch
+            {
+                BacklogPriority.Critical => 1000,
+                BacklogPriority.High => 800,
+                BacklogPriority.Medium => 600,
+                BacklogPriority.Low => 400,
+                _ => 200
+            };
+
+            var slaScore = GetSLAStatus() switch
+            {
+                "Overdue" => 500,
+                "Due Soon" => 300,
+                "Approaching" => 200,
+                "On Track" => 100,
+                _ => 50
+            };
+
+            var ageScore = Math.Min(GetDaysOld() * 5, 200); // Cap age contribution
+
+            return baseScore + slaScore + ageScore;
+        }
     }
 }

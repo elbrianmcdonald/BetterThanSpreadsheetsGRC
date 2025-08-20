@@ -1,0 +1,364 @@
+@model CyberRiskApp.ViewModels.FrameworkComplianceAnalyticsViewModel
+@{
+    ViewData["Title"] = "Compliance Analytics - " + Model.Framework.Name;
+    var complianceGrade = Model.Metrics.ComplianceGrade;
+    var riskLevel = Model.Metrics.RiskLevel;
+}
+
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Dashboard")">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Frameworks")">Frameworks</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@Model.Framework.Name Analytics</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-chart-line me-2"></i>Compliance Analytics: @Model.Framework.Name
+            </h1>
+        </div>
+        <div class="btn-group">
+            <a href="@Url.Action("Details", new { id = Model.Framework.Id })" class="btn btn-outline-primary">
+                <i class="fas fa-eye me-1"></i>View Framework
+            </a>
+            <a href="@Url.Action("Index", "ComplianceAssessments", new { frameworkId = Model.Framework.Id })" class="btn btn-outline-info">
+                <i class="fas fa-clipboard-list me-1"></i>View Assessments
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards Row -->
+    <div class="row mb-4">
+        <!-- Overall Compliance Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-@(Model.Metrics.OverallCompliancePercentage >= 85 ? "success" : Model.Metrics.OverallCompliancePercentage >= 70 ? "warning" : "danger") shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-@(Model.Metrics.OverallCompliancePercentage >= 85 ? "success" : Model.Metrics.OverallCompliancePercentage >= 70 ? "warning" : "danger") text-uppercase mb-1">
+                                Overall Compliance
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @Math.Round(Model.Metrics.OverallCompliancePercentage, 1)%
+                            </div>
+                            <div class="small text-muted">Grade: @complianceGrade</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-award fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Level Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-@(riskLevel == "Low" ? "success" : riskLevel == "Medium" ? "warning" : "danger") shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-@(riskLevel == "Low" ? "success" : riskLevel == "Medium" ? "warning" : "danger") text-uppercase mb-1">
+                                Risk Level
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @riskLevel
+                            </div>
+                            <div class="small text-muted">Based on compliance %</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shield-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compliance Gaps Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Controls with Gaps
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @Model.TotalControlsWithGaps
+                            </div>
+                            <div class="small text-muted">@Model.CriticalGaps critical priority</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trend Indicator Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-@(Model.ComplianceImprovement >= 0 ? "success" : "danger") shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-@(Model.ComplianceImprovement >= 0 ? "success" : "danger") text-uppercase mb-1">
+                                12-Month Trend
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @(Model.ComplianceImprovement >= 0 ? "+" : "")@Math.Round(Model.ComplianceImprovement, 1)%
+                            </div>
+                            <div class="small text-muted">Change over time</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Compliance Trend Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-area me-2"></i>Compliance Trend (Last 12 Months)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.TrendData.Any())
+                    {
+                        <div class="chart-area">
+                            <canvas id="complianceTrendChart" style="height: 320px;"></canvas>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-5">
+                            <i class="fas fa-chart-line fa-3x text-gray-300 mb-3"></i>
+                            <p class="text-muted">No trend data available. Complete assessments over time to see trends.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Framework Summary -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle me-2"></i>Framework Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4 font-weight-bold">Type:</div>
+                        <div class="col-sm-8">
+                            <span class="badge badge-info">@Model.Framework.Type</span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 font-weight-bold">Version:</div>
+                        <div class="col-sm-8">@Model.Framework.Version</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 font-weight-bold">Status:</div>
+                        <div class="col-sm-8">
+                            <span class="badge badge-@(Model.Framework.Status == FrameworkStatus.Active ? "success" : "secondary")">
+                                @Model.Framework.Status
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 font-weight-bold">Total Controls:</div>
+                        <div class="col-sm-8">@Model.Metrics.TotalControls</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 font-weight-bold">Last Assessment:</div>
+                        <div class="col-sm-8">
+                            @if (Model.Metrics.LastAssessmentDate != DateTime.MinValue)
+                            {
+                                @Model.Metrics.LastAssessmentDate.ToString("MMM dd, yyyy")
+                                <br><small class="text-muted">by @Model.Metrics.LastAssessor</small>
+                            }
+                            else
+                            {
+                                <span class="text-muted">No completed assessments</span>
+                            }
+                        </div>
+                    </div>
+
+                    <h6 class="font-weight-bold mt-4 mb-3">Control Status Breakdown</h6>
+                    <div class="row mb-2">
+                        <div class="col-8">
+                            <div class="d-flex align-items-center">
+                                <span class="badge badge-success me-2"></span>
+                                Fully Compliant
+                            </div>
+                        </div>
+                        <div class="col-4 text-right">@Model.Metrics.FullyCompliantControls</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-8">
+                            <div class="d-flex align-items-center">
+                                <span class="badge badge-info me-2"></span>
+                                Majorly Compliant
+                            </div>
+                        </div>
+                        <div class="col-4 text-right">@Model.Metrics.MajorlyCompliantControls</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-8">
+                            <div class="d-flex align-items-center">
+                                <span class="badge badge-warning me-2"></span>
+                                Partially Compliant
+                            </div>
+                        </div>
+                        <div class="col-4 text-right">@Model.Metrics.PartiallyCompliantControls</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-8">
+                            <div class="d-flex align-items-center">
+                                <span class="badge badge-danger me-2"></span>
+                                Non-Compliant
+                            </div>
+                        </div>
+                        <div class="col-4 text-right">@Model.Metrics.NonCompliantControls</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="d-flex align-items-center">
+                                <span class="badge badge-secondary me-2"></span>
+                                Not Applicable
+                            </div>
+                        </div>
+                        <div class="col-4 text-right">@Model.Metrics.NotApplicableControls</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Details Section -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-list-check me-2"></i>Control Compliance Details
+            </h6>
+            <div class="d-flex align-items-center">
+                <!-- Filter Controls -->
+                <div class="me-3">
+                    <select class="form-select form-select-sm" id="statusFilter" onchange="filterControls()">
+                        <option value="">All Statuses</option>
+                        <option value="0">Non-Compliant</option>
+                        <option value="1">Partially Compliant</option>
+                        <option value="2">Majorly Compliant</option>
+                        <option value="3">Fully Compliant</option>
+                    </select>
+                </div>
+                <div class="me-3">
+                    <select class="form-select form-select-sm" id="categoryFilter" onchange="filterControls()">
+                        <option value="">All Categories</option>
+                        @foreach (var category in Model.Categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportControlDetails()">
+                    <i class="fas fa-download me-1"></i>Export
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="controlDetailsContainer">
+                @await Html.PartialAsync("_ControlComplianceDetailsPartial", Model.ControlDetails)
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Compliance Trend Chart
+        @if (Model.TrendData.Any())
+        {
+            <text>
+            const ctx = document.getElementById('complianceTrendChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [@Html.Raw(Model.TrendChartLabels)],
+                    datasets: [{
+                        label: 'Compliance Percentage',
+                        data: [@Html.Raw(Model.TrendChartData)],
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Compliance: ' + context.parsed.y.toFixed(1) + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            </text>
+        }
+
+        // Filter controls function
+        function filterControls() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            
+            const url = '@Url.Action("GetControlComplianceDetails")' +
+                        '?frameworkId=@Model.Framework.Id' +
+                        (statusFilter ? '&status=' + statusFilter : '') +
+                        (categoryFilter ? '&category=' + encodeURIComponent(categoryFilter) : '');
+            
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('controlDetailsContainer').innerHTML = html;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Export function placeholder
+        function exportControlDetails() {
+            // TODO: Implement export functionality
+            alert('Export functionality will be implemented in the next iteration.');
+        }
+    </script>
+}

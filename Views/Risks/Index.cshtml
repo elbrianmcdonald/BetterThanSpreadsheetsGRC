@@ -113,9 +113,9 @@
                     <div class="legend-title">Risk Levels:</div>
                     <div class="legend-items">
                         @{
-                            var criticalMin = Model.RiskLevelSettings?.QualitativeCriticalThreshold ?? 12;
-                            var highMin = Model.RiskLevelSettings?.QualitativeHighThreshold ?? 8;
-                            var mediumMin = Model.RiskLevelSettings?.QualitativeMediumThreshold ?? 4;
+                            var criticalMin = Model.RiskMatrix?.QualitativeCriticalThreshold ?? 12;
+                            var highMin = Model.RiskMatrix?.QualitativeHighThreshold ?? 8;
+                            var mediumMin = Model.RiskMatrix?.QualitativeMediumThreshold ?? 4;
                             var criticalMax = 16;
                             var highMax = criticalMin - 1;
                             var mediumMax = highMin - 1;
@@ -601,13 +601,13 @@
         var riskScore = impact * likelihood;
         
         // Use actual configured thresholds from risk level settings
-        if (Model.RiskLevelSettings != null)
+        if (Model.RiskMatrix != null)
         {
-            if (riskScore >= Model.RiskLevelSettings.QualitativeCriticalThreshold)
+            if (riskScore >= Model.RiskMatrix.QualitativeCriticalThreshold)
                 return "Critical";
-            if (riskScore >= Model.RiskLevelSettings.QualitativeHighThreshold)
+            if (riskScore >= Model.RiskMatrix.QualitativeHighThreshold)
                 return "High";
-            if (riskScore >= Model.RiskLevelSettings.QualitativeMediumThreshold)
+            if (riskScore >= Model.RiskMatrix.QualitativeMediumThreshold)
                 return "Medium";
             return "Low";
         }
@@ -637,13 +637,13 @@
     private string GetMatrixCellClass(int riskScore)
     {
         // Use actual configured thresholds from risk level settings
-        if (Model.RiskLevelSettings != null)
+        if (Model.RiskMatrix != null)
         {
-            if (riskScore >= Model.RiskLevelSettings.QualitativeCriticalThreshold)
+            if (riskScore >= Model.RiskMatrix.QualitativeCriticalThreshold)
                 return "risk-critical";
-            if (riskScore >= Model.RiskLevelSettings.QualitativeHighThreshold)
+            if (riskScore >= Model.RiskMatrix.QualitativeHighThreshold)
                 return "risk-high";
-            if (riskScore >= Model.RiskLevelSettings.QualitativeMediumThreshold)
+            if (riskScore >= Model.RiskMatrix.QualitativeMediumThreshold)
                 return "risk-medium";
             return "risk-low";
         }

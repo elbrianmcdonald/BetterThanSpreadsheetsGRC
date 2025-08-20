@@ -2,7 +2,7 @@
 
 namespace CyberRiskApp.Models
 {
-    public class MaturityFramework
+    public class MaturityFramework : IEntity
     {
         public int Id { get; set; }
 
@@ -32,7 +32,7 @@ namespace CyberRiskApp.Models
         public virtual ICollection<MaturityAssessment> Assessments { get; set; } = new List<MaturityAssessment>();
     }
 
-    public class MaturityControl
+    public class MaturityControl : IEntity
     {
         public int Id { get; set; }
 

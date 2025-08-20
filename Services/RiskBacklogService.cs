@@ -1265,5 +1265,106 @@ namespace CyberRiskApp.Services
             }
         }
 
+        // Enhanced SLA and Escalation Management Methods
+        public async Task<List<RiskBacklogEntry>> GetEntriesRequiringEscalationAsync()
+        {
+            return await _context.RiskBacklogEntries
+                .Include(e => e.Risk)
+                .Include(e => e.Finding)
+                .Where(e => e.Status != RiskBacklogStatus.Approved && 
+                           e.Status != RiskBacklogStatus.Rejected)
+                .ToListAsync()
+                .ContinueWith(task => task.Result.Where(e => e.RequiresEscalation()).ToList());
+        }
+
+        public async Task<List<RiskBacklogEntry>> GetBacklogSortedBySLAPriorityAsync()
+        {
+            var entries = await _context.RiskBacklogEntries
+                .Include(e => e.Risk)
+                .Include(e => e.Finding)
+                .Where(e => e.Status != RiskBacklogStatus.Approved && 
+                           e.Status != RiskBacklogStatus.Rejected)
+                .ToListAsync();
+
+            return entries.OrderByDescending(e => e.GetSLAPriorityScore()).ToList();
+        }
+
+        public async Task<Dictionary<string, int>> GetSLAStatusBreakdownAsync()
+        {
+            var entries = await _context.RiskBacklogEntries
+                .Where(e => e.Status != RiskBacklogStatus.Approved && 
+                           e.Status != RiskBacklogStatus.Rejected)
+                .ToListAsync();
+
+            var breakdown = new Dictionary<string, int>
+            {
+                ["Overdue"] = 0,
+                ["Due Soon"] = 0,
+                ["Approaching"] = 0,
+                ["On Track"] = 0,
+                ["No SLA"] = 0
+            };
+
+            foreach (var entry in entries)
+            {
+                var status = entry.GetSLAStatus();
+                if (breakdown.ContainsKey(status))
+                {
+                    breakdown[status]++;
+                }
+            }
+
+            return breakdown;
+        }
+
+        public async Task<List<RiskBacklogEntry>> GetApproachingDueEntriesAsync(int daysAhead = 3)
+        {
+            return await _context.RiskBacklogEntries
+                .Include(e => e.Risk)
+                .Include(e => e.Finding)
+                .Where(e => e.DueDate.HasValue &&
+                           e.DueDate.Value <= DateTime.UtcNow.AddDays(daysAhead) &&
+                           e.DueDate.Value >= DateTime.UtcNow &&
+                           e.Status != RiskBacklogStatus.Approved &&
+                           e.Status != RiskBacklogStatus.Rejected)
+                .OrderBy(e => e.DueDate)
+                .ToListAsync();
+        }
+
+        public async Task EscalateOverdueEntriesAsync(string escalatedBy)
+        {
+            var overdueEntries = await GetEntriesRequiringEscalationAsync();
+            
+            foreach (var entry in overdueEntries)
+            {
+                if (entry.Status != RiskBacklogStatus.Escalated)
+                {
+                    var previousStatus = entry.Status;
+                    entry.Status = RiskBacklogStatus.Escalated;
+                    entry.UpdatedAt = DateTime.UtcNow;
+                    entry.UpdatedBy = escalatedBy;
+
+                    await LogActivityAsync(entry.Id, "Escalated", 
+                        previousStatus.ToString(), 
+                        RiskBacklogStatus.Escalated.ToString(),
+                        $"Auto-escalated: {entry.GetEscalationReason()}", 
+                        escalatedBy);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<int> GetEscalationCandidatesCountAsync()
+        {
+            var entries = await _context.RiskBacklogEntries
+                .Where(e => e.Status != RiskBacklogStatus.Approved && 
+                           e.Status != RiskBacklogStatus.Rejected &&
+                           e.Status != RiskBacklogStatus.Escalated)
+                .ToListAsync();
+
+            return entries.Count(e => e.RequiresEscalation());
+        }
+
     }
 }

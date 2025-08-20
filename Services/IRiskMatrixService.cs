@@ -33,5 +33,11 @@ namespace CyberRiskApp.Services
         // Matrix validation and seeding
         Task<bool> ValidateMatrixAsync(RiskMatrix matrix);
         Task SeedDefaultMatricesAsync();
+
+        // Threshold management (replaces RiskLevelSettings functionality)
+        Task<RiskMatrix> UpdateThresholdsAsync(int matrixId, decimal mediumThreshold, decimal highThreshold, decimal criticalThreshold, decimal riskAppetiteThreshold);
+        Task<RiskLevel> GetRiskLevelFromScoreAsync(decimal score);
+        Task<bool> IsWithinRiskAppetiteAsync(decimal score);
+        Task<string> GetRiskAppetiteStatusAsync(decimal score);
     }
 }

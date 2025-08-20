@@ -1,11 +1,14 @@
-﻿@model CyberRiskApp.ViewModels.DashboardViewModel
+@model CyberRiskApp.ViewModels.DashboardViewModel
 @{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "GRC Dashboard";
 }
 
 <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">GRC Dashboard</h1>
+        <a href="@Url.Action("Index", "CISOExecutive")" class="btn btn-primary">
+            <i class="fas fa-chart-line me-1"></i>Executive Dashboard
+        </a>
     </div>
 
     @if (ViewBag.CurrentUserInfo != null)
@@ -22,224 +25,45 @@
         </div>
     }
 
-    <!-- Summary Cards Row -->
-    <div class="row">
-        <!-- Total Findings Card -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <a href="@Url.Action("Index", "Findings", new { status = "open" })" class="text-decoration-none">
-                <div class="card border-left-primary shadow h-100 py-2 dashboard-card-hover">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Open Findings
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    @Model.OpenFindings
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-bug fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
+    <!-- Quick Actions for GRC Users -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-tasks me-2"></i>Quick Actions
+                    </h6>
                 </div>
-            </a>
-        </div>
-
-        <!-- High Risk Findings Card -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <a href="@Url.Action("Index", "Findings", new { status = "open", riskRating = "high" })" class="text-decoration-none">
-                <div class="card border-left-danger shadow h-100 py-2 dashboard-card-hover">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                    High Risk Findings
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    @Model.HighRiskFindings
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                            </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <a href="@Url.Action("Index", "RiskBacklog")" class="btn btn-outline-primary btn-block">
+                                <i class="fas fa-clipboard-list me-2"></i>Risk Backlog
+                            </a>
                         </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Total Risks Card -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <a href="@Url.Action("Index", "Risks")" class="text-decoration-none">
-                <div class="card border-left-info shadow h-100 py-2 dashboard-card-hover">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                    Total Risks
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    @Model.TotalRisks
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-shield-alt fa-2x text-gray-300"></i>
-                            </div>
+                        <div class="col-md-3">
+                            <a href="@Url.Action("Index", "Findings")" class="btn btn-outline-info btn-block">
+                                <i class="fas fa-bug me-2"></i>Findings Management
+                            </a>
                         </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Total ALE Card -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <a href="@Url.Action("Index", "Risks")" class="text-decoration-none">
-                <div class="card border-left-warning shadow h-100 py-2 dashboard-card-hover">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                    Total ALE
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    @Model.TotalALE.ToString("C")
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
-                            </div>
+                        <div class="col-md-3">
+                            <a href="@Url.Action("Index", "ComplianceAssessments")" class="btn btn-outline-success btn-block">
+                                <i class="fas fa-shield-alt me-2"></i>Compliance Assessments
+                            </a>
                         </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
-
-    <!-- Second Row of Cards -->
-    <div class="row">
-        <!-- Pending Requests Card -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <a href="@Url.Action("Index", "RiskBacklog", new { status = "unassigned" })" class="text-decoration-none">
-                <div class="card border-left-success shadow h-100 py-2 dashboard-card-hover">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    Pending Requests
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    @Model.PendingRequests
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Overdue Items Card -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <a href="@Url.Action("Index", "RiskBacklog", new { filter = "overdue" })" class="text-decoration-none">
-                <div class="card border-left-dark shadow h-100 py-2 dashboard-card-hover">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
-                                    Overdue Items
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    @Model.OverdueItems
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-clock fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
-
-    <!-- Risk Workflow Quick Access for GRC Users and Admins -->
-    @if (User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
-    {
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card dashboard-widget border-primary">
-                    <div class="card-header bg-primary text-white">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="m-0 font-weight-bold">
-                                <i class="fas fa-tasks me-2"></i>Risk Workflow Management
-                            </h6>
-                            <small class="badge bg-light text-primary">Quick Access</small>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <p class="text-muted mb-3">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Manage the centralized risk triage queue and approval workflow. All new risks go through this workflow before being added to the Risk Register.
-                                </p>
-                                <div class="row">
-                                    <div class="col-sm-4 text-center">
-                                        <div class="bg-light p-3 rounded mb-2 dashboard-widget">
-                                            <i class="fas fa-inbox text-secondary fa-2x mb-2"></i>
-                                            <h6 class="mb-1">Triage Queue</h6>
-                                            <small class="text-muted">Review & assign</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-4 text-center">
-                                        <div class="bg-light p-3 rounded mb-2 dashboard-widget">
-                                            <i class="fas fa-sitemap text-info fa-2x mb-2"></i>
-                                            <h6 class="mb-1">Workflow</h6>
-                                            <small class="text-muted">Track progress</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-4 text-center">
-                                        <div class="bg-light p-3 rounded mb-2 dashboard-widget">
-                                            <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
-                                            <h6 class="mb-1">Approval</h6>
-                                            <small class="text-muted">Final decision</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="d-grid gap-2">
-                                    <a asp-controller="RiskBacklog" asp-action="Index" class="btn btn-primary quick-access-btn">
-                                        <i class="fas fa-inbox me-2"></i>Open Risk Workflow
-                                    </a>
-                                    @if (User.IsInRole("Admin"))
-                                    {
-                                        <a asp-controller="RiskBacklog" asp-action="AdminWorkflow" class="btn btn-outline-info quick-access-btn">
-                                            <i class="fas fa-sitemap me-2"></i>Admin Pipeline View
-                                        </a>
-                                        <a asp-controller="RiskBacklog" asp-action="SystemHealth" class="btn btn-outline-warning quick-access-btn">
-                                            <i class="fas fa-heartbeat me-2"></i>System Health
-                                        </a>
-                                    }
-                                    <a asp-controller="Risks" asp-action="Index" class="btn btn-outline-secondary quick-access-btn">
-                                        <i class="fas fa-clipboard-list me-2"></i>Risk Register
-                                    </a>
-                                </div>
-                            </div>
+                        <div class="col-md-3">
+                            <a href="@Url.Action("Index", "MaturityAssessments")" class="btn btn-outline-warning btn-block">
+                                <i class="fas fa-chart-bar me-2"></i>Maturity Assessments
+                            </a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    }
+    </div>
 
-    <!-- Content Row -->
+    <!-- Recent Findings -->
     <div class="row">
-        <!-- Recent Findings -->
         <div class="col-lg-6 mb-4">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
@@ -262,18 +86,23 @@
                                     @foreach (var finding in Model.RecentFindings)
                                     {
                                         <tr>
-                                            <td>@finding.FindingNumber</td>
-                                            <td>@finding.Title</td>
                                             <td>
-                                                <span class="badge badge-@GetRiskColor(finding.RiskRating)">
-                                                    @finding.RiskRating
-                                                </span>
+                                                <a href="@Url.Action("Details", "Findings", new { id = finding.Id })">
+                                                    @finding.FindingNumber
+                                                </a>
                                             </td>
+                                            <td>@finding.Title</td>
+                                            <td><span class="badge badge-@GetRiskColor(finding.RiskRating)">@finding.RiskRating</span></td>
                                             <td>@finding.Status</td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="@Url.Action("Index", "Findings")" class="btn btn-sm btn-primary">
+                                View All Findings
+                            </a>
                         </div>
                     }
                     else
@@ -284,51 +113,8 @@
             </div>
         </div>
 
-        <!-- High Value Risks -->
+        <!-- Pending Assessment Requests -->
         <div class="col-lg-6 mb-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">High Value Risks</h6>
-                </div>
-                <div class="card-body">
-                    @if (Model.HighValueRisks.Any())
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Risk #</th>
-                                        <th>Title</th>
-                                        <th>ALE</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var risk in Model.HighValueRisks)
-                                    {
-                                        <tr>
-                                            <td>@risk.RiskNumber</td>
-                                            <td>@risk.Title</td>
-                                            <td>@risk.ALE.ToString("C")</td>
-                                            <td>@risk.Status</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted">No high value risks</p>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Pending Assessments -->
-    <div class="row">
-        <div class="col-12">
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Pending Assessment Requests</h6>
@@ -337,15 +123,14 @@
                     @if (Model.PendingAssessments.Any())
                     {
                         <div class="table-responsive">
-                            <table class="table">
+                            <table class="table table-sm">
                                 <thead>
                                     <tr>
                                         <th>Requester</th>
-                                        <th>Department</th>
+                                        <th>Scope</th>
                                         <th>Priority</th>
                                         <th>Status</th>
-                                        <th>Assigned To</th>
-                                        <th>Request Date</th>
+                                        <th>Days Pending</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -353,19 +138,23 @@
                                     {
                                         <tr>
                                             <td>@request.RequesterName</td>
-                                            <td>@request.Department</td>
+                                            <td>@request.Scope</td>
                                             <td>
                                                 <span class="badge badge-@GetPriorityColor(request.Priority)">
                                                     @request.Priority
                                                 </span>
                                             </td>
                                             <td>@request.Status</td>
-                                            <td>@(request.AssignedToUser?.FullName ?? "Unassigned")</td>
-                                            <td>@request.RequestDate.ToShortDateString()</td>
+                                            <td>@((DateTime.UtcNow - request.RequestDate).Days)</td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="@Url.Action("Index", "RiskBacklog")" class="btn btn-sm btn-primary">
+                                View Risk Backlog
+                            </a>
                         </div>
                     }
                     else
@@ -376,7 +165,76 @@
             </div>
         </div>
     </div>
+
+    <!-- Risk Workflow Quick Access -->
+    @if (User.IsInRole("GRCUser") || User.IsInRole("Admin"))
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 bg-success text-white">
+                        <h6 class="m-0 font-weight-bold">Risk Workflow Quick Access</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="card border-left-primary">
+                                    <div class="card-body">
+                                        <h6 class="text-primary">Assessment Requests</h6>
+                                        <p class="mb-2">Process new assessment requests and assign assessors.</p>
+                                        <a href="@Url.Action("Index", "RiskBacklog", new { status = "unassigned" })" class="btn btn-sm btn-primary">
+                                            Process Requests
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-left-warning">
+                                    <div class="card-body">
+                                        <h6 class="text-warning">Risk Reviews</h6>
+                                        <p class="mb-2">Review and approve completed risk assessments.</p>
+                                        <a href="@Url.Action("Index", "RiskBacklog", new { status = "review" })" class="btn btn-sm btn-warning">
+                                            Review Assessments
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card border-left-success">
+                                    <div class="card-body">
+                                        <h6 class="text-success">Risk Register</h6>
+                                        <p class="mb-2">View and manage the organizational risk register.</p>
+                                        <a href="@Url.Action("Index", "Risks")" class="btn btn-sm btn-success">
+                                            Risk Register
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
+
+<style>
+    .btn-block {
+        width: 100%;
+    }
+    
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+    
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+    
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+</style>
 
 @functions {
     private string GetRiskColor(RiskRating rating)

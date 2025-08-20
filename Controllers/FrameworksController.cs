@@ -433,6 +433,137 @@ namespace CyberRiskApp.Controllers
         {
             await _governanceService.AddControlsToFrameworkAsync(frameworkId, controls);
         }
+
+        // GET: Frameworks/ComplianceAnalytics/5
+        public async Task<IActionResult> ComplianceAnalytics(int id)
+        {
+            var framework = await _governanceService.GetFrameworkByIdAsync(id);
+            if (framework == null)
+                return NotFound();
+
+            var metrics = await _governanceService.GetFrameworkComplianceMetricsAsync(id);
+            var trendData = await _governanceService.GetComplianceTrendDataAsync(id, 12);
+            var controlDetails = await _governanceService.GetControlComplianceDetailsAsync(id);
+
+            var viewModel = new FrameworkComplianceAnalyticsViewModel
+            {
+                Framework = framework,
+                Metrics = metrics,
+                TrendData = trendData,
+                ControlDetails = controlDetails,
+                // Filter options
+                StatusFilterOptions = Enum.GetValues<ComplianceStatus>()
+                    .Where(s => s != ComplianceStatus.NotApplicable)
+                    .Select(s => new { Value = (int)s, Text = GetComplianceStatusDisplayName(s) })
+                    .ToList(),
+                // Group controls by category for better organization
+                ControlsByCategory = controlDetails
+                    .GroupBy(c => c.Category)
+                    .OrderBy(g => g.Key)
+                    .ToDictionary(g => g.Key, g => g.OrderBy(c => c.ControlNumber).ToList())
+            };
+
+            return View(viewModel);
+        }
+
+        // AJAX endpoint for filtered control compliance details
+        [HttpGet]
+        public async Task<IActionResult> GetControlComplianceDetails(int frameworkId, ComplianceStatus? status = null, string? category = null)
+        {
+            var controlDetails = await _governanceService.GetControlComplianceDetailsAsync(frameworkId, status);
+            
+            if (!string.IsNullOrEmpty(category))
+            {
+                controlDetails = controlDetails.Where(c => c.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
+            }
+
+            return PartialView("_ControlComplianceDetailsPartial", controlDetails);
+        }
+
+        // GET: Frameworks/TrendAnalysis/5
+        public async Task<IActionResult> TrendAnalysis(int id, int months = 24)
+        {
+            var framework = await _governanceService.GetFrameworkByIdAsync(id);
+            if (framework == null)
+                return NotFound();
+
+            var trendAnalysis = await _governanceService.GetComplianceTrendAnalysisAsync(id, months);
+            var forecast = await _governanceService.GetComplianceForecastAsync(id, 6);
+            var velocity = await _governanceService.GetComplianceVelocityAsync(id);
+            var milestones = await _governanceService.GetComplianceMilestonesAsync(id);
+            var maturity = await _governanceService.GetComplianceMaturityProgressionAsync(id);
+
+            var viewModel = new ComplianceTrendAnalysisViewModel
+            {
+                Framework = framework,
+                TrendAnalysis = trendAnalysis,
+                Forecast = forecast,
+                Velocity = velocity,
+                Milestones = milestones,
+                MaturityProgression = maturity,
+                // Chart data for visualization
+                HistoricalChartLabels = string.Join(",", trendAnalysis.TrendData.Select(t => $"\"{t.Date:MMM yyyy}\"")),
+                HistoricalChartData = string.Join(",", trendAnalysis.TrendData.Select(t => t.CompliancePercentage.ToString("F1"))),
+                ForecastChartLabels = string.Join(",", forecast.Select(f => $"\"{f.Date:MMM yyyy}\"")),
+                ForecastChartData = string.Join(",", forecast.Select(f => f.PredictedCompliance.ToString("F1"))),
+                ForecastUpperBound = string.Join(",", forecast.Select(f => f.UpperBound.ToString("F1"))),
+                ForecastLowerBound = string.Join(",", forecast.Select(f => f.LowerBound.ToString("F1"))),
+                VelocityChartLabels = string.Join(",", velocity.VelocityHistory.Select(v => $"\"{v.Date:MMM yyyy}\"")),
+                VelocityChartData = string.Join(",", velocity.VelocityHistory.Select(v => v.Velocity.ToString("F1")))
+            };
+
+            return View(viewModel);
+        }
+
+        // AJAX endpoint for trend data with custom date ranges
+        [HttpGet]
+        public async Task<IActionResult> GetTrendData(int frameworkId, DateTime? startDate = null, DateTime? endDate = null)
+        {
+            try
+            {
+                var months = startDate.HasValue && endDate.HasValue 
+                    ? ((endDate.Value.Year - startDate.Value.Year) * 12) + endDate.Value.Month - startDate.Value.Month 
+                    : 12;
+                
+                var trendAnalysis = await _governanceService.GetComplianceTrendAnalysisAsync(frameworkId, Math.Max(months, 3));
+                
+                return Json(new
+                {
+                    success = true,
+                    trendData = trendAnalysis.TrendData.Select(t => new
+                    {
+                        date = t.Date.ToString("yyyy-MM-dd"),
+                        compliance = t.CompliancePercentage,
+                        assessor = t.Assessor
+                    }),
+                    analysis = new
+                    {
+                        currentCompliance = trendAnalysis.CurrentCompliance,
+                        averageCompliance = trendAnalysis.AverageCompliance,
+                        trendDirection = trendAnalysis.OverallTrend,
+                        slope = trendAnalysis.TrendSlope,
+                        variance = trendAnalysis.ComplianceVariance
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
+        private string GetComplianceStatusDisplayName(ComplianceStatus status)
+        {
+            return status switch
+            {
+                ComplianceStatus.FullyCompliant => "Fully Compliant",
+                ComplianceStatus.MajorlyCompliant => "Majorly Compliant",
+                ComplianceStatus.PartiallyCompliant => "Partially Compliant",
+                ComplianceStatus.NonCompliant => "Non-Compliant",
+                ComplianceStatus.NotApplicable => "Not Applicable",
+                _ => status.ToString()
+            };
+        }
     }
 
     // Request model for AJAX priority updates

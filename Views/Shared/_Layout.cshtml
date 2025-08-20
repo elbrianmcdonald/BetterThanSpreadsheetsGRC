@@ -21,7 +21,7 @@
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Dashboard" asp-action="Index">
+                <a class="navbar-brand" asp-area="" asp-controller="RiskBacklog" asp-action="Index">
                     <i class="fas fa-chart-line me-2"></i>Better Than Spreadsheets GRC
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
@@ -34,21 +34,21 @@
                         <ul class="navbar-nav flex-grow-1">
                             <!-- 🏠 Home Dashboard -->
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-controller="Dashboard" asp-action="Index" title="Main dashboard with overview of all activities">
+                                <a class="nav-link text-light" asp-controller="RiskBacklog" asp-action="Index" title="Risk backlog and workflow management">
                                     <i class="fas fa-home me-1"></i>Home
                                 </a>
                             </li>
 
-                            <!-- 🚨 Security Operations -->
+                            <!-- 🔍 Findings -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle text-light" href="#" id="securityDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Security findings, vulnerabilities, and incident tracking">
-                                    <i class="fas fa-shield-alt me-1"></i>Security
+                                <a class="nav-link dropdown-toggle text-light" href="#" id="findingsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="Security findings, vulnerabilities, and incident tracking">
+                                    <i class="fas fa-search me-1"></i>Findings
                                 </a>
-                                <ul class="dropdown-menu" aria-labelledby="securityDropdown">
+                                <ul class="dropdown-menu" aria-labelledby="findingsDropdown">
                                     <li><h6 class="dropdown-header"><i class="fas fa-exclamation-triangle me-1"></i>Findings & Issues</h6></li>
                                     <li>
                                         <a class="dropdown-item" asp-controller="Findings" asp-action="Index">
-                                            <i class="fas fa-list me-1"></i>Security Findings
+                                            <i class="fas fa-list me-1"></i>Findings
                                             <small class="text-muted d-block">View all security issues</small>
                                         </a>
                                     </li>
@@ -225,20 +225,8 @@
                                                 <small class="text-muted d-block">Add, edit, and assign roles</small>
                                             </a>
                                         </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="RequestManagement" asp-action="Index">
-                                                <i class="fas fa-inbox me-1"></i>Request Queue
-                                                <small class="text-muted d-block">Approve user requests</small>
-                                            </a>
-                                        </li>
                                         <li><hr class="dropdown-divider"></li>
                                         <li><h6 class="dropdown-header"><i class="fas fa-sliders-h me-1"></i>Risk Configuration</h6></li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="RiskLevelSettings" asp-action="Index">
-                                                <i class="fas fa-thermometer-half me-1"></i>Risk Levels
-                                                <small class="text-muted d-block">Configure risk scoring</small>
-                                            </a>
-                                        </li>
                                         <li>
                                             <a class="dropdown-item" asp-controller="RiskMatrix" asp-action="Index">
                                                 <i class="fas fa-th me-1"></i>Risk Matrix

@@ -1,6 +1,6 @@
-@model CyberRiskApp.ViewModels.FAIRAssessmentViewModel
+@model CyberRiskApp.ViewModels.RiskAssessmentViewModel
 @{
-    ViewData["Title"] = "Edit Qualitative Risk Assessment";
+    ViewData["Title"] = "Edit Risk Assessment";
 }
 
 <div class="container-fluid py-4">
@@ -9,8 +9,8 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>
                     <i class="fas fa-edit text-primary me-2"></i>
-                    Edit Qualitative Risk Assessment
-                    <span class="badge bg-warning text-dark ms-2">Qualitative</span>
+                    Edit Risk Assessment
+                    <span class="badge bg-primary ms-2">ID: @Model.Assessment.Id</span>
                 </h2>
                 <div>
                     <a asp-action="Details" asp-route-id="@Model.Assessment.Id" class="btn btn-outline-info me-2">
@@ -22,423 +22,208 @@
                 </div>
             </div>
 
-            <form asp-action="Edit" method="post" id="qualitativeAssessmentForm" novalidate>
-                <div asp-validation-summary="All" class="alert alert-danger"></div>
-                
-                <!-- Hidden fields for edit -->
-                <input asp-for="Assessment.Id" type="hidden" />
-                <input type="hidden" name="Assessment.AssessmentType" value="0" />
-                
-                <!-- Basic Information -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary bg-opacity-10">
-                        <h5 class="mb-0">
-                            <i class="fas fa-info-circle me-2"></i>Basic Information
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
+            <form asp-action="Edit" method="post" class="needs-validation" novalidate>
+                <input type="hidden" asp-for="Assessment.Id" />
+                <input type="hidden" asp-for="Assessment.AssessmentType" />
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Assessment Details</h5>
+                            </div>
+                            <div class="card-body">
                                 <div class="mb-3">
-                                    <label asp-for="Assessment.Title" class="form-label fw-bold">Assessment Title <span class="text-danger">*</span></label>
+                                    <label asp-for="Assessment.Title" class="form-label">Assessment Title</label>
                                     <input asp-for="Assessment.Title" class="form-control" placeholder="Enter assessment title" required />
                                     <span asp-validation-for="Assessment.Title" class="text-danger"></span>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
+
                                 <div class="mb-3">
-                                    <label asp-for="Assessment.Asset" class="form-label fw-bold">Primary Asset <span class="text-danger">*</span></label>
-                                    @Html.AssetComboboxFor(m => m.Assessment.Asset, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"), required: true)
+                                    <label asp-for="Assessment.Asset" class="form-label">Primary Asset</label>
+                                    <input asp-for="Assessment.Asset" class="form-control" placeholder="Enter primary asset being assessed" required />
+                                    <span asp-validation-for="Assessment.Asset" class="text-danger"></span>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="Assessment.BusinessUnit" class="form-label">Business Unit</label>
+                                            <input asp-for="Assessment.BusinessUnit" class="form-control" placeholder="Enter business unit" />
+                                            <span asp-validation-for="Assessment.BusinessUnit" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label asp-for="Assessment.BusinessOwner" class="form-label">Business Owner</label>
+                                            <input asp-for="Assessment.BusinessOwner" class="form-control" placeholder="Enter business owner" />
+                                            <span asp-validation-for="Assessment.BusinessOwner" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.Description" class="form-label">Description</label>
+                                    <textarea asp-for="Assessment.Description" class="form-control" rows="3" placeholder="Describe the assessment scope and objectives"></textarea>
+                                    <span asp-validation-for="Assessment.Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.ThreatScenario" class="form-label">Threat Scenario</label>
+                                    <textarea asp-for="Assessment.ThreatScenario" class="form-control" rows="3" placeholder="Describe the threat scenario being assessed"></textarea>
+                                    <span asp-validation-for="Assessment.ThreatScenario" class="text-danger"></span>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Assessment.BusinessUnit" class="form-label fw-bold">Business Unit</label>
-                                    @Html.BusinessUnitComboboxFor(m => m.Assessment.BusinessUnit, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Assessment.BusinessOwner" class="form-label fw-bold">Business Owner</label>
-                                    @Html.BusinessOwnerComboboxFor(m => m.Assessment.BusinessOwner, canAddNew: User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Assessment.CIATriad" class="form-label fw-bold">CIA Triad Impact</label>
-                                    <select asp-for="Assessment.CIATriad" class="form-control">
-                                        <option value="">Select CIA Impact</option>
-                                        <option value="1">Confidentiality</option>
-                                        <option value="2">Integrity</option>
-                                        <option value="3">Availability</option>
-                                        <option value="4">Confidentiality & Integrity</option>
-                                        <option value="5">Confidentiality & Availability</option>
-                                        <option value="6">Integrity & Availability</option>
-                                        <option value="7">All Three (CIA)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label asp-for="Assessment.RiskMatrixId" class="form-label fw-bold">Risk Matrix <span class="text-danger">*</span></label>
-                                    <select asp-for="Assessment.RiskMatrixId" class="form-control" id="riskMatrixSelector" required onchange="loadMatrixData(this.value)">
-                                        <option value="">Select Risk Matrix</option>
-                                        @if (ViewBag.AvailableMatrices != null)
-                                        {
-                                            @foreach (var matrix in ViewBag.AvailableMatrices as List<CyberRiskApp.Models.RiskMatrix>)
-                                            {
-                                                <option value="@matrix.Id" selected="@(matrix.Id == Model.Assessment.RiskMatrixId)">
-                                                    @matrix.Name (@matrix.MatrixSize×@matrix.MatrixSize @matrix.MatrixType.ToString().Replace("ImpactLikelihood", "Impact×Likelihood").Replace("Exposure", "×Exposure"))
-                                                </option>
-                                            }
-                                        }
-                                    </select>
-                                    <span asp-validation-for="Assessment.RiskMatrixId" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label asp-for="Assessment.Description" class="form-label fw-bold">Business Use</label>
-                            <textarea asp-for="Assessment.Description" class="form-control" rows="2" placeholder="Describe how this system aids the business"></textarea>
                         </div>
 
-                        <!-- Threat Model Selection -->
-                        @if (Model.AvailableThreatModels != null && Model.AvailableThreatModels.Any())
+                        <div class="card shadow-sm mt-4">
+                            <div class="card-header bg-warning">
+                                <h5 class="mb-0 text-dark"><i class="fas fa-calculator me-2"></i>Risk Scoring</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label asp-for="Assessment.QualitativeImpact" class="form-label">Impact Level</label>
+                                            <select asp-for="Assessment.QualitativeImpact" class="form-select">
+                                                <option value="">Select Impact</option>
+                                                <option value="1">1 - Very Low</option>
+                                                <option value="2">2 - Low</option>
+                                                <option value="3">3 - Medium</option>
+                                                <option value="4">4 - High</option>
+                                                <option value="5">5 - Very High</option>
+                                            </select>
+                                            <span asp-validation-for="Assessment.QualitativeImpact" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label asp-for="Assessment.QualitativeLikelihood" class="form-label">Likelihood Level</label>
+                                            <select asp-for="Assessment.QualitativeLikelihood" class="form-select">
+                                                <option value="">Select Likelihood</option>
+                                                <option value="1">1 - Very Low</option>
+                                                <option value="2">2 - Low</option>
+                                                <option value="3">3 - Medium</option>
+                                                <option value="4">4 - High</option>
+                                                <option value="5">5 - Very High</option>
+                                            </select>
+                                            <span asp-validation-for="Assessment.QualitativeLikelihood" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label asp-for="Assessment.QualitativeExposure" class="form-label">Exposure Level</label>
+                                            <select asp-for="Assessment.QualitativeExposure" class="form-select">
+                                                <option value="">Select Exposure</option>
+                                                <option value="1">1 - Very Low</option>
+                                                <option value="2">2 - Low</option>
+                                                <option value="3">3 - Medium</option>
+                                                <option value="4">4 - High</option>
+                                                <option value="5">5 - Very High</option>
+                                            </select>
+                                            <span asp-validation-for="Assessment.QualitativeExposure" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (Model.Assessment.QualitativeImpact.HasValue && Model.Assessment.QualitativeLikelihood.HasValue)
+                                {
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Current Risk Score:</strong> 
+                                        @(Model.Assessment.QualitativeImpact.Value * Model.Assessment.QualitativeLikelihood.Value * (Model.Assessment.QualitativeExposure ?? 1))
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Assessment Settings</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.Status" class="form-label">Status</label>
+                                    <select asp-for="Assessment.Status" class="form-select">
+                                        <option value="Draft">Draft</option>
+                                        <option value="InProgress">In Progress</option>
+                                        <option value="UnderReview">Under Review</option>
+                                        <option value="Completed">Completed</option>
+                                    </select>
+                                    <span asp-validation-for="Assessment.Status" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.CIATriad" class="form-label">CIA Impact</label>
+                                    <select asp-for="Assessment.CIATriad" class="form-select">
+                                        <option value="">Select Impact Type</option>
+                                        <option value="Confidentiality">Confidentiality</option>
+                                        <option value="Integrity">Integrity</option>
+                                        <option value="Availability">Availability</option>
+                                        <option value="Mixed">Mixed</option>
+                                    </select>
+                                    <span asp-validation-for="Assessment.CIATriad" class="text-danger"></span>
+                                </div>
+
+                                @if (Model.Assessment.CreatedAt != default(DateTime))
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label">Created</label>
+                                        <div class="form-control-plaintext">
+                                            @Model.Assessment.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (Model.Assessment.UpdatedAt != default(DateTime))
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label">Last Updated</label>
+                                        <div class="form-control-plaintext">
+                                            @Model.Assessment.UpdatedAt.ToString("yyyy-MM-dd HH:mm")
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        @if (Model.OpenRisks?.Any() == true)
                         {
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Link Threat Models (Optional)</label>
-                                <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
-                                    @foreach (var threatModel in Model.AvailableThreatModels)
+                            <div class="card shadow-sm mt-3">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Related Risks</h5>
+                                </div>
+                                <div class="card-body">
+                                    @foreach (var risk in Model.OpenRisks.Take(5))
                                     {
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" 
-                                                   name="SelectedThreatModelIds" 
-                                                   value="@threatModel.Id" 
-                                                   id="threat_@threatModel.Id"
-                                                   @(Model.SelectedThreatModelIds?.Contains(threatModel.Id) == true ? "checked" : "") />
-                                            <label class="form-check-label" for="threat_@threatModel.Id">
-                                                <strong>@threatModel.Name</strong>
-                                                @if (threatModel.Status == CyberRiskApp.Models.AttackChainStatus.Approved)
-                                                {
-                                                    <span class="badge bg-primary ms-2">Approved</span>
-                                                }
-                                                else if (threatModel.Status == CyberRiskApp.Models.AttackChainStatus.Reviewed)
-                                                {
-                                                    <span class="badge bg-success ms-2">Reviewed</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-warning text-dark ms-2">@threatModel.Status</span>
-                                                }
-                                                <br>
-                                                <small class="text-muted">@(threatModel.Description?.Length > 100 ? threatModel.Description.Substring(0, 100) + "..." : threatModel.Description)</small>
-                                                @if (threatModel.AttackChainSteps?.Any() == true)
-                                                {
-                                                    <br><small class="text-info">@threatModel.AttackChainSteps.Count attack steps</small>
-                                                }
-                                            </label>
+                                        <div class="d-flex align-items-center mb-2">
+                                            <span class="badge bg-@(risk.RiskLevel.ToString().ToLower()) me-2">@risk.RiskLevel</span>
+                                            <small>@risk.Title</small>
                                         </div>
                                     }
+                                    @if (Model.OpenRisks.Count > 5)
+                                    {
+                                        <small class="text-muted">And @(Model.OpenRisks.Count - 5) more...</small>
+                                    }
                                 </div>
-                                <small class="form-text text-muted">Select threat models to link with this risk assessment. This helps track which attack scenarios are being assessed.</small>
                             </div>
                         }
                     </div>
                 </div>
 
-                <!-- Risk Level Settings Information -->
-                @if(Model.RiskLevelSettings != null)
-                {
-                    <div class="alert alert-info">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6><i class="fas fa-info-circle me-2"></i>Current Risk Level Thresholds</h6>
-                                <ul class="mb-0">
-                                    <li><strong>Critical:</strong> @Model.RiskLevelSettings.QualitativeCriticalThreshold.ToString("F1")+</li>
-                                    <li><strong>High:</strong> @Model.RiskLevelSettings.QualitativeHighThreshold.ToString("F1") - @((Model.RiskLevelSettings.QualitativeCriticalThreshold - 0.1m).ToString("F1"))</li>
-                                    <li><strong>Medium:</strong> @Model.RiskLevelSettings.QualitativeMediumThreshold.ToString("F1") - @((Model.RiskLevelSettings.QualitativeHighThreshold - 0.1m).ToString("F1"))</li>
-                                    <li><strong>Low:</strong> 0.0 - @((Model.RiskLevelSettings.QualitativeMediumThreshold - 0.1m).ToString("F1"))</li>
-                                </ul>
-                            </div>
-                            <div class="col-md-6">
-                                <h6><i class="fas fa-target me-2"></i>Risk Appetite</h6>
-                                <p class="mb-0">
-                                    Risk scores above <strong>@Model.RiskLevelSettings.RiskAppetiteThreshold.ToString("F1")</strong> are considered above organizational risk appetite.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                }
-
-                <!-- Threat Scenario Details -->
-                <div class="card mb-4">
-                    <div class="card-header bg-success bg-opacity-10">
-                        <h5 class="mb-0">
-                            <i class="fas fa-shield-alt me-2"></i>Threat Scenario Details
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="alert alert-info mb-3">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Model complete threat scenarios using MITRE ATT&CK framework and Lockheed Martin Kill Chain. Add multiple scenarios to comprehensively analyze different attack paths.
-                        </div>
-
-                        <div id="threatScenariosContainer">
-                            @if (Model.Assessment.ThreatScenarios?.Any() == true)
-                            {
-                                @foreach (var scenario in Model.Assessment.ThreatScenarios.Select((s, i) => new { Scenario = s, Index = i }))
-                                {
-                                    <!-- Pre-populate existing threat scenarios -->
-                                    <div class="threat-scenario-item card mb-4 border-primary" id="threatScenario_@scenario.Index">
-                                        <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0">
-                                                <i class="fas fa-sitemap me-2"></i>Threat Scenario @(scenario.Index + 1)
-                                            </h6>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeThreatScenario(@scenario.Index)" title="Remove Threat Scenario">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                        <div class="card-body">
-                                            <input type="hidden" name="ThreatScenarios[@scenario.Index].Id" value="@scenario.Scenario.Id" />
-                                            
-                                            <!-- Threat Scenario Description -->
-                                            <div class="row mb-4">
-                                                <div class="col-md-12">
-                                                    <label class="form-label fw-bold">Threat Scenario Description <span class="text-danger">*</span></label>
-                                                    <textarea name="ThreatScenarios[@scenario.Index].Description" 
-                                                              class="form-control" rows="3" 
-                                                              placeholder="Describe this specific threat scenario in detail..." 
-                                                              required>@scenario.Scenario.Description</textarea>
-                                                </div>
-                                            </div>
-
-                                            <!-- Initial Threat Vector Section -->
-                                            <div class="card mb-3">
-                                                <div class="card-header bg-danger bg-opacity-10">
-                                                    <h6 class="mb-0">
-                                                        <i class="fas fa-user-ninja me-2"></i>Initial Threat Vector
-                                                    </h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div id="threatEventsContainer_@scenario.Index">
-                                                        <!-- Initial threat vectors will be populated here -->
-                                                    </div>
-                                                    <button type="button" class="btn btn-sm btn-danger" onclick="addThreatEvent(@scenario.Index)">
-                                                        <i class="fas fa-plus me-1"></i>Add Initial Threat Vector
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <!-- Threat Action Section -->
-                                            <div class="card mb-3">
-                                                <div class="card-header bg-warning bg-opacity-10">
-                                                    <h6 class="mb-0">
-                                                        <i class="fas fa-crosshairs me-2"></i>Threat Action
-                                                    </h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div id="vulnerabilitiesContainer_@scenario.Index">
-                                                        <!-- Threat actions will be populated here -->
-                                                    </div>
-                                                    <button type="button" class="btn btn-sm btn-warning" onclick="addVulnerability(@scenario.Index)">
-                                                        <i class="fas fa-plus me-1"></i>Add Threat Action
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <!-- Actions on Objectives Section -->
-                                            <div class="card mb-3">
-                                                <div class="card-header bg-info bg-opacity-10">
-                                                    <h6 class="mb-0">
-                                                        <i class="fas fa-bullseye me-2"></i>Actions on Objectives
-                                                    </h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div id="lossEventsContainer_@scenario.Index">
-                                                        <!-- Actions on objectives will be populated here -->
-                                                    </div>
-                                                    <button type="button" class="btn btn-sm btn-info" onclick="addLossEvent(@scenario.Index)">
-                                                        <i class="fas fa-plus me-1"></i>Add Action on Objectives
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <!-- Additional Controls Needed Section -->
-                                            <div class="card mb-3">
-                                                <div class="card-header bg-success bg-opacity-10">
-                                                    <h6 class="mb-0">
-                                                        <i class="fas fa-shield-alt me-2"></i>Additional Controls Needed
-                                                    </h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div id="controlsContainer_@scenario.Index">
-                                                        <!-- Controls will be populated here -->
-                                                    </div>
-                                                    <button type="button" class="btn btn-sm btn-success" onclick="addControl(@scenario.Index)">
-                                                        <i class="fas fa-plus me-1"></i>Add Additional Control
-                                                    </button>
-                                                </div>
-                                            </div>
-
-                                            <!-- Qualitative Risk Analysis Section -->
-                                            <div class="card mb-3">
-                                                <div class="card-header bg-warning bg-opacity-10">
-                                                    <h6 class="mb-0">
-                                                        <i class="fas fa-balance-scale me-2"></i>Qualitative Risk Analysis
-                                                    </h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div class="alert alert-info mb-3">
-                                                        <i class="fas fa-info-circle me-2"></i>
-                                                        <strong>Risk Calculation:</strong> Risk Score = (Likelihood × Impact) × Exposure Level
-                                                        <br><small class="text-muted">Select appropriate levels based on this specific threat scenario.</small>
-                                                    </div>
-                                                    
-                                                    <div class="row">
-                                                        <div class="col-md-4">
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Likelihood Level <span class="text-danger">*</span></label>
-                                                                <select name="ThreatScenarios[@scenario.Index].QualitativeLikelihood" class="form-select form-select-sm" required>
-                                                                    <option value="">Select Likelihood</option>
-                                                                </select>
-                                                                <small class="form-text text-muted">How likely is this threat scenario to occur?</small>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Impact Level <span class="text-danger">*</span></label>
-                                                                <select name="ThreatScenarios[@scenario.Index].QualitativeImpact" class="form-select form-select-sm" required>
-                                                                    <option value="">Select Impact</option>
-                                                                </select>
-                                                                <small class="form-text text-muted">What would be the impact if this threat scenario occurred?</small>
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-md-4">
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Exposure Level <span class="text-danger">*</span></label>
-                                                                <select name="ThreatScenarios[@scenario.Index].QualitativeExposure" class="form-select form-select-sm" required>
-                                                                    <option value="">Select Exposure</option>
-                                                                </select>
-                                                                <small class="form-text text-muted">How exposed is the asset to this threat scenario?</small>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Risk Calculation Preview -->
-                                                    <div class="card bg-light border-warning mt-2">
-                                                        <div class="card-body p-2">
-                                                            <h6 class="text-warning mb-2">
-                                                                <i class="fas fa-calculator me-2"></i>Risk Calculation Preview
-                                                            </h6>
-                                                            <div class="row text-center">
-                                                                <div class="col-md-2">
-                                                                    <div class="p-1 bg-white rounded shadow-sm">
-                                                                        <small class="text-muted d-block">Likelihood</small>
-                                                                        <strong class="text-info"><span id="likelihoodPreview_@scenario.Index">-</span></strong>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <div class="p-1 bg-white rounded shadow-sm">
-                                                                        <small class="text-muted d-block">Impact</small>
-                                                                        <strong class="text-primary"><span id="impactPreview_@scenario.Index">-</span></strong>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <div class="p-1 bg-white rounded shadow-sm">
-                                                                        <small class="text-muted d-block">Exposure</small>
-                                                                        <strong class="text-secondary"><span id="exposurePreview_@scenario.Index">-</span></strong>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="col-md-3">
-                                                                    <div class="p-1 bg-white rounded shadow-sm">
-                                                                        <small class="text-muted d-block">Risk Score</small>
-                                                                        <strong class="text-warning"><span id="riskScorePreview_@scenario.Index">-</span></strong>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="col-md-3">
-                                                                    <div class="p-1 bg-white rounded shadow-sm">
-                                                                        <small class="text-muted d-block">Risk Appetite</small>
-                                                                        <strong><span id="riskAppetitePreview_@scenario.Index" class="text-muted">-</span></strong>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Identified Risks Section -->
-                                            <div class="card mb-3">
-                                                <div class="card-header bg-danger bg-opacity-10">
-                                                    <h6 class="mb-0">
-                                                        <i class="fas fa-exclamation-triangle me-2"></i>Identified Risks
-                                                    </h6>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div class="alert alert-info mb-3">
-                                                        <i class="fas fa-info-circle me-2"></i>
-                                                        Add specific risks identified for this threat scenario that need to be tracked and managed.
-                                                    </div>
-                                                    
-                                                    <!-- Column Headers -->
-                                                    <div class="row mb-2 d-none" id="riskHeaders_@scenario.Index">
-                                                        <div class="col-md-2">
-                                                            <small class="text-muted fw-bold">Risk Title</small>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <small class="text-muted fw-bold">Risk Description</small>
-                                                        </div>
-                                                        <div class="col-md-1">
-                                                            <small class="text-muted fw-bold">Owner</small>
-                                                        </div>
-                                                        <div class="col-md-2">
-                                                            <small class="text-muted fw-bold">Current Risk Level</small>
-                                                        </div>
-                                                        <div class="col-md-2">
-                                                            <small class="text-muted fw-bold">Treatment</small>
-                                                        </div>
-                                                        <div class="col-md-2">
-                                                            <small class="text-muted fw-bold">Risk Level after Treatment</small>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div id="risksContainer_@scenario.Index">
-                                                        <!-- Risks will be populated here -->
-                                                    </div>
-                                                    
-                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="addScenarioRisk(@scenario.Index)">
-                                                        <i class="fas fa-plus me-2"></i>Add Risk
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            }
-                        </div>
-                        
-                        <button type="button" class="btn btn-primary" onclick="addThreatScenario()">
-                            <i class="fas fa-plus me-1"></i>Add Threat Scenario
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Submit Buttons -->
-                <div class="card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-save me-2"></i>Update Assessment
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i>Save Changes
                             </button>
-                            <a asp-action="Index" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-times me-2"></i>Cancel
+                            <a asp-action="Details" asp-route-id="@Model.Assessment.Id" class="btn btn-info">
+                                <i class="fas fa-eye me-1"></i>View Details
+                            </a>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i>Cancel
                             </a>
                         </div>
                     </div>
@@ -449,1222 +234,5 @@
 </div>
 
 @section Scripts {
-    <script>
-        let qualitativeControlIndex = 0;
-        let riskIndex = 0;
-        let threatEventIndex = 0;
-        let vulnerabilityIndex = 0;
-        let lossEventIndex = 0;
-        let threatScenarioIndex = @(Model.Assessment.ThreatScenarios?.Count ?? 0);
-        let scenarioRiskIndex = 0;
-        
-        // MITRE ATT&CK data cache
-        let mitreData = [];
-        
-        // Risk level settings from server
-        const riskLevelSettings = @Html.Raw(Json.Serialize(Model.RiskLevelSettings ?? new CyberRiskApp.Models.RiskLevelSettings()));
-        const defaultMatrix = @Html.Raw(Json.Serialize(ViewBag.DefaultMatrix));
-        const defaultMatrixCells = @Html.Raw(Json.Serialize(ViewBag.DefaultMatrixCells ?? new List<CyberRiskApp.Models.RiskMatrixCell>()));
-        let defaultMatrixLevels = @Html.Raw(Json.Serialize(ViewBag.DefaultMatrixLevels ?? new List<CyberRiskApp.Models.RiskMatrixLevel>()));
-        const availableMatrices = @Html.Raw(Json.Serialize(ViewBag.AvailableMatrices ?? new List<CyberRiskApp.Models.RiskMatrix>()));
-        
-        // Load MITRE data once and cache it
-        async function loadMitreData() {
-            if (mitreData.length > 0) {
-                console.log('MITRE data already loaded:', mitreData.length);
-                return mitreData;
-            }
-            
-            try {
-                console.log('Loading MITRE techniques...');
-                
-                // Try the threat modeling API endpoint first
-                let response = await fetch('/api/threatmodeling/mitretechniques');
-                console.log('ThreatModeling API response status:', response.status);
-                
-                if (!response.ok) {
-                    console.log('Falling back to direct MITRE API...');
-                    // Fallback to the direct MITRE API
-                    response = await fetch('/api/mitre/techniques');
-                    console.log('MITRE API response status:', response.status);
-                }
-                
-                if (response.ok) {
-                    const apiResponse = await response.json();
-                    // Handle different API response formats
-                    const techniques = apiResponse.results || apiResponse || [];
-                    
-                    mitreData = techniques.map(technique => ({
-                        id: technique.id || technique.techniqueId,
-                        name: technique.name,
-                        tactic: technique.tactic,
-                        description: technique.description,
-                        displayText: `${technique.id || technique.techniqueId} - ${technique.name}`
-                    }));
-                    
-                    console.log(`Successfully loaded ${mitreData.length} MITRE techniques`);
-                    setupMitreAutocomplete();
-                    return mitreData;
-                } else {
-                    console.error('Failed to load MITRE techniques. Response:', response);
-                }
-            } catch (error) {
-                console.error('Error loading MITRE data:', error);
-            }
-            
-            return [];
-        }
-        
-        // Setup autocomplete for MITRE technique search boxes
-        function setupMitreAutocomplete() {
-            document.querySelectorAll('.mitre-technique-search').forEach(input => {
-                const suggestionBox = input.nextElementSibling;
-                
-                // Skip if already setup
-                if (input.dataset.autocompleteSetup) return;
-                input.dataset.autocompleteSetup = 'true';
-                
-                input.addEventListener('input', function(e) {
-                    const query = e.target.value.toLowerCase().trim();
-                    
-                    if (query.length < 2) {
-                        suggestionBox.style.display = 'none';
-                        return;
-                    }
-                    
-                    const matches = mitreData.filter(technique => 
-                        technique.displayText.toLowerCase().includes(query) ||
-                        (technique.tactic && technique.tactic.toLowerCase().includes(query)) ||
-                        (technique.description && technique.description.toLowerCase().includes(query))
-                    ).slice(0, 10); // Limit to 10 results
-                    
-                    if (matches.length === 0) {
-                        suggestionBox.style.display = 'none';
-                        return;
-                    }
-                    
-                    suggestionBox.innerHTML = matches.map(technique => 
-                        `<div class="mitre-suggestion-item p-2 border-bottom" style="cursor: pointer;" data-id="${technique.id}" data-text="${technique.displayText}">
-                            <strong>${technique.displayText}</strong>
-                            ${technique.tactic ? `<br><small class="text-muted">Tactic: ${technique.tactic}</small>` : ''}
-                        </div>`
-                    ).join('');
-                    
-                    suggestionBox.style.display = 'block';
-                    
-                    // Add click handlers to suggestion items
-                    suggestionBox.querySelectorAll('.mitre-suggestion-item').forEach(item => {
-                        item.addEventListener('click', function() {
-                            input.value = this.dataset.text;
-                            suggestionBox.style.display = 'none';
-                        });
-                    });
-                });
-                
-                // Hide suggestions when clicking outside
-                document.addEventListener('click', function(e) {
-                    if (!input.contains(e.target) && !suggestionBox.contains(e.target)) {
-                        suggestionBox.style.display = 'none';
-                    }
-                });
-            });
-        }
-        
-        // Function to load matrix data when user changes selection
-        async function loadMatrixData(matrixId) {
-            if (!matrixId) {
-                console.log('No matrix ID provided');
-                return;
-            }
-            
-            console.log('Loading matrix data for ID:', matrixId);
-            
-            try {
-                const response = await fetch(`/RiskMatrix/GetMatrixData/${matrixId}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    // Update the global matrix levels variable
-                    defaultMatrixLevels = data.levels;
-                    console.log('Updated matrix levels:', defaultMatrixLevels);
-                    
-                    // Update all existing threat scenario dropdowns
-                    updateAllThreatScenarioDropdowns();
-                } else {
-                    console.error('Error loading matrix data:', data.message);
-                    alert('Error loading risk matrix data. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error loading matrix data:', error);
-                alert('Error loading risk matrix data. Please try again.');
-            }
-        }
-        
-        // Function to update all existing threat scenario dropdowns
-        function updateAllThreatScenarioDropdowns() {
-            // Update dropdowns in all existing threat scenarios
-            const threatScenarios = document.querySelectorAll('.threat-scenario-item');
-            threatScenarios.forEach((scenario, index) => {
-                const likelihoodSelect = scenario.querySelector('select[name*="QualitativeLikelihood"]');
-                const impactSelect = scenario.querySelector('select[name*="QualitativeImpact"]');
-                const exposureSelect = scenario.querySelector('select[name*="QualitativeExposure"]');
-                
-                if (likelihoodSelect) {
-                    const currentValue = likelihoodSelect.value;
-                    likelihoodSelect.innerHTML = getLikelihoodOptions();
-                    if (currentValue) likelihoodSelect.value = currentValue;
-                }
-                if (impactSelect) {
-                    const currentValue = impactSelect.value;
-                    impactSelect.innerHTML = getImpactOptions();
-                    if (currentValue) impactSelect.value = currentValue;
-                }
-                if (exposureSelect) {
-                    const currentValue = exposureSelect.value;
-                    exposureSelect.innerHTML = getExposureOptions();
-                    if (currentValue) exposureSelect.value = currentValue;
-                }
-            });
-        }
-
-        // Helper functions to get level options from matrix
-        function getLikelihoodOptions() {
-            let options = '<option value="">Select Likelihood</option>';
-            if (defaultMatrixLevels && defaultMatrixLevels.length > 0) {
-                const likelihoodLevels = defaultMatrixLevels.filter(l => 
-                    l.levelType === 2 || l.levelType === 'Likelihood' || l.levelType === 'likelihood'
-                ).sort((a, b) => a.levelValue - b.levelValue);
-                if (likelihoodLevels.length > 0) {
-                    likelihoodLevels.forEach(level => {
-                        options += `<option value="${level.levelValue}">${level.levelName} (${level.levelValue})</option>`;
-                    });
-                } else {
-                    options += '<option value="1">Very Low (1)</option>';
-                    options += '<option value="2">Low (2)</option>';
-                    options += '<option value="3">Medium (3)</option>';
-                    options += '<option value="4">High (4)</option>';
-                    options += '<option value="5">Very High (5)</option>';
-                }
-            } else {
-                options += '<option value="1">Very Low (1)</option>';
-                options += '<option value="2">Low (2)</option>';
-                options += '<option value="3">Medium (3)</option>';
-                options += '<option value="4">High (4)</option>';
-                options += '<option value="5">Very High (5)</option>';
-            }
-            return options;
-        }
-        
-        function getImpactOptions() {
-            let options = '<option value="">Select Impact</option>';
-            if (defaultMatrixLevels && defaultMatrixLevels.length > 0) {
-                const impactLevels = defaultMatrixLevels.filter(l => 
-                    l.levelType === 1 || l.levelType === 'Impact' || l.levelType === 'impact'
-                ).sort((a, b) => a.levelValue - b.levelValue);
-                impactLevels.forEach(level => {
-                    options += `<option value="${level.levelValue}">${level.levelName} (${level.levelValue})</option>`;
-                });
-            } else {
-                options += '<option value="1">Very Low (1)</option>';
-                options += '<option value="2">Low (2)</option>';
-                options += '<option value="3">Medium (3)</option>';
-                options += '<option value="4">High (4)</option>';
-                options += '<option value="5">Very High (5)</option>';
-            }
-            return options;
-        }
-        
-        function getExposureOptions() {
-            let options = '<option value="">Select Exposure</option>';
-            if (defaultMatrixLevels && defaultMatrixLevels.length > 0) {
-                const exposureLevels = defaultMatrixLevels.filter(l => 
-                    l.levelType === 3 || l.levelType === 'Exposure' || l.levelType === 'exposure'
-                ).sort((a, b) => a.levelValue - b.levelValue);
-                if (exposureLevels.length > 0) {
-                    exposureLevels.forEach(level => {
-                        const multiplier = level.multiplier || (level.levelValue * 0.2);
-                        options += `<option value="${multiplier}">${level.levelName} (${multiplier})</option>`;
-                    });
-                } else {
-                    options += '<option value="0.2">Slightly Exposed (0.2)</option>';
-                    options += '<option value="0.4">Exposed (0.4)</option>';
-                    options += '<option value="0.8">Moderately Exposed (0.8)</option>';
-                    options += '<option value="1.0">Highly Exposed (1.0)</option>';
-                }
-            } else {
-                options += '<option value="0.2">Slightly Exposed (0.2)</option>';
-                options += '<option value="0.4">Exposed (0.4)</option>';
-                options += '<option value="0.8">Moderately Exposed (0.8)</option>';
-                options += '<option value="1.0">Highly Exposed (1.0)</option>';
-            }
-            return options;
-        }
-
-        // Main threat scenario management
-        function addThreatScenario() {
-            const container = document.getElementById('threatScenariosContainer');
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
-            
-            const scenarioHtml = `
-                <div class="threat-scenario-item card mb-4 border-primary" id="threatScenario_${threatScenarioIndex}">
-                    <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">
-                            <i class="fas fa-sitemap me-2"></i>Threat Scenario ${threatScenarioIndex + 1}
-                        </h6>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeThreatScenario(${threatScenarioIndex})" title="Remove Threat Scenario">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <!-- Threat Scenario Description -->
-                        <div class="row mb-4">
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold">Threat Scenario Description <span class="text-danger">*</span></label>
-                                <textarea name="ThreatScenarios[${threatScenarioIndex}].Description" 
-                                          class="form-control" rows="3" 
-                                          placeholder="Describe this specific threat scenario in detail..." 
-                                          required></textarea>
-                            </div>
-                        </div>
-                        
-                        <!-- Initial Threat Vector Section -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-danger bg-opacity-10">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-user-ninja me-2"></i>Initial Threat Vector
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="threatEventsContainer_${threatScenarioIndex}">
-                                    <!-- Initial threat vectors will be added here -->
-                                </div>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="addThreatEvent(${threatScenarioIndex})">
-                                    <i class="fas fa-plus me-1"></i>Add Initial Threat Vector
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Threat Action Section -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-warning bg-opacity-10">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-crosshairs me-2"></i>Threat Action
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="vulnerabilitiesContainer_${threatScenarioIndex}">
-                                    <!-- Threat actions will be added here -->
-                                </div>
-                                <button type="button" class="btn btn-sm btn-warning" onclick="addVulnerability(${threatScenarioIndex})">
-                                    <i class="fas fa-plus me-1"></i>Add Threat Action
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Actions on Objectives Section -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-info bg-opacity-10">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-bullseye me-2"></i>Actions on Objectives
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="lossEventsContainer_${threatScenarioIndex}">
-                                    <!-- Actions on objectives will be added here -->
-                                </div>
-                                <button type="button" class="btn btn-sm btn-info" onclick="addLossEvent(${threatScenarioIndex})">
-                                    <i class="fas fa-plus me-1"></i>Add Action on Objectives
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Additional Controls Needed Section -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-success bg-opacity-10">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-shield-alt me-2"></i>Additional Controls Needed
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div id="controlsContainer_${threatScenarioIndex}">
-                                    <!-- Controls will be dynamically added here -->
-                                </div>
-                                <button type="button" class="btn btn-sm btn-success" onclick="addControl(${threatScenarioIndex})">
-                                    <i class="fas fa-plus me-1"></i>Add Additional Control
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Qualitative Risk Analysis Section -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-warning bg-opacity-10">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-balance-scale me-2"></i>Qualitative Risk Analysis
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="alert alert-info mb-3">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Risk Calculation:</strong> Risk Score = (Likelihood × Impact) × Exposure Level
-                                    <br><small class="text-muted">Select appropriate levels based on this specific threat scenario.</small>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Likelihood Level <span class="text-danger">*</span></label>
-                                            <select name="ThreatScenarios[${threatScenarioIndex}].QualitativeLikelihood" class="form-select form-select-sm" required>
-                                                ${getLikelihoodOptions()}
-                                            </select>
-                                            <small class="form-text text-muted">How likely is this threat scenario to occur?</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Impact Level <span class="text-danger">*</span></label>
-                                            <select name="ThreatScenarios[${threatScenarioIndex}].QualitativeImpact" class="form-select form-select-sm" required>
-                                                ${getImpactOptions()}
-                                            </select>
-                                            <small class="form-text text-muted">What would be the impact if this threat scenario occurred?</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Exposure Level <span class="text-danger">*</span></label>
-                                            <select name="ThreatScenarios[${threatScenarioIndex}].QualitativeExposure" class="form-select form-select-sm" required>
-                                                ${getExposureOptions()}
-                                            </select>
-                                            <small class="form-text text-muted">How exposed is the asset to this threat scenario?</small>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Risk Calculation Preview -->
-                                <div class="card bg-light border-warning mt-2">
-                                    <div class="card-body p-2">
-                                        <h6 class="text-warning mb-2">
-                                            <i class="fas fa-calculator me-2"></i>Risk Calculation Preview
-                                        </h6>
-                                        <div class="row text-center">
-                                            <div class="col-md-2">
-                                                <div class="p-1 bg-white rounded shadow-sm">
-                                                    <small class="text-muted d-block">Likelihood</small>
-                                                    <strong class="text-info"><span id="likelihoodPreview_${threatScenarioIndex}">-</span></strong>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="p-1 bg-white rounded shadow-sm">
-                                                    <small class="text-muted d-block">Impact</small>
-                                                    <strong class="text-primary"><span id="impactPreview_${threatScenarioIndex}">-</span></strong>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="p-1 bg-white rounded shadow-sm">
-                                                    <small class="text-muted d-block">Exposure</small>
-                                                    <strong class="text-secondary"><span id="exposurePreview_${threatScenarioIndex}">-</span></strong>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="p-1 bg-white rounded shadow-sm">
-                                                    <small class="text-muted d-block">Risk Score</small>
-                                                    <strong class="text-warning"><span id="riskScorePreview_${threatScenarioIndex}">-</span></strong>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="p-1 bg-white rounded shadow-sm">
-                                                    <small class="text-muted d-block">Risk Appetite</small>
-                                                    <strong><span id="riskAppetitePreview_${threatScenarioIndex}" class="text-muted">-</span></strong>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Identified Risks Section -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-danger bg-opacity-10">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>Identified Risks
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="alert alert-info mb-3">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Add specific risks identified for this threat scenario that need to be tracked and managed.
-                                </div>
-                                
-                                <!-- Column Headers -->
-                                <div class="row mb-2 d-none" id="riskHeaders_${threatScenarioIndex}">
-                                    <div class="col-md-2">
-                                        <small class="text-muted fw-bold">Risk Title</small>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <small class="text-muted fw-bold">Risk Description</small>
-                                    </div>
-                                    <div class="col-md-1">
-                                        <small class="text-muted fw-bold">Owner</small>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <small class="text-muted fw-bold">Current Risk Level</small>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <small class="text-muted fw-bold">Treatment</small>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <small class="text-muted fw-bold">Risk Level after Treatment</small>
-                                    </div>
-                                </div>
-                                
-                                <div id="risksContainer_${threatScenarioIndex}">
-                                    <!-- Risks will be added here dynamically -->
-                                </div>
-                                
-                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="addScenarioRisk(${threatScenarioIndex})">
-                                    <i class="fas fa-plus me-2"></i>Add Risk
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', scenarioHtml);
-            
-            // Initialize smart comboboxes and MITRE autocomplete for the new scenario
-            setTimeout(() => {
-                if (window.initializeSmartComboboxes) {
-                    window.initializeSmartComboboxes();
-                }
-                setupMitreAutocomplete();
-                
-                // Add event listeners for qualitative risk fields in this scenario
-                const scenarioIdx = threatScenarioIndex;
-                document.querySelector(`[name="ThreatScenarios[${scenarioIdx}].QualitativeLikelihood"]`)?.addEventListener('change', () => {
-                    updateScenarioQualitativePreview(scenarioIdx);
-                    updateAllRiskLevels(scenarioIdx);
-                });
-                document.querySelector(`[name="ThreatScenarios[${scenarioIdx}].QualitativeImpact"]`)?.addEventListener('change', () => {
-                    updateScenarioQualitativePreview(scenarioIdx);
-                    updateAllRiskLevels(scenarioIdx);
-                });
-                document.querySelector(`[name="ThreatScenarios[${scenarioIdx}].QualitativeExposure"]`)?.addEventListener('change', () => {
-                    updateScenarioQualitativePreview(scenarioIdx);
-                    updateAllRiskLevels(scenarioIdx);
-                });
-            }, 100);
-            
-            threatScenarioIndex++;
-        }
-
-        function removeThreatScenario(scenarioIndex) {
-            const scenarioElement = document.getElementById('threatScenario_' + scenarioIndex);
-            if (scenarioElement) {
-                scenarioElement.remove();
-            }
-        }
-        
-        // Simplified scenario-based functions
-        function addThreatEvent(scenarioIndex) {
-            const container = document.getElementById('threatEventsContainer_' + scenarioIndex);
-            const eventHtml = `
-                <div class="threat-event-item card mb-2 border-danger" id="threatEvent_${scenarioIndex}_${threatEventIndex}">
-                    <div class="card-body p-2">
-                        <div class="row align-items-center">
-                            <div class="col-md-3">
-                                <select name="ThreatScenarios[${scenarioIndex}].ThreatEvents[${threatEventIndex}].ThreatCommunity" 
-                                        class="form-select smart-combobox form-select-sm" 
-                                        data-category="10" 
-                                        data-can-add-new="true">
-                                    <option value="">Threat Community...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <input type="text" 
-                                       name="ThreatScenarios[${scenarioIndex}].ThreatEvents[${threatEventIndex}].MitreTechnique" 
-                                       class="form-control form-control-sm mitre-technique-search" 
-                                       placeholder="MITRE technique..."
-                                       autocomplete="off" />
-                                <div class="mitre-suggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; width: 100%;"></div>
-                            </div>
-                            <div class="col-md-2">
-                                <select name="ThreatScenarios[${scenarioIndex}].ThreatEvents[${threatEventIndex}].KillChainStep" class="form-select form-select-sm">
-                                    <option value="">Kill Chain...</option>
-                                    <option value="Reconnaissance">Reconnaissance</option>
-                                    <option value="Weaponization">Weaponization</option>
-                                    <option value="Delivery">Delivery</option>
-                                    <option value="Exploitation">Exploitation</option>
-                                    <option value="Installation">Installation</option>
-                                    <option value="Command and Control">Command & Control</option>
-                                    <option value="Actions on Objectives">Actions on Objectives</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <input type="text" name="ThreatScenarios[${scenarioIndex}].ThreatEvents[${threatEventIndex}].Description" 
-                                       class="form-control form-control-sm" placeholder="Description..." />
-                            </div>
-                            <div class="col-md-1">
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeThreatEvent(${scenarioIndex}, ${threatEventIndex})" title="Remove">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', eventHtml);
-            threatEventIndex++;
-            
-            // Initialize new smart comboboxes and autocomplete
-            setTimeout(() => {
-                if (window.initializeSmartComboboxes) {
-                    window.initializeSmartComboboxes();
-                }
-                setupMitreAutocomplete();
-            }, 100);
-        }
-        
-        function removeThreatEvent(scenarioIndex, eventIndex) {
-            const eventElement = document.getElementById('threatEvent_' + scenarioIndex + '_' + eventIndex);
-            if (eventElement) {
-                eventElement.remove();
-            }
-        }
-        
-        function addVulnerability(scenarioIndex) {
-            const container = document.getElementById('vulnerabilitiesContainer_' + scenarioIndex);
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
-            const vulnHtml = `
-                <div class="vulnerability-item card mb-2 border-warning" id="vulnerability_${scenarioIndex}_${vulnerabilityIndex}">
-                    <div class="card-body p-2">
-                        <div class="row mb-2">
-                            <div class="col-md-3">
-                                <label class="form-label form-label-sm">Threat Action</label>
-                                <select name="ThreatScenarios[${scenarioIndex}].Vulnerabilities[${vulnerabilityIndex}].ThreatAction" 
-                                        class="form-select smart-combobox form-select-sm" 
-                                        data-category="11" 
-                                        data-can-add-new="true">
-                                    <option value="">Threat Action...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label form-label-sm">MITRE Technique</label>
-                                <input type="text" 
-                                       name="ThreatScenarios[${scenarioIndex}].Vulnerabilities[${vulnerabilityIndex}].MitreTechnique" 
-                                       class="form-control form-control-sm mitre-technique-search" 
-                                       placeholder="MITRE technique..."
-                                       autocomplete="off" />
-                                <div class="mitre-suggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; width: 100%;"></div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label form-label-sm">Access Level</label>
-                                <select name="ThreatScenarios[${scenarioIndex}].Vulnerabilities[${vulnerabilityIndex}].AccessNeeded" class="form-select form-select-sm">
-                                    <option value="">Access Level...</option>
-                                    <option value="None">None</option>
-                                    <option value="User">User</option>
-                                    <option value="Admin">Admin</option>
-                                    <option value="Root">Root</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label form-label-sm">Description</label>
-                                <textarea name="ThreatScenarios[${scenarioIndex}].Vulnerabilities[${vulnerabilityIndex}].Description" 
-                                          class="form-control form-control-sm" rows="2" placeholder="Description..."></textarea>
-                            </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVulnerability(${scenarioIndex}, ${vulnerabilityIndex})" title="Remove">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label class="form-label form-label-sm">Current Protective Controls</label>
-                                <select name="ThreatScenarios[${scenarioIndex}].Vulnerabilities[${vulnerabilityIndex}].ProtectiveControls" 
-                                        class="form-select smart-combobox form-select-sm" 
-                                        data-category="7" 
-                                        data-can-add-new="${canAddNew ? 'true' : 'false'}">
-                                    <option value="">Current protective controls...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label form-label-sm">Current Detective Controls</label>
-                                <select name="ThreatScenarios[${scenarioIndex}].Vulnerabilities[${vulnerabilityIndex}].DetectiveControls" 
-                                        class="form-select smart-combobox form-select-sm" 
-                                        data-category="8" 
-                                        data-can-add-new="${canAddNew ? 'true' : 'false'}">
-                                    <option value="">Current detective controls...</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', vulnHtml);
-            vulnerabilityIndex++;
-            
-            setTimeout(() => {
-                if (window.initializeSmartComboboxes) {
-                    window.initializeSmartComboboxes();
-                }
-                setupMitreAutocomplete();
-            }, 100);
-        }
-        
-        function removeVulnerability(scenarioIndex, vulnIndex) {
-            const vulnElement = document.getElementById('vulnerability_' + scenarioIndex + '_' + vulnIndex);
-            if (vulnElement) {
-                vulnElement.remove();
-            }
-        }
-        
-        function addLossEvent(scenarioIndex) {
-            const container = document.getElementById('lossEventsContainer_' + scenarioIndex);
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
-            const lossHtml = `
-                <div class="loss-event-item card mb-2 border-info" id="lossEvent_${scenarioIndex}_${lossEventIndex}">
-                    <div class="card-body p-2">
-                        <div class="row mb-2">
-                            <div class="col-md-3">
-                                <label class="form-label form-label-sm">Primary Objective</label>
-                                <select name="ThreatScenarios[${scenarioIndex}].LossEvents[${lossEventIndex}].PrimaryObjective" 
-                                        class="form-select smart-combobox form-select-sm" 
-                                        data-category="11" 
-                                        data-can-add-new="true">
-                                    <option value="">Primary Objective...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label form-label-sm">MITRE Technique</label>
-                                <input type="text" 
-                                       name="ThreatScenarios[${scenarioIndex}].LossEvents[${lossEventIndex}].MitreTechnique" 
-                                       class="form-control form-control-sm mitre-technique-search" 
-                                       placeholder="MITRE technique..."
-                                       autocomplete="off" />
-                                <div class="mitre-suggestions" style="display: none; position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; width: 100%;"></div>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label form-label-sm">Kill Chain Step</label>
-                                <select name="ThreatScenarios[${scenarioIndex}].LossEvents[${lossEventIndex}].KillChainStep" class="form-select form-select-sm">
-                                    <option value="">Kill Chain...</option>
-                                    <option value="Actions on Objectives">Actions on Objectives</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label form-label-sm">Description</label>
-                                <textarea name="ThreatScenarios[${scenarioIndex}].LossEvents[${lossEventIndex}].Description" 
-                                          class="form-control form-control-sm" rows="2" placeholder="Description..."></textarea>
-                            </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLossEvent(${scenarioIndex}, ${lossEventIndex})" title="Remove">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label class="form-label form-label-sm">Current Protective Controls</label>
-                                <select name="ThreatScenarios[${scenarioIndex}].LossEvents[${lossEventIndex}].ProtectiveControls" 
-                                        class="form-select smart-combobox form-select-sm" 
-                                        data-category="7" 
-                                        data-can-add-new="${canAddNew ? 'true' : 'false'}">
-                                    <option value="">Current protective controls...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label form-label-sm">Current Detective Controls</label>
-                                <select name="ThreatScenarios[${scenarioIndex}].LossEvents[${lossEventIndex}].DetectiveControls" 
-                                        class="form-select smart-combobox form-select-sm" 
-                                        data-category="8" 
-                                        data-can-add-new="${canAddNew ? 'true' : 'false'}">
-                                    <option value="">Current detective controls...</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', lossHtml);
-            lossEventIndex++;
-            
-            setTimeout(() => {
-                if (window.initializeSmartComboboxes) {
-                    window.initializeSmartComboboxes();
-                }
-                setupMitreAutocomplete();
-            }, 100);
-        }
-        
-        function removeLossEvent(scenarioIndex, lossIndex) {
-            const lossElement = document.getElementById('lossEvent_' + scenarioIndex + '_' + lossIndex);
-            if (lossElement) {
-                lossElement.remove();
-            }
-        }
-        
-        function addControl(scenarioIndex) {
-            const container = document.getElementById('controlsContainer_' + scenarioIndex);
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
-            const controlHtml = `
-                <div class="control-item card mb-2 border-success" id="control_${scenarioIndex}_${qualitativeControlIndex}">
-                    <div class="card-body p-2">
-                        <div class="row align-items-center">
-                            <div class="col-md-4">
-                                <select name="ThreatScenarios[${scenarioIndex}].Controls[${qualitativeControlIndex}].ControlName" 
-                                        class="form-select smart-combobox form-select-sm control-name-select" 
-                                        data-category="5" 
-                                        data-can-add-new="${canAddNew ? 'true' : 'false'}"
-                                        data-placeholder="Control name...">
-                                    <option value="">Control name...</option>
-                                </select>
-                                <input type="hidden" name="ThreatScenarios[${scenarioIndex}].Controls[${qualitativeControlIndex}].Id" value="0" />
-                            </div>
-                            <div class="col-md-2">
-                                <select name="ThreatScenarios[${scenarioIndex}].Controls[${qualitativeControlIndex}].ControlType" class="form-select form-select-sm">
-                                    <option value="Preventive">Preventive</option>
-                                    <option value="Detective">Detective</option>
-                                    <option value="Responsive">Responsive</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <select name="ThreatScenarios[${scenarioIndex}].Controls[${qualitativeControlIndex}].ImplementationStatus" class="form-select form-select-sm">
-                                    <option value="Implemented">Implemented</option>
-                                    <option value="Planned">Planned</option>
-                                    <option value="NotImplemented">Not Implemented</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <textarea name="ThreatScenarios[${scenarioIndex}].Controls[${qualitativeControlIndex}].Description" 
-                                          class="form-control form-control-sm" rows="2" placeholder="Description..."></textarea>
-                            </div>
-                            <div class="col-md-1">
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeControl(${scenarioIndex}, ${qualitativeControlIndex})" title="Remove">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', controlHtml);
-            qualitativeControlIndex++;
-            
-            setTimeout(() => {
-                if (window.initializeSmartComboboxes) {
-                    window.initializeSmartComboboxes();
-                }
-            }, 100);
-        }
-        
-        function removeControl(scenarioIndex, controlIndex) {
-            const controlElement = document.getElementById('control_' + scenarioIndex + '_' + controlIndex);
-            if (controlElement) {
-                controlElement.remove();
-            }
-        }
-
-        // Scenario-specific risk management functions
-        function addScenarioRisk(scenarioIndex) {
-            const container = document.getElementById('risksContainer_' + scenarioIndex);
-            const canAddNew = '@(User.IsInRole("Admin") || User.IsInRole("GRCAnalyst") || User.IsInRole("GRCManager"))' === 'True';
-            const riskHtml = `
-                <div class="risk-item card mb-2 border-danger" id="scenarioRisk_${scenarioIndex}_${scenarioRiskIndex}">
-                    <div class="card-body p-2">
-                        <div class="row align-items-center">
-                            <div class="col-md-2">
-                                <input type="text" name="ThreatScenarios[${scenarioIndex}].IdentifiedRisks[${scenarioRiskIndex}].Title" 
-                                       class="form-control form-control-sm" 
-                                       placeholder="Risk Title" />
-                            </div>
-                            <div class="col-md-3">
-                                <textarea name="ThreatScenarios[${scenarioIndex}].IdentifiedRisks[${scenarioRiskIndex}].Description" 
-                                          class="form-control form-control-sm" 
-                                          rows="2" placeholder="Risk Description"></textarea>
-                            </div>
-                            <div class="col-md-1">
-                                <select name="ThreatScenarios[${scenarioIndex}].IdentifiedRisks[${scenarioRiskIndex}].Owner" 
-                                        class="form-select form-select-sm risk-owner-select" 
-                                        data-category="2" 
-                                        data-can-add-new="${canAddNew}" 
-                                        data-placeholder="Select owner..." 
-                                        style="width: 100%;">
-                                    <option value="">Select...</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="d-flex flex-column align-items-center">
-                                    <span id="inherentRiskLevel_${scenarioIndex}_${scenarioRiskIndex}" class="badge bg-secondary mb-1">TBD</span>
-                                    <input type="hidden" name="ThreatScenarios[${scenarioIndex}].IdentifiedRisks[${scenarioRiskIndex}].InherentRiskLevel" id="inherentRiskLevelValue_${scenarioIndex}_${scenarioRiskIndex}" value="1" />
-                                    <small class="text-muted">Auto-calculated</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <select name="ThreatScenarios[${scenarioIndex}].IdentifiedRisks[${scenarioRiskIndex}].Treatment" 
-                                        class="form-select form-select-sm" 
-                                        onchange="updateScenarioResidualRisk(${scenarioIndex}, ${scenarioRiskIndex})">
-                                    <option value="1">Mitigate</option>
-                                    <option value="2">Transfer</option>
-                                    <option value="3">Accept</option>
-                                    <option value="4">Avoid</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <select name="ThreatScenarios[${scenarioIndex}].IdentifiedRisks[${scenarioRiskIndex}].ResidualRiskLevel" 
-                                        class="form-select form-select-sm" 
-                                        id="residualRiskLevel_${scenarioIndex}_${scenarioRiskIndex}">
-                                    <option value="1">Low</option>
-                                    <option value="2">Medium</option>
-                                    <option value="3">High</option>
-                                    <option value="4">Critical</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 mt-1 me-1" 
-                            onclick="removeScenarioRisk(${scenarioIndex}, ${scenarioRiskIndex})" title="Remove Risk">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            
-            container.insertAdjacentHTML('beforeend', riskHtml);
-            
-            // Show headers if this is the first risk
-            const headers = document.getElementById('riskHeaders_' + scenarioIndex);
-            if (headers) {
-                headers.classList.remove('d-none');
-            }
-            
-            if (window.initializeSmartComboboxes) {
-                window.initializeSmartComboboxes();
-            }
-            
-            scenarioRiskIndex++;
-        }
-
-        function removeScenarioRisk(scenarioIndex, riskIndex) {
-            const riskElement = document.getElementById('scenarioRisk_' + scenarioIndex + '_' + riskIndex);
-            if (riskElement) {
-                riskElement.remove();
-            }
-            
-            // Hide headers if no risks remain
-            const container = document.getElementById('risksContainer_' + scenarioIndex);
-            const headers = document.getElementById('riskHeaders_' + scenarioIndex);
-            if (container && headers && container.children.length === 0) {
-                headers.classList.add('d-none');
-            }
-        }
-
-        function updateScenarioResidualRisk(scenarioIndex, riskIndex) {
-            // This function can be enhanced to automatically calculate residual risk
-            // based on treatment type and inherent risk level
-            console.log('Updating residual risk for scenario', scenarioIndex, 'risk', riskIndex);
-        }
-        
-        // Risk level calculation functions using Risk Matrix
-        function calculateQualitativeRiskLevel(scenarioIndex = null) {
-            let likelihoodElement, impactElement, exposureElement;
-            
-            if (scenarioIndex !== null) {
-                // Scenario-specific fields
-                likelihoodElement = document.querySelector(`[name="ThreatScenarios[${scenarioIndex}].QualitativeLikelihood"]`);
-                impactElement = document.querySelector(`[name="ThreatScenarios[${scenarioIndex}].QualitativeImpact"]`);
-                exposureElement = document.querySelector(`[name="ThreatScenarios[${scenarioIndex}].QualitativeExposure"]`);
-            } else {
-                // Global assessment fields (fallback)
-                likelihoodElement = document.querySelector('[name="Assessment.QualitativeLikelihood"]');
-                impactElement = document.querySelector('[name="Assessment.QualitativeImpact"]');
-                exposureElement = document.querySelector('[name="Assessment.QualitativeExposure"]');
-            }
-            
-            if (!likelihoodElement?.value || !impactElement?.value || !exposureElement?.value) {
-                return { level: 1, text: 'TBD', class: 'bg-secondary', score: 0 };
-            }
-            
-            const likelihood = parseInt(likelihoodElement.value);
-            const impact = parseInt(impactElement.value);
-            const exposure = parseFloat(exposureElement.value);
-            
-            // Fallback to calculation if no matrix cell found
-            const riskScore = (likelihood * impact) * exposure;
-            
-            // Use RiskLevelSettings thresholds as fallback
-            const settings = riskLevelSettings;
-            if (riskScore >= settings.qualitativeCriticalThreshold) {
-                return { level: 4, text: 'Critical', class: 'bg-danger', score: riskScore };
-            }
-            if (riskScore >= settings.qualitativeHighThreshold) {
-                return { level: 3, text: 'High', class: 'bg-warning', score: riskScore };
-            }
-            if (riskScore >= settings.qualitativeMediumThreshold) {
-                return { level: 2, text: 'Medium', class: 'bg-info', score: riskScore };
-            }
-            return { level: 1, text: 'Low', class: 'bg-success', score: riskScore };
-        }
-        
-        function updateAllRiskLevels(scenarioIndex = null) {
-            const riskLevel = calculateQualitativeRiskLevel(scenarioIndex);
-            
-            // Update scenario-specific risks
-            if (scenarioIndex !== null) {
-                const container = document.getElementById('risksContainer_' + scenarioIndex);
-                if (container) {
-                    const riskItems = container.querySelectorAll('.risk-item');
-                    riskItems.forEach((item) => {
-                        // More specific selectors to match scenario-specific IDs
-                        const badge = item.querySelector(`[id^="inherentRiskLevel_${scenarioIndex}_"]`);
-                        const hiddenInput = item.querySelector(`[id^="inherentRiskLevelValue_${scenarioIndex}_"]`);
-                        
-                        if (badge && hiddenInput) {
-                            badge.textContent = riskLevel.text;
-                            badge.className = `badge ${riskLevel.class} mb-1`;
-                            hiddenInput.value = riskLevel.level;
-                            
-                            const residualSelect = item.querySelector(`[id^="residualRiskLevel_${scenarioIndex}_"]`);
-                            if (residualSelect && !residualSelect.hasAttribute('data-user-modified')) {
-                                residualSelect.value = riskLevel.level;
-                            }
-                        }
-                    });
-                }
-            }
-        }
-        
-        // Update scenario-specific qualitative preview
-        function updateScenarioQualitativePreview(scenarioIndex) {
-            const likelihoodElement = document.querySelector(`[name="ThreatScenarios[${scenarioIndex}].QualitativeLikelihood"]`);
-            const impactElement = document.querySelector(`[name="ThreatScenarios[${scenarioIndex}].QualitativeImpact"]`);
-            const exposureElement = document.querySelector(`[name="ThreatScenarios[${scenarioIndex}].QualitativeExposure"]`);
-            
-            // Update preview displays
-            if (likelihoodElement?.value) {
-                const likelihoodText = likelihoodElement.options[likelihoodElement.selectedIndex].text;
-                document.getElementById(`likelihoodPreview_${scenarioIndex}`).textContent = likelihoodText;
-            } else {
-                document.getElementById(`likelihoodPreview_${scenarioIndex}`).textContent = '-';
-            }
-            
-            if (impactElement?.value) {
-                const impactText = impactElement.options[impactElement.selectedIndex].text;
-                document.getElementById(`impactPreview_${scenarioIndex}`).textContent = impactText;
-            } else {
-                document.getElementById(`impactPreview_${scenarioIndex}`).textContent = '-';
-            }
-            
-            if (exposureElement?.value) {
-                const exposureText = exposureElement.options[exposureElement.selectedIndex].text;
-                document.getElementById(`exposurePreview_${scenarioIndex}`).textContent = exposureText;
-            } else {
-                document.getElementById(`exposurePreview_${scenarioIndex}`).textContent = '-';
-            }
-            
-            // Calculate and display risk score
-            if (likelihoodElement?.value && impactElement?.value && exposureElement?.value) {
-                const likelihood = parseInt(likelihoodElement.value);
-                const impact = parseInt(impactElement.value);
-                const exposure = parseFloat(exposureElement.value);
-                const riskScore = (likelihood * impact) * exposure;
-                
-                document.getElementById(`riskScorePreview_${scenarioIndex}`).textContent = riskScore.toFixed(1);
-                
-                // Update risk appetite status
-                const settings = riskLevelSettings;
-                const withinAppetite = riskScore <= settings.riskAppetiteThreshold;
-                const appetiteElement = document.getElementById(`riskAppetitePreview_${scenarioIndex}`);
-                if (appetiteElement) {
-                    appetiteElement.textContent = withinAppetite ? 'Within Appetite' : 'Above Appetite';
-                    appetiteElement.className = withinAppetite ? 'text-success' : 'text-danger';
-                }
-            } else {
-                document.getElementById(`riskScorePreview_${scenarioIndex}`).textContent = '-';
-            }
-            
-            // Update risk levels for identified risks in this scenario
-            updateAllRiskLevels(scenarioIndex);
-        }
-
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize smart comboboxes
-            if (window.initializeSmartComboboxes) {
-                window.initializeSmartComboboxes();
-            }
-            
-            // Load MITRE data for any existing dropdowns
-            loadMitreData();
-            
-            // Initialize existing scenarios with their saved values
-            @if (Model.Assessment.ThreatScenarios?.Any() == true)
-            {
-                @foreach (var scenario in Model.Assessment.ThreatScenarios.Select((s, i) => new { Scenario = s, Index = i }))
-                {
-                    <text>
-                    // Initialize scenario @scenario.Index with saved values
-                    setTimeout(() => {
-                        const likelihoodSelect = document.querySelector('[name="ThreatScenarios[@scenario.Index].QualitativeLikelihood"]');
-                        const impactSelect = document.querySelector('[name="ThreatScenarios[@scenario.Index].QualitativeImpact"]');
-                        const exposureSelect = document.querySelector('[name="ThreatScenarios[@scenario.Index].QualitativeExposure"]');
-                        
-                        // Populate dropdowns first
-                        if (likelihoodSelect) {
-                            likelihoodSelect.innerHTML = getLikelihoodOptions();
-                            @if (scenario.Scenario.QualitativeLikelihood.HasValue)
-                            {
-                                <text>likelihoodSelect.value = '@((int)scenario.Scenario.QualitativeLikelihood.Value)';</text>
-                            }
-                        }
-                        
-                        if (impactSelect) {
-                            impactSelect.innerHTML = getImpactOptions();
-                            @if (scenario.Scenario.QualitativeImpact.HasValue)
-                            {
-                                <text>impactSelect.value = '@((int)scenario.Scenario.QualitativeImpact.Value)';</text>
-                            }
-                        }
-                        
-                        if (exposureSelect) {
-                            exposureSelect.innerHTML = getExposureOptions();
-                            @if (scenario.Scenario.QualitativeExposure.HasValue)
-                            {
-                                <text>exposureSelect.value = '@scenario.Scenario.QualitativeExposure.Value.ToString("F2")';</text>
-                            }
-                        }
-                        
-                        // Add event listeners
-                        likelihoodSelect?.addEventListener('change', () => updateScenarioQualitativePreview(@scenario.Index));
-                        impactSelect?.addEventListener('change', () => updateScenarioQualitativePreview(@scenario.Index));
-                        exposureSelect?.addEventListener('change', () => updateScenarioQualitativePreview(@scenario.Index));
-                        
-                        // Update preview
-                        updateScenarioQualitativePreview(@scenario.Index);
-                    }, 200);
-                    </text>
-                }
-            }
-            
-            // Load initial matrix data if selected
-            const selectedMatrixId = document.getElementById('riskMatrixSelector').value;
-            if (selectedMatrixId) {
-                loadMatrixData(selectedMatrixId);
-            }
-            
-            // Handle form submission
-            document.getElementById('qualitativeAssessmentForm').addEventListener('submit', function(e) {
-                console.log('Form submission started');
-                
-                // Remove any empty identified risks to prevent validation errors
-                const emptyRisks = document.querySelectorAll('.risk-item');
-                console.log('Found risk items:', emptyRisks.length);
-                
-                emptyRisks.forEach(riskItem => {
-                    const titleInput = riskItem.querySelector('input[name*="IdentifiedRisks"][name*="Title"]');
-                    if (!titleInput || !titleInput.value.trim()) {
-                        console.log('Removing empty risk item');
-                        riskItem.remove();
-                    }
-                });
-                
-                // Remove any hidden or orphaned risk-related inputs that might have been left behind
-                const orphanedRiskInputs = document.querySelectorAll('input[name*="IdentifiedRisks"], select[name*="IdentifiedRisks"], textarea[name*="IdentifiedRisks"]');
-                orphanedRiskInputs.forEach(input => {
-                    // Check if this input is inside a remaining risk-item
-                    const parentRiskItem = input.closest('.risk-item');
-                    if (!parentRiskItem) {
-                        console.log('Removing orphaned risk input:', input.name);
-                        input.remove();
-                    }
-                });
-                
-                // Basic validation
-                const requiredFields = ['Assessment.Title', 'Assessment.Asset'];
-                let isValid = true;
-                
-                requiredFields.forEach(fieldName => {
-                    const field = document.querySelector(`[name="${fieldName}"]`);
-                    if (!field || !field.value.trim()) {
-                        isValid = false;
-                        field?.classList.add('is-invalid');
-                        console.log('Required field missing:', fieldName);
-                    } else {
-                        field?.classList.remove('is-invalid');
-                    }
-                });
-                
-                // Validate threat scenario descriptions (at least one must be filled)
-                const threatScenarioFields = document.querySelectorAll('textarea[name*="ThreatScenarios"][name*="Description"]');
-                let hasValidThreatScenario = false;
-                threatScenarioFields.forEach(field => {
-                    if (field.value.trim()) {
-                        hasValidThreatScenario = true;
-                        field.classList.remove('is-invalid');
-                    } else {
-                        field.classList.add('is-invalid');
-                    }
-                });
-                
-                if (!hasValidThreatScenario && threatScenarioFields.length > 0) {
-                    isValid = false;
-                    console.log('At least one threat scenario description is required');
-                }
-                
-                // Check that at least one threat scenario has qualitative values
-                const scenarios = document.querySelectorAll('.threat-scenario-item');
-                let hasValidScenario = false;
-                
-                scenarios.forEach((scenario, index) => {
-                    const likelihoodField = scenario.querySelector('select[name*="ThreatScenarios"][name*="QualitativeLikelihood"]');
-                    const impactField = scenario.querySelector('select[name*="ThreatScenarios"][name*="QualitativeImpact"]');
-                    const exposureField = scenario.querySelector('select[name*="ThreatScenarios"][name*="QualitativeExposure"]');
-                    const descriptionField = scenario.querySelector('textarea[name*="ThreatScenarios"][name*="Description"]');
-                    
-                    console.log(`Scenario ${index} - Description: ${descriptionField?.value}, Likelihood: ${likelihoodField?.value}, Impact: ${impactField?.value}, Exposure: ${exposureField?.value}`);
-                    
-                    // Check if this scenario has description and all qualitative fields filled
-                    if (descriptionField?.value?.trim()) {
-                        if (likelihoodField?.value && impactField?.value && exposureField?.value) {
-                            hasValidScenario = true;
-                            likelihoodField?.classList.remove('is-invalid');
-                            impactField?.classList.remove('is-invalid');
-                            exposureField?.classList.remove('is-invalid');
-                        } else {
-                            // Mark missing fields as invalid
-                            if (!likelihoodField?.value) likelihoodField?.classList.add('is-invalid');
-                            if (!impactField?.value) impactField?.classList.add('is-invalid');
-                            if (!exposureField?.value) exposureField?.classList.add('is-invalid');
-                            console.log('Scenario', index, 'has description but missing qualitative fields');
-                        }
-                    }
-                });
-                
-                if (!hasValidScenario) {
-                    isValid = false;
-                    console.log('No valid threat scenario with complete qualitative risk factors');
-                }
-                
-                if (!isValid) {
-                    e.preventDefault();
-                    alert('Please fill in all required fields: Title, Asset, and for each Threat Scenario, provide a Description and all qualitative risk factors (Likelihood, Impact, Exposure)');
-                    return false;
-                }
-                
-                // Log final form data for debugging
-                const formData = new FormData(this);
-                console.log('Final form data:');
-                for (let [key, value] of formData.entries()) {
-                    if (key.includes('IdentifiedRisks')) {
-                        console.log(key, '=', value);
-                    }
-                }
-                
-                console.log('Form validation passed, submitting...');
-                return true;
-            });
-        });
-    </script>
+    <partial name="_ValidationScriptsPartial" />
 }

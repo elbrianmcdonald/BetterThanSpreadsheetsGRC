@@ -55,6 +55,14 @@ namespace CyberRiskApp.Services
         Task<List<RiskBacklogEntry>> GetOverdueBacklogEntriesAsync();
         Task<List<RiskBacklogEntry>> GetCompletedThisWeekBacklogEntriesAsync();
         
+        // Enhanced SLA and Escalation Management
+        Task<List<RiskBacklogEntry>> GetEntriesRequiringEscalationAsync();
+        Task<List<RiskBacklogEntry>> GetBacklogSortedBySLAPriorityAsync();
+        Task<Dictionary<string, int>> GetSLAStatusBreakdownAsync();
+        Task<List<RiskBacklogEntry>> GetApproachingDueEntriesAsync(int daysAhead = 3);
+        Task EscalateOverdueEntriesAsync(string escalatedBy);
+        Task<int> GetEscalationCandidatesCountAsync();
+        
         // Statistics and Reporting
         Task<BacklogStatistics> GetBacklogStatisticsAsync(string? userId = null, string? role = null);
         Task<List<RiskBacklogEntry>> GetBacklogForUserAsync(string userId, string role);

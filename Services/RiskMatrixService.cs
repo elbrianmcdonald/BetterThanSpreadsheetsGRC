@@ -518,5 +518,47 @@ namespace CyberRiskApp.Services
                 _ => "#6c757d"
             };
         }
+
+        // Threshold management methods (replaces RiskLevelSettings functionality)
+        public async Task<RiskMatrix> UpdateThresholdsAsync(int matrixId, decimal mediumThreshold, decimal highThreshold, decimal criticalThreshold, decimal riskAppetiteThreshold)
+        {
+            var matrix = await _context.RiskMatrices.FindAsync(matrixId);
+            if (matrix == null) throw new InvalidOperationException("Matrix not found");
+
+            matrix.QualitativeMediumThreshold = mediumThreshold;
+            matrix.QualitativeHighThreshold = highThreshold;
+            matrix.QualitativeCriticalThreshold = criticalThreshold;
+            matrix.RiskAppetiteThreshold = riskAppetiteThreshold;
+            matrix.UpdatedAt = DateTime.UtcNow;
+
+            _context.RiskMatrices.Update(matrix);
+            await _context.SaveChangesAsync();
+            
+            return matrix;
+        }
+
+        public async Task<RiskLevel> GetRiskLevelFromScoreAsync(decimal score)
+        {
+            var defaultMatrix = await GetDefaultMatrixAsync();
+            if (defaultMatrix == null) return RiskLevel.Medium; // fallback
+
+            return defaultMatrix.GetRiskLevel(score);
+        }
+
+        public async Task<bool> IsWithinRiskAppetiteAsync(decimal score)
+        {
+            var defaultMatrix = await GetDefaultMatrixAsync();
+            if (defaultMatrix == null) return false; // conservative fallback
+
+            return defaultMatrix.IsWithinRiskAppetite(score);
+        }
+
+        public async Task<string> GetRiskAppetiteStatusAsync(decimal score)
+        {
+            var defaultMatrix = await GetDefaultMatrixAsync();
+            if (defaultMatrix == null) return "Unknown"; // fallback
+
+            return defaultMatrix.GetRiskAppetiteStatus(score);
+        }
     }
 }

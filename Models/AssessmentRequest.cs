@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CyberRiskApp.Models
 {
-    public class AssessmentRequest
+    public class AssessmentRequest : IEntity
     {
         public int Id { get; set; }
 

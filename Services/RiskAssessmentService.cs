@@ -9,18 +9,18 @@ namespace CyberRiskApp.Services
     public class RiskAssessmentService : IRiskAssessmentService
     {
         private readonly CyberRiskContext _context;
-        private readonly IRiskLevelSettingsService _settingsService;
+        private readonly IRiskMatrixService _riskMatrixService;
         private readonly IRiskService _riskService;
         private readonly ILogger<RiskAssessmentService> _logger;
         private readonly IAuditService _auditService;
         private readonly IRiskBacklogService _backlogService;
 
-        public RiskAssessmentService(CyberRiskContext context, IRiskLevelSettingsService settingsService, 
+        public RiskAssessmentService(CyberRiskContext context, IRiskMatrixService riskMatrixService, 
             IRiskService riskService, ILogger<RiskAssessmentService> logger,
             IAuditService auditService, IRiskBacklogService backlogService)
         {
             _context = context;
-            _settingsService = settingsService;
+            _riskMatrixService = riskMatrixService;
             _riskService = riskService;
             _logger = logger;
             _auditService = auditService;

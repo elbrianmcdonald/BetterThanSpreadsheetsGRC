@@ -241,7 +241,7 @@
         <div class="card-body">
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
-                <strong>Note:</strong> These thresholds are saved to the global Risk Level Settings and will affect all risk assessments across the system.
+                <strong>Note:</strong> These thresholds are saved to this Risk Matrix and will be used for risk level calculations when this matrix is the default.
             </div>
             
             <form id="thresholdsForm">
@@ -291,10 +291,10 @@
 
                 <div class="mt-4">
                     <button type="button" class="btn btn-warning" id="saveThresholds">
-                        <i class="fas fa-save me-2"></i>Save Risk Thresholds to Settings
+                        <i class="fas fa-save me-2"></i>Save Risk Thresholds to Matrix
                     </button>
                     <button type="button" class="btn btn-outline-secondary" id="loadCurrentThresholds">
-                        <i class="fas fa-sync me-2"></i>Load Current Settings
+                        <i class="fas fa-sync me-2"></i>Load Matrix Thresholds
                     </button>
                 </div>
             </form>
@@ -445,38 +445,39 @@
                 });
             }
 
-            // Load Current Risk Level Settings
+            // Load Current Matrix Thresholds
             async function loadCurrentThresholds() {
                 try {
-                    const response = await fetch('/RiskLevelSettings/GetActiveSettings');
+                    const response = await fetch(`/RiskMatrix/GetMatrixData/${matrixId}`);
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
                     
-                    const settings = await response.json();
+                    const data = await response.json();
                     
-                    if (settings) {
+                    if (data.success && data.matrix) {
+                        const matrix = data.matrix;
                         const mediumElement = document.getElementById('mediumThreshold');
                         const highElement = document.getElementById('highThreshold');
                         const criticalElement = document.getElementById('criticalThreshold');
                         const appetiteElement = document.getElementById('riskAppetiteThreshold');
                         
-                        if (mediumElement) mediumElement.value = settings.qualitativeMediumThreshold || 4;
-                        if (highElement) highElement.value = settings.qualitativeHighThreshold || 10;
-                        if (criticalElement) criticalElement.value = settings.qualitativeCriticalThreshold || 16;
-                        if (appetiteElement) appetiteElement.value = settings.riskAppetiteThreshold || 6;
+                        if (mediumElement) mediumElement.value = matrix.qualitativeMediumThreshold || 4;
+                        if (highElement) highElement.value = matrix.qualitativeHighThreshold || 10;
+                        if (criticalElement) criticalElement.value = matrix.qualitativeCriticalThreshold || 16;
+                        if (appetiteElement) appetiteElement.value = matrix.riskAppetiteThreshold || 6;
                         
-                        showAlert('Current risk level settings loaded successfully!', 'info');
+                        showAlert('Matrix thresholds loaded successfully!', 'info');
                     } else {
-                        showAlert('No risk level settings found. Using default values.', 'warning');
+                        showAlert('No matrix thresholds found. Using default values.', 'warning');
                     }
                 } catch (error) {
-                    console.error('Error loading current settings:', error);
-                    showAlert('Error loading current settings: ' + error.message, 'warning');
+                    console.error('Error loading matrix thresholds:', error);
+                    showAlert('Error loading matrix thresholds: ' + error.message, 'warning');
                 }
             }
 
-            // Save Risk Thresholds to RiskLevelSettings
+            // Save Risk Thresholds to RiskMatrix
             document.getElementById('saveThresholds').addEventListener('click', function() {
                 const mediumElement = document.getElementById('mediumThreshold');
                 const highElement = document.getElementById('highThreshold');
@@ -488,7 +489,7 @@
                     return;
                 }
                 
-                const settings = {
+                const thresholds = {
                     QualitativeMediumThreshold: parseFloat(mediumElement.value) || 4,
                     QualitativeHighThreshold: parseFloat(highElement.value) || 10,
                     QualitativeCriticalThreshold: parseFloat(criticalElement.value) || 16,
@@ -497,26 +498,26 @@
 
                 const token = document.querySelector('#thresholdsForm input[name="__RequestVerificationToken"]').value;
 
-                fetch('/RiskLevelSettings/UpdateSettings', {
+                fetch(`/RiskMatrix/SaveThresholds/${matrixId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'RequestVerificationToken': token
                     },
-                    body: JSON.stringify(settings)
+                    body: JSON.stringify(thresholds)
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showAlert('Risk level settings saved successfully! All assessments will use the new thresholds.', 'success');
+                        showAlert('Risk thresholds saved successfully to this matrix!', 'success');
                         // Refresh matrix preview with new thresholds
                         previewMatrix();
                     } else {
-                        showAlert('Error saving settings: ' + data.message, 'danger');
+                        showAlert('Error saving thresholds: ' + data.message, 'danger');
                     }
                 })
                 .catch(error => {
-                    showAlert('Error saving settings: ' + error.message, 'danger');
+                    showAlert('Error saving thresholds: ' + error.message, 'danger');
                 });
             });
 

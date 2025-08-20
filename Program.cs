@@ -111,6 +111,14 @@ builder.Services.AddHttpContextAccessor(); // Required for AuditService to get c
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 
+// Register Repository Pattern and Unit of Work
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped(typeof(IBasicRepository<>), typeof(BasicRepository<>));
+builder.Services.AddScoped<IFindingRepository, FindingRepository>();
+builder.Services.AddScoped<IRiskRepository, RiskRepository>();
+builder.Services.AddScoped<IComplianceAssessmentRepository, ComplianceAssessmentRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 // Register existing Risk Management services
 builder.Services.AddScoped<IFindingService, FindingService>();
 builder.Services.AddScoped<IRiskService, RiskService>();
@@ -126,7 +134,7 @@ builder.Services.AddScoped<IMaturityService, MaturityService>();
 builder.Services.AddScoped<IExportService, ExportService>();
 // Register new Risk Level Settings service
 // NEW: Register Risk Level Settings service
-builder.Services.AddScoped<IRiskLevelSettingsService, RiskLevelSettingsService>();
+// builder.Services.AddScoped<IRiskLevelSettingsService, RiskLevelSettingsService>(); // REMOVED: Using RiskMatrix instead
 // Register Third Party Risk Management service
 builder.Services.AddScoped<IThirdPartyService, ThirdPartyService>();
 // Register PDF Export service

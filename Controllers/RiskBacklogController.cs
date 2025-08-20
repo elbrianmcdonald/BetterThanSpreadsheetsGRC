@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace CyberRiskApp.Controllers
 {
     [Authorize(Policy = "RequireGRCAnalystOrAbove")]
-    public class RiskBacklogController : BaseController
+    public partial class RiskBacklogController : BaseController
     {
         private readonly IRiskBacklogService _backlogService;
         private readonly IUserService _userService;
@@ -876,5 +876,72 @@ namespace CyberRiskApp.Controllers
         public string BusinessOwner { get; set; } = string.Empty;
         public string Domain { get; set; } = string.Empty;
         public string TechnicalControl { get; set; } = string.Empty;
+    }
+
+    // API endpoints for enhanced SLA tracking
+    public partial class RiskBacklogController
+    {
+        // API endpoint for SLA Status Breakdown
+        [HttpGet]
+        [Route("RiskBacklog/GetSLAStatusBreakdown")]
+        public async Task<IActionResult> GetSLAStatusBreakdown()
+        {
+            try
+            {
+                var breakdown = await _backlogService.GetSLAStatusBreakdownAsync();
+                return Json(new { success = true, breakdown = breakdown });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting SLA status breakdown");
+                return Json(new { success = false, error = "Failed to load SLA status breakdown" });
+            }
+        }
+
+        // API endpoint for escalation candidates count
+        [HttpGet]
+        [Route("RiskBacklog/GetEscalationCandidatesCount")]
+        public async Task<IActionResult> GetEscalationCandidatesCount()
+        {
+            try
+            {
+                var count = await _backlogService.GetEscalationCandidatesCountAsync();
+                return Json(new { success = true, count = count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting escalation candidates count");
+                return Json(new { success = false, error = "Failed to get escalation count" });
+            }
+        }
+
+        // API endpoint for entries requiring escalation
+        [HttpGet]
+        [Route("RiskBacklog/GetEntriesRequiringEscalation")]
+        public async Task<IActionResult> GetEntriesRequiringEscalation()
+        {
+            try
+            {
+                var entries = await _backlogService.GetEntriesRequiringEscalationAsync();
+                var result = entries.Select(e => new
+                {
+                    id = e.Id,
+                    backlogNumber = e.BacklogNumber,
+                    priority = e.Priority.ToString(),
+                    actionType = e.ActionType.ToString(),
+                    daysOld = e.GetDaysOld(),
+                    daysOverdue = e.GetDaysOverdue(),
+                    escalationReason = e.GetEscalationReason(),
+                    slaStatus = e.GetSLAStatus()
+                }).ToList();
+
+                return Json(new { success = true, entries = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting entries requiring escalation");
+                return Json(new { success = false, error = "Failed to get escalation entries" });
+            }
+        }
     }
 }
