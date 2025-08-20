@@ -31,30 +31,41 @@
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label asp-for="Assessment.Title" class="form-label">Assessment Title</label>
-                                    <input asp-for="Assessment.Title" class="form-control" placeholder="Enter assessment title" required />
+                                    <label asp-for="Assessment.Title" class="form-label fw-bold">
+                                        <i class="fas fa-tag me-1 text-primary"></i>Assessment Title <span class="text-danger">*</span>
+                                    </label>
+                                    <input asp-for="Assessment.Title" class="form-control form-control-lg" 
+                                           placeholder="Enter assessment title" required 
+                                           data-bs-toggle="tooltip" 
+                                           title="Provide a clear, descriptive title for this risk assessment" />
                                     <span asp-validation-for="Assessment.Title" class="text-danger"></span>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label asp-for="Assessment.Asset" class="form-label">Primary Asset</label>
-                                    <input asp-for="Assessment.Asset" class="form-control" placeholder="Enter primary asset being assessed" required />
-                                    <span asp-validation-for="Assessment.Asset" class="text-danger"></span>
+                                    <label asp-for="Assessment.Asset" class="form-label fw-bold">
+                                        <i class="fas fa-server me-1 text-primary"></i>Primary Asset <span class="text-danger">*</span>
+                                    </label>
+                                    @Html.AssetComboboxFor(m => m.Assessment.Asset, canAddNew: Model.CanAddNewAssets, required: true)
+                                    <small class="text-muted">System, application, or resource being assessed</small>
                                 </div>
 
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label asp-for="Assessment.BusinessUnit" class="form-label">Business Unit</label>
-                                            <input asp-for="Assessment.BusinessUnit" class="form-control" placeholder="Enter business unit" />
-                                            <span asp-validation-for="Assessment.BusinessUnit" class="text-danger"></span>
+                                            <label asp-for="Assessment.BusinessUnit" class="form-label fw-bold">
+                                                <i class="fas fa-building me-1 text-secondary"></i>Business Unit
+                                            </label>
+                                            @Html.BusinessUnitComboboxFor(m => m.Assessment.BusinessUnit, canAddNew: Model.CanAddNewBusinessUnits)
+                                            <small class="text-muted">Department or division that owns the asset</small>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label asp-for="Assessment.BusinessOwner" class="form-label">Business Owner</label>
-                                            <input asp-for="Assessment.BusinessOwner" class="form-control" placeholder="Enter business owner" />
-                                            <span asp-validation-for="Assessment.BusinessOwner" class="text-danger"></span>
+                                            <label asp-for="Assessment.BusinessOwner" class="form-label fw-bold">
+                                                <i class="fas fa-user-tie me-1 text-secondary"></i>Business Owner
+                                            </label>
+                                            @Html.BusinessOwnerComboboxFor(m => m.Assessment.BusinessOwner, canAddNew: Model.CanAddNewBusinessOwners)
+                                            <small class="text-muted">Business stakeholder responsible for the asset</small>
                                         </div>
                                     </div>
                                 </div>
@@ -74,51 +85,139 @@
                         </div>
 
                         <div class="card shadow-sm mt-4">
-                            <div class="card-header bg-warning">
-                                <h5 class="mb-0 text-dark"><i class="fas fa-calculator me-2"></i>Risk Scoring</h5>
+                            <div class="card-header bg-warning bg-opacity-15">
+                                <h5 class="mb-0 text-dark"><i class="fas fa-calculator me-2"></i>Basic Risk Assessment</h5>
+                                <small class="text-muted">Simple risk scoring - Enhanced threat scenarios available below</small>
                             </div>
                             <div class="card-body">
+                                <div class="alert alert-info mb-4">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-info-circle me-2 mt-1"></i>
+                                        <div>
+                                            <strong>Risk Calculation:</strong> Risk Score = (Likelihood × Impact) × Exposure<br>
+                                            <small class="text-muted">Use this for overall assessment risk, or add detailed threat scenarios below for comprehensive analysis.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label asp-for="Assessment.QualitativeImpact" class="form-label">Impact Level</label>
-                                            <select asp-for="Assessment.QualitativeImpact" class="form-select">
-                                                <option value="">Select Impact</option>
-                                                <option value="1">1 - Very Low</option>
-                                                <option value="2">2 - Low</option>
-                                                <option value="3">3 - Medium</option>
-                                                <option value="4">4 - High</option>
-                                                <option value="5">5 - Very High</option>
-                                            </select>
-                                            <span asp-validation-for="Assessment.QualitativeImpact" class="text-danger"></span>
+                                    <div class="col-lg-4">
+                                        <div class="card h-100 border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Impact Level</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <select asp-for="Assessment.QualitativeImpact" class="form-select form-select-lg impact-selector" 
+                                                        onchange="calculateBasicRisk()">
+                                                    <option value="">-- Select Impact --</option>
+                                                    <option value="1">1 - Very Low</option>
+                                                    <option value="2">2 - Low</option>
+                                                    <option value="3">3 - Medium</option>
+                                                    <option value="4">4 - High</option>
+                                                    <option value="5">5 - Very High</option>
+                                                </select>
+                                                <span asp-validation-for="Assessment.QualitativeImpact" class="text-danger"></span>
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <strong>Consider:</strong> Financial loss, operational disruption, data compromise, reputation damage
+                                                    </small>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label asp-for="Assessment.QualitativeLikelihood" class="form-label">Likelihood Level</label>
-                                            <select asp-for="Assessment.QualitativeLikelihood" class="form-select">
-                                                <option value="">Select Likelihood</option>
-                                                <option value="1">1 - Very Low</option>
-                                                <option value="2">2 - Low</option>
-                                                <option value="3">3 - Medium</option>
-                                                <option value="4">4 - High</option>
-                                                <option value="5">5 - Very High</option>
-                                            </select>
-                                            <span asp-validation-for="Assessment.QualitativeLikelihood" class="text-danger"></span>
+                                    <div class="col-lg-4">
+                                        <div class="card h-100 border-info">
+                                            <div class="card-header bg-info text-white">
+                                                <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Likelihood</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <select asp-for="Assessment.QualitativeLikelihood" class="form-select form-select-lg likelihood-selector" 
+                                                        onchange="calculateBasicRisk()">
+                                                    <option value="">-- Select Likelihood --</option>
+                                                    <option value="1">1 - Very Low</option>
+                                                    <option value="2">2 - Low</option>
+                                                    <option value="3">3 - Medium</option>
+                                                    <option value="4">4 - High</option>
+                                                    <option value="5">5 - Very High</option>
+                                                </select>
+                                                <span asp-validation-for="Assessment.QualitativeLikelihood" class="text-danger"></span>
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <strong>Consider:</strong> Threat actor motivation, vulnerability complexity, existing controls
+                                                    </small>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label asp-for="Assessment.QualitativeExposure" class="form-label">Exposure Level</label>
-                                            <select asp-for="Assessment.QualitativeExposure" class="form-select">
-                                                <option value="">Select Exposure</option>
-                                                <option value="1">1 - Very Low</option>
-                                                <option value="2">2 - Low</option>
-                                                <option value="3">3 - Medium</option>
-                                                <option value="4">4 - High</option>
-                                                <option value="5">5 - Very High</option>
-                                            </select>
-                                            <span asp-validation-for="Assessment.QualitativeExposure" class="text-danger"></span>
+                                    <div class="col-lg-4">
+                                        <div class="card h-100 border-secondary">
+                                            <div class="card-header bg-secondary text-white">
+                                                <h6 class="mb-0"><i class="fas fa-eye me-2"></i>Exposure Level</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <select asp-for="Assessment.QualitativeExposure" class="form-select form-select-lg exposure-selector" 
+                                                        onchange="calculateBasicRisk()">
+                                                    <option value="">-- Select Exposure --</option>
+                                                    <option value="1">1 - Very Low</option>
+                                                    <option value="2">2 - Low</option>
+                                                    <option value="3">3 - Medium</option>
+                                                    <option value="4">4 - High</option>
+                                                    <option value="5">5 - Very High</option>
+                                                </select>
+                                                <span asp-validation-for="Assessment.QualitativeExposure" class="text-danger"></span>
+                                                <div class="mt-2">
+                                                    <small class="text-muted">
+                                                        <strong>Consider:</strong> Asset accessibility, network exposure, user access levels
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Real-time Risk Calculation Display -->
+                                <div class="card bg-light border-0 mt-4" id="basicRiskCalculation">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-muted mb-3">
+                                            <i class="fas fa-calculator me-2"></i>Basic Risk Assessment & SLA
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-6 col-md-3">
+                                                <div class="p-2">
+                                                    <small class="text-muted d-block">Impact</small>
+                                                    <strong class="d-block" id="basicImpactDisplay">-</strong>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <div class="p-2">
+                                                    <small class="text-muted d-block">Likelihood</small>
+                                                    <strong class="d-block" id="basicLikelihoodDisplay">-</strong>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <div class="p-2">
+                                                    <small class="text-muted d-block">Exposure</small>
+                                                    <strong class="d-block" id="basicExposureDisplay">-</strong>
+                                                </div>
+                                            </div>
+                                            <div class="col-6 col-md-3">
+                                                <div class="p-2 border-start">
+                                                    <small class="text-muted d-block">Risk Score</small>
+                                                    <h4 class="mb-0" id="basicRiskScore">-</h4>
+                                                    <span id="basicRiskLevel" class="badge">-</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3 pt-3 border-top">
+                                            <div class="col-12">
+                                                <div class="d-flex justify-content-center align-items-center">
+                                                    <div class="text-center">
+                                                        <small class="text-muted d-block">Assessment SLA Deadline</small>
+                                                        <strong class="text-primary d-block" id="basicSlaHours">-</strong>
+                                                        <small class="text-muted" id="basicSlaDate">Select risk factors to calculate SLA</small>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -129,11 +228,13 @@
                     <div class="col-md-4">
                         <div class="card shadow-sm">
                             <div class="card-header bg-info text-white">
-                                <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Assessment Settings</h5>
+                                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Assessment Settings</h5>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label asp-for="Assessment.Status" class="form-label">Status</label>
+                                    <label asp-for="Assessment.Status" class="form-label fw-bold">
+                                        <i class="fas fa-flag me-1 text-primary"></i>Status
+                                    </label>
                                     <select asp-for="Assessment.Status" class="form-select">
                                         <option value="Draft">Draft</option>
                                         <option value="InProgress">In Progress</option>
@@ -144,15 +245,264 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label asp-for="Assessment.CIATriad" class="form-label">CIA Impact</label>
-                                    <select asp-for="Assessment.CIATriad" class="form-select">
-                                        <option value="">Select Impact Type</option>
-                                        <option value="Confidentiality">Confidentiality</option>
-                                        <option value="Integrity">Integrity</option>
-                                        <option value="Availability">Availability</option>
-                                        <option value="Mixed">Mixed</option>
+                                    <label asp-for="Assessment.RiskMatrixId" class="form-label fw-bold">
+                                        <i class="fas fa-table me-1 text-warning"></i>Risk Matrix <span class="text-danger">*</span>
+                                    </label>
+                                    <select asp-for="Assessment.RiskMatrixId" class="form-select" 
+                                            id="riskMatrixSelector" required 
+                                            onchange="loadMatrixData(this.value)"
+                                            data-bs-toggle="tooltip" 
+                                            title="Select the risk matrix for calculating risk scores and SLA deadlines">
+                                        <option value="">Select Risk Matrix</option>
+                                        @if (Model.AvailableMatrices != null)
+                                        {
+                                            @foreach (var matrix in Model.AvailableMatrices)
+                                            {
+                                                <option value="@matrix.Id" selected="@(matrix.Id == Model.SelectedMatrix?.Id)">
+                                                    @matrix.Name (@matrix.MatrixSize×@matrix.MatrixSize @matrix.MatrixType.ToString().Replace("ImpactLikelihood", "Impact×Likelihood").Replace("Exposure", "×Exposure"))
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                    <span asp-validation-for="Assessment.RiskMatrixId" class="text-danger"></span>
+                                    <small class="text-muted">Defines risk calculation method and SLA thresholds</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Assessment.CIATriad" class="form-label fw-bold">
+                                        <i class="fas fa-shield-alt me-1 text-info"></i>CIA Impact Type
+                                    </label>
+                                    <select asp-for="Assessment.CIATriad" class="form-select" 
+                                            data-bs-toggle="tooltip" 
+                                            title="Select the primary CIA triad component(s) affected by potential threats">
+                                        <option value="">Select CIA Impact Type</option>
+                                        <option value="1">Confidentiality</option>
+                                        <option value="2">Integrity</option>
+                                        <option value="3">Availability</option>
+                                        <option value="4">Confidentiality & Integrity</option>
+                                        <option value="5">Confidentiality & Availability</option>
+                                        <option value="6">Integrity & Availability</option>
+                                        <option value="7">All Three (CIA)</option>
                                     </select>
                                     <span asp-validation-for="Assessment.CIATriad" class="text-danger"></span>
+                                    <small class="text-muted">Information security properties primarily at risk</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Level Settings Display -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card shadow-sm border-warning">
+                            <div class="card-header bg-warning bg-opacity-15">
+                                <h5 class="mb-0 text-dark">
+                                    <i class="fas fa-chart-line me-2"></i>Current Risk Matrix Settings
+                                </h5>
+                                <small class="text-muted">Live thresholds and risk appetite settings from selected matrix</small>
+                            </div>
+                            <div class="card-body" id="riskMatrixSettings">
+                                <div class="alert alert-info text-center" id="matrixNotSelected">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Select a risk matrix above</strong> to view risk level thresholds and SLA settings
+                                </div>
+                                
+                                <div id="matrixSettingsContent" style="display: none;">
+                                    <div class="row">
+                                        <!-- Risk Level Thresholds -->
+                                        <div class="col-lg-6">
+                                            <h6 class="text-primary mb-3">
+                                                <i class="fas fa-layer-group me-2"></i>Risk Level Thresholds
+                                            </h6>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th>Risk Level</th>
+                                                            <th>Score Range</th>
+                                                            <th>Color</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="riskLevelThresholds">
+                                                        <tr>
+                                                            <td><span class="badge bg-danger">Critical</span></td>
+                                                            <td id="criticalRange">-</td>
+                                                            <td><span class="badge bg-danger">●</span></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><span class="badge bg-warning">High</span></td>
+                                                            <td id="highRange">-</td>
+                                                            <td><span class="badge bg-warning">●</span></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><span class="badge bg-info">Medium</span></td>
+                                                            <td id="mediumRange">-</td>
+                                                            <td><span class="badge bg-info">●</span></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td><span class="badge bg-success">Low</span></td>
+                                                            <td id="lowRange">-</td>
+                                                            <td><span class="badge bg-success">●</span></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- SLA Settings & Risk Appetite -->
+                                        <div class="col-lg-6">
+                                            <h6 class="text-primary mb-3">
+                                                <i class="fas fa-clock me-2"></i>SLA & Risk Appetite Settings
+                                            </h6>
+                                            
+                                            <!-- SLA Deadlines -->
+                                            <div class="mb-3">
+                                                <strong class="text-secondary">Assessment SLA Deadlines</strong>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>Risk Level</th>
+                                                                <th>SLA Hours</th>
+                                                                <th>Working Days</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="slaSettings">
+                                                            <tr>
+                                                                <td><span class="badge bg-danger">Critical</span></td>
+                                                                <td id="criticalSla">-</td>
+                                                                <td id="criticalDays">-</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td><span class="badge bg-warning">High</span></td>
+                                                                <td id="highSla">-</td>
+                                                                <td id="highDays">-</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td><span class="badge bg-info">Medium</span></td>
+                                                                <td id="mediumSla">-</td>
+                                                                <td id="mediumDays">-</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td><span class="badge bg-success">Low</span></td>
+                                                                <td id="lowSla">-</td>
+                                                                <td id="lowDays">-</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Risk Appetite -->
+                                            <div class="alert alert-light border-secondary">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-balance-scale text-secondary me-2"></i>
+                                                    <div>
+                                                        <strong>Risk Appetite Level</strong><br>
+                                                        <span id="riskAppetiteLevel" class="badge">Not Set</span>
+                                                        <span id="riskAppetiteDescription" class="text-muted small">Select matrix to view appetite threshold</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Matrix Information -->
+                                    <div class="row mt-3 pt-3 border-top">
+                                        <div class="col-12">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong class="text-secondary">Matrix Details:</strong>
+                                                    <span id="matrixName" class="text-primary">-</span>
+                                                    <span class="badge bg-light text-dark ms-2" id="matrixType">-</span>
+                                                </div>
+                                                <div class="text-end">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-table me-1"></i>
+                                                        Matrix Size: <strong id="matrixSize">-</strong>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comprehensive Threat Scenarios Section -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card shadow-sm border-warning">
+                            <div class="card-header bg-warning bg-opacity-15">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-0 text-dark">
+                                            <i class="fas fa-sitemap me-2"></i>Comprehensive Threat Scenarios
+                                        </h5>
+                                        <small class="text-muted">Add detailed threat scenarios with multiple risks, controls, and MITRE ATT&CK mapping</small>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-warning" onclick="addThreatScenario()">
+                                        <i class="fas fa-plus me-1"></i>Add Threat Scenario
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-info-circle me-2 mt-1"></i>
+                                        <div>
+                                            <strong>Enhanced Threat Modeling:</strong> Create detailed threat scenarios with initial vectors, actor steps, objectives, and multiple individual risks.<br>
+                                            <small class="text-muted">Each risk can have its own ratings, treatment plans, and completion dates. MITRE ATT&CK techniques can be mapped to each component.</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="threat-scenarios-container">
+                                    @for (int i = 0; i < Model.ThreatScenarios.Count; i++)
+                                    {
+                                        @Html.Partial("_ThreatScenarioCard", Model.ThreatScenarios[i], new ViewDataDictionary(ViewData) 
+                                        { 
+                                            ["ScenarioIndex"] = i.ToString() 
+                                        })
+                                    }
+                                </div>
+                                
+                                <!-- Overall Assessment Risk Summary -->
+                                <div class="card bg-light border-0 mt-4" id="overall-assessment-summary" style="display: none;">
+                                    <div class="card-body">
+                                        <h6 class="text-center text-muted mb-3">
+                                            <i class="fas fa-chart-pie me-2"></i>Overall Assessment Risk Summary
+                                        </h6>
+                                        <div class="row text-center">
+                                            <div class="col-md-3">
+                                                <div class="p-2">
+                                                    <small class="text-muted d-block">Scenarios</small>
+                                                    <strong class="d-block h5" id="total-scenarios-count">0</strong>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="p-2">
+                                                    <small class="text-muted d-block">Total Risks</small>
+                                                    <strong class="d-block h5" id="total-risks-count">0</strong>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="p-2">
+                                                    <small class="text-muted d-block">Highest Risk Level</small>
+                                                    <span class="badge fs-6" id="highest-risk-level">Unknown</span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="p-2">
+                                                    <small class="text-muted d-block">Risks Above Appetite</small>
+                                                    <strong class="d-block h5 text-danger" id="risks-above-appetite-count">0</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -162,10 +512,10 @@
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success">
+                            <button type="submit" class="btn btn-success btn-lg">
                                 <i class="fas fa-save me-1"></i>Create Assessment
                             </button>
-                            <a asp-action="Index" class="btn btn-secondary">
+                            <a asp-action="Index" class="btn btn-secondary btn-lg">
                                 <i class="fas fa-times me-1"></i>Cancel
                             </a>
                         </div>
@@ -178,4 +528,1303 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        // Global variables for risk calculation
+        let currentMatrix = null;
+        let matrixLevels = [];
+        let matrixCells = [];
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            initializeTooltips();
+            
+            // Initialize smart comboboxes if available
+            if (window.initializeSmartComboboxes) {
+                console.log('Initializing smart comboboxes...');
+                window.initializeSmartComboboxes();
+            }
+            
+            // Load initial matrix if one is pre-selected
+            const selectedMatrixId = document.getElementById('riskMatrixSelector').value;
+            if (selectedMatrixId) {
+                loadMatrixData(selectedMatrixId);
+            }
+            
+            // Add risk calculation listeners
+            ['Assessment_QualitativeImpact', 'Assessment_QualitativeLikelihood', 'Assessment_QualitativeExposure'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('change', calculateBasicRisk);
+                }
+            });
+            
+            // Initial calculations
+            calculateBasicRisk();
+        });
+        
+        // Initialize tooltips
+        function initializeTooltips() {
+            const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltips.forEach(function(tooltip) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    new bootstrap.Tooltip(tooltip);
+                }
+            });
+        }
+        
+        // Load matrix data when selection changes
+        async function loadMatrixData(matrixId) {
+            console.log('Loading matrix data for ID:', matrixId);
+            
+            if (!matrixId) {
+                // Reset displays
+                hideMatrixSettings();
+                return;
+            }
+            
+            try {
+                // Show loading state
+                showMatrixLoading();
+                
+                // Fetch matrix data from server
+                const response = await fetch(`/api/risk-matrix/${matrixId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const matrixData = await response.json();
+                console.log('Matrix data loaded:', matrixData);
+                
+                // Store matrix data globally
+                currentMatrix = matrixData.matrix;
+                matrixLevels = matrixData.levels || [];
+                matrixCells = matrixData.cells || [];
+                
+                // Update UI
+                updateMatrixSettings(matrixData);
+                calculateBasicRisk();
+                
+            } catch (error) {
+                console.error('Error loading matrix data:', error);
+                showMatrixError();
+            }
+        }
+        
+        // Show matrix loading state
+        function showMatrixLoading() {
+            document.getElementById('matrixNotSelected').style.display = 'none';
+            document.getElementById('matrixSettingsContent').style.display = 'block';
+            document.getElementById('matrixName').textContent = 'Loading...';
+        }
+        
+        // Hide matrix settings
+        function hideMatrixSettings() {
+            document.getElementById('matrixNotSelected').style.display = 'block';
+            document.getElementById('matrixSettingsContent').style.display = 'none';
+        }
+        
+        // Show matrix error
+        function showMatrixError() {
+            document.getElementById('matrixNotSelected').innerHTML = `
+                <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                <strong>Error loading matrix data</strong> - Please try selecting another matrix
+            `;
+            document.getElementById('matrixNotSelected').style.display = 'block';
+            document.getElementById('matrixSettingsContent').style.display = 'none';
+        }
+        
+        // Update matrix settings display
+        function updateMatrixSettings(matrixData) {
+            const matrix = matrixData.matrix;
+            const levels = matrixData.levels || [];
+            const cells = matrixData.cells || [];
+            
+            // Update matrix details
+            document.getElementById('matrixName').textContent = matrix.name || 'Unknown Matrix';
+            document.getElementById('matrixType').textContent = matrix.matrixType?.replace('ImpactLikelihood', 'Impact×Likelihood')?.replace('Exposure', '×Exposure') || 'Unknown';
+            document.getElementById('matrixSize').textContent = `${matrix.matrixSize}×${matrix.matrixSize}`;
+            
+            // Update risk level thresholds
+            updateRiskLevelThresholds(levels);
+            
+            // Update SLA settings
+            updateSlaSettings(matrix);
+            
+            // Update risk appetite
+            updateRiskAppetite(matrix);
+            
+            // Show the content
+            document.getElementById('matrixNotSelected').style.display = 'none';
+            document.getElementById('matrixSettingsContent').style.display = 'block';
+        }
+        
+        // Update risk level thresholds table
+        function updateRiskLevelThresholds(levels) {
+            const riskLevels = ['Critical', 'High', 'Medium', 'Low'];
+            
+            riskLevels.forEach(level => {
+                const levelData = levels.find(l => l.levelName === level);
+                const rangeElement = document.getElementById(level.toLowerCase() + 'Range');
+                
+                if (levelData && rangeElement) {
+                    rangeElement.textContent = `${levelData.minValue} - ${levelData.maxValue}`;
+                } else if (rangeElement) {
+                    rangeElement.textContent = 'Not defined';
+                }
+            });
+        }
+        
+        // Update SLA settings table
+        function updateSlaSettings(matrix) {
+            const riskLevels = [
+                { name: 'Critical', id: 'critical' },
+                { name: 'High', id: 'high' },
+                { name: 'Medium', id: 'medium' },
+                { name: 'Low', id: 'low' }
+            ];
+            
+            riskLevels.forEach(level => {
+                const slaElement = document.getElementById(level.id + 'Sla');
+                const daysElement = document.getElementById(level.id + 'Days');
+                
+                // Try to get SLA hours from matrix (check multiple possible property names)
+                let slaHours = null;
+                if (matrix[level.id + 'RiskSlaHours']) {
+                    slaHours = matrix[level.id + 'RiskSlaHours'];
+                } else if (matrix['assessmentSla' + level.name + 'Hours']) {
+                    slaHours = matrix['assessmentSla' + level.name + 'Hours'];
+                }
+                
+                if (slaHours && slaElement && daysElement) {
+                    slaElement.textContent = `${slaHours}h`;
+                    daysElement.textContent = `${Math.round(slaHours / 8)} days`;
+                } else {
+                    if (slaElement) slaElement.textContent = 'Not set';
+                    if (daysElement) daysElement.textContent = '-';
+                }
+            });
+        }
+        
+        // Update risk appetite display
+        function updateRiskAppetite(matrix) {
+            const appetiteElement = document.getElementById('riskAppetiteLevel');
+            const descriptionElement = document.getElementById('riskAppetiteDescription');
+            
+            if (matrix.riskAppetiteLevel && appetiteElement) {
+                appetiteElement.textContent = matrix.riskAppetiteLevel;
+                appetiteElement.className = `badge ${getRiskAppetiteBadgeClass(matrix.riskAppetiteLevel)}`;
+                
+                if (descriptionElement) {
+                    descriptionElement.textContent = `Organization accepts risks at or below ${matrix.riskAppetiteLevel} level`;
+                }
+            } else {
+                if (appetiteElement) {
+                    appetiteElement.textContent = 'Not Set';
+                    appetiteElement.className = 'badge bg-secondary';
+                }
+                if (descriptionElement) {
+                    descriptionElement.textContent = 'Risk appetite not configured for this matrix';
+                }
+            }
+        }
+        
+        // Get risk appetite badge class
+        function getRiskAppetiteBadgeClass(appetiteLevel) {
+            switch (appetiteLevel?.toLowerCase()) {
+                case 'critical': return 'bg-danger';
+                case 'high': return 'bg-warning';
+                case 'medium': return 'bg-info';
+                case 'low': return 'bg-success';
+                default: return 'bg-secondary';
+            }
+        }
+        
+        // Calculate basic risk score and display
+        function calculateBasicRisk() {
+            const impact = parseInt(document.getElementById('Assessment_QualitativeImpact')?.value) || 0;
+            const likelihood = parseInt(document.getElementById('Assessment_QualitativeLikelihood')?.value) || 0;
+            const exposure = parseInt(document.getElementById('Assessment_QualitativeExposure')?.value) || 0;
+            
+            // Update individual displays
+            document.getElementById('basicImpactDisplay').textContent = impact || '-';
+            document.getElementById('basicLikelihoodDisplay').textContent = likelihood || '-';
+            document.getElementById('basicExposureDisplay').textContent = exposure || '-';
+            
+            // Calculate risk score if all values present
+            if (impact && likelihood && exposure) {
+                const riskScore = (likelihood * impact) * exposure;
+                const riskLevel = getRiskLevel(riskScore);
+                const riskLevelClass = getRiskLevelBadgeClass(riskLevel);
+                
+                document.getElementById('basicRiskScore').textContent = riskScore;
+                
+                const riskLevelElement = document.getElementById('basicRiskLevel');
+                riskLevelElement.textContent = riskLevel;
+                riskLevelElement.className = `badge fs-6 ${riskLevelClass}`;
+                
+                // Update SLA information
+                updateBasicSlaInfo(riskLevel);
+                
+                // Check risk appetite status
+                updateRiskAppetiteStatus(riskLevel);
+                
+            } else {
+                // Reset displays
+                document.getElementById('basicRiskScore').textContent = '-';
+                document.getElementById('basicRiskLevel').textContent = '-';
+                document.getElementById('basicRiskLevel').className = 'badge fs-6';
+                document.getElementById('basicSlaHours').textContent = '-';
+                document.getElementById('basicSlaDate').textContent = 'Complete risk assessment to calculate SLA';
+            }
+        }
+        
+        // Get risk level from score
+        function getRiskLevel(score) {
+            if (!currentMatrix || !matrixLevels.length) {
+                // Fallback simple calculation
+                if (score >= 60) return 'Critical';
+                if (score >= 30) return 'High';
+                if (score >= 10) return 'Medium';
+                return 'Low';
+            }
+            
+            // Use matrix levels
+            for (const level of matrixLevels) {
+                if (score >= level.minValue && score <= level.maxValue) {
+                    return level.levelName;
+                }
+            }
+            
+            return 'Unknown';
+        }
+        
+        // Get risk level badge class
+        function getRiskLevelBadgeClass(riskLevel) {
+            switch (riskLevel?.toLowerCase()) {
+                case 'critical': return 'bg-danger';
+                case 'high': return 'bg-warning';
+                case 'medium': return 'bg-info';
+                case 'low': return 'bg-success';
+                default: return 'bg-secondary';
+            }
+        }
+        
+        // Update SLA information
+        function updateBasicSlaInfo(riskLevel) {
+            if (!currentMatrix) {
+                document.getElementById('basicSlaHours').textContent = 'Matrix not loaded';
+                document.getElementById('basicSlaDate').textContent = 'Select risk matrix first';
+                return;
+            }
+            
+            // Get SLA hours for this risk level
+            let slaHours = null;
+            const levelKey = riskLevel.toLowerCase();
+            
+            if (currentMatrix[levelKey + 'RiskSlaHours']) {
+                slaHours = currentMatrix[levelKey + 'RiskSlaHours'];
+            } else if (currentMatrix['assessmentSla' + riskLevel + 'Hours']) {
+                slaHours = currentMatrix['assessmentSla' + riskLevel + 'Hours'];
+            }
+            
+            if (slaHours) {
+                document.getElementById('basicSlaHours').textContent = `${slaHours} hours`;
+                
+                // Calculate due date
+                const now = new Date();
+                const dueDate = new Date(now.getTime() + (slaHours * 60 * 60 * 1000));
+                document.getElementById('basicSlaDate').textContent = `Due: ${dueDate.toLocaleDateString()} ${dueDate.toLocaleTimeString()}`;
+            } else {
+                document.getElementById('basicSlaHours').textContent = 'Not configured';
+                document.getElementById('basicSlaDate').textContent = 'SLA not set for this risk level';
+            }
+        }
+        
+        // Update risk appetite status
+        function updateRiskAppetiteStatus(riskLevel) {
+            if (!currentMatrix || !currentMatrix.riskAppetiteLevel) return;
+            
+            const appetiteLevel = currentMatrix.riskAppetiteLevel.toLowerCase();
+            const currentLevel = riskLevel.toLowerCase();
+            
+            const riskLevels = ['low', 'medium', 'high', 'critical'];
+            const appetiteIndex = riskLevels.indexOf(appetiteLevel);
+            const currentIndex = riskLevels.indexOf(currentLevel);
+            
+            const calculationElement = document.getElementById('basicRiskCalculation');
+            
+            if (currentIndex > appetiteIndex) {
+                // Above risk appetite
+                calculationElement.classList.remove('border-success');
+                calculationElement.classList.add('border-warning');
+                
+                const slaDateElement = document.getElementById('basicSlaDate');
+                if (slaDateElement && !slaDateElement.textContent.includes('ABOVE APPETITE')) {
+                    slaDateElement.innerHTML += ' <span class="badge bg-warning ms-2">ABOVE APPETITE</span>';
+                }
+            } else {
+                // Within risk appetite
+                calculationElement.classList.remove('border-warning');
+                calculationElement.classList.add('border-success');
+            }
+        }
+        
+        // Global function for external calls
+        window.loadMatrixData = loadMatrixData;
+        window.calculateBasicRisk = calculateBasicRisk;
+        
+        // ========== COMPREHENSIVE THREAT SCENARIO MANAGEMENT ==========
+        
+        let threatScenarioCounter = 0;
+        let riskCounter = 0;
+        let stepCounter = 0;
+        
+        // Add new threat scenario
+        function addThreatScenario() {
+            threatScenarioCounter++;
+            const scenarioIndex = threatScenarioCounter - 1;
+            const scenarioId = `TS-${String(scenarioIndex + 1).padStart(3, '0')}`;
+            
+            const scenarioHtml = `
+                <div class="card shadow-sm threat-scenario-card mb-4" id="threat-scenario-${scenarioIndex}" data-scenario-index="${scenarioIndex}">
+                    <div class="card-header bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Threat Scenario ${scenarioIndex + 1}
+                            </h6>
+                            <div>
+                                <button type="button" class="btn btn-sm btn-outline-light toggle-scenario" 
+                                        data-bs-toggle="collapse" data-bs-target="#scenario-content-${scenarioIndex}">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-light remove-scenario" 
+                                        onclick="removeThreatScenario(${scenarioIndex})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="collapse show" id="scenario-content-${scenarioIndex}">
+                        <div class="card-body">
+                            <!-- Scenario Header Information -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-hashtag me-1"></i>Scenario ID <span class="text-danger">*</span>
+                                    </label>
+                                    <input name="ThreatScenarios[${scenarioIndex}].ScenarioId" 
+                                           value="${scenarioId}" 
+                                           class="form-control" 
+                                           placeholder="e.g., TS-001" 
+                                           required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-tag me-1"></i>Scenario Name <span class="text-danger">*</span>
+                                    </label>
+                                    <input name="ThreatScenarios[${scenarioIndex}].ScenarioName" 
+                                           class="form-control" 
+                                           placeholder="e.g., Phishing Attack on Email System" 
+                                           required />
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-file-alt me-1"></i>Scenario Description
+                                </label>
+                                <textarea name="ThreatScenarios[${scenarioIndex}].Description" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="Describe the overall threat scenario..."></textarea>
+                            </div>
+
+                            <!-- Scenario Sections -->
+                            <div class="accordion" id="scenario-accordion-${scenarioIndex}">
+                                ${createAccordionSections(scenarioIndex)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('threat-scenarios-container').insertAdjacentHTML('beforeend', scenarioHtml);
+            updateOverallSummary();
+        }
+        
+        // Create accordion sections for threat scenario
+        function createAccordionSections(scenarioIndex) {
+            return `
+                <!-- Initial Threat Vector Section -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="vector-heading-${scenarioIndex}">
+                        <button class="accordion-button" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#vector-collapse-${scenarioIndex}">
+                            <i class="fas fa-arrow-right text-danger me-2"></i>
+                            <strong>Initial Threat Vector</strong>
+                        </button>
+                    </h2>
+                    <div id="vector-collapse-${scenarioIndex}" 
+                         class="accordion-collapse collapse show" 
+                         data-bs-parent="#scenario-accordion-${scenarioIndex}">
+                        <div class="accordion-body">
+                            ${createThreatVectorForm(scenarioIndex)}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Threat Actor Steps Section -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="steps-heading-${scenarioIndex}">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#steps-collapse-${scenarioIndex}">
+                            <i class="fas fa-list-ol text-warning me-2"></i>
+                            <strong>Threat Actor Steps</strong>
+                            <span class="badge bg-secondary ms-2" id="steps-count-${scenarioIndex}">0</span>
+                        </button>
+                    </h2>
+                    <div id="steps-collapse-${scenarioIndex}" 
+                         class="accordion-collapse collapse" 
+                         data-bs-parent="#scenario-accordion-${scenarioIndex}">
+                        <div class="accordion-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <p class="text-muted mb-0">Define the sequence of steps the threat actor takes</p>
+                                <button type="button" class="btn btn-sm btn-outline-success" 
+                                        onclick="addThreatActorStep(${scenarioIndex})">
+                                    <i class="fas fa-plus me-1"></i>Add Step
+                                </button>
+                            </div>
+                            <div id="threat-actor-steps-${scenarioIndex}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Threat Actor Objective Section -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="objective-heading-${scenarioIndex}">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#objective-collapse-${scenarioIndex}">
+                            <i class="fas fa-bullseye text-info me-2"></i>
+                            <strong>Threat Actor Objective</strong>
+                        </button>
+                    </h2>
+                    <div id="objective-collapse-${scenarioIndex}" 
+                         class="accordion-collapse collapse" 
+                         data-bs-parent="#scenario-accordion-${scenarioIndex}">
+                        <div class="accordion-body">
+                            ${createThreatActorObjectiveForm(scenarioIndex)}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Identified Risks Section -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="risks-heading-${scenarioIndex}">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#risks-collapse-${scenarioIndex}">
+                            <i class="fas fa-exclamation-circle text-danger me-2"></i>
+                            <strong>Identified Risks</strong>
+                            <span class="badge bg-danger ms-2" id="risks-count-${scenarioIndex}">0</span>
+                        </button>
+                    </h2>
+                    <div id="risks-collapse-${scenarioIndex}" 
+                         class="accordion-collapse collapse" 
+                         data-bs-parent="#scenario-accordion-${scenarioIndex}">
+                        <div class="accordion-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <p class="text-muted mb-0">Add multiple risks that could emerge from this threat scenario</p>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="addScenarioRisk(${scenarioIndex})">
+                                    <i class="fas fa-plus me-1"></i>Add Risk
+                                </button>
+                            </div>
+                            
+                            <!-- Overall Scenario Risk Summary -->
+                            <div class="alert alert-light border mb-3" id="scenario-risk-summary-${scenarioIndex}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="text-muted">Overall Scenario Risk Level:</strong>
+                                        <span class="badge ms-2" id="overall-risk-badge-${scenarioIndex}">Unknown</span>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">Highest individual risk: 
+                                            <strong id="overall-risk-score-${scenarioIndex}">-</strong>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="scenario-risks-${scenarioIndex}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Create threat vector form
+        function createThreatVectorForm(scenarioIndex) {
+            return `
+                <div class="threat-vector-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-tag me-1"></i>Threat Vector Name <span class="text-danger">*</span>
+                                </label>
+                                <input name="ThreatScenarios[${scenarioIndex}].ThreatVector.Name" 
+                                       class="form-control" 
+                                       placeholder="e.g., Phishing Email" 
+                                       required />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-shield-alt me-1"></i>MITRE ATT&CK Technique
+                                </label>
+                                <input name="ThreatScenarios[${scenarioIndex}].ThreatVector.MitreTechnique" 
+                                       class="form-control mitre-technique-input" 
+                                       placeholder="e.g., T1566.001 - Spearphishing Attachment" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-file-alt me-1"></i>Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="ThreatScenarios[${scenarioIndex}].ThreatVector.Description" 
+                                  class="form-control" 
+                                  rows="3" 
+                                  placeholder="Describe the initial entry point used by the threat actor..."
+                                  required></textarea>
+                    </div>
+
+                    <!-- Controls Section -->
+                    <div class="row">
+                        ${createControlsSection(scenarioIndex, 'ThreatVector')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Create threat actor objective form
+        function createThreatActorObjectiveForm(scenarioIndex) {
+            return `
+                <div class="threat-actor-objective-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-bullseye me-1"></i>Objective Name
+                                </label>
+                                <input name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.Name" 
+                                       class="form-control" 
+                                       placeholder="e.g., Data Exfiltration" />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-shield-alt me-1"></i>MITRE ATT&CK Technique
+                                </label>
+                                <input name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.MitreTechnique" 
+                                       class="form-control mitre-technique-input" 
+                                       placeholder="e.g., T1041 - Exfiltration Over C2 Channel" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-file-alt me-1"></i>Description
+                        </label>
+                        <textarea name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.Description" 
+                                  class="form-control" 
+                                  rows="3" 
+                                  placeholder="Describe the end goal or objective of the threat actor..."></textarea>
+                    </div>
+
+                    <!-- Controls Section -->
+                    <div class="row">
+                        ${createControlsSection(scenarioIndex, 'ThreatActorObjective')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Create controls section for different components
+        function createControlsSection(scenarioIndex, componentType) {
+            const prefix = componentType.toLowerCase();
+            return `
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-success">
+                        <i class="fas fa-shield-alt me-1"></i>Current Protective
+                    </label>
+                    <div id="${prefix}-current-protective-${scenarioIndex}" class="controls-container">
+                        <!-- Controls will be added here dynamically -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-success mt-2" 
+                            onclick="addControl('${prefix}-current-protective-${scenarioIndex}', '${scenarioIndex}', '${componentType}.CurrentProtectiveControls')">
+                        <i class="fas fa-plus me-1"></i>Add Control
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-info">
+                        <i class="fas fa-search me-1"></i>Current Detective
+                    </label>
+                    <div id="${prefix}-current-detective-${scenarioIndex}" class="controls-container">
+                        <!-- Controls will be added here dynamically -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-info mt-2" 
+                            onclick="addControl('${prefix}-current-detective-${scenarioIndex}', '${scenarioIndex}', '${componentType}.CurrentDetectiveControls')">
+                        <i class="fas fa-plus me-1"></i>Add Control
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-warning">
+                        <i class="fas fa-plus-shield me-1"></i>Needed Protective
+                    </label>
+                    <div id="${prefix}-needed-protective-${scenarioIndex}" class="controls-container">
+                        <!-- Controls will be added here dynamically -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-warning mt-2" 
+                            onclick="addControl('${prefix}-needed-protective-${scenarioIndex}', '${scenarioIndex}', '${componentType}.NeededProtectiveControls')">
+                        <i class="fas fa-plus me-1"></i>Add Control
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold text-secondary">
+                        <i class="fas fa-plus-search me-1"></i>Needed Detective
+                    </label>
+                    <div id="${prefix}-needed-detective-${scenarioIndex}" class="controls-container">
+                        <!-- Controls will be added here dynamically -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" 
+                            onclick="addControl('${prefix}-needed-detective-${scenarioIndex}', '${scenarioIndex}', '${componentType}.NeededDetectiveControls')">
+                        <i class="fas fa-plus me-1"></i>Add Control
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Remove threat scenario
+        function removeThreatScenario(scenarioIndex) {
+            document.getElementById(`threat-scenario-${scenarioIndex}`).remove();
+            updateOverallSummary();
+        }
+        
+        // Add threat actor step
+        function addThreatActorStep(scenarioIndex) {
+            const stepIndex = document.querySelectorAll(`#threat-actor-steps-${scenarioIndex} .threat-actor-step`).length;
+            
+            const stepHtml = `
+                <div class="card mb-3 threat-actor-step" data-step-index="${stepIndex}">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">Step ${stepIndex + 1}</h6>
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="removeThreatActorStep(${scenarioIndex}, ${stepIndex})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Step Name</label>
+                                <input name="ThreatScenarios[${scenarioIndex}].ThreatActorSteps[${stepIndex}].Name" 
+                                       class="form-control" 
+                                       placeholder="e.g., Credential Harvesting" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">MITRE ATT&CK Technique</label>
+                                <input name="ThreatScenarios[${scenarioIndex}].ThreatActorSteps[${stepIndex}].MitreTechnique" 
+                                       class="form-control mitre-technique-input" 
+                                       placeholder="e.g., T1555 - Credentials from Password Stores" />
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label fw-bold">Description</label>
+                            <textarea name="ThreatScenarios[${scenarioIndex}].ThreatActorSteps[${stepIndex}].Description" 
+                                      class="form-control" 
+                                      rows="2" 
+                                      placeholder="Describe what the threat actor does in this step..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById(`threat-actor-steps-${scenarioIndex}`).insertAdjacentHTML('beforeend', stepHtml);
+            updateStepCount(scenarioIndex);
+        }
+        
+        // Remove threat actor step
+        function removeThreatActorStep(scenarioIndex, stepIndex) {
+            document.querySelector(`#threat-actor-steps-${scenarioIndex} .threat-actor-step[data-step-index="${stepIndex}"]`).remove();
+            updateStepCount(scenarioIndex);
+        }
+        
+        // Update step count
+        function updateStepCount(scenarioIndex) {
+            const count = document.querySelectorAll(`#threat-actor-steps-${scenarioIndex} .threat-actor-step`).length;
+            document.getElementById(`steps-count-${scenarioIndex}`).textContent = count;
+        }
+        
+        // Add scenario risk
+        function addScenarioRisk(scenarioIndex) {
+            const riskIndex = document.querySelectorAll(`#scenario-risks-${scenarioIndex} .scenario-risk-card`).length;
+            
+            const riskHtml = createScenarioRiskForm(scenarioIndex, riskIndex);
+            document.getElementById(`scenario-risks-${scenarioIndex}`).insertAdjacentHTML('beforeend', riskHtml);
+            updateRiskCount(scenarioIndex);
+            updateOverallSummary();
+        }
+        
+        // Create scenario risk form
+        function createScenarioRiskForm(scenarioIndex, riskIndex) {
+            return `
+                <div class="card mb-3 scenario-risk-card" id="scenario-risk-${scenarioIndex}-${riskIndex}" data-risk-index="${riskIndex}">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                Risk ${riskIndex + 1}
+                            </h6>
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="removeScenarioRisk(${scenarioIndex}, ${riskIndex})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Risk Basic Information -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-tag me-1"></i>Risk Name <span class="text-danger">*</span>
+                                </label>
+                                <input name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].RiskName" 
+                                       class="form-control" 
+                                       placeholder="e.g., Credential Theft" 
+                                       required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Risk Treatment Status</label>
+                                <select name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentPlanStatus" 
+                                        class="form-select">
+                                    <option value="0">Not Started</option>
+                                    <option value="1">In Progress</option>
+                                    <option value="2">On Hold</option>
+                                    <option value="3">Completed</option>
+                                    <option value="4">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-file-alt me-1"></i>Risk Description <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].RiskDescription" 
+                                      class="form-control" 
+                                      rows="2" 
+                                      placeholder="Describe what could go wrong..."
+                                      required></textarea>
+                        </div>
+
+                        <!-- Current Risk Assessment -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                ${createRiskAssessmentCard(scenarioIndex, riskIndex, 'current', 'Current Risk (Before Treatment)', 'primary')}
+                            </div>
+                            <div class="col-md-6">
+                                ${createRiskAssessmentCard(scenarioIndex, riskIndex, 'residual', 'Residual Risk (After Treatment)', 'success')}
+                            </div>
+                        </div>
+
+                        <!-- Risk Treatment Plan -->
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-tasks me-2"></i>Risk Treatment Plan
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Treatment Plan Description</label>
+                                    <textarea name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].RiskTreatmentPlan" 
+                                              class="form-control" 
+                                              rows="3" 
+                                              placeholder="Describe what actions will be taken to reduce this risk..."></textarea>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Expected Completion Date</label>
+                                        <input name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].ExpectedCompletionDate" 
+                                               type="date" 
+                                               class="form-control treatment-completion-date"
+                                               data-scenario="${scenarioIndex}" 
+                                               data-risk="${riskIndex}"
+                                               onchange="checkSlaCompliance('${scenarioIndex}', '${riskIndex}')" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">SLA Compliance Status</label>
+                                        <div class="mt-2" id="sla-status-${scenarioIndex}-${riskIndex}">
+                                            <span class="badge bg-success fs-6">On Track</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Create risk assessment card
+        function createRiskAssessmentCard(scenarioIndex, riskIndex, riskType, title, colorClass) {
+            return `
+                <div class="card border-${colorClass} mb-3">
+                    <div class="card-header bg-${colorClass} text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>${title}
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Impact</label>
+                                <select name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].${riskType === 'current' ? 'Current' : 'Residual'}Impact" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="${riskType}"
+                                        data-scenario="${scenarioIndex}" 
+                                        data-risk="${riskIndex}"
+                                        onchange="calculateRisk('${scenarioIndex}', '${riskIndex}', '${riskType}')">
+                                    <option value="">--</option>
+                                    <option value="1">1 - Very Low</option>
+                                    <option value="2">2 - Low</option>
+                                    <option value="3">3 - Medium</option>
+                                    <option value="4">4 - High</option>
+                                    <option value="5">5 - Very High</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Likelihood</label>
+                                <select name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].${riskType === 'current' ? 'Current' : 'Residual'}Likelihood" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="${riskType}"
+                                        data-scenario="${scenarioIndex}" 
+                                        data-risk="${riskIndex}"
+                                        onchange="calculateRisk('${scenarioIndex}', '${riskIndex}', '${riskType}')">
+                                    <option value="">--</option>
+                                    <option value="1">1 - Very Low</option>
+                                    <option value="2">2 - Low</option>
+                                    <option value="3">3 - Medium</option>
+                                    <option value="4">4 - High</option>
+                                    <option value="5">5 - Very High</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label fw-bold">Exposure</label>
+                                <select name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].${riskType === 'current' ? 'Current' : 'Residual'}Exposure" 
+                                        class="form-select risk-factor" 
+                                        data-risk-type="${riskType}"
+                                        data-scenario="${scenarioIndex}" 
+                                        data-risk="${riskIndex}"
+                                        onchange="calculateRisk('${scenarioIndex}', '${riskIndex}', '${riskType}')">
+                                    <option value="">--</option>
+                                    <option value="1">1 - Very Low</option>
+                                    <option value="2">2 - Low</option>
+                                    <option value="3">3 - Medium</option>
+                                    <option value="4">4 - High</option>
+                                    <option value="5">5 - Very High</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-light border text-center" id="${riskType}-risk-display-${scenarioIndex}-${riskIndex}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Risk Score:</strong>
+                                            <span class="h5 mb-0" id="${riskType}-risk-score-${scenarioIndex}-${riskIndex}">-</span>
+                                        </div>
+                                        <div>
+                                            <span class="badge" id="${riskType}-risk-level-${scenarioIndex}-${riskIndex}">Unknown</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2" id="${riskType}-appetite-status-${scenarioIndex}-${riskIndex}">
+                                        <span class="badge bg-success">Within Risk Appetite</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Remove scenario risk
+        function removeScenarioRisk(scenarioIndex, riskIndex) {
+            document.getElementById(`scenario-risk-${scenarioIndex}-${riskIndex}`).remove();
+            updateRiskCount(scenarioIndex);
+            updateScenarioRiskSummary(scenarioIndex);
+            updateOverallSummary();
+        }
+        
+        // Update risk count
+        function updateRiskCount(scenarioIndex) {
+            const count = document.querySelectorAll(`#scenario-risks-${scenarioIndex} .scenario-risk-card`).length;
+            document.getElementById(`risks-count-${scenarioIndex}`).textContent = count;
+        }
+        
+        // Calculate individual risk using risk matrix API
+        async function calculateRisk(scenarioIndex, riskIndex, riskType) {
+            const impact = parseFloat(document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].${riskType === 'current' ? 'Current' : 'Residual'}Impact"]`).value) || 0;
+            const likelihood = parseFloat(document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].${riskType === 'current' ? 'Current' : 'Residual'}Likelihood"]`).value) || 0;
+            const exposure = parseFloat(document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].${riskType === 'current' ? 'Current' : 'Residual'}Exposure"]`).value) || 0;
+            
+            if (impact && likelihood && exposure && currentMatrix) {
+                try {
+                    // Use the risk matrix API for accurate calculation
+                    const response = await fetch('/api/risk-matrix/calculate-risk', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            matrixType: currentMatrix.matrixType || 'ImpactLikelihoodExposure',
+                            impact: impact,
+                            likelihood: likelihood,
+                            exposure: exposure,
+                            mediumThreshold: currentMatrix.qualitativeMediumThreshold || 4.0,
+                            highThreshold: currentMatrix.qualitativeHighThreshold || 10.0,
+                            criticalThreshold: currentMatrix.qualitativeCriticalThreshold || 16.0,
+                            riskAppetiteThreshold: currentMatrix.riskAppetiteThreshold || 6.0
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        const riskScore = result.riskScore;
+                        const riskLevel = result.riskLevel;
+                        const riskLevelClass = getRiskLevelBadgeClass(riskLevel);
+                        const isAboveAppetite = !result.withinRiskAppetite;
+                        
+                        document.getElementById(`${riskType}-risk-score-${scenarioIndex}-${riskIndex}`).textContent = riskScore.toFixed(1);
+                        
+                        const riskLevelElement = document.getElementById(`${riskType}-risk-level-${scenarioIndex}-${riskIndex}`);
+                        riskLevelElement.textContent = riskLevel;
+                        riskLevelElement.className = `badge ${riskLevelClass}`;
+                        
+                        const appetiteElement = document.getElementById(`${riskType}-appetite-status-${scenarioIndex}-${riskIndex}`);
+                        if (isAboveAppetite) {
+                            appetiteElement.innerHTML = '<span class="badge bg-warning"><i class="fas fa-exclamation-triangle me-1"></i>Above Risk Appetite</span>';
+                        } else {
+                            appetiteElement.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Within Risk Appetite</span>';
+                        }
+                        
+                        // Check SLA compliance if this is current risk calculation
+                        if (riskType === 'current') {
+                            checkSlaCompliance(scenarioIndex, riskIndex);
+                        }
+                        
+                        updateScenarioRiskSummary(scenarioIndex);
+                        updateOverallSummary();
+                    } else {
+                        // Fallback to simple calculation if API fails
+                        console.warn('Risk matrix API failed, using fallback calculation');
+                        calculateRiskFallback(scenarioIndex, riskIndex, riskType, impact, likelihood, exposure);
+                    }
+                } catch (error) {
+                    console.error('Error calculating risk:', error);
+                    // Fallback to simple calculation
+                    calculateRiskFallback(scenarioIndex, riskIndex, riskType, impact, likelihood, exposure);
+                }
+            } else {
+                document.getElementById(`${riskType}-risk-score-${scenarioIndex}-${riskIndex}`).textContent = '-';
+                document.getElementById(`${riskType}-risk-level-${scenarioIndex}-${riskIndex}`).textContent = 'Unknown';
+                document.getElementById(`${riskType}-risk-level-${scenarioIndex}-${riskIndex}`).className = 'badge bg-secondary';
+            }
+        }
+        
+        // Fallback risk calculation method
+        function calculateRiskFallback(scenarioIndex, riskIndex, riskType, impact, likelihood, exposure) {
+            const riskScore = (likelihood * impact) * exposure;
+            const riskLevel = getRiskLevel(riskScore);
+            const riskLevelClass = getRiskLevelBadgeClass(riskLevel);
+            const isAboveAppetite = checkRiskAppetite(riskScore);
+            
+            document.getElementById(`${riskType}-risk-score-${scenarioIndex}-${riskIndex}`).textContent = riskScore.toFixed(1);
+            
+            const riskLevelElement = document.getElementById(`${riskType}-risk-level-${scenarioIndex}-${riskIndex}`);
+            riskLevelElement.textContent = riskLevel;
+            riskLevelElement.className = `badge ${riskLevelClass}`;
+            
+            const appetiteElement = document.getElementById(`${riskType}-appetite-status-${scenarioIndex}-${riskIndex}`);
+            if (isAboveAppetite) {
+                appetiteElement.innerHTML = '<span class="badge bg-warning"><i class="fas fa-exclamation-triangle me-1"></i>Above Risk Appetite</span>';
+            } else {
+                appetiteElement.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Within Risk Appetite</span>';
+            }
+            
+            updateScenarioRiskSummary(scenarioIndex);
+            updateOverallSummary();
+        }
+        
+        // Check risk appetite
+        function checkRiskAppetite(riskScore) {
+            // Use the same appetite threshold as the basic assessment (can be enhanced to use actual matrix data)
+            return riskScore > 6.0; // Default appetite threshold
+        }
+        
+        // Add control to controls container
+        function addControl(containerId, scenarioIndex, fieldPath) {
+            const container = document.getElementById(containerId);
+            const controlIndex = container.children.length;
+            
+            const controlHtml = `
+                <div class="control-item mb-3 p-2 border rounded">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="input-group mb-2">
+                                <span class="input-group-text bg-light">
+                                    <i class="fas fa-cog text-muted"></i>
+                                </span>
+                                <input name="ThreatScenarios[${scenarioIndex}].${fieldPath}[${controlIndex}].ControlName" 
+                                       class="form-control control-name-input" 
+                                       placeholder="Enter control name (e.g., Firewall, MFA, SIEM)" 
+                                       required />
+                                <button type="button" class="btn btn-outline-danger btn-sm" 
+                                        onclick="removeControl(this)">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <textarea name="ThreatScenarios[${scenarioIndex}].${fieldPath}[${controlIndex}].ControlDescription" 
+                                      class="form-control form-control-sm control-description-input" 
+                                      rows="2"
+                                      placeholder="Optional: Describe how this control works..."></textarea>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <select name="ThreatScenarios[${scenarioIndex}].${fieldPath}[${controlIndex}].ImplementationStatus" 
+                                    class="form-select form-select-sm implementation-status-select">
+                                <option value="0">Not Implemented</option>
+                                <option value="1">Partially Implemented</option>
+                                <option value="2">Fully Implemented</option>
+                                <option value="3">Planned</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', controlHtml);
+            
+            // Focus on the new control name input
+            const newInput = container.lastElementChild.querySelector('.control-name-input');
+            if (newInput) {
+                newInput.focus();
+            }
+        }
+        
+        // Remove control
+        function removeControl(button) {
+            button.closest('.control-item').remove();
+        }
+        
+        // Check SLA compliance using risk matrix settings
+        function checkSlaCompliance(scenarioIndex, riskIndex) {
+            const completionDateInput = document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].ExpectedCompletionDate"]`);
+            const slaStatusElement = document.getElementById(`sla-status-${scenarioIndex}-${riskIndex}`);
+            const riskLevelElement = document.getElementById(`current-risk-level-${scenarioIndex}-${riskIndex}`);
+            
+            if (!completionDateInput.value || !riskLevelElement) {
+                slaStatusElement.innerHTML = '<span class="badge bg-secondary fs-6">Not Set</span>';
+                return;
+            }
+            
+            const completionDate = new Date(completionDateInput.value);
+            const now = new Date();
+            const riskLevel = riskLevelElement.textContent || 'Low';
+            
+            // Get SLA hours from risk matrix or use defaults
+            let slaHours = 168; // 7 days default
+            if (currentMatrix && currentMatrix.remediationSla) {
+                switch (riskLevel.toLowerCase()) {
+                    case 'critical':
+                        slaHours = currentMatrix.remediationSla.critical || 4;
+                        break;
+                    case 'high':
+                        slaHours = currentMatrix.remediationSla.high || 24;
+                        break;
+                    case 'medium':
+                        slaHours = currentMatrix.remediationSla.medium || 168;
+                        break;
+                    case 'low':
+                        slaHours = currentMatrix.remediationSla.low || 720;
+                        break;
+                }
+            }
+            
+            const slaDeadline = new Date(now.getTime() + (slaHours * 60 * 60 * 1000));
+            const isOverdue = completionDate < now;
+            const isPastSla = completionDate > slaDeadline;
+            
+            // Format SLA display
+            const slaText = formatSlaHours(slaHours);
+            
+            if (isOverdue) {
+                slaStatusElement.innerHTML = `
+                    <div class="text-center">
+                        <span class="badge bg-danger fs-6 mb-1">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Overdue
+                        </span>
+                        <div class="small text-muted">
+                            Expected: ${completionDate.toLocaleDateString()}
+                        </div>
+                    </div>
+                `;
+            } else if (isPastSla) {
+                slaStatusElement.innerHTML = `
+                    <div class="text-center">
+                        <span class="badge bg-warning fs-6 mb-1">
+                            <i class="fas fa-clock me-1"></i>Past SLA
+                        </span>
+                        <div class="small text-muted">
+                            SLA: ${slaText}<br>
+                            Expected: ${completionDate.toLocaleDateString()}
+                        </div>
+                    </div>
+                `;
+            } else {
+                slaStatusElement.innerHTML = `
+                    <div class="text-center">
+                        <span class="badge bg-success fs-6 mb-1">
+                            <i class="fas fa-check-circle me-1"></i>On Track
+                        </span>
+                        <div class="small text-muted">
+                            Within ${slaText} SLA<br>
+                            Due: ${completionDate.toLocaleDateString()}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Highlight the completion date input based on SLA status
+            if (isOverdue) {
+                completionDateInput.classList.add('border-danger', 'bg-danger-subtle');
+                completionDateInput.classList.remove('border-warning', 'bg-warning-subtle', 'border-success', 'bg-success-subtle');
+            } else if (isPastSla) {
+                completionDateInput.classList.add('border-warning', 'bg-warning-subtle');
+                completionDateInput.classList.remove('border-danger', 'bg-danger-subtle', 'border-success', 'bg-success-subtle');
+            } else {
+                completionDateInput.classList.add('border-success', 'bg-success-subtle');
+                completionDateInput.classList.remove('border-danger', 'bg-danger-subtle', 'border-warning', 'bg-warning-subtle');
+            }
+        }
+        
+        // Format SLA hours for display
+        function formatSlaHours(hours) {
+            if (hours < 24) {
+                return `${hours} hours`;
+            } else if (hours < 168) {
+                return `${Math.round(hours / 24)} days`;
+            } else if (hours < 720) {
+                return `${Math.round(hours / 168)} weeks`;
+            } else {
+                return `${Math.round(hours / 720 * 10) / 10} months`;
+            }
+        }
+        
+        // Update scenario risk summary
+        function updateScenarioRiskSummary(scenarioIndex) {
+            const risks = document.querySelectorAll(`#scenario-risks-${scenarioIndex} .scenario-risk-card`);
+            let highestScore = 0;
+            let highestLevel = 'Unknown';
+            
+            risks.forEach(risk => {
+                const scoreElement = risk.querySelector(`#current-risk-score-${scenarioIndex}-${risk.dataset.riskIndex}`);
+                if (scoreElement && scoreElement.textContent !== '-') {
+                    const score = parseFloat(scoreElement.textContent);
+                    if (score > highestScore) {
+                        highestScore = score;
+                        highestLevel = getRiskLevel(score);
+                    }
+                }
+            });
+            
+            document.getElementById(`overall-risk-score-${scenarioIndex}`).textContent = highestScore > 0 ? highestScore.toFixed(1) : '-';
+            
+            const badgeElement = document.getElementById(`overall-risk-badge-${scenarioIndex}`);
+            badgeElement.textContent = highestLevel;
+            badgeElement.className = `badge ms-2 ${getRiskLevelBadgeClass(highestLevel)}`;
+        }
+        
+        // Update overall assessment summary
+        function updateOverallSummary() {
+            const scenarios = document.querySelectorAll('.threat-scenario-card');
+            const totalScenarios = scenarios.length;
+            let totalRisks = 0;
+            let highestLevel = 'Unknown';
+            let risksAboveAppetite = 0;
+            
+            scenarios.forEach(scenario => {
+                const scenarioRisks = scenario.querySelectorAll('.scenario-risk-card');
+                totalRisks += scenarioRisks.length;
+                
+                scenarioRisks.forEach(risk => {
+                    const appetiteElement = risk.querySelector('[id^="current-appetite-status-"]');
+                    if (appetiteElement && appetiteElement.textContent.includes('Above Risk Appetite')) {
+                        risksAboveAppetite++;
+                    }
+                });
+            });
+            
+            document.getElementById('total-scenarios-count').textContent = totalScenarios;
+            document.getElementById('total-risks-count').textContent = totalRisks;
+            document.getElementById('risks-above-appetite-count').textContent = risksAboveAppetite;
+            
+            // Show/hide summary based on whether there are scenarios
+            const summaryElement = document.getElementById('overall-assessment-summary');
+            if (totalScenarios > 0) {
+                summaryElement.style.display = 'block';
+            } else {
+                summaryElement.style.display = 'none';
+            }
+        }
+        
+        // Make functions globally available
+        window.addThreatScenario = addThreatScenario;
+        window.removeThreatScenario = removeThreatScenario;
+        window.addThreatActorStep = addThreatActorStep;
+        window.removeThreatActorStep = removeThreatActorStep;
+        window.addScenarioRisk = addScenarioRisk;
+        window.removeScenarioRisk = removeScenarioRisk;
+        window.addControl = addControl;
+        window.removeControl = removeControl;
+        window.calculateRisk = calculateRisk;
+        window.checkSlaCompliance = checkSlaCompliance;
+    </script>
 }
