@@ -550,6 +550,284 @@
                                             </div>
                                         </div>
 
+                                        <!-- Threat Vector Details -->
+                                        @if (scenario.ThreatVector != null)
+                                        {
+                                            <div class="mb-4">
+                                                <h6><i class="fas fa-arrow-right me-1 text-primary"></i>Threat Vector</h6>
+                                                <div class="card border-primary">
+                                                    <div class="card-body">
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-8">
+                                                                <strong>@scenario.ThreatVector.Name</strong>
+                                                                @if (!string.IsNullOrEmpty(scenario.ThreatVector.Description))
+                                                                {
+                                                                    <p class="text-muted mb-0 mt-1">@scenario.ThreatVector.Description</p>
+                                                                }
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                @if (!string.IsNullOrEmpty(scenario.ThreatVector.MitreTechnique))
+                                                                {
+                                                                    <span class="badge bg-info">@scenario.ThreatVector.MitreTechnique</span>
+                                                                }
+                                                            </div>
+                                                        </div>
+
+                                                        @if (scenario.ThreatVector.Controls?.Any() == true)
+                                                        {
+                                                            <h6 class="text-success"><i class="fas fa-shield-alt me-1"></i>Controls</h6>
+                                                            <div class="row">
+                                                                @foreach (var controlGroup in scenario.ThreatVector.Controls.GroupBy(tvc => new { tvc.ThreatControl.ControlType, tvc.ThreatControl.ControlCategory }))
+                                                                {
+                                                                    <div class="col-md-6 mb-2">
+                                                                        <div class="border rounded p-2 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "border-success" : "border-warning")">
+                                                                            <h6 class="small mb-1 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "text-success" : "text-warning")">
+                                                                                @controlGroup.Key.ControlCategory @controlGroup.Key.ControlType Controls
+                                                                            </h6>
+                                                                            <ul class="list-unstyled mb-0 small">
+                                                                                @foreach (var tvc in controlGroup)
+                                                                                {
+                                                                                    <li><i class="fas fa-check-circle me-1"></i>@tvc.ThreatControl.ControlName</li>
+                                                                                }
+                                                                            </ul>
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+
+                                        <!-- Threat Actor Objective Details -->
+                                        @if (scenario.ThreatActorObjective != null)
+                                        {
+                                            <div class="mb-4">
+                                                <h6><i class="fas fa-bullseye me-1 text-warning"></i>Threat Actor Objective</h6>
+                                                <div class="card border-warning">
+                                                    <div class="card-body">
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-8">
+                                                                <strong>@scenario.ThreatActorObjective.Name</strong>
+                                                                @if (!string.IsNullOrEmpty(scenario.ThreatActorObjective.Description))
+                                                                {
+                                                                    <p class="text-muted mb-0 mt-1">@scenario.ThreatActorObjective.Description</p>
+                                                                }
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                @if (!string.IsNullOrEmpty(scenario.ThreatActorObjective.MitreTechnique))
+                                                                {
+                                                                    <span class="badge bg-info">@scenario.ThreatActorObjective.MitreTechnique</span>
+                                                                }
+                                                            </div>
+                                                        </div>
+
+                                                        @if (scenario.ThreatActorObjective.Controls?.Any() == true)
+                                                        {
+                                                            <h6 class="text-success"><i class="fas fa-shield-alt me-1"></i>Controls</h6>
+                                                            <div class="row">
+                                                                @foreach (var controlGroup in scenario.ThreatActorObjective.Controls.GroupBy(taoc => new { taoc.ThreatControl.ControlType, taoc.ThreatControl.ControlCategory }))
+                                                                {
+                                                                    <div class="col-md-6 mb-2">
+                                                                        <div class="border rounded p-2 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "border-success" : "border-warning")">
+                                                                            <h6 class="small mb-1 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "text-success" : "text-warning")">
+                                                                                @controlGroup.Key.ControlCategory @controlGroup.Key.ControlType Controls
+                                                                            </h6>
+                                                                            <ul class="list-unstyled mb-0 small">
+                                                                                @foreach (var taoc in controlGroup)
+                                                                                {
+                                                                                    <li><i class="fas fa-check-circle me-1"></i>@taoc.ThreatControl.ControlName</li>
+                                                                                }
+                                                                            </ul>
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+
+                                        <!-- Threat Actor Steps Details -->
+                                        @if (scenario.ThreatActorSteps?.Any() == true)
+                                        {
+                                            <div class="mb-4">
+                                                <h6><i class="fas fa-list-ol me-1 text-info"></i>Threat Actor Steps (@scenario.ThreatActorSteps.Count)</h6>
+                                                @foreach (var step in scenario.ThreatActorSteps.OrderBy(s => s.StepOrder))
+                                                {
+                                                    <div class="card border-info mb-3">
+                                                        <div class="card-body">
+                                                            <div class="row mb-3">
+                                                                <div class="col-md-1">
+                                                                    <div class="badge bg-info fs-6">@step.StepOrder</div>
+                                                                </div>
+                                                                <div class="col-md-7">
+                                                                    <strong>@step.Name</strong>
+                                                                    @if (!string.IsNullOrEmpty(step.Description))
+                                                                    {
+                                                                        <p class="text-muted mb-0 mt-1">@step.Description</p>
+                                                                    }
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    @if (!string.IsNullOrEmpty(step.MitreTechnique))
+                                                                    {
+                                                                        <span class="badge bg-info">@step.MitreTechnique</span>
+                                                                    }
+                                                                </div>
+                                                            </div>
+
+                                                            @if (step.Controls?.Any() == true)
+                                                            {
+                                                                <h6 class="text-success small"><i class="fas fa-shield-alt me-1"></i>Controls</h6>
+                                                                <div class="row">
+                                                                    @foreach (var controlGroup in step.Controls.GroupBy(tasc => new { tasc.ThreatControl.ControlType, tasc.ThreatControl.ControlCategory }))
+                                                                    {
+                                                                        <div class="col-md-6 mb-2">
+                                                                            <div class="border rounded p-2 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "border-success" : "border-warning")">
+                                                                                <h6 class="small mb-1 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "text-success" : "text-warning")">
+                                                                                    @controlGroup.Key.ControlCategory @controlGroup.Key.ControlType
+                                                                                </h6>
+                                                                                <ul class="list-unstyled mb-0 small">
+                                                                                    @foreach (var tasc in controlGroup)
+                                                                                    {
+                                                                                        <li><i class="fas fa-check-circle me-1"></i>@tasc.ThreatControl.ControlName</li>
+                                                                                    }
+                                                                                </ul>
+                                                                            </div>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+
+                                        <!-- Scenario Risks Details -->
+                                        @if (scenario.ScenarioRisks?.Any() == true)
+                                        {
+                                            <div class="mb-4">
+                                                <h6><i class="fas fa-exclamation-triangle me-1 text-danger"></i>Scenario Risks (@scenario.ScenarioRisks.Count)</h6>
+                                                @foreach (var risk in scenario.ScenarioRisks.OrderByDescending(r => r.CurrentRiskScore))
+                                                {
+                                                    <div class="card border-danger mb-3">
+                                                        <div class="card-body">
+                                                            <div class="row mb-3">
+                                                                <div class="col-md-8">
+                                                                    <strong>@risk.RiskName</strong>
+                                                                    @if (!string.IsNullOrEmpty(risk.RiskDescription))
+                                                                    {
+                                                                        <p class="text-muted mb-0 mt-1">@risk.RiskDescription</p>
+                                                                    }
+                                                                </div>
+                                                                <div class="col-md-4 text-end">
+                                                                    <span class="badge bg-@(risk.TreatmentPlanStatus.ToString().ToLower() switch 
+                                                                    { 
+                                                                        "notstarted" => "secondary",
+                                                                        "inprogress" => "primary",
+                                                                        "onhold" => "warning", 
+                                                                        "completed" => "success",
+                                                                        "cancelled" => "dark",
+                                                                        _ => "secondary"
+                                                                    })">
+                                                                        @risk.TreatmentPlanStatus.ToString().Replace("NotStarted", "Not Started").Replace("InProgress", "In Progress").Replace("OnHold", "On Hold")
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="row">
+                                                                <div class="col-md-6">
+                                                                    <div class="card border-primary">
+                                                                        <div class="card-header bg-primary text-white py-2">
+                                                                            <h6 class="mb-0 small">Current Risk</h6>
+                                                                        </div>
+                                                                        <div class="card-body py-2">
+                                                                            <div class="row text-center">
+                                                                                <div class="col-4">
+                                                                                    <small class="text-muted">Impact</small>
+                                                                                    <div class="fw-bold">@(risk.CurrentImpact?.ToString() ?? "-")</div>
+                                                                                </div>
+                                                                                <div class="col-4">
+                                                                                    <small class="text-muted">Likelihood</small>
+                                                                                    <div class="fw-bold">@(risk.CurrentLikelihood?.ToString() ?? "-")</div>
+                                                                                </div>
+                                                                                <div class="col-4">
+                                                                                    <small class="text-muted">Exposure</small>
+                                                                                    <div class="fw-bold">@(risk.CurrentExposure?.ToString() ?? "-")</div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="text-center mt-2">
+                                                                                <span class="badge bg-primary">Score: @(risk.CurrentRiskScore?.ToString("F1") ?? "N/A")</span>
+                                                                                <span class="badge bg-@(risk.CurrentRiskLevel.ToLower() switch 
+                                                                                { 
+                                                                                    "low" => "success",
+                                                                                    "medium" => "warning", 
+                                                                                    "high" => "danger",
+                                                                                    "critical" => "dark",
+                                                                                    "extreme" => "dark",
+                                                                                    _ => "secondary"
+                                                                                })">@risk.CurrentRiskLevel</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <div class="card border-success">
+                                                                        <div class="card-header bg-success text-white py-2">
+                                                                            <h6 class="mb-0 small">Residual Risk</h6>
+                                                                        </div>
+                                                                        <div class="card-body py-2">
+                                                                            <div class="row text-center">
+                                                                                <div class="col-4">
+                                                                                    <small class="text-muted">Impact</small>
+                                                                                    <div class="fw-bold">@(risk.ResidualImpact?.ToString() ?? "-")</div>
+                                                                                </div>
+                                                                                <div class="col-4">
+                                                                                    <small class="text-muted">Likelihood</small>
+                                                                                    <div class="fw-bold">@(risk.ResidualLikelihood?.ToString() ?? "-")</div>
+                                                                                </div>
+                                                                                <div class="col-4">
+                                                                                    <small class="text-muted">Exposure</small>
+                                                                                    <div class="fw-bold">@(risk.ResidualExposure?.ToString() ?? "-")</div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="text-center mt-2">
+                                                                                <span class="badge bg-success">Score: @(risk.ResidualRiskScore?.ToString("F1") ?? "N/A")</span>
+                                                                                <span class="badge bg-@(risk.ResidualRiskLevel.ToLower() switch 
+                                                                                { 
+                                                                                    "low" => "success",
+                                                                                    "medium" => "warning", 
+                                                                                    "high" => "danger",
+                                                                                    "critical" => "dark",
+                                                                                    "extreme" => "dark",
+                                                                                    _ => "secondary"
+                                                                                })">@risk.ResidualRiskLevel</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            @if (!string.IsNullOrEmpty(risk.RiskTreatmentPlan))
+                                                            {
+                                                                <div class="mt-3">
+                                                                    <h6 class="small text-warning"><i class="fas fa-tasks me-1"></i>Treatment Plan</h6>
+                                                                    <p class="mb-1">@risk.RiskTreatmentPlan</p>
+                                                                    @if (risk.ExpectedCompletionDate.HasValue)
+                                                                    {
+                                                                        <small class="text-muted">Expected Completion: @risk.ExpectedCompletionDate.Value.ToString("MMM dd, yyyy")</small>
+                                                                    }
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+
                                         <!-- Associated Risks for this Scenario -->
                                         @if (scenario.IdentifiedRisks?.Any() == true)
                                         {

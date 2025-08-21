@@ -22,6 +22,7 @@ namespace CyberRiskApp.Data
         public DbSet<ThreatActorStep> ThreatActorSteps { get; set; }
         public DbSet<ThreatActorObjective> ThreatActorObjectives { get; set; }
         public DbSet<ScenarioRisk> ScenarioRisks { get; set; }
+        public DbSet<TreatmentAction> TreatmentActions { get; set; }
         public DbSet<ThreatControl> ThreatControls { get; set; }
         public DbSet<ThreatVectorControl> ThreatVectorControls { get; set; }
         public DbSet<ThreatActorStepControl> ThreatActorStepControls { get; set; }
@@ -943,6 +944,187 @@ namespace CyberRiskApp.Data
             modelBuilder.Entity<ScenarioRecommendation>()
                 .Property(r => r.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // ========================================
+            // THREAT SCENARIO ENTITIES CONFIGURATION
+            // ========================================
+
+            // Configure ThreatScenario RowVersion for PostgreSQL
+            modelBuilder.Entity<ThreatScenario>(entity =>
+            {
+                entity.Property(ts => ts.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+            });
+
+            // Configure ThreatVector RowVersion for PostgreSQL
+            modelBuilder.Entity<ThreatVector>(entity =>
+            {
+                entity.Property(tv => tv.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+            });
+
+            // Configure ThreatActorStep RowVersion for PostgreSQL
+            modelBuilder.Entity<ThreatActorStep>(entity =>
+            {
+                entity.Property(tas => tas.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+            });
+
+            // Configure ThreatActorObjective RowVersion for PostgreSQL
+            modelBuilder.Entity<ThreatActorObjective>(entity =>
+            {
+                entity.Property(tao => tao.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+            });
+
+            // Configure ScenarioRisk RowVersion for PostgreSQL
+            modelBuilder.Entity<ScenarioRisk>(entity =>
+            {
+                entity.Property(sr => sr.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+            });
+
+            // Configure TreatmentAction RowVersion for PostgreSQL
+            modelBuilder.Entity<TreatmentAction>(entity =>
+            {
+                entity.Property(ta => ta.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+            });
+
+            // Configure ThreatControl RowVersion for PostgreSQL
+            modelBuilder.Entity<ThreatControl>(entity =>
+            {
+                entity.Property(tc => tc.RowVersion)
+                    .IsRowVersion()
+                    .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+            });
+        }
+
+        // Override SaveChanges to handle audit fields
+        public override int SaveChanges()
+        {
+            Console.WriteLine($"🔍 DEBUGGING: SaveChanges called with {ChangeTracker.Entries().Count()} total entries");
+            
+            try
+            {
+                UpdateAuditFields();
+                Console.WriteLine($"🔍 DEBUGGING: About to call base.SaveChanges()");
+                var result = base.SaveChanges();
+                Console.WriteLine($"🔍 DEBUGGING: SaveChanges completed successfully, affected rows: {result}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ DEBUGGING: SaveChanges failed with error: {ex.Message}");
+                Console.WriteLine($"❌ DEBUGGING: Inner exception: {ex.InnerException?.Message}");
+                Console.WriteLine($"❌ DEBUGGING: Stack trace: {ex.StackTrace}");
+                
+                // Log all entries that were being saved
+                foreach (var entry in ChangeTracker.Entries())
+                {
+                    Console.WriteLine($"❌ DEBUGGING: Entry: {entry.Entity.GetType().Name} in state {entry.State}");
+                    if (entry.Entity is IAuditableEntity auditable)
+                    {
+                        var rowVersionProp = entry.Property(nameof(IAuditableEntity.RowVersion));
+                        Console.WriteLine($"❌ DEBUGGING: RowVersion value: {(rowVersionProp.CurrentValue == null ? "NULL" : "NOT NULL")}");
+                        Console.WriteLine($"❌ DEBUGGING: RowVersion is nullable: {rowVersionProp.Metadata.IsNullable}");
+                    }
+                }
+                throw;
+            }
+        }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            Console.WriteLine($"🔍 DEBUGGING: SaveChangesAsync called with {ChangeTracker.Entries().Count()} total entries");
+            
+            try
+            {
+                UpdateAuditFields();
+                Console.WriteLine($"🔍 DEBUGGING: About to call base.SaveChangesAsync()");
+                var result = await base.SaveChangesAsync(cancellationToken);
+                Console.WriteLine($"🔍 DEBUGGING: SaveChangesAsync completed successfully, affected rows: {result}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ DEBUGGING: SaveChangesAsync failed with error: {ex.Message}");
+                Console.WriteLine($"❌ DEBUGGING: Inner exception: {ex.InnerException?.Message}");
+                Console.WriteLine($"❌ DEBUGGING: Stack trace: {ex.StackTrace}");
+                
+                // Log all entries that were being saved
+                foreach (var entry in ChangeTracker.Entries())
+                {
+                    Console.WriteLine($"❌ DEBUGGING: Entry: {entry.Entity.GetType().Name} in state {entry.State}");
+                    if (entry.Entity is IAuditableEntity auditable)
+                    {
+                        var rowVersionProp = entry.Property(nameof(IAuditableEntity.RowVersion));
+                        Console.WriteLine($"❌ DEBUGGING: RowVersion value: {(rowVersionProp.CurrentValue == null ? "NULL" : "NOT NULL")}");
+                        Console.WriteLine($"❌ DEBUGGING: RowVersion is nullable: {rowVersionProp.Metadata.IsNullable}");
+                    }
+                }
+                throw;
+            }
+        }
+
+        private void UpdateAuditFields()
+        {
+            var currentUser = "System"; // TODO: Get from current user context
+            var now = DateTime.UtcNow;
+
+            Console.WriteLine($"🔍 DEBUGGING: UpdateAuditFields called with {ChangeTracker.Entries<IAuditableEntity>().Count()} auditable entities");
+
+            foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
+            {
+                var entityType = entry.Entity.GetType().Name;
+                var entityId = entry.Entity.Id;
+                var state = entry.State;
+                
+                Console.WriteLine($"🔍 DEBUGGING: Processing {entityType} (ID: {entityId}) in state: {state}");
+                
+                // Check RowVersion status before modification
+                var rowVersionProperty = entry.Property(nameof(IAuditableEntity.RowVersion));
+                var currentRowVersion = rowVersionProperty.CurrentValue;
+                Console.WriteLine($"🔍 DEBUGGING: {entityType} RowVersion before: {(currentRowVersion == null ? "NULL" : $"[{string.Join(",", (byte[])currentRowVersion)}]")}");
+
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        Console.WriteLine($"🔍 DEBUGGING: Setting audit fields for new {entityType}");
+                        entry.Entity.CreatedAt = now;
+                        entry.Entity.UpdatedAt = now;
+                        entry.Entity.CreatedBy = currentUser;
+                        entry.Entity.UpdatedBy = currentUser;
+                        
+                        // Check if RowVersion is still null after audit field setting
+                        var rowVersionAfter = entry.Property(nameof(IAuditableEntity.RowVersion)).CurrentValue;
+                        Console.WriteLine($"🔍 DEBUGGING: {entityType} RowVersion after audit: {(rowVersionAfter == null ? "NULL" : $"[{string.Join(",", (byte[])rowVersionAfter)}]")}");
+                        
+                        // Log all property values for debugging
+                        foreach (var property in entry.Properties)
+                        {
+                            if (property.Metadata.Name == "RowVersion")
+                            {
+                                Console.WriteLine($"🔍 DEBUGGING: {entityType}.{property.Metadata.Name} = {(property.CurrentValue == null ? "NULL" : property.CurrentValue)} (IsNullable: {property.Metadata.IsNullable})");
+                            }
+                        }
+                        break;
+
+                    case EntityState.Modified:
+                        Console.WriteLine($"🔍 DEBUGGING: Updating {entityType} audit fields");
+                        entry.Entity.UpdatedAt = now;
+                        entry.Entity.UpdatedBy = currentUser;
+                        break;
+                }
+            }
+            
+            Console.WriteLine($"🔍 DEBUGGING: UpdateAuditFields completed");
         }
     }
 }

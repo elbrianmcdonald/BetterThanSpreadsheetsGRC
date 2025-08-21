@@ -56,6 +56,23 @@ namespace CyberRiskApp.Services
                         .ThenInclude(tm => tm.TemplateAttackChain)
                     .Include(a => a.ThreatScenarios)
                         .ThenInclude(ts => ts.IdentifiedRisks)
+                    .Include(a => a.ThreatScenarios)
+                        .ThenInclude(ts => ts.ScenarioRisks)
+                    .Include(a => a.ThreatScenarios)
+                        .ThenInclude(ts => ts.ThreatVector)
+                    .Include(a => a.ThreatScenarios)
+                        .ThenInclude(ts => ts.ThreatActorObjective)
+                    .Include(a => a.ThreatScenarios)
+                        .ThenInclude(ts => ts.ThreatActorSteps)
+                    .Include(a => a.ThreatScenarios)
+                        .ThenInclude(ts => ts.ThreatVector)
+                            .ThenInclude(tv => tv.Controls)
+                    .Include(a => a.ThreatScenarios)
+                        .ThenInclude(ts => ts.ThreatActorObjective)
+                            .ThenInclude(tao => tao.Controls)
+                    .Include(a => a.ThreatScenarios)
+                        .ThenInclude(ts => ts.ThreatActorSteps)
+                            .ThenInclude(tas => tas.Controls)
                     .FirstOrDefaultAsync(a => a.Id == id);
 
                 if (assessment != null)
@@ -104,14 +121,15 @@ namespace CyberRiskApp.Services
                 // Set audit fields using AuditService
                 _auditService.SetAuditFields(assessment, _auditService.GetCurrentUser());
 
-                assessment.DateCompleted = DateTime.Today;
-                assessment.Status = AssessmentStatus.Completed;
+                // DON'T override status - let the controller set the appropriate status
+                // assessment.DateCompleted should only be set when actually completed
+                // assessment.Status should be preserved from controller (Draft for new assessments)
 
                 _context.RiskAssessments.Add(assessment);
                 await _context.SaveChangesAsync();
 
-                // Automatically generate risks for the backlog
-                await AutoGenerateRisksForBacklogAsync(assessment);
+                // Don't automatically generate risks - only generate when assessment is manually completed
+                // await AutoGenerateRisksForBacklogAsync(assessment);
 
                 return assessment;
             }

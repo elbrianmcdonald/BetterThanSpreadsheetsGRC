@@ -1411,5 +1411,41 @@ namespace CyberRiskApp.Services
             return entries.Count(e => e.RequiresEscalation());
         }
 
+        public async Task ClearAllBacklogEntriesAsync()
+        {
+            // Clear all backlog entries and related data for fresh start
+            
+            // Get counts for logging
+            var totalComments = await _context.RiskBacklogComments.CountAsync();
+            var totalActivities = await _context.RiskBacklogActivities.CountAsync();
+            var totalEntries = await _context.RiskBacklogEntries.CountAsync();
+            
+            _logger.LogInformation("Clearing {TotalEntries} backlog entries, {TotalComments} comments, {TotalActivities} activities", 
+                totalEntries, totalComments, totalActivities);
+
+            // Clear in order due to foreign key dependencies
+            if (totalComments > 0)
+            {
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM \"RiskBacklogComments\"");
+                _logger.LogInformation("Deleted {TotalComments} backlog comments", totalComments);
+            }
+
+            if (totalActivities > 0)
+            {
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM \"RiskBacklogActivities\"");
+                _logger.LogInformation("Deleted {TotalActivities} backlog activities", totalActivities);
+            }
+
+            if (totalEntries > 0)
+            {
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM \"RiskBacklogEntries\"");
+                _logger.LogInformation("Deleted {TotalEntries} backlog entries", totalEntries);
+            }
+
+            // Reset the sequence for clean numbering
+            await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"RiskBacklogEntries\"', 'Id'), 1, false)");
+            _logger.LogInformation("Reset backlog entry ID sequence");
+        }
+
     }
 }

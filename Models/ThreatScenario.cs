@@ -23,6 +23,9 @@ namespace CyberRiskApp.Models
         [Display(Name = "Threat Scenario Description")]
         public string Description { get; set; } = string.Empty;
 
+        [Display(Name = "CIA Impact Type")]
+        public CIATriad CIAImpactType { get; set; } = CIATriad.All;
+
         // Audit and Concurrency Control Fields
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -38,7 +41,7 @@ namespace CyberRiskApp.Models
         public string UpdatedBy { get; set; } = string.Empty;
         
         [Timestamp]
-        public byte[] RowVersion { get; set; } = new byte[] { 0, 0, 0, 0, 0, 0, 0, 1 };
+        public byte[]? RowVersion { get; set; }
 
         // Navigation properties
         [ForeignKey("RiskAssessmentId")]

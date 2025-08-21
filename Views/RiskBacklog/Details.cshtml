@@ -28,12 +28,131 @@
                 </div>
             }
         </div>
-        <div>
+        <div class="d-flex gap-2">
+            @if (Model.CanApprove && 
+                (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || 
+                 Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
+            {
+                @if (Model.Entry.ActionType == CyberRiskApp.Models.RiskBacklogAction.RiskReassessment)
+                {
+                    <button type="button" class="btn btn-success" onclick="approveRiskAssessment(@Model.Entry.Id)">
+                        <i class="fas fa-check-circle me-1"></i>Approve Risk Assessment
+                    </button>
+                }
+                @if (Model.Entry.ActionType == CyberRiskApp.Models.RiskBacklogAction.RiskReview)
+                {
+                    <button type="button" class="btn btn-success" onclick="approveAndAddToRegister(@Model.Entry.Id)">
+                        <i class="fas fa-plus-circle me-1"></i>Approve & Add to Risk Register
+                    </button>
+                }
+                <button type="button" class="btn btn-warning" onclick="showRejectModal(@Model.Entry.Id)">
+                    <i class="fas fa-times-circle me-1"></i>Reject
+                </button>
+            }
             <a asp-controller="RiskBacklog" asp-action="Index" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i>Back to Backlog
             </a>
         </div>
     </div>
+
+    <!-- Decision Summary for Managers -->
+    @if (Model.CanApprove && (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
+    {
+        <div class="alert alert-info mb-4">
+            <h5 class="alert-heading">
+                <i class="fas fa-gavel me-2"></i>Decision Required
+            </h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <p class="mb-2">This @Model.Entry.ActionType.ToString().Replace("_", " ").ToLower() request requires your review and approval.</p>
+                    
+                    <!-- Quick Decision Metrics -->
+                    <div class="row g-2 mb-3">
+                        @if (Model.Entry.RiskRating.HasValue)
+                        {
+                            <div class="col-auto">
+                                <span class="badge bg-@(Model.Entry.RiskRating.Value switch 
+                                { 
+                                    CyberRiskApp.Models.RiskRating.Low => "success",
+                                    CyberRiskApp.Models.RiskRating.Medium => "primary", 
+                                    CyberRiskApp.Models.RiskRating.High => "warning",
+                                    CyberRiskApp.Models.RiskRating.Critical => "danger",
+                                    _ => "secondary"
+                                }) fs-6">@Model.Entry.RiskRating Risk</span>
+                            </div>
+                        }
+                        @if (Model.Entry.Priority != CyberRiskApp.Models.BacklogPriority.Medium)
+                        {
+                            <div class="col-auto">
+                                <span class="badge bg-@(Model.Entry.Priority switch 
+                                { 
+                                    CyberRiskApp.Models.BacklogPriority.Low => "secondary",
+                                    CyberRiskApp.Models.BacklogPriority.Medium => "primary", 
+                                    CyberRiskApp.Models.BacklogPriority.High => "warning",
+                                    CyberRiskApp.Models.BacklogPriority.Critical => "danger",
+                                    _ => "secondary"
+                                }) fs-6">@Model.Entry.Priority Priority</span>
+                            </div>
+                        }
+                        @if (Model.Entry.IsOverdue())
+                        {
+                            <div class="col-auto">
+                                <span class="badge bg-danger fs-6"><i class="fas fa-clock me-1"></i>Overdue</span>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Entry.BusinessUnit))
+                        {
+                            <div class="col-auto">
+                                <span class="badge bg-info fs-6"><i class="fas fa-building me-1"></i>@Model.Entry.BusinessUnit</span>
+                            </div>
+                        }
+                    </div>
+                    
+                    <!-- Key Decision Points -->
+                    <div class="decision-points">
+                        <strong>Key Considerations:</strong>
+                        <ul class="mb-0 mt-1">
+                            @if (Model.Entry.Risk != null)
+                            {
+                                <li>Risk Level: <strong>@Model.Entry.Risk.InherentRiskLevel</strong> - affects organizational risk profile</li>
+                                @if (Model.Entry.Risk.LinkedAssessment != null)
+                                {
+                                    <li>Source: <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.Entry.Risk.LinkedAssessment.Id" class="text-decoration-none fw-semibold">
+                                        Risk Assessment "@Model.Entry.Risk.LinkedAssessment.Title" <i class="fas fa-external-link-alt ms-1 small"></i>
+                                    </a></li>
+                                }
+                            }
+                            @if (Model.Entry.RiskRating.HasValue && Model.Entry.RiskRating >= CyberRiskApp.Models.RiskRating.High)
+                            {
+                                <li>High/Critical risk requires senior management attention</li>
+                            }
+                            @if (Model.Entry.IsOverdue())
+                            {
+                                <li>SLA deadline exceeded - escalation may be required</li>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.Entry.BusinessOwner))
+                            {
+                                <li>Business Owner: @Model.Entry.BusinessOwner should be consulted</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end">
+                    @if (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
+                    {
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" onclick="quickApprove(@Model.Entry.Id)">
+                                <i class="fas fa-check me-1"></i>Quick Approve
+                            </button>
+                            <button type="button" class="btn btn-outline-warning" onclick="showRejectModal(@Model.Entry.Id)">
+                                <i class="fas fa-times me-1"></i>Reject
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
 
     <!-- Main Content Row -->
     <div class="row">
@@ -85,7 +204,22 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label text-muted">Current Assignee</label>
-                                <div>@Model.Entry.GetCurrentAssignee()</div>
+                                <div>
+                                    @{
+                                        var currentAssignee = Model.Entry.GetCurrentAssignee();
+                                        var assigneeName = Model.AvailableAnalysts.FirstOrDefault(a => a.Id == currentAssignee)?.FullName ??
+                                                          Model.AvailableManagers.FirstOrDefault(m => m.Id == currentAssignee)?.FullName ??
+                                                          currentAssignee;
+                                    }
+                                    @if (!string.IsNullOrEmpty(assigneeName) && assigneeName != "Unassigned")
+                                    {
+                                        <span class="badge bg-primary">@assigneeName</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Unassigned</span>
+                                    }
+                                </div>
                             </div>
                             @if (Model.Entry.DueDate.HasValue)
                             {
@@ -103,7 +237,14 @@
                             }
                             <div class="mb-3">
                                 <label class="form-label text-muted">Requested By</label>
-                                <div>@Model.Entry.RequesterUserId</div>
+                                <div>
+                                    @{
+                                        var requesterName = Model.AvailableAnalysts.FirstOrDefault(a => a.Id == Model.Entry.RequesterUserId)?.FullName ??
+                                                          Model.AvailableManagers.FirstOrDefault(m => m.Id == Model.Entry.RequesterUserId)?.FullName ??
+                                                          Model.Entry.RequesterUserId;
+                                    }
+                                    <span class="fw-semibold">@requesterName</span>
+                                </div>
                                 <small class="text-muted">@Model.Entry.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</small>
                             </div>
                         </div>
@@ -128,61 +269,230 @@
                 </div>
             </div>
 
+            <!-- Source Risk Assessment -->
+            @if (Model.Entry.Risk?.LinkedAssessment != null)
+            {
+                <div class="card mb-4 border-info">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0"><i class="fas fa-clipboard-list me-2"></i>Source Risk Assessment</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h6 class="mb-2">
+                                    <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.Entry.Risk.LinkedAssessment.Id" class="text-decoration-none">
+                                        @Model.Entry.Risk.LinkedAssessment.Title
+                                        <i class="fas fa-external-link-alt ms-2"></i>
+                                    </a>
+                                </h6>
+                                <p class="text-muted mb-2 small">@Model.Entry.Risk.LinkedAssessment.Description</p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Assessment Type:</small>
+                                        <div><span class="badge bg-secondary">@Model.Entry.Risk.LinkedAssessment.AssessmentType</span></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Assessment Status:</small>
+                                        <div>
+                                            <span class="badge bg-@(Model.Entry.Risk.LinkedAssessment.Status switch 
+                                            { 
+                                                CyberRiskApp.Models.AssessmentStatus.Draft => "secondary",
+                                                CyberRiskApp.Models.AssessmentStatus.InProgress => "warning", 
+                                                CyberRiskApp.Models.AssessmentStatus.Completed => "success",
+                                                CyberRiskApp.Models.AssessmentStatus.Approved => "primary",
+                                                _ => "secondary"
+                                            })">@Model.Entry.Risk.LinkedAssessment.Status</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="mb-2">
+                                    <small class="text-muted">Date Completed:</small>
+                                    <div>@(Model.Entry.Risk.LinkedAssessment.DateCompleted?.ToString("MMM dd, yyyy") ?? "In Progress")</div>
+                                </div>
+                                <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.Entry.Risk.LinkedAssessment.Id" class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-eye me-1"></i>View Full Assessment
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
             <!-- Related Risk Information -->
             @if (Model.Entry.Risk != null)
             {
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h5 class="card-title mb-0"><i class="fas fa-shield-alt me-2"></i>Related Risk</h5>
+                        <h5 class="card-title mb-0"><i class="fas fa-shield-alt me-2"></i>Related Risk - Detailed Analysis</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row">
+                        <!-- Risk Overview -->
+                        <div class="row mb-4">
                             <div class="col-md-6">
-                                <div class="mb-2">
-                                    <strong>Risk ID:</strong> 
-                                    <a asp-controller="Risks" asp-action="Details" asp-route-id="@Model.Entry.Risk.Id">
-                                        @Model.Entry.Risk.RiskNumber
-                                    </a>
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Title:</strong> @Model.Entry.Risk.Title
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Status:</strong> 
-                                    <span class="badge bg-@(Model.Entry.Risk.Status switch 
-                                    { 
-                                        CyberRiskApp.Models.RiskStatus.UnderReview => "warning",
-                                        CyberRiskApp.Models.RiskStatus.Open => "danger", 
-                                        CyberRiskApp.Models.RiskStatus.Closed => "success",
-                                        CyberRiskApp.Models.RiskStatus.Accepted => "primary",
-                                        _ => "secondary"
-                                    })">@Model.Entry.Risk.Status</span>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Risk Identification</label>
+                                    <div class="p-3 bg-light rounded">
+                                        <div class="mb-2">
+                                            <strong>Risk ID:</strong> 
+                                            <a asp-controller="Risks" asp-action="Details" asp-route-id="@Model.Entry.Risk.Id" class="text-decoration-none">
+                                                @Model.Entry.Risk.RiskNumber <i class="fas fa-external-link-alt ms-1 small"></i>
+                                            </a>
+                                        </div>
+                                        <div class="mb-2">
+                                            <strong>Title:</strong> @Model.Entry.Risk.Title
+                                        </div>
+                                        <div class="mb-2">
+                                            <strong>Current Status:</strong> 
+                                            <span class="badge bg-@(Model.Entry.Risk.Status switch 
+                                            { 
+                                                CyberRiskApp.Models.RiskStatus.UnderReview => "warning",
+                                                CyberRiskApp.Models.RiskStatus.Open => "danger", 
+                                                CyberRiskApp.Models.RiskStatus.Closed => "success",
+                                                CyberRiskApp.Models.RiskStatus.Accepted => "primary",
+                                                _ => "secondary"
+                                            })">@Model.Entry.Risk.Status</span>
+                                        </div>
+                                        @if (Model.Entry.Risk.NextReviewDate.HasValue)
+                                        {
+                                            <div class="mb-2">
+                                                <strong>Next Review:</strong> @Model.Entry.Risk.NextReviewDate.Value.ToString("MMM dd, yyyy")
+                                                @if (Model.Entry.Risk.NextReviewDate.Value < DateTime.UtcNow)
+                                                {
+                                                    <span class="badge bg-warning ms-1">Overdue</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                @if (Model.Entry.Risk.InherentRiskLevel != CyberRiskApp.Models.RiskLevel.Low || true)
-                                {
-                                    <div class="mb-2">
-                                        <strong>Risk Level:</strong> 
-                                        <span class="badge bg-@(Model.Entry.Risk.InherentRiskLevel switch 
-                                        { 
-                                            CyberRiskApp.Models.RiskLevel.Low => "success",
-                                            CyberRiskApp.Models.RiskLevel.Medium => "warning", 
-                                            CyberRiskApp.Models.RiskLevel.High => "danger",
-                                            CyberRiskApp.Models.RiskLevel.Critical => "dark",
-                                            _ => "secondary"
-                                        })">@Model.Entry.Risk.InherentRiskLevel</span>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Risk Assessment</label>
+                                    <div class="p-3 bg-light rounded">
+                                        <div class="mb-2">
+                                            <strong>Inherent Risk Level:</strong> 
+                                            <span class="badge bg-@(Model.Entry.Risk.InherentRiskLevel switch 
+                                            { 
+                                                CyberRiskApp.Models.RiskLevel.Low => "success",
+                                                CyberRiskApp.Models.RiskLevel.Medium => "warning", 
+                                                CyberRiskApp.Models.RiskLevel.High => "danger",
+                                                CyberRiskApp.Models.RiskLevel.Critical => "dark",
+                                                _ => "secondary"
+                                            }) fs-6">@Model.Entry.Risk.InherentRiskLevel</span>
+                                        </div>
+                                        @if (Model.Entry.Risk.ResidualRiskLevel != Model.Entry.Risk.InherentRiskLevel)
+                                        {
+                                            <div class="mb-2">
+                                                <strong>Residual Risk Level:</strong> 
+                                                <span class="badge bg-@(Model.Entry.Risk.ResidualRiskLevel switch 
+                                                { 
+                                                    CyberRiskApp.Models.RiskLevel.Low => "success",
+                                                    CyberRiskApp.Models.RiskLevel.Medium => "warning", 
+                                                    CyberRiskApp.Models.RiskLevel.High => "danger",
+                                                    CyberRiskApp.Models.RiskLevel.Critical => "dark",
+                                                    _ => "secondary"
+                                                }) fs-6">@Model.Entry.Risk.ResidualRiskLevel</span>
+                                            </div>
+                                        }
+                                        <div class="mb-2">
+                                            <strong>Treatment Strategy:</strong> 
+                                            <span class="badge bg-info">@Model.Entry.Risk.Treatment</span>
+                                        </div>
+                                        @if (Model.Entry.Risk.LinkedAssessment != null)
+                                        {
+                                            <div class="mb-0">
+                                                <strong>Source Assessment:</strong> 
+                                                <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.Entry.Risk.LinkedAssessment.Id" class="text-decoration-none">
+                                                    @Model.Entry.Risk.LinkedAssessment.Title <i class="fas fa-external-link-alt ms-1 small"></i>
+                                                </a>
+                                            </div>
+                                        }
                                     </div>
-                                }
-                                @if (Model.Entry.Risk.LinkedAssessment != null)
-                                {
-                                    <div class="mb-2">
-                                        <strong>Source Assessment:</strong> 
-                                        <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.Entry.Risk.LinkedAssessment.Id">
-                                            @Model.Entry.Risk.LinkedAssessment.Title
-                                        </a>
-                                    </div>
-                                }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Business Context -->
+                        @if (!string.IsNullOrEmpty(Model.Entry.Risk.Description) || !string.IsNullOrEmpty(Model.Entry.BusinessUnit) || !string.IsNullOrEmpty(Model.Entry.BusinessOwner))
+                        {
+                            <div class="mb-4">
+                                <h6 class="text-muted mb-3"><i class="fas fa-building me-2"></i>Business Context</h6>
+                                <div class="row">
+                                    @if (!string.IsNullOrEmpty(Model.Entry.Risk.Description))
+                                    {
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label text-muted small">Risk Description</label>
+                                            <div class="p-2 bg-light rounded small">@Model.Entry.Risk.Description</div>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.Entry.BusinessUnit))
+                                    {
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label text-muted small">Business Unit</label>
+                                            <div><span class="badge bg-secondary">@Model.Entry.BusinessUnit</span></div>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.Entry.BusinessOwner))
+                                    {
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label text-muted small">Business Owner</label>
+                                            <div>@Model.Entry.BusinessOwner</div>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Model.Entry.Asset))
+                                    {
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label text-muted small">Affected Asset</label>
+                                            <div>@Model.Entry.Asset</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Decision Impact Analysis -->
+                        <div class="alert alert-light border">
+                            <h6 class="alert-heading text-primary"><i class="fas fa-lightbulb me-2"></i>Decision Impact Analysis</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong class="text-success">If Approved:</strong>
+                                    <ul class="mb-0 mt-1 small">
+                                        @if (Model.Entry.ActionType == CyberRiskApp.Models.RiskBacklogAction.NewRisk)
+                                        {
+                                            <li>Risk will be added to the official risk register</li>
+                                            <li>Risk owner will be assigned and notified</li>
+                                            <li>Treatment plan implementation will begin</li>
+                                        }
+                                        @if (Model.Entry.ActionType == CyberRiskApp.Models.RiskBacklogAction.RiskAcceptance)
+                                        {
+                                            <li>Risk will be formally accepted</li>
+                                            <li>No further mitigation required</li>
+                                            <li>Regular review cycles will continue</li>
+                                        }
+                                        @if (Model.Entry.ActionType == CyberRiskApp.Models.RiskBacklogAction.RiskReassessment)
+                                        {
+                                            <li>Risk assessment will be updated</li>
+                                            <li>Risk level may change</li>
+                                            <li>Treatment strategy may be revised</li>
+                                        }
+                                        <li>Compliance with risk management framework maintained</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong class="text-warning">If Rejected:</strong>
+                                    <ul class="mb-0 mt-1 small">
+                                        <li>Request will be returned to requester</li>
+                                        <li>Additional justification may be required</li>
+                                        @if (Model.Entry.Risk.InherentRiskLevel >= CyberRiskApp.Models.RiskLevel.High)
+                                        {
+                                            <li class="text-danger">High/Critical risk may remain unaddressed</li>
+                                        }
+                                        <li>SLA timers may be reset</li>
+                                        <li>Process workflow will be delayed</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -422,6 +732,104 @@
 
         <!-- Right Column - Actions -->
         <div class="col-lg-4">
+            <!-- Decision Summary Card -->
+            @if (Model.CanApprove && (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
+            {
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0"><i class="fas fa-gavel me-2"></i>Decision Center</h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Risk Assessment Quick View -->
+                        @if (Model.Entry.Risk != null)
+                        {
+                            <div class="alert alert-light mb-3">
+                                <h6 class="mb-2"><i class="fas fa-chart-line me-2"></i>Risk Profile</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>Risk Level:</span>
+                                    <span class="badge bg-@(Model.Entry.Risk.InherentRiskLevel switch 
+                                    { 
+                                        CyberRiskApp.Models.RiskLevel.Low => "success",
+                                        CyberRiskApp.Models.RiskLevel.Medium => "warning", 
+                                        CyberRiskApp.Models.RiskLevel.High => "danger",
+                                        CyberRiskApp.Models.RiskLevel.Critical => "dark",
+                                        _ => "secondary"
+                                    })">@Model.Entry.Risk.InherentRiskLevel</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>Treatment:</span>
+                                    <span class="badge bg-info">@Model.Entry.Risk.Treatment</span>
+                                </div>
+                                @if (!string.IsNullOrEmpty(Model.Entry.BusinessUnit))
+                                {
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>Business Unit:</span>
+                                        <span class="badge bg-secondary">@Model.Entry.BusinessUnit</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- Decision Factors -->
+                        <div class="mb-3">
+                            <h6><i class="fas fa-list-check me-2"></i>Review Checklist</h6>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check1">
+                                <label class="form-check-label small" for="check1">
+                                    Risk level appropriate for organization
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check2">
+                                <label class="form-check-label small" for="check2">
+                                    Justification is adequate
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check3">
+                                <label class="form-check-label small" for="check3">
+                                    Business impact considered
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check4">
+                                <label class="form-check-label small" for="check4">
+                                    Compliance requirements met
+                                </label>
+                            </div>
+                            @if (Model.Entry.Risk?.InherentRiskLevel >= CyberRiskApp.Models.RiskLevel.High)
+                            {
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="check5">
+                                    <label class="form-check-label small" for="check5">
+                                        High/Critical risk escalation considered
+                                    </label>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Quick Decision Actions -->
+                        @if (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
+                        {
+                            <div class="d-grid gap-2">
+                                <button type="button" class="btn btn-success" onclick="showApprovalModal(@Model.Entry.Id)">
+                                    <i class="fas fa-check me-1"></i>Approve with Comments
+                                </button>
+                                <button type="button" class="btn btn-outline-success" onclick="quickApprove(@Model.Entry.Id)">
+                                    <i class="fas fa-check-circle me-1"></i>Quick Approve
+                                </button>
+                                <button type="button" class="btn btn-warning" onclick="showRejectModal(@Model.Entry.Id)">
+                                    <i class="fas fa-times me-1"></i>Request Changes
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="showEscalateModal(@Model.Entry.Id)">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Escalate
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
             <!-- Quick Actions -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -577,6 +985,439 @@
         </div>
     </div>
 </div>
+
+<!-- Approval Modal -->
+<div class="modal fade" id="approvalModal" tabindex="-1" aria-labelledby="approvalModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="approvalModalLabel">
+                    <i class="fas fa-check-circle me-2"></i>Approve Request
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success">
+                    <h6 class="alert-heading">Approval Confirmation</h6>
+                    <p class="mb-0">You are about to approve this request. This action will:</p>
+                    <ul class="mb-0 mt-2">
+                        <li>Update the request status to approved</li>
+                        <li>Execute the requested action</li>
+                        <li>Notify relevant stakeholders</li>
+                        <li>Close this backlog entry</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <label for="approvalComments" class="form-label">Approval Comments (Optional)</label>
+                    <textarea class="form-control" id="approvalComments" rows="3" 
+                              placeholder="Add any comments or conditions for this approval..."></textarea>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="notifyStakeholders" checked>
+                    <label class="form-check-label" for="notifyStakeholders">
+                        Notify business owner and requester of approval
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmApproval()">
+                    <i class="fas fa-check-circle me-1"></i>Confirm Approval
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="rejectModalLabel">
+                    <i class="fas fa-times-circle me-2"></i>Request Changes
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">Rejection Impact</h6>
+                    <p class="mb-0">Rejecting this request will:</p>
+                    <ul class="mb-0 mt-2">
+                        <li>Return the request to the requester</li>
+                        <li>Reset SLA timers</li>
+                        <li>Require additional justification or changes</li>
+                        <li>Delay risk management process</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <label for="rejectionReason" class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="rejectionReason" rows="4" required 
+                              placeholder="Please provide a detailed reason for rejecting this entry. Be specific about what changes are needed..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Common Rejection Reasons</label>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="insufficient-justification" id="reason1">
+                                <label class="form-check-label small" for="reason1">
+                                    Insufficient justification
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="missing-information" id="reason2">
+                                <label class="form-check-label small" for="reason2">
+                                    Missing required information
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="risk-level-inappropriate" id="reason3">
+                                <label class="form-check-label small" for="reason3">
+                                    Risk level inappropriate
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="business-impact-unclear" id="reason4">
+                                <label class="form-check-label small" for="reason4">
+                                    Business impact unclear
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="alternative-required" id="reason5">
+                                <label class="form-check-label small" for="reason5">
+                                    Alternative approach required
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="stakeholder-consultation" id="reason6">
+                                <label class="form-check-label small" for="reason6">
+                                    Additional stakeholder consultation needed
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="confirmRejection()">
+                    <i class="fas fa-times-circle me-1"></i>Request Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Escalation Modal -->
+<div class="modal fade" id="escalateModal" tabindex="-1" aria-labelledby="escalateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="escalateModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Escalate Request
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">Escalation Notice</h6>
+                    <p class="mb-0">This request will be escalated to senior management for review due to:</p>
+                </div>
+                <div class="mb-3">
+                    <label for="escalationReason" class="form-label">Escalation Reason <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="escalationReason" rows="3" required 
+                              placeholder="Explain why this request requires escalation..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Escalation Category</label>
+                    <select class="form-select" id="escalationCategory">
+                        <option value="">Select reason...</option>
+                        <option value="high-risk">High/Critical Risk Level</option>
+                        <option value="policy-exception">Policy Exception Required</option>
+                        <option value="significant-impact">Significant Business Impact</option>
+                        <option value="regulatory-concern">Regulatory Concern</option>
+                        <option value="resource-constraint">Resource Constraint</option>
+                        <option value="stakeholder-conflict">Stakeholder Conflict</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmEscalation()">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Escalate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentEntryId = null;
+
+    // Show Approval Modal
+    function showApprovalModal(entryId) {
+        currentEntryId = entryId;
+        document.getElementById('approvalComments').value = '';
+        document.getElementById('notifyStakeholders').checked = true;
+        const modal = new bootstrap.Modal(document.getElementById('approvalModal'));
+        modal.show();
+    }
+
+    // Show Escalation Modal
+    function showEscalateModal(entryId) {
+        currentEntryId = entryId;
+        document.getElementById('escalationReason').value = '';
+        document.getElementById('escalationCategory').value = '';
+        const modal = new bootstrap.Modal(document.getElementById('escalateModal'));
+        modal.show();
+    }
+
+    // Quick Approve
+    async function quickApprove(entryId) {
+        if (!confirm('Are you sure you want to approve this request? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/RiskBacklog/ManagerApprove/${entryId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({ comments: 'Quick approval' })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                toastr.success('Request approved successfully!');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toastr.error(result.message || 'Failed to approve request.');
+            }
+        } catch (error) {
+            console.error('Error approving request:', error);
+            toastr.error('An error occurred while approving the request.');
+        }
+    }
+
+    // Confirm Approval
+    async function confirmApproval() {
+        const comments = document.getElementById('approvalComments').value.trim();
+        const notify = document.getElementById('notifyStakeholders').checked;
+
+        try {
+            const response = await fetch(`/RiskBacklog/ManagerApprove/${currentEntryId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({ 
+                    comments: comments || 'Approved',
+                    notifyStakeholders: notify 
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                toastr.success('Request approved successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('approvalModal')).hide();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toastr.error(result.message || 'Failed to approve request.');
+            }
+        } catch (error) {
+            console.error('Error approving request:', error);
+            toastr.error('An error occurred while approving the request.');
+        }
+    }
+
+    // Confirm Escalation
+    async function confirmEscalation() {
+        const reason = document.getElementById('escalationReason').value.trim();
+        const category = document.getElementById('escalationCategory').value;
+        
+        if (!reason) {
+            toastr.error('Please provide an escalation reason.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/RiskBacklog/Escalate/${currentEntryId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({ 
+                    reason: reason,
+                    category: category 
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                toastr.warning('Request escalated successfully.');
+                bootstrap.Modal.getInstance(document.getElementById('escalateModal')).hide();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toastr.error(result.message || 'Failed to escalate request.');
+            }
+        } catch (error) {
+            console.error('Error escalating request:', error);
+            toastr.error('An error occurred while escalating the request.');
+        }
+    }
+
+    // Enhanced Rejection Handling
+    function showRejectModal(entryId) {
+        currentEntryId = entryId;
+        document.getElementById('rejectionReason').value = '';
+        // Clear all checkboxes
+        document.querySelectorAll('#rejectModal input[type="checkbox"]').forEach(cb => cb.checked = false);
+        const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+        modal.show();
+    }
+
+    // Auto-populate rejection reason based on selected checkboxes
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('#rejectModal input[type="checkbox"]');
+        const reasonTextarea = document.getElementById('rejectionReason');
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const checkedReasons = Array.from(checkboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.nextElementSibling.textContent.trim());
+                
+                if (checkedReasons.length > 0) {
+                    const currentText = reasonTextarea.value.trim();
+                    const newText = checkedReasons.join(', ') + (currentText ? '. ' + currentText : '');
+                    reasonTextarea.value = newText;
+                }
+            });
+        });
+    });
+
+    // Approve Risk Assessment
+    async function approveRiskAssessment(entryId) {
+        if (!confirm('Are you sure you want to approve this risk assessment? This will update its status and may trigger additional workflows.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/RiskBacklog/ApproveRiskAssessment/${entryId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                toastr.success('Risk assessment approved successfully!');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toastr.error(result.message || 'Failed to approve risk assessment.');
+            }
+        } catch (error) {
+            console.error('Error approving risk assessment:', error);
+            toastr.error('An error occurred while approving the risk assessment.');
+        }
+    }
+
+    // Approve and Add to Risk Register
+    async function approveAndAddToRegister(entryId) {
+        if (!confirm('Are you sure you want to approve this risk and add it to the risk register? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/RiskBacklog/ApproveAndAddToRegister/${entryId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                toastr.success('Risk approved and added to register successfully!');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toastr.error(result.message || 'Failed to approve and add risk to register.');
+            }
+        } catch (error) {
+            console.error('Error approving and adding to register:', error);
+            toastr.error('An error occurred while processing the approval.');
+        }
+    }
+
+    // Show Rejection Modal
+    function showRejectModal(entryId) {
+        currentEntryId = entryId;
+        document.getElementById('rejectionReason').value = '';
+        const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+        modal.show();
+    }
+
+    // Confirm Rejection
+    async function confirmRejection() {
+        const reason = document.getElementById('rejectionReason').value.trim();
+        
+        if (!reason) {
+            toastr.error('Please provide a reason for rejection.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/RiskBacklog/RejectEntry/${currentEntryId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({ reason: reason })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                toastr.success('Entry rejected successfully.');
+                bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toastr.error(result.message || 'Failed to reject entry.');
+            }
+        } catch (error) {
+            console.error('Error rejecting entry:', error);
+            toastr.error('An error occurred while rejecting the entry.');
+        }
+    }
+</script>
 
 <style>
     .timeline-marker {

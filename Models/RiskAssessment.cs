@@ -44,7 +44,7 @@ namespace CyberRiskApp.Models
         public int? RiskMatrixId { get; set; }
 
         [Display(Name = "Assessment Status")]
-        public AssessmentStatus Status { get; set; }
+        public AssessmentStatus Status { get; set; } = AssessmentStatus.Draft;
 
         [Display(Name = "Date Completed")]
         [DataType(DataType.Date)]
@@ -213,6 +213,12 @@ namespace CyberRiskApp.Models
                     >= 4 => "Medium",
                     _ => "Low"
                 };
+            }
+
+            // For Draft assessments or assessments without threat scenarios/scores, show as pending
+            if (Status == AssessmentStatus.Draft || Status == AssessmentStatus.InProgress)
+            {
+                return "Pending";
             }
 
             return "Unknown";

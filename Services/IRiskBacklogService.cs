@@ -84,5 +84,6 @@ namespace CyberRiskApp.Services
         Task<List<RiskBacklogEntry>> GetStuckEntriesAsync();
         Task<int> GetRecentErrorsCountAsync();
         Task<int> GetTotalEntriesCountAsync();
+        Task ClearAllBacklogEntriesAsync();
     }
 }

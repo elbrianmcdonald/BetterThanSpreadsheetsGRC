@@ -129,6 +129,9 @@
                                     <button type="button" class="btn btn-outline-success btn-sm" onclick="testBacklogCreation()">
                                         <i class="fas fa-vial me-1"></i>Test Backlog Creation
                                     </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearAllBacklogEntries()" title="Clear all backlog entries for fresh start">
+                                        <i class="fas fa-trash-alt me-1"></i>Clear All Entries
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2601,6 +2604,37 @@
             
             // Update the URL and reload to get server-side filtering
             window.location.href = currentUrl.toString();
+        }
+
+        // Clear all backlog entries (Admin only)
+        function clearAllBacklogEntries() {
+            if (confirm('⚠️ WARNING: This will delete ALL backlog entries, comments, and activities permanently.\n\nThis action cannot be undone. Are you sure you want to proceed?')) {
+                if (confirm('🔥 FINAL WARNING: You are about to clear the ENTIRE backlog.\n\nClick OK to proceed or Cancel to abort.')) {
+                    // Show loading state
+                    const button = event.target;
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Clearing...';
+                    button.disabled = true;
+                    
+                    // Submit form to clear entries
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '@Url.Action("ClearAllEntries")';
+                    
+                    // Add anti-forgery token
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                    if (token) {
+                        const tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = '__RequestVerificationToken';
+                        tokenInput.value = token.value;
+                        form.appendChild(tokenInput);
+                    }
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            }
         }
 
         // Add click handlers for the new metric cards

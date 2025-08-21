@@ -95,11 +95,13 @@ namespace CyberRiskApp.Models
         public string UpdatedBy { get; set; } = string.Empty;
         
         [Timestamp]
-        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+        public byte[]? RowVersion { get; set; }
 
         // Navigation properties
         [ForeignKey("ThreatScenarioId")]
         public virtual ThreatScenario ThreatScenario { get; set; } = null!;
+        
+        public virtual ICollection<TreatmentAction> TreatmentActions { get; set; } = new List<TreatmentAction>();
 
         // Computed properties
         [NotMapped]

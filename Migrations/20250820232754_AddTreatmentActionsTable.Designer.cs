@@ -3,6 +3,7 @@ using System;
 using CyberRiskApp.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CyberRiskApp.Migrations
 {
     [DbContext(typeof(CyberRiskContext))]
-    partial class CyberRiskContextModelSnapshot : ModelSnapshot
+    [Migration("20250820232754_AddTreatmentActionsTable")]
+    partial class AddTreatmentActionsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3506,9 +3509,9 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("ThreatScenarioId")
                         .HasColumnType("integer");
@@ -3942,9 +3945,9 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("ThreatScenarioId")
                         .HasColumnType("integer");
@@ -4023,9 +4026,9 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("StepOrder")
                         .HasColumnType("integer");
@@ -4107,9 +4110,9 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+                        .HasColumnType("bytea");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -4371,9 +4374,6 @@ namespace CyberRiskApp.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CIAImpactType")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -4392,6 +4392,7 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("bytea")
                         .HasDefaultValueSql("'\\x0000000000000001'::bytea");
@@ -4453,9 +4454,9 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("ThreatScenarioId")
                         .HasColumnType("integer");
@@ -4554,9 +4555,9 @@ namespace CyberRiskApp.Migrations
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
+                        .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea")
-                        .HasDefaultValueSql("'\\x0000000000000001'::bytea");
+                        .HasColumnType("bytea");
 
                     b.Property<int>("ScenarioRiskId")
                         .HasColumnType("integer");

@@ -41,6 +41,7 @@ namespace CyberRiskApp.ViewModels
         public string ScenarioId { get; set; } = string.Empty;
         public string ScenarioName { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public CIATriad CIAImpactType { get; set; } = CIATriad.All;
         
         // Initial Threat Vector
         public ThreatVectorViewModel ThreatVector { get; set; } = new ThreatVectorViewModel();

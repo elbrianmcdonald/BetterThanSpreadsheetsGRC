@@ -955,5 +955,135 @@ namespace CyberRiskApp.Controllers
                 return Json(new { success = false, error = "Failed to get escalation entries" });
             }
         }
+
+        // Risk Assessment Approval Actions
+        [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
+        public async Task<IActionResult> ApproveRiskAssessment(int entryId)
+        {
+            try
+            {
+                var userId = User.Identity?.Name ?? "";
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+
+                // Check permissions
+                if (!await _backlogService.CanUserApproveBacklogEntryAsync(entryId, userId, userRoles))
+                {
+                    return Json(new { success = false, error = "You do not have permission to approve this entry." });
+                }
+
+                // Get the entry to validate it's a risk assessment review
+                var entry = await _backlogService.GetBacklogEntryByIdAsync(entryId);
+                if (entry == null)
+                {
+                    return Json(new { success = false, error = "Entry not found." });
+                }
+
+                if (entry.ActionType != RiskBacklogAction.RiskReassessment)
+                {
+                    return Json(new { success = false, error = "This entry is not a risk reassessment." });
+                }
+
+                // Approve the risk assessment
+                await _backlogService.ManagerApproveAsync(entryId, "Risk assessment approved", userId);
+                
+                return Json(new { success = true, message = "Risk assessment approved successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving risk assessment for entry {EntryId}", entryId);
+                return Json(new { success = false, error = "Error approving risk assessment." });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
+        public async Task<IActionResult> ApproveAndAddToRegister(int entryId)
+        {
+            try
+            {
+                var userId = User.Identity?.Name ?? "";
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+
+                // Check permissions
+                if (!await _backlogService.CanUserApproveBacklogEntryAsync(entryId, userId, userRoles))
+                {
+                    return Json(new { success = false, error = "You do not have permission to approve this entry." });
+                }
+
+                // Get the entry to validate it's a risk review
+                var entry = await _backlogService.GetBacklogEntryByIdAsync(entryId);
+                if (entry == null)
+                {
+                    return Json(new { success = false, error = "Entry not found." });
+                }
+
+                if (entry.ActionType != RiskBacklogAction.RiskReview)
+                {
+                    return Json(new { success = false, error = "This entry is not a risk review." });
+                }
+
+                // Approve and add to risk register
+                await _backlogService.ManagerApproveAsync(entryId, "Risk approved and added to register", userId);
+                
+                return Json(new { success = true, message = "Risk approved and added to register successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving and adding risk to register for entry {EntryId}", entryId);
+                return Json(new { success = false, error = "Error approving and adding risk to register." });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
+        public async Task<IActionResult> RejectEntry(int entryId, string reason)
+        {
+            try
+            {
+                var userId = User.Identity?.Name ?? "";
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+
+                // Check permissions
+                if (!await _backlogService.CanUserApproveBacklogEntryAsync(entryId, userId, userRoles))
+                {
+                    return Json(new { success = false, error = "You do not have permission to reject this entry." });
+                }
+
+                if (string.IsNullOrWhiteSpace(reason))
+                {
+                    return Json(new { success = false, error = "Rejection reason is required." });
+                }
+
+                // Reject the entry
+                await _backlogService.ManagerRejectAsync(entryId, reason, userId);
+                
+                return Json(new { success = true, message = "Entry rejected successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting entry {EntryId} with reason: {Reason}", entryId, reason);
+                return Json(new { success = false, error = "Error rejecting entry." });
+            }
+        }
+
+        // TEMPORARY: Clear all backlog entries for fresh start
+        [HttpPost]
+        [Authorize(Policy = PolicyConstants.RequireAdminRole)]
+        public async Task<IActionResult> ClearAllEntries()
+        {
+            try
+            {
+                await _backlogService.ClearAllBacklogEntriesAsync();
+                TempData["Success"] = "All backlog entries have been cleared successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error clearing all backlog entries");
+                TempData["Error"] = "Error clearing backlog entries.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
     }
 }

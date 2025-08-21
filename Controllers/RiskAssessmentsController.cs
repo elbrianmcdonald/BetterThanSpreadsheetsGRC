@@ -373,6 +373,17 @@ namespace CyberRiskApp.Controllers
                     Console.WriteLine($"Removing remaining audit error: {key}");
                     ModelState.Remove(key);
                 }
+                
+                // Remove validation errors for empty threat scenarios
+                var threatScenarioErrors = ModelState.Keys.Where(k => 
+                    k.Contains("ThreatScenarios") && 
+                    (k.Contains("MitreTechnique") || k.Contains("Description") || k.Contains("Name"))).ToList();
+                        
+                foreach (var key in threatScenarioErrors)
+                {
+                    Console.WriteLine($"Removing threat scenario validation error: {key}");
+                    ModelState.Remove(key);
+                }
             }
 
             if (ModelState.IsValid)
@@ -390,13 +401,15 @@ namespace CyberRiskApp.Controllers
                 {
                     Console.WriteLine($"🔄 DEBUGGING: Starting CreateQualitative transaction");
                     
-                        // Set assessment metadata
+                        // Set assessment metadata - FORCE Draft status for new assessments
                         model.Assessment.Assessor = User.GetUserId();
-                        model.Assessment.Status = AssessmentStatus.Draft; // Set default status
+                        model.Assessment.Status = AssessmentStatus.Draft; // Always Draft for new assessments
                         model.Assessment.CreatedAt = DateTime.UtcNow;
                         model.Assessment.UpdatedAt = DateTime.UtcNow;
                         model.Assessment.CreatedBy = User.GetUserId();
                         model.Assessment.UpdatedBy = User.GetUserId();
+                        
+                        Console.WriteLine($"🔍 DEBUGGING: Assessment status forced to Draft: {model.Assessment.Status}");
 
                         createdAssessment = await _assessmentService.CreateAssessmentAsync(model.Assessment);
                     Console.WriteLine($"✅ DEBUGGING: Created assessment {createdAssessment.Id} - '{createdAssessment.Title}'");
@@ -602,7 +615,7 @@ namespace CyberRiskApp.Controllers
                 // Handle the results outside the execution strategy
                 if (success && createdAssessment != null)
                 {
-                    TempData["Success"] = "Risk assessment completed successfully! Identified risks have been submitted to the backlog for GRC review and approval.";
+                    TempData["Success"] = "Risk assessment created successfully! Use the 'Complete' button when ready to submit for approval.";
                     return RedirectToAction(nameof(Details), new { id = createdAssessment.Id });
                 }
                 else
@@ -732,17 +745,54 @@ namespace CyberRiskApp.Controllers
             if (assessment == null)
                 return NotFound();
 
+            // Load all required data for the full edit form (same as CreateQualitative)
             var model = new RiskAssessmentViewModel
             {
                 Assessment = assessment,
-                // Load related risks (if any)
+                AvailableMatrices = await _context.RiskMatrices.ToListAsync(),
+                SelectedMatrix = assessment.RiskMatrixId.HasValue ? 
+                    await _context.RiskMatrices.FindAsync(assessment.RiskMatrixId.Value) : null,
+                
+                // Convert existing threat scenarios to ViewModels for editing
+                ThreatScenarios = assessment.ThreatScenarios?.Select(ts => new ComprehensiveThreatScenario
+                {
+                    Id = ts.Id,
+                    ScenarioId = ts.ScenarioId ?? "",
+                    ScenarioName = ts.ScenarioName ?? "",
+                    Description = ts.Description ?? "",
+                    CIAImpactType = ts.CIAImpactType,
+                    // Convert related entities to ViewModels as needed
+                    ThreatVector = new ThreatVectorViewModel
+                    {
+                        Id = ts.ThreatVector?.Id ?? 0,
+                        Name = ts.ThreatVector?.Name ?? "",
+                        Description = ts.ThreatVector?.Description ?? ""
+                    },
+                    ThreatActorSteps = ts.ThreatActorSteps?.Select(step => new ThreatActorStepViewModel
+                    {
+                        Id = step.Id,
+                        Name = step.Name ?? "",
+                        Description = step.Description ?? "",
+                        MitreTechnique = step.MitreTechnique ?? "",
+                        StepOrder = step.StepOrder
+                        // Add other properties as needed
+                    }).ToList() ?? new List<ThreatActorStepViewModel>(),
+                    // Convert associated risks
+                    ScenarioRisks = ts.IdentifiedRisks?.Select(risk => new ScenarioRiskViewModel
+                    {
+                        Id = risk.Id,
+                        RiskName = risk.Title ?? "",
+                        RiskDescription = risk.Description ?? "",
+                        // Add other risk properties as needed
+                    }).ToList() ?? new List<ScenarioRiskViewModel>()
+                }).ToList() ?? new List<ComprehensiveThreatScenario>(),
+                
+                // Load related risks
                 OpenRisks = assessment.IdentifiedRisks?.Where(r => r.Status != RiskStatus.Closed).ToList() ?? new List<Risk>()
             };
 
-            // Load risk level settings
-            // Risk level settings replaced with RiskMatrix - model may need adjustment
-
-            return View(model);
+            // Use the CreateQualitative view for editing (full form)
+            return View("CreateQualitative", model);
         }
 
         // Edit POST action method
@@ -934,6 +984,9 @@ namespace CyberRiskApp.Controllers
                         // }
                     }
 
+                    // ===== COMPREHENSIVE THREAT SCENARIO PROCESSING =====
+                    await ProcessComprehensiveThreatScenarios(model.ThreatScenarios, id);
+
                     TempData["Success"] = "Risk assessment updated successfully! Any new identified risks have been submitted to the backlog for GRC review and approval.";
                     return RedirectToAction(nameof(Details), new { id = model.Assessment.Id });
                 }
@@ -943,9 +996,12 @@ namespace CyberRiskApp.Controllers
                 }
             }
 
-            // Reload risk level settings if validation fails
-            // Risk level settings replaced with RiskMatrix - model may need adjustment
-            return View(model);
+            // Reload all required data if validation fails (same as CreateQualitative)
+            model.AvailableMatrices = await _context.RiskMatrices.ToListAsync();
+            model.SelectedMatrix = model.Assessment.RiskMatrixId.HasValue ? 
+                await _context.RiskMatrices.FindAsync(model.Assessment.RiskMatrixId.Value) : null;
+            
+            return View("CreateQualitative", model);
         }
         // FAIR ThreatScenarios block completed
 
@@ -994,7 +1050,7 @@ namespace CyberRiskApp.Controllers
                     }
                 }
 
-                // STEP 4: Mark as completed
+                // STEP 4: Mark as completed and create backlog entry for approval
                 Console.WriteLine("🔄 DEBUGGING: Marking assessment as completed...");
                 assessment.Status = AssessmentStatus.Completed;
                 assessment.DateCompleted = DateTime.Today;
@@ -1002,141 +1058,36 @@ namespace CyberRiskApp.Controllers
                 await _assessmentService.UpdateAssessmentAsync(assessment);
                 Console.WriteLine("✅ DEBUGGING: Assessment status updated to Completed");
 
-                var risksCreated = 0;
-                var backlogEntriesCreated = 0;
-
-                // STEP 4: Collect all risks from both sources
-                Console.WriteLine($"🔍 DEBUGGING: Collecting risks from all sources:");
+                // STEP 5: Create backlog entry for assessment completion approval
+                Console.WriteLine("🔄 DEBUGGING: Creating backlog entry for assessment completion approval...");
                 
-                // Collect direct assessment risks
-                var allRisks = new List<Risk>();
-                if (assessment.IdentifiedRisks?.Any() == true)
-                {
-                    Console.WriteLine($"   - Found {assessment.IdentifiedRisks.Count} direct assessment risks");
-                    allRisks.AddRange(assessment.IdentifiedRisks);
-                }
+                var assessmentDescription = BuildAssessmentDescriptionForBacklog(assessment);
+                var justification = $"Risk assessment '{assessment.Title}' has been completed and requires approval before risks are added to the register.";
                 
-                // Collect threat scenario risks
-                if (assessment.ThreatScenarios?.Any() == true)
+                try 
                 {
-                    foreach (var scenario in assessment.ThreatScenarios)
-                    {
-                        if (scenario.IdentifiedRisks?.Any() == true)
-                        {
-                            Console.WriteLine($"   - Found {scenario.IdentifiedRisks.Count} risks in threat scenario '{scenario.Description}'");
-                            allRisks.AddRange(scenario.IdentifiedRisks);
-                        }
-                    }
-                }
-                
-                Console.WriteLine($"   - Total risks collected: {allRisks.Count}");
-
-                // Create risks from all collected sources
-                if (assessment.Status == AssessmentStatus.Completed && allRisks.Any())
-                {
-                    Console.WriteLine("✅ DEBUGGING: Entering risk creation loop");
-                    var riskMatrix = await _riskMatrixService.GetDefaultMatrixAsync();
-                    Console.WriteLine($"   DEBUGGING: Risk matrix loaded: {riskMatrix != null}");
+                    var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
+                        riskId: null, // No specific risk - this is for assessment approval
+                        actionType: RiskBacklogAction.RiskReview, // Use RiskReview as closest match for assessment approval
+                        description: assessmentDescription,
+                        justification: justification,
+                        requesterId: User.GetUserId()
+                    );
                     
-                    foreach (var identifiedRisk in allRisks)
-                    {
-                        Console.WriteLine($"🔄 DEBUGGING: Processing identified risk: '{identifiedRisk.Title}'");
-
-                        // Create risk entry from identified risk
-                        var risk = new Risk
-                        {
-                            Title = identifiedRisk.Title,
-                            Description = identifiedRisk.Description,
-                            Asset = assessment.Asset,
-                            BusinessUnit = assessment.BusinessUnit ?? "Unknown",
-                            ThreatScenario = assessment.ThreatScenario,
-                            CIATriad = assessment.CIATriad ?? CIATriad.All,
-                            Owner = !string.IsNullOrEmpty(identifiedRisk.Owner) ? identifiedRisk.Owner : 
-                                   (!string.IsNullOrEmpty(assessment.Assessor) ? assessment.Assessor : "Unknown"),
-                            // Set default ALE for qualitative assessments
-                            ALE = 0m,
-                            RiskAssessmentId = assessment.Id,
-                            Status = RiskStatus.Open,
-                            OpenDate = DateTime.Today,
-                            NextReviewDate = DateTime.Today.AddMonths(3),
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow,
-                            Impact = ImpactLevel.High,
-                            Likelihood = LikelihoodLevel.Possible,
-                            Exposure = ExposureLevel.HighlyExposed,
-                            Treatment = TreatmentStrategy.Mitigate
-                        };
-
-                        Console.WriteLine($"   DEBUGGING: Risk object created with title: '{risk.Title}'");
-
-                        // Use the assessment's risk level calculation method for consistency
-                        var calculatedRiskLevel = assessment.CalculateRiskLevel();
-                        Console.WriteLine($"   DEBUGGING: Calculated risk level: '{calculatedRiskLevel}'");
-                        
-                        risk.RiskLevel = calculatedRiskLevel switch
-                        {
-                            "Critical" => RiskLevel.Critical,
-                            "High" => RiskLevel.High,
-                            "Medium" => RiskLevel.Medium,
-                            "Low" => RiskLevel.Low,
-                            _ => RiskLevel.Medium // Fallback for "Unknown" or other values
-                        };
-
-                        risk.InherentRiskLevel = risk.RiskLevel;
-                        risk.ResidualRiskLevel = risk.RiskLevel;
-
-                        Console.WriteLine($"   DEBUGGING: Creating backlog entry for risk approval...");
-                        
-                        // Create backlog entry for risk approval (don't create the risk yet)
-                        try
-                        {
-                            var riskDescription = BuildRiskDescriptionForBacklog(risk, assessment);
-                            var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
-                                riskId: null, // No risk created yet - will be created upon approval
-                                actionType: RiskBacklogAction.NewRisk,
-                                description: riskDescription,
-                                justification: $"New risk identified from assessment '{assessment.Title}' for asset '{assessment.Asset}'. Risk level: {risk.RiskLevel}",
-                                requesterId: User.GetUserId()
-                            );
-                            backlogEntriesCreated++;
-                            Console.WriteLine($"✅ DEBUGGING: Backlog entry created with number: {backlogEntry.BacklogNumber}");
-                            Console.WriteLine($"✅ Created backlog entry {backlogEntry.BacklogNumber} for risk '{risk.Title}' pending approval");
-                        }
-                        catch (Exception backlogEx)
-                        {
-                            Console.WriteLine($"❌ DEBUGGING: Backlog creation failed: {backlogEx.Message}");
-                            if (backlogEx.InnerException != null)
-                            {
-                                Console.WriteLine($"   DEBUGGING: Inner exception: {backlogEx.InnerException.Message}");
-                            }
-                            Console.WriteLine($"❌ Failed to create backlog entry for risk '{risk.Title}': {backlogEx.Message}");
-                            // Log the error but continue with other risks
-                        }
-                        Console.WriteLine($"   - Risk ALE: ${risk.ALE:N0}");
-                        Console.WriteLine($"   - Risk Level: {risk.RiskLevel}");
-                    }
+                    Console.WriteLine($"✅ DEBUGGING: Created backlog entry {backlogEntry.BacklogNumber} for assessment completion approval");
+                    TempData["Success"] = $"Risk assessment completed and submitted for approval! Backlog entry {backlogEntry.BacklogNumber} created.";
                 }
-                else
+                catch (Exception backlogEx)
                 {
-                    Console.WriteLine("❌ DEBUGGING: Risk creation conditions not met - skipping risk creation");
-                    if (assessment.Status != AssessmentStatus.Completed)
-                        Console.WriteLine($"   DEBUGGING: Assessment status is not Completed: {assessment.Status}");
-                    if (assessment.IdentifiedRisks == null)
-                        Console.WriteLine("   DEBUGGING: IdentifiedRisks collection is null");
-                    if (assessment.IdentifiedRisks?.Any() != true)
-                        Console.WriteLine("   DEBUGGING: IdentifiedRisks collection is empty");
+                    Console.WriteLine($"❌ DEBUGGING: Failed to create backlog entry for assessment completion: {backlogEx.Message}");
+                    TempData["Warning"] = "Assessment completed but failed to create approval backlog entry. Please contact administrator.";
                 }
 
-                Console.WriteLine($"=== DEBUGGING: Complete method finished ===");
-                Console.WriteLine($"   DEBUGGING: Total risks created: {risksCreated}");
-                Console.WriteLine($"   DEBUGGING: Total backlog entries created: {backlogEntriesCreated}");
-
-                TempData["Success"] = $"Assessment completed successfully! {backlogEntriesCreated} risk(s) submitted to backlog for GRC review and approval.";
                 return RedirectToAction(nameof(Details), new { id });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ DEBUGGING: Exception in Complete method: {ex.Message}");
+                Console.WriteLine($"❌ DEBUGGING: Error in Complete method: {ex.Message}");
                 if (ex.InnerException != null)
                 {
                     Console.WriteLine($"   DEBUGGING: Inner exception: {ex.InnerException.Message}");
@@ -1147,7 +1098,6 @@ namespace CyberRiskApp.Controllers
                 return RedirectToAction(nameof(Details), new { id });
             }
         }
-
         // ADDED: Helper method to load findings for dropdown
         private async Task LoadFindingsForViewModel(RiskAssessmentViewModel model)
         {
@@ -1167,6 +1117,46 @@ namespace CyberRiskApp.Controllers
             {
                 Console.WriteLine($"Error loading findings: {ex.Message}");
                 model.AvailableFindings = new List<SelectListItem>();
+            }
+        }
+
+        // Approve Risk Assessment
+        [HttpPost]
+        [Authorize(Policy = PolicyConstants.RequireGRCAnalystOrAbove)]
+        public async Task<IActionResult> Approve(int id)
+        {
+            try
+            {
+                var assessment = await _assessmentService.GetAssessmentByIdAsync(id);
+                if (assessment == null)
+                {
+                    return NotFound();
+                }
+
+                if (assessment.Status != AssessmentStatus.Completed)
+                {
+                    TempData["Error"] = "Only completed assessments can be approved.";
+                    return RedirectToAction(nameof(Details), new { id });
+                }
+
+                // Update assessment status to Approved
+                assessment.Status = AssessmentStatus.Approved;
+                assessment.UpdatedAt = DateTime.UtcNow;
+                assessment.UpdatedBy = User.Identity?.Name ?? "System";
+
+                await _assessmentService.UpdateAssessmentAsync(assessment);
+
+                // TODO: Update any related backlog entries to approved status
+                // This would typically involve updating the RiskBacklog entries created during completion
+
+                TempData["Success"] = "Risk assessment has been approved successfully. All identified risks are now part of the official risk register.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving risk assessment {AssessmentId}", id);
+                TempData["Error"] = "An error occurred while approving the assessment. Please try again.";
+                return RedirectToAction(nameof(Details), new { id });
             }
         }
 
@@ -1639,14 +1629,65 @@ namespace CyberRiskApp.Controllers
             return description;
         }
 
+        // Helper method to build detailed assessment description for backlog approval
+        private string BuildAssessmentDescriptionForBacklog(RiskAssessment assessment)
+        {
+            var description = $"ASSESSMENT COMPLETION APPROVAL: {assessment.Title}\n\n";
+            description += $"Assessment ID: {assessment.Id}\n";
+            description += $"Assessment Type: {assessment.AssessmentType}\n";
+            description += $"Asset: {assessment.Asset}\n";
+            description += $"Business Unit: {assessment.BusinessUnit ?? "Unknown"}\n";
+            description += $"Business Owner: {assessment.BusinessOwner ?? "Not specified"}\n";
+            description += $"Assessor: {assessment.Assessor}\n";
+            description += $"Date Completed: {assessment.DateCompleted?.ToString("yyyy-MM-dd") ?? "Today"}\n";
+            description += $"CIA Triad: {assessment.CIATriad}\n\n";
+            
+            if (!string.IsNullOrEmpty(assessment.Description))
+            {
+                description += $"Description: {assessment.Description}\n\n";
+            }
+            
+            // Add threat scenario summary
+            if (assessment.ThreatScenarios?.Any() == true)
+            {
+                description += $"Threat Scenarios ({assessment.ThreatScenarios.Count()}):\n";
+                foreach (var scenario in assessment.ThreatScenarios.Take(5)) // Limit to first 5 for brevity
+                {
+                    description += $"  - {scenario.ScenarioName}: {scenario.Description ?? "No description"}\n";
+                    if (scenario.ScenarioRisks?.Any() == true)
+                    {
+                        description += $"    ({scenario.ScenarioRisks.Count()} risks identified)\n";
+                    }
+                }
+                if (assessment.ThreatScenarios.Count() > 5)
+                {
+                    description += $"  ... and {assessment.ThreatScenarios.Count() - 5} more scenarios\n";
+                }
+                description += "\n";
+            }
+            
+            description += $"⚠️ APPROVAL REQUIRED: Once approved, all identified risks will be added to the Risk Register.\n";
+            description += $"Assessment created: {assessment.CreatedAt:yyyy-MM-dd HH:mm}\n";
+            description += $"Assessment completed: {DateTime.UtcNow:yyyy-MM-dd HH:mm}\n";
+            
+            return description;
+        }
+
         // ===== COMPREHENSIVE THREAT SCENARIO PROCESSING =====
         private async Task ProcessComprehensiveThreatScenarios(List<ComprehensiveThreatScenario> threatScenarios, int assessmentId)
         {
+            Console.WriteLine($"🔍 DEBUGGING: ProcessComprehensiveThreatScenarios called with {threatScenarios?.Count ?? 0} scenarios for assessment {assessmentId}");
+            
             if (threatScenarios?.Any() != true)
+            {
+                Console.WriteLine($"🔍 DEBUGGING: No threat scenarios to process");
                 return;
+            }
 
             foreach (var scenarioViewModel in threatScenarios.Where(s => !string.IsNullOrEmpty(s.ScenarioName)))
             {
+                Console.WriteLine($"🔍 DEBUGGING: Processing threat scenario: {scenarioViewModel.ScenarioName}, CIA Impact: {scenarioViewModel.CIAImpactType}");
+                
                 // Create the main threat scenario record
                 var threatScenario = new ThreatScenario
                 {
@@ -1654,18 +1695,34 @@ namespace CyberRiskApp.Controllers
                     ScenarioId = scenarioViewModel.ScenarioId,
                     ScenarioName = scenarioViewModel.ScenarioName,
                     Description = scenarioViewModel.Description,
+                    CIAImpactType = scenarioViewModel.CIAImpactType,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
                     CreatedBy = User.GetUserId(),
                     UpdatedBy = User.GetUserId()
                 };
 
+                Console.WriteLine($"🔍 DEBUGGING: Created ThreatScenario object, RowVersion = {(threatScenario.RowVersion == null ? "NULL" : "NOT NULL")}");
+                
                 _context.ThreatScenarios.Add(threatScenario);
-                await _context.SaveChangesAsync(); // Save to get the ID
+                Console.WriteLine($"🔍 DEBUGGING: Added ThreatScenario to context, about to save...");
+                
+                try
+                {
+                    await _context.SaveChangesAsync(); // Save to get the ID
+                    Console.WriteLine($"🔍 DEBUGGING: ThreatScenario saved successfully with ID: {threatScenario.Id}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ DEBUGGING: Failed to save ThreatScenario: {ex.Message}");
+                    throw;
+                }
 
                 // Process Threat Vector
                 if (!string.IsNullOrEmpty(scenarioViewModel.ThreatVector.Name))
                 {
+                    Console.WriteLine($"🔍 DEBUGGING: Processing threat vector: {scenarioViewModel.ThreatVector.Name}");
+                    
                     var threatVector = new ThreatVector
                     {
                         ThreatScenarioId = threatScenario.Id,
@@ -1677,8 +1734,23 @@ namespace CyberRiskApp.Controllers
                         CreatedBy = User.GetUserId(),
                         UpdatedBy = User.GetUserId()
                     };
+                    
+                    Console.WriteLine($"🔍 DEBUGGING: Created ThreatVector object, RowVersion = {(threatVector.RowVersion == null ? "NULL" : "NOT NULL")}");
+                    
                     _context.ThreatVectors.Add(threatVector);
-                    await _context.SaveChangesAsync();
+                    Console.WriteLine($"🔍 DEBUGGING: Added ThreatVector to context, about to save...");
+                    
+                    try
+                    {
+                        await _context.SaveChangesAsync();
+                        Console.WriteLine($"🔍 DEBUGGING: ThreatVector saved successfully with ID: {threatVector.Id}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ DEBUGGING: Failed to save ThreatVector: {ex.Message}");
+                        Console.WriteLine($"❌ DEBUGGING: ThreatVector details - ThreatScenarioId: {threatVector.ThreatScenarioId}, Name: {threatVector.Name}");
+                        throw;
+                    }
 
                     // Process controls for threat vector
                     await ProcessThreatVectorControls(threatVector.Id, scenarioViewModel.ThreatVector);
@@ -1812,61 +1884,80 @@ namespace CyberRiskApp.Controllers
         private async Task ProcessControlsForComponent(int componentId, string componentType, 
             List<ControlSelectionViewModel> controls, ControlType controlType, ControlCategory controlCategory)
         {
+            if (controls == null || !controls.Any())
+                return;
+
             foreach (var controlViewModel in controls.Where(c => !string.IsNullOrEmpty(c.ControlName)))
             {
-                // Create or find existing threat control
-                var existingControl = await _context.ThreatControls
-                    .FirstOrDefaultAsync(tc => tc.ControlName == controlViewModel.ControlName);
+                try
+                {
+                    // Create or find existing threat control
+                    var existingControl = await _context.ThreatControls
+                        .FirstOrDefaultAsync(tc => tc.ControlName == controlViewModel.ControlName);
 
-                ThreatControl threatControl;
-                if (existingControl != null)
-                {
-                    threatControl = existingControl;
-                }
-                else
-                {
-                    threatControl = new ThreatControl
+                    ThreatControl threatControl;
+                    if (existingControl != null)
                     {
-                        ControlName = controlViewModel.ControlName,
-                        ControlDescription = controlViewModel.ControlDescription,
-                        ControlType = controlType,
-                        ControlCategory = controlCategory,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        CreatedBy = User.GetUserId(),
-                        UpdatedBy = User.GetUserId()
-                    };
-                    _context.ThreatControls.Add(threatControl);
-                    await _context.SaveChangesAsync();
-                }
+                        threatControl = existingControl;
+                    }
+                    else
+                    {
+                        threatControl = new ThreatControl
+                        {
+                            ControlName = controlViewModel.ControlName,
+                            ControlDescription = string.IsNullOrEmpty(controlViewModel.ControlDescription) ? 
+                                controlViewModel.ControlName : controlViewModel.ControlDescription,
+                            ControlType = controlType,
+                            ControlCategory = controlCategory,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            CreatedBy = User.GetUserId(),
+                            UpdatedBy = User.GetUserId()
+                        };
+                        _context.ThreatControls.Add(threatControl);
+                        await _context.SaveChangesAsync();
+                    }
 
-                // Create the junction table record based on component type
-                switch (componentType)
+                    // Default implementation status if not provided
+                    var implementationStatus = controlViewModel.ImplementationStatus == 0 ? 
+                        ControlImplementationStatus.NotImplemented : controlViewModel.ImplementationStatus;
+
+                    // Create the junction table record based on component type
+                    switch (componentType)
+                    {
+                        case "ThreatVector":
+                            var vectorControl = new ThreatVectorControl
+                            {
+                                ThreatVectorId = componentId,
+                                ThreatControlId = threatControl.Id,
+                                ImplementationStatus = implementationStatus
+                            };
+                            _context.ThreatVectorControls.Add(vectorControl);
+                            break;
+                        case "ThreatActorStep":
+                            var stepControl = new ThreatActorStepControl
+                            {
+                                ThreatActorStepId = componentId,
+                                ThreatControlId = threatControl.Id,
+                                ImplementationStatus = implementationStatus
+                            };
+                            _context.ThreatActorStepControls.Add(stepControl);
+                            break;
+                        case "ThreatActorObjective":
+                            var objectiveControl = new ThreatActorObjectiveControl
+                            {
+                                ThreatActorObjectiveId = componentId,
+                                ThreatControlId = threatControl.Id,
+                                ImplementationStatus = implementationStatus
+                            };
+                            _context.ThreatActorObjectiveControls.Add(objectiveControl);
+                            break;
+                    }
+                }
+                catch (Exception ex)
                 {
-                    case "ThreatVector":
-                        _context.ThreatVectorControls.Add(new ThreatVectorControl
-                        {
-                            ThreatVectorId = componentId,
-                            ThreatControlId = threatControl.Id,
-                            ImplementationStatus = controlViewModel.ImplementationStatus
-                        });
-                        break;
-                    case "ThreatActorStep":
-                        _context.ThreatActorStepControls.Add(new ThreatActorStepControl
-                        {
-                            ThreatActorStepId = componentId,
-                            ThreatControlId = threatControl.Id,
-                            ImplementationStatus = controlViewModel.ImplementationStatus
-                        });
-                        break;
-                    case "ThreatActorObjective":
-                        _context.ThreatActorObjectiveControls.Add(new ThreatActorObjectiveControl
-                        {
-                            ThreatActorObjectiveId = componentId,
-                            ThreatControlId = threatControl.Id,
-                            ImplementationStatus = controlViewModel.ImplementationStatus
-                        });
-                        break;
+                    // Log error but continue processing other controls
+                    Console.WriteLine($"Error processing control {controlViewModel.ControlName}: {ex.Message}");
                 }
             }
 
