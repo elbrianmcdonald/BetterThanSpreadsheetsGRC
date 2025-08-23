@@ -28,6 +28,25 @@
                 </div>
             }
         </div>
+        
+        <!-- DEBUG INFO - Shows values for troubleshooting approve button visibility -->
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="alert alert-info mt-2 mb-2">
+                <strong>🐛 DEBUG INFO (Admin Only):</strong><br/>
+                <small>
+                    <strong>Model.CanApprove:</strong> @Model.CanApprove<br/>
+                    <strong>Entry.Status:</strong> @Model.Entry.Status (@((int)Model.Entry.Status))<br/>
+                    <strong>User Roles:</strong> @string.Join(", ", User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value))<br/>
+                    <strong>User ID:</strong> @User.Identity.Name<br/>
+                    <strong>AssignedToAnalyst:</strong> @(Model.Entry.AssignedToAnalyst ?? "null")<br/>
+                    <strong>AssignedToManager:</strong> @(Model.Entry.AssignedToManager ?? "null")<br/>
+                    <strong>IsITUser:</strong> @(User.IsInRole("ITUser"))<br/>
+                    <strong>Status Check:</strong> @(Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.Unassigned || Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
+                </small>
+            </div>
+        }
+        
         <div class="d-flex gap-2">
             @if (Model.CanApprove && 
                 (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.Unassigned ||

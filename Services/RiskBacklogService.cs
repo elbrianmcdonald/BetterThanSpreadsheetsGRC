@@ -851,6 +851,14 @@ namespace CyberRiskApp.Services
             var entry = await _context.RiskBacklogEntries.FindAsync(backlogId);
             if (entry == null) return false;
 
+            // Admins can approve any entry in valid statuses (highest privilege)
+            if (role.Contains("Admin"))
+            {
+                return entry.Status == RiskBacklogStatus.Unassigned || 
+                       entry.Status == RiskBacklogStatus.AssignedToAnalyst || 
+                       entry.Status == RiskBacklogStatus.AssignedToManager;
+            }
+
             // Analysts can approve entries assigned to them that are in the correct status
             if (role.Contains("Analyst") && entry.AssignedToAnalyst == userId && entry.Status == RiskBacklogStatus.AssignedToAnalyst)
                 return true;
