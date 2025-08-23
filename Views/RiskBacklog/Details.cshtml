@@ -30,7 +30,8 @@
         </div>
         <div class="d-flex gap-2">
             @if (Model.CanApprove && 
-                (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || 
+                (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.Unassigned ||
+                 Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || 
                  Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
             {
                 <button type="button" class="btn btn-success" onclick="showApproveModal(@Model.Entry.Id)">
