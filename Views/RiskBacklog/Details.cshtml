@@ -808,7 +808,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="confirmApproval()">
+                <button type="button" class="btn btn-success" onclick="confirmApproval()" id="confirmApprovalBtn">
                     <i class="fas fa-check me-1"></i>Confirm Approval
                 </button>
             </div>
@@ -1223,16 +1223,35 @@
 
     // Confirm Approval
     async function confirmApproval() {
-        console.log('confirmApproval() called');
+        alert('confirmApproval function called!'); // Immediate visual feedback
+        console.log('=== CONFIRM APPROVAL DEBUG START ===');
+        console.log('confirmApproval() called at:', new Date().toISOString());
         console.log('currentEntryId:', currentEntryId);
+        console.log('typeof currentEntryId:', typeof currentEntryId);
         
-        const justification = document.getElementById('approvalJustification').value.trim();
+        // Check if elements exist
+        const justificationElement = document.getElementById('approvalJustification');
+        console.log('justificationElement found:', !!justificationElement);
+        if (!justificationElement) {
+            console.error('ERROR: approvalJustification element not found!');
+            toastr.error('ERROR: Form element not found');
+            return;
+        }
+        
+        const justification = justificationElement.value.trim();
+        console.log('justification length:', justification.length);
         console.log('justification:', justification);
         
         if (!justification) {
+            console.log('No justification provided, showing error');
             toastr.error('Please provide justification for approval.');
             return;
         }
+
+        // Check CSRF token
+        const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
+        console.log('CSRF token element found:', !!csrfToken);
+        console.log('CSRF token value:', csrfToken?.value);
 
         try {
             const url = `/RiskBacklog/ApproveEntryJson`;
@@ -1242,35 +1261,66 @@
             const formData = new FormData();
             formData.append('entryId', currentEntryId);
             formData.append('comments', justification);
-            formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value || '');
+            formData.append('__RequestVerificationToken', csrfToken?.value || '');
             
-            console.log('Form data:', {
-                entryId: currentEntryId,
-                comments: justification
-            });
+            console.log('Form data being sent:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`  ${key}: ${value}`);
+            }
             
+            console.log('About to send fetch request...');
             const response = await fetch(url, {
                 method: 'POST',
                 body: formData
             });
 
+            console.log('Response received!');
             console.log('Response status:', response.status);
-            const result = await response.json();
-            console.log('Response result:', result);
+            console.log('Response statusText:', response.statusText);
+            console.log('Response headers:', [...response.headers.entries()]);
+            
+            const responseText = await response.text();
+            console.log('Raw response text:', responseText);
+            
+            let result;
+            try {
+                result = JSON.parse(responseText);
+                console.log('Parsed JSON result:', result);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                console.log('Response was not valid JSON');
+                toastr.error('Server returned invalid response');
+                return;
+            }
             
             if (result.success) {
+                console.log('Success! Showing success message');
                 toastr.success(result.message || 'Entry approved successfully.');
-                bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('approveModal'));
+                if (modal) {
+                    console.log('Hiding modal');
+                    modal.hide();
+                } else {
+                    console.log('Modal instance not found');
+                }
+                console.log('Setting timeout for page reload');
                 setTimeout(() => {
+                    console.log('Reloading page');
                     window.location.reload();
                 }, 1500);
             } else {
+                console.log('Request failed:', result.error);
                 toastr.error(result.error || 'Failed to approve entry.');
             }
         } catch (error) {
-            console.error('Error approving entry:', error);
+            console.error('=== FETCH ERROR ===');
+            console.error('Error type:', error.constructor.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            console.error('Full error:', error);
             toastr.error('An error occurred while approving the entry.');
         }
+        console.log('=== CONFIRM APPROVAL DEBUG END ===');
     }
 </script>
 

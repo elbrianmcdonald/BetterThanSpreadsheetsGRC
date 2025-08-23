@@ -1071,24 +1071,33 @@ namespace CyberRiskApp.Controllers
         [Authorize(Policy = "RequireGRCAnalystOrAbove")]
         public async Task<IActionResult> ApproveEntryJson(int entryId, string comments)
         {
+            _logger.LogInformation("=== ApproveEntryJson called ===");
+            _logger.LogInformation("EntryId: {EntryId}", entryId);
+            _logger.LogInformation("Comments: {Comments}", comments);
+            _logger.LogInformation("User: {User}", User.Identity?.Name);
+            
             try
             {
                 var userId = User.GetUserId();
+                _logger.LogInformation("UserId from GetUserId(): {UserId}", userId);
                 
                 if (string.IsNullOrWhiteSpace(comments))
                 {
+                    _logger.LogWarning("Comments are null or whitespace");
                     return Json(new { success = false, error = "Comments are required for approval." });
                 }
 
+                _logger.LogInformation("About to call ManagerApproveAsync");
                 // Approve the entry
                 await _backlogService.ManagerApproveAsync(entryId, comments, userId);
+                _logger.LogInformation("ManagerApproveAsync completed successfully");
                 
                 return Json(new { success = true, message = "Entry approved successfully." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error approving entry {EntryId} with comments: {Comments}", entryId, comments);
-                return Json(new { success = false, error = "Error approving entry." });
+                return Json(new { success = false, error = "Error approving entry: " + ex.Message });
             }
         }
 
