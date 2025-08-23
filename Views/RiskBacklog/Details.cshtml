@@ -1130,7 +1130,10 @@
 
     // Show Approval Modal
     function showApproveModal(entryId) {
+        console.log('showApproveModal called with entryId:', entryId);
         currentEntryId = entryId;
+        console.log('currentEntryId set to:', currentEntryId);
+        
         document.getElementById('approvalJustification').value = '';
         
         // Clear all checkboxes
@@ -1216,7 +1219,11 @@
 
     // Confirm Approval
     async function confirmApproval() {
+        console.log('confirmApproval() called');
+        console.log('currentEntryId:', currentEntryId);
+        
         const justification = document.getElementById('approvalJustification').value.trim();
+        console.log('justification:', justification);
         
         if (!justification) {
             toastr.error('Please provide justification for approval.');
@@ -1224,7 +1231,10 @@
         }
 
         try {
-            const response = await fetch(`/RiskBacklog/ManagerApprove/${currentEntryId}`, {
+            const url = `/RiskBacklog/ManagerApprove/${currentEntryId}`;
+            console.log('Fetching URL:', url);
+            
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1233,7 +1243,9 @@
                 body: JSON.stringify({ comments: justification })
             });
 
+            console.log('Response status:', response.status);
             const result = await response.json();
+            console.log('Response result:', result);
             
             if (result.success) {
                 toastr.success('Entry approved successfully.');
