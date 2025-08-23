@@ -263,7 +263,7 @@
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">
+                            <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
                                 <i class="fas fa-save me-1"></i>@(isEdit ? "Update Assessment" : "Create Assessment")
                             </button>
                             @if (isEdit)
@@ -2385,5 +2385,54 @@
         window.updateTreatmentSummary = updateTreatmentSummary;
         window.checkTreatmentPlanSlaCompliance = checkTreatmentPlanSlaCompliance;
         window.fillTestData = fillTestData; // Make test data function available globally
+        
+        // ========== FORM SUBMISSION DEBUGGING ==========
+        const isEditMode = @Json.Serialize(isEdit);
+        console.log('🔧 Form Debug: Edit mode =', isEditMode);
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            console.log('🔧 Form Debug: Form found =', !!form);
+            console.log('🔧 Form Debug: Form action =', form?.action);
+            console.log('🔧 Form Debug: Form method =', form?.method);
+            console.log('🔧 Form Debug: Submit button found =', !!submitBtn);
+            
+            if (submitBtn) {
+                submitBtn.addEventListener('click', function(e) {
+                    console.log('🔧 Form Debug: Submit button clicked!');
+                    
+                    const formValid = form.checkValidity();
+                    console.log('🔧 Form Debug: Form is valid =', formValid);
+                    
+                    if (!formValid) {
+                        console.log('🔧 Form Debug: Form validation failed');
+                        e.preventDefault();
+                        form.reportValidity();
+                        return;
+                    }
+                    
+                    console.log('🔧 Form Debug: Form should submit normally');
+                });
+            }
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('🔧 Form Debug: Form submit event fired!');
+                    console.log('🔧 Form Debug: Form data preview:');
+                    
+                    const formData = new FormData(form);
+                    let fieldCount = 0;
+                    for (let [key, value] of formData.entries()) {
+                        if (fieldCount < 10) { // Only show first 10 fields
+                            console.log(`  ${key}: ${value}`);
+                        }
+                        fieldCount++;
+                    }
+                    console.log(`🔧 Form Debug: Total form fields: ${fieldCount}`);
+                });
+            }
+        });
     </script>
 }
