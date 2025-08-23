@@ -618,7 +618,7 @@
                                             <small class="text-muted">
                                                 <i class="fas fa-calendar me-1"></i>@entry.CreatedAt.ToString("MMM dd, yyyy")
                                                 <span class="mx-2">•</span>
-                                                <i class="fas fa-user me-1"></i>@entry.CreatedBy
+                                                <i class="fas fa-user me-1"></i>@GetUserDisplayName(entry.CreatedBy)
                                                 <span class="mx-2">•</span>
                                                 <span class="badge badge-outline">@entry.GetSourceDescription()</span>
                                             </small>
@@ -783,7 +783,7 @@
                                         <td>
                                             <small class="text-muted">
                                                 @entry.CreatedAt.ToString("MMM dd, yyyy")
-                                                <br>by @entry.CreatedBy
+                                                <br>by @GetUserDisplayName(entry.CreatedBy)
                                             </small>
                                         </td>
                                         <td>
@@ -867,7 +867,7 @@
                                                 <i class="fas fa-calendar me-1"></i>@entry.CreatedAt.ToString("MMM dd, yyyy")
                                             </span>
                                             <span>
-                                                <i class="fas fa-user me-1"></i>@entry.CreatedBy
+                                                <i class="fas fa-user me-1"></i>@GetUserDisplayName(entry.CreatedBy)
                                             </span>
                                             @if (!string.IsNullOrEmpty(entry.GetCurrentAssignee()))
                                             {

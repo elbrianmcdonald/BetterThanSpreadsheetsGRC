@@ -1,6 +1,30 @@
 @model CyberRiskApp.ViewModels.BacklogDetailsViewModel
 @{
     ViewData["Title"] = $"Backlog Entry - {Model.Entry.BacklogNumber}";
+    
+    // Helper function to get user display name from ID
+    string GetUserDisplayName(string userId)
+    {
+        if (string.IsNullOrEmpty(userId)) return "Unassigned";
+        
+        // Try to find user in available users collections
+        var allUsers = new List<CyberRiskApp.Models.User>();
+        if (Model.AvailableAnalysts != null) allUsers.AddRange(Model.AvailableAnalysts);
+        
+        var user = allUsers.FirstOrDefault(u => u.Id == userId);
+        if (user != null)
+        {
+            return $"{user.FirstName} {user.LastName}".Trim();
+        }
+        
+        // Fallback to username portion of email if available
+        if (userId.Contains("@"))
+        {
+            return userId.Split('@')[0];
+        }
+        
+        return userId; // Last resort - return the ID as-is
+    }
 }
 
 @Html.AntiForgeryToken()
@@ -537,7 +561,7 @@
                                 <div class="comment mb-3 p-3 @(comment.IsInternal ? "bg-warning bg-opacity-10 border-warning" : "bg-light") rounded">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <div>
-                                            <strong>@comment.CreatedBy</strong>
+                                            <strong>@GetUserDisplayName(comment.CreatedBy)</strong>
                                             <span class="badge bg-info ms-2">@comment.CommentType</span>
                                             @if (comment.IsInternal)
                                             {
@@ -618,7 +642,7 @@
                                                 </div>
                                                 <small class="text-muted">@activity.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</small>
                                             </div>
-                                            <small class="text-muted">by @activity.CreatedBy</small>
+                                            <small class="text-muted">by @GetUserDisplayName(activity.CreatedBy)</small>
                                         </div>
                                     </div>
                                 </div>
