@@ -33,18 +33,9 @@
                 (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || 
                  Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
             {
-                @if (Model.Entry.ActionType == CyberRiskApp.Models.RiskBacklogAction.RiskReassessment)
-                {
-                    <button type="button" class="btn btn-success" onclick="approveRiskAssessment(@Model.Entry.Id)">
-                        <i class="fas fa-check-circle me-1"></i>Approve Risk Assessment
-                    </button>
-                }
-                @if (Model.Entry.ActionType == CyberRiskApp.Models.RiskBacklogAction.RiskReview)
-                {
-                    <button type="button" class="btn btn-success" onclick="approveAndAddToRegister(@Model.Entry.Id)">
-                        <i class="fas fa-plus-circle me-1"></i>Approve & Add to Risk Register
-                    </button>
-                }
+                <button type="button" class="btn btn-success" onclick="showApproveModal(@Model.Entry.Id)">
+                    <i class="fas fa-check-circle me-1"></i>Approve
+                </button>
                 <button type="button" class="btn btn-warning" onclick="showRejectModal(@Model.Entry.Id)">
                     <i class="fas fa-times-circle me-1"></i>Reject
                 </button>
@@ -1029,6 +1020,87 @@
     </div>
 </div>
 
+<!-- Approval Modal -->
+<div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="approveModalLabel">
+                    <i class="fas fa-check-circle me-2"></i>Approve Entry
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success">
+                    <h6 class="alert-heading">Approval Impact</h6>
+                    <p class="mb-0">Approving this entry will:</p>
+                    <ul class="mb-0 mt-2">
+                        <li id="approval-impact-list">
+                            <!-- Impact will be populated based on entry type -->
+                        </li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <label for="approvalJustification" class="form-label">Approval Justification <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="approvalJustification" rows="4" required 
+                              placeholder="Please provide justification for approving this entry. Include any relevant business context, risk considerations, or approval criteria..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Common Approval Justifications</label>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="meets-criteria" id="approve1">
+                                <label class="form-check-label small" for="approve1">
+                                    Meets all approval criteria
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="acceptable-risk" id="approve2">
+                                <label class="form-check-label small" for="approve2">
+                                    Risk level is acceptable
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="adequate-controls" id="approve3">
+                                <label class="form-check-label small" for="approve3">
+                                    Adequate controls in place
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="business-approved" id="approve4">
+                                <label class="form-check-label small" for="approve4">
+                                    Business stakeholders approved
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="compliance-aligned" id="approve5">
+                                <label class="form-check-label small" for="approve5">
+                                    Aligns with compliance requirements
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="sla-compliant" id="approve6">
+                                <label class="form-check-label small" for="approve6">
+                                    Within SLA timeframes
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmApproval()">
+                    <i class="fas fa-check me-1"></i>Confirm Approval
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Rejection Modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -1415,6 +1487,128 @@
         } catch (error) {
             console.error('Error rejecting entry:', error);
             toastr.error('An error occurred while rejecting the entry.');
+        }
+    }
+
+    // Show Approval Modal
+    function showApproveModal(entryId) {
+        currentEntryId = entryId;
+        document.getElementById('approvalJustification').value = '';
+        
+        // Clear all checkboxes
+        document.querySelectorAll('#approveModal input[type="checkbox"]').forEach(cb => cb.checked = false);
+        
+        // Set approval impact based on entry type
+        updateApprovalImpact();
+        
+        const modal = new bootstrap.Modal(document.getElementById('approveModal'));
+        modal.show();
+    }
+
+    // Update approval impact text based on entry type
+    function updateApprovalImpact() {
+        const entryType = '@Model.Entry.ActionType';
+        const impactList = document.getElementById('approval-impact-list');
+        let impacts = [];
+
+        switch(entryType) {
+            case 'AssessmentApproval':
+                impacts = [
+                    'Add identified risks to the risk register',
+                    'Update assessment status to Approved',
+                    'Trigger risk management workflows',
+                    'Generate risk register entries for tracking'
+                ];
+                break;
+            case 'NewRisk':
+                impacts = [
+                    'Add the risk to the official risk register',
+                    'Assign risk owner and tracking details',
+                    'Start SLA tracking for risk management',
+                    'Make risk visible to business stakeholders'
+                ];
+                break;
+            case 'RiskAcceptance':
+                impacts = [
+                    'Accept the risk with documented justification',
+                    'Update risk status to Accepted',
+                    'Set acceptance expiration date',
+                    'Notify relevant stakeholders'
+                ];
+                break;
+            case 'FindingClosure':
+                impacts = [
+                    'Close the finding as resolved',
+                    'Update finding status to Closed',
+                    'Archive finding documentation',
+                    'Remove from active monitoring'
+                ];
+                break;
+            default:
+                impacts = [
+                    'Process the request as approved',
+                    'Update entry status',
+                    'Complete the associated workflow',
+                    'Notify relevant parties'
+                ];
+        }
+
+        impactList.innerHTML = impacts.map(impact => `<li>${impact}</li>`).join('');
+    }
+
+    // Auto-populate approval justification based on selected checkboxes
+    document.addEventListener('DOMContentLoaded', function() {
+        const approveCheckboxes = document.querySelectorAll('#approveModal input[type="checkbox"]');
+        const approveTextarea = document.getElementById('approvalJustification');
+        
+        approveCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const checkedReasons = Array.from(approveCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.nextElementSibling.textContent.trim());
+                
+                if (checkedReasons.length > 0) {
+                    const currentText = approveTextarea.value.trim();
+                    const newText = checkedReasons.join(', ') + (currentText ? '. ' + currentText : '');
+                    approveTextarea.value = newText;
+                }
+            });
+        });
+    });
+
+    // Confirm Approval
+    async function confirmApproval() {
+        const justification = document.getElementById('approvalJustification').value.trim();
+        
+        if (!justification) {
+            toastr.error('Please provide justification for approval.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/RiskBacklog/ManagerApprove/${currentEntryId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({ comments: justification })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                toastr.success('Entry approved successfully.');
+                bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                toastr.error(result.message || 'Failed to approve entry.');
+            }
+        } catch (error) {
+            console.error('Error approving entry:', error);
+            toastr.error('An error occurred while approving the entry.');
         }
     }
 </script>
