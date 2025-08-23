@@ -1223,9 +1223,14 @@
 
     // Confirm Approval
     async function confirmApproval() {
+        console.log('confirmApproval called');
+        console.log('toastr available:', typeof toastr !== 'undefined');
+        
         const justification = document.getElementById('approvalJustification').value.trim();
+        console.log('justification:', justification);
         
         if (!justification) {
+            console.log('No justification - showing error');
             toastr.error('Please provide justification for approval.');
             return;
         }
@@ -1243,13 +1248,21 @@
 
             const result = await response.json();
             
+            console.log('Response result:', result);
             if (result.success) {
+                console.log('Success - showing toastr message');
+                alert('SUCCESS: Entry approved successfully!'); // Fallback visual confirmation
                 toastr.success(result.message || 'Entry approved successfully.');
+                console.log('Hiding modal');
                 bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
+                console.log('Setting redirect timeout');
                 setTimeout(() => {
+                    console.log('Redirecting to /RiskBacklog');
                     window.location.href = '/RiskBacklog';
                 }, 1500);
             } else {
+                console.log('Error response:', result.error);
+                alert('ERROR: ' + (result.error || 'Failed to approve entry.')); // Fallback error alert
                 toastr.error(result.error || 'Failed to approve entry.');
             }
         } catch (error) {
