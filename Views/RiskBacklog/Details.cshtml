@@ -152,9 +152,6 @@
                     @if (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
                     {
                         <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-success" onclick="quickApprove(@Model.Entry.Id)">
-                                <i class="fas fa-check me-1"></i>Quick Approve
-                            </button>
                             <button type="button" class="btn btn-outline-warning" onclick="showRejectModal(@Model.Entry.Id)">
                                 <i class="fas fa-times me-1"></i>Reject
                             </button>
@@ -823,11 +820,8 @@
                         @if (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
                         {
                             <div class="d-grid gap-2">
-                                <button type="button" class="btn btn-success" onclick="showApprovalModal(@Model.Entry.Id)">
+                                <button type="button" class="btn btn-success" onclick="showApproveModal(@Model.Entry.Id)">
                                     <i class="fas fa-check me-1"></i>Approve with Comments
-                                </button>
-                                <button type="button" class="btn btn-outline-success" onclick="quickApprove(@Model.Entry.Id)">
-                                    <i class="fas fa-check-circle me-1"></i>Quick Approve
                                 </button>
                                 <button type="button" class="btn btn-warning" onclick="showRejectModal(@Model.Entry.Id)">
                                     <i class="fas fa-times me-1"></i>Request Changes
@@ -1267,37 +1261,6 @@
         modal.show();
     }
 
-    // Quick Approve
-    async function quickApprove(entryId) {
-        if (!confirm('Are you sure you want to approve this request? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/RiskBacklog/ManagerApprove/${entryId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify({ comments: 'Quick approval' })
-            });
-
-            const result = await response.json();
-            
-            if (result.success) {
-                toastr.success('Request approved successfully!');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                toastr.error(result.message || 'Failed to approve request.');
-            }
-        } catch (error) {
-            console.error('Error approving request:', error);
-            toastr.error('An error occurred while approving the request.');
-        }
-    }
 
     // Confirm Approval
     async function confirmApproval() {
