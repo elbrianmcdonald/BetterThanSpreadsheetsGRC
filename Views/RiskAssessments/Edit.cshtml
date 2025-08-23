@@ -3,6 +3,12 @@
     ViewData["Title"] = "Edit Risk Assessment";
 }
 
+<!-- DEBUG: Confirm Edit view is rendering -->
+<div class="alert alert-info" style="position: fixed; top: 10px; right: 10px; z-index: 9999; max-width: 300px;">
+    <strong>🔧 DEBUG:</strong> This is Edit.cshtml view<br/>
+    <small>Assessment ID: @Model.Assessment.Id</small>
+</div>
+
 <div class="container-fluid py-4">
     <div class="row justify-content-center">
         <div class="col-md-10">
@@ -217,7 +223,16 @@
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success">
+                            <!-- DEBUG: Form and button information -->
+                            <div class="alert alert-warning w-100 mb-2">
+                                <strong>🔧 DEBUG FORM INFO:</strong><br/>
+                                <small>
+                                    Form Action: Edit<br/>
+                                    Assessment ID: @Model.Assessment.Id<br/>
+                                    Button Text Should Be: "Save Changes"
+                                </small>
+                            </div>
+                            <button type="submit" class="btn btn-success" id="editSubmitBtn">
                                 <i class="fas fa-save me-1"></i>Save Changes
                             </button>
                             <a asp-action="Details" asp-route-id="@Model.Assessment.Id" class="btn btn-info">
@@ -236,4 +251,41 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        console.log('🔧 DEBUG: Edit.cshtml Scripts section loaded');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 DEBUG: DOM loaded for Edit view');
+            
+            const submitBtn = document.getElementById('editSubmitBtn');
+            const form = document.querySelector('form[asp-action="Edit"]') || document.querySelector('form');
+            
+            console.log('🔧 DEBUG: Submit button found:', !!submitBtn);
+            console.log('🔧 DEBUG: Submit button text:', submitBtn?.textContent.trim());
+            console.log('🔧 DEBUG: Form found:', !!form);
+            console.log('🔧 DEBUG: Form action:', form?.action);
+            console.log('🔧 DEBUG: Form method:', form?.method);
+            
+            if (submitBtn) {
+                submitBtn.addEventListener('click', function(e) {
+                    console.log('🔧 DEBUG: Submit button clicked!');
+                    console.log('🔧 DEBUG: Form is valid:', form?.checkValidity());
+                    
+                    // Don't prevent default - let form submit normally
+                    // Just log what's happening
+                    setTimeout(() => {
+                        console.log('🔧 DEBUG: Form should have submitted by now');
+                    }, 100);
+                });
+            }
+            
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('🔧 DEBUG: Form submit event triggered!');
+                    console.log('🔧 DEBUG: Form data:', new FormData(form));
+                });
+            }
+        });
+    </script>
 }
