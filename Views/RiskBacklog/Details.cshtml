@@ -673,7 +673,9 @@
 
 
                         <!-- Quick Decision Actions -->
-                        @if (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
+                        @if (Model.CanApprove && (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.Unassigned || 
+                                                  Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || 
+                                                  Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
                         {
                             <div class="d-grid gap-2">
                                 <button type="button" class="btn btn-success" onclick="showApproveModal(@Model.Entry.Id)">
