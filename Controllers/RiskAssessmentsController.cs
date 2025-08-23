@@ -829,8 +829,8 @@ namespace CyberRiskApp.Controllers
                 OpenRisks = assessment.IdentifiedRisks?.Where(r => r.Status != RiskStatus.Closed).ToList() ?? new List<Risk>()
             };
 
-            // Use the Edit view for editing
-            return View("Edit", model);
+            // Use the CreateQualitative view for editing (context-aware)
+            return View("CreateQualitative", model);
         }
 
         // Edit POST action method
@@ -1074,7 +1074,7 @@ namespace CyberRiskApp.Controllers
             model.SelectedMatrix = model.Assessment.RiskMatrixId.HasValue ? 
                 await _context.RiskMatrices.FindAsync(model.Assessment.RiskMatrixId.Value) : null;
             
-            return View("Edit", model);
+            return View("CreateQualitative", model);
         }
         // FAIR ThreatScenarios block completed
 

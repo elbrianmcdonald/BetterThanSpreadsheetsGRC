@@ -25,6 +25,12 @@
                     <a asp-action="SelectType" class="btn btn-outline-success me-2">
                         <i class="fas fa-exchange-alt me-1"></i>Change Type
                     </a>
+                    @if (isEdit)
+                    {
+                        <a asp-action="Details" asp-route-id="@Model.Assessment.Id" class="btn btn-outline-info me-2">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </a>
+                    }
                     <a asp-action="Index" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i>Back to List
                     </a>
@@ -225,11 +231,20 @@
                     <div class="col-12">
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-save me-1"></i>Create Assessment
+                                <i class="fas fa-save me-1"></i>@(isEdit ? "Update Assessment" : "Create Assessment")
                             </button>
-                            <a asp-action="Index" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-times me-1"></i>Cancel
-                            </a>
+                            @if (isEdit)
+                            {
+                                <a asp-action="Details" asp-route-id="@Model.Assessment.Id" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </a>
+                            }
+                            else
+                            {
+                                <a asp-action="Index" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </a>
+                            }
                         </div>
                     </div>
                 </div>
