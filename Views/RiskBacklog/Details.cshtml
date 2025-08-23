@@ -691,123 +691,6 @@
                 </div>
             }
 
-            <!-- Quick Actions -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0"><i class="fas fa-bolt me-2"></i>Actions</h5>
-                </div>
-                <div class="card-body">
-                    <!-- Assignment Actions (Managers Only) -->
-                    @if (Model.CanAssign && Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.Unassigned)
-                    {
-                        <div class="mb-3">
-                            <h6>Assign to Analyst</h6>
-                            <form asp-action="AssignToAnalyst" method="post" class="d-flex">
-                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
-                                <select name="analystId" class="form-select me-2" required>
-                                    <option value="">Select Analyst...</option>
-                                    @foreach (var user in Model.AvailableAnalysts.Where(u => u.Role == CyberRiskApp.Models.UserRole.GRCAnalyst || u.Role == CyberRiskApp.Models.UserRole.GRCManager))
-                                    {
-                                        <option value="@user.Id">@user.FirstName @user.LastName</option>
-                                    }
-                                </select>
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-user-plus"></i>
-                                </button>
-                            </form>
-                        </div>
-                    }
-
-                    <!-- Analyst Actions -->
-                    @if (Model.CanApprove && Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst)
-                    {
-                        <div class="mb-3">
-                            <h6>Analyst Review</h6>
-                            <form asp-action="AnalystApprove" method="post" class="mb-2">
-                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
-                                <div class="mb-2">
-                                    <textarea name="comments" class="form-control" rows="2" placeholder="Comments (optional)"></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-success btn-sm w-100">
-                                    <i class="fas fa-check me-1"></i>Approve & Forward to Manager
-                                </button>
-                            </form>
-                            <form asp-action="AnalystReject" method="post">
-                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
-                                <div class="mb-2">
-                                    <textarea name="reason" class="form-control" rows="2" placeholder="Rejection reason (required)" required></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-danger btn-sm w-100">
-                                    <i class="fas fa-times me-1"></i>Reject
-                                </button>
-                            </form>
-                        </div>
-                    }
-
-                    <!-- Manager Actions -->
-                    @if (Model.CanAssign && Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
-                    {
-                        <div class="mb-3">
-                            <h6>Manager Decision</h6>
-                            <form asp-action="ManagerApprove" method="post" class="mb-2">
-                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
-                                <div class="mb-2">
-                                    <textarea name="comments" class="form-control" rows="2" placeholder="Comments (optional)"></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-success btn-sm w-100">
-                                    <i class="fas fa-check me-1"></i>Final Approval
-                                </button>
-                            </form>
-                            <form asp-action="ManagerReject" method="post">
-                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
-                                <div class="mb-2">
-                                    <textarea name="reason" class="form-control" rows="2" placeholder="Rejection reason (required)" required></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-danger btn-sm w-100">
-                                    <i class="fas fa-times me-1"></i>Reject
-                                </button>
-                            </form>
-                        </div>
-                    }
-
-                    <!-- Priority Management -->
-                    @if (Model.CanAssign && Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Approved && Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Rejected)
-                    {
-                        <div class="mb-3">
-                            <h6>Change Priority</h6>
-                            <form asp-action="SetPriority" method="post" class="d-flex">
-                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
-                                <select name="priority" class="form-select me-2">
-                                    <option value="Low" selected="@(Model.Entry.Priority == CyberRiskApp.Models.BacklogPriority.Low)">Low</option>
-                                    <option value="Medium" selected="@(Model.Entry.Priority == CyberRiskApp.Models.BacklogPriority.Medium)">Medium</option>
-                                    <option value="High" selected="@(Model.Entry.Priority == CyberRiskApp.Models.BacklogPriority.High)">High</option>
-                                    <option value="Critical" selected="@(Model.Entry.Priority == CyberRiskApp.Models.BacklogPriority.Critical)">Critical</option>
-                                </select>
-                                <button type="submit" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-flag"></i>
-                                </button>
-                            </form>
-                        </div>
-                    }
-
-                    <!-- Escalation -->
-                    @if (Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Approved && Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Rejected && Model.Entry.Status != CyberRiskApp.Models.RiskBacklogStatus.Escalated)
-                    {
-                        <div class="mb-3">
-                            <h6>Escalate</h6>
-                            <form asp-action="Escalate" method="post">
-                                <input type="hidden" name="backlogId" value="@Model.Entry.Id" />
-                                <div class="mb-2">
-                                    <textarea name="reason" class="form-control" rows="2" placeholder="Escalation reason (required)" required></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-warning btn-sm w-100">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>Escalate
-                                </button>
-                            </form>
-                        </div>
-                    }
-                </div>
-            </div>
 
             <!-- Entry Summary -->
             <div class="card">
@@ -847,48 +730,6 @@
     </div>
 </div>
 
-<!-- Approval Modal -->
-<div class="modal fade" id="approvalModal" tabindex="-1" aria-labelledby="approvalModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="approvalModalLabel">
-                    <i class="fas fa-check-circle me-2"></i>Approve Request
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-success">
-                    <h6 class="alert-heading">Approval Confirmation</h6>
-                    <p class="mb-0">You are about to approve this request. This action will:</p>
-                    <ul class="mb-0 mt-2">
-                        <li>Update the request status to approved</li>
-                        <li>Execute the requested action</li>
-                        <li>Notify relevant stakeholders</li>
-                        <li>Close this backlog entry</li>
-                    </ul>
-                </div>
-                <div class="mb-3">
-                    <label for="approvalComments" class="form-label">Approval Comments (Optional)</label>
-                    <textarea class="form-control" id="approvalComments" rows="3" 
-                              placeholder="Add any comments or conditions for this approval..."></textarea>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="notifyStakeholders" checked>
-                    <label class="form-check-label" for="notifyStakeholders">
-                        Notify business owner and requester of approval
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="confirmApproval()">
-                    <i class="fas fa-check-circle me-1"></i>Confirm Approval
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Approval Modal -->
 <div class="modal fade" id="approveModal" tabindex="-1" aria-labelledby="approveModalLabel" aria-hidden="true">
@@ -1099,14 +940,6 @@
 <script>
     let currentEntryId = null;
 
-    // Show Approval Modal
-    function showApprovalModal(entryId) {
-        currentEntryId = entryId;
-        document.getElementById('approvalComments').value = '';
-        document.getElementById('notifyStakeholders').checked = true;
-        const modal = new bootstrap.Modal(document.getElementById('approvalModal'));
-        modal.show();
-    }
 
     // Show Escalation Modal
     function showEscalateModal(entryId) {
@@ -1118,40 +951,6 @@
     }
 
 
-    // Confirm Approval
-    async function confirmApproval() {
-        const comments = document.getElementById('approvalComments').value.trim();
-        const notify = document.getElementById('notifyStakeholders').checked;
-
-        try {
-            const response = await fetch(`/RiskBacklog/ManagerApprove/${currentEntryId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify({ 
-                    comments: comments || 'Approved',
-                    notifyStakeholders: notify 
-                })
-            });
-
-            const result = await response.json();
-            
-            if (result.success) {
-                toastr.success('Request approved successfully!');
-                bootstrap.Modal.getInstance(document.getElementById('approvalModal')).hide();
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                toastr.error(result.message || 'Failed to approve request.');
-            }
-        } catch (error) {
-            console.error('Error approving request:', error);
-            toastr.error('An error occurred while approving the request.');
-        }
-    }
 
     // Confirm Escalation
     async function confirmEscalation() {
