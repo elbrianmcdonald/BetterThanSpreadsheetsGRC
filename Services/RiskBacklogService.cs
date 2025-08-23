@@ -851,6 +851,10 @@ namespace CyberRiskApp.Services
             var entry = await _context.RiskBacklogEntries.FindAsync(backlogId);
             if (entry == null) return false;
 
+            // DEBUG: Log what we received
+            Console.WriteLine($"🐛 SERVICE DEBUG - backlogId: {backlogId}, userId: {userId}, role: '{role}'");
+            Console.WriteLine($"🐛 SERVICE DEBUG - entry.Status: {entry.Status}, role.Contains('Admin'): {role.Contains("Admin")}");
+
             // Admins can approve any entry in valid statuses (highest privilege)
             if (role.Contains("Admin"))
             {

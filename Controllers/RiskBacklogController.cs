@@ -154,7 +154,7 @@ namespace CyberRiskApp.Controllers
                     return NotFound();
 
                 var userId = User.Identity?.Name ?? "";
-                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
 
                 if (!await _backlogService.CanUserAccessBacklogEntryAsync(id, userId, userRoles))
                 {
@@ -231,7 +231,7 @@ namespace CyberRiskApp.Controllers
             try
             {
                 var userId = User.Identity?.Name ?? "";
-                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
 
                 if (!await _backlogService.CanUserApproveBacklogEntryAsync(backlogId, userId, userRoles))
                 {
@@ -257,7 +257,7 @@ namespace CyberRiskApp.Controllers
             try
             {
                 var userId = User.Identity?.Name ?? "";
-                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
 
                 if (!await _backlogService.CanUserApproveBacklogEntryAsync(backlogId, userId, userRoles))
                 {
@@ -964,7 +964,7 @@ namespace CyberRiskApp.Controllers
             try
             {
                 var userId = User.Identity?.Name ?? "";
-                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
 
                 // Check permissions
                 if (!await _backlogService.CanUserApproveBacklogEntryAsync(entryId, userId, userRoles))
@@ -1003,7 +1003,7 @@ namespace CyberRiskApp.Controllers
             try
             {
                 var userId = User.Identity?.Name ?? "";
-                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
 
                 // Check permissions
                 if (!await _backlogService.CanUserApproveBacklogEntryAsync(entryId, userId, userRoles))
@@ -1042,7 +1042,7 @@ namespace CyberRiskApp.Controllers
             try
             {
                 var userId = User.Identity?.Name ?? "";
-                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role").Select(c => c.Value));
+                var userRoles = string.Join(",", User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value));
 
                 // Check permissions
                 if (!await _backlogService.CanUserApproveBacklogEntryAsync(entryId, userId, userRoles))
