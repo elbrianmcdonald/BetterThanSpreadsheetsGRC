@@ -144,8 +144,9 @@
     {
         Draft = 1,
         InProgress = 2,
-        Completed = 3,
-        Approved = 4
+        ReadyForReview = 3,
+        Completed = 4,
+        Approved = 5
     }
 
     // Assessment Type enum - only qualitative assessments supported

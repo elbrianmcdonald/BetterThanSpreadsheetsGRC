@@ -591,6 +591,33 @@ namespace CyberRiskApp.Controllers
                         // }
                     }
 
+                    // ===== CREATE BACKLOG ENTRY FOR READY FOR REVIEW STATUS =====
+                    if (createdAssessment.Status == AssessmentStatus.ReadyForReview)
+                    {
+                        Console.WriteLine("🔄 DEBUGGING: Creating backlog entry for ReadyForReview assessment...");
+                        
+                        try 
+                        {
+                            var assessmentDescription = BuildAssessmentDescriptionForBacklog(createdAssessment);
+                            var justification = $"Risk assessment '{createdAssessment.Title}' has been submitted for review and requires approval before risks are added to the register.";
+                            
+                            var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
+                                riskId: null, // No specific risk - this is for assessment approval
+                                actionType: RiskBacklogAction.AssessmentApproval, // Use proper assessment approval action type
+                                description: assessmentDescription,
+                                justification: justification,
+                                requesterId: User.GetUserId()
+                            );
+                            
+                            Console.WriteLine($"✅ DEBUGGING: Created backlog entry {backlogEntry.BacklogNumber} for ReadyForReview assessment");
+                        }
+                        catch (Exception backlogEx)
+                        {
+                            Console.WriteLine($"❌ DEBUGGING: Failed to create backlog entry for ReadyForReview assessment: {backlogEx.Message}");
+                            // Don't fail the entire transaction - just log the error
+                        }
+                    }
+
                         // Commit the transaction if everything succeeded
                         await transaction.CommitAsync();
                         Console.WriteLine($"✅ DEBUGGING: Transaction committed successfully");
@@ -615,7 +642,11 @@ namespace CyberRiskApp.Controllers
                 // Handle the results outside the execution strategy
                 if (success && createdAssessment != null)
                 {
-                    TempData["Success"] = "Risk assessment created successfully! Use the 'Complete' button when ready to submit for approval.";
+                    var successMessage = createdAssessment.Status == AssessmentStatus.ReadyForReview 
+                        ? "Risk assessment created and submitted for review! It has been added to the manager approval backlog."
+                        : "Risk assessment created successfully! Set status to 'Ready for Review' and save to submit for approval.";
+                    
+                    TempData["Success"] = successMessage;
                     return RedirectToAction(nameof(Details), new { id = createdAssessment.Id });
                 }
                 else
@@ -987,7 +1018,42 @@ namespace CyberRiskApp.Controllers
                     // ===== COMPREHENSIVE THREAT SCENARIO PROCESSING =====
                     await ProcessComprehensiveThreatScenarios(model.ThreatScenarios, id);
 
-                    TempData["Success"] = "Risk assessment updated successfully! Any new identified risks have been submitted to the backlog for GRC review and approval.";
+                    // ===== CREATE BACKLOG ENTRY IF STATUS CHANGED TO READY FOR REVIEW =====
+                    var statusChanged = originalAssessment.Status != model.Assessment.Status;
+                    var nowReadyForReview = model.Assessment.Status == AssessmentStatus.ReadyForReview;
+                    var wasNotReadyForReview = originalAssessment.Status != AssessmentStatus.ReadyForReview;
+
+                    if (statusChanged && nowReadyForReview && wasNotReadyForReview)
+                    {
+                        Console.WriteLine("🔄 DEBUGGING: Creating backlog entry for status change to ReadyForReview...");
+                        
+                        try 
+                        {
+                            var assessmentDescription = BuildAssessmentDescriptionForBacklog(model.Assessment);
+                            var justification = $"Risk assessment '{model.Assessment.Title}' has been updated and submitted for review. Requires approval before risks are added to the register.";
+                            
+                            var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
+                                riskId: null, // No specific risk - this is for assessment approval
+                                actionType: RiskBacklogAction.AssessmentApproval, // Use proper assessment approval action type
+                                description: assessmentDescription,
+                                justification: justification,
+                                requesterId: User.GetUserId()
+                            );
+                            
+                            Console.WriteLine($"✅ DEBUGGING: Created backlog entry {backlogEntry.BacklogNumber} for ReadyForReview status change");
+                            TempData["Success"] = $"Risk assessment updated and submitted for review! Backlog entry {backlogEntry.BacklogNumber} created.";
+                        }
+                        catch (Exception backlogEx)
+                        {
+                            Console.WriteLine($"❌ DEBUGGING: Failed to create backlog entry for ReadyForReview status change: {backlogEx.Message}");
+                            TempData["Success"] = "Risk assessment updated successfully, but failed to create approval backlog entry. Please contact administrator.";
+                        }
+                    }
+                    else
+                    {
+                        TempData["Success"] = "Risk assessment updated successfully! Any new identified risks have been submitted to the backlog for GRC review and approval.";
+                    }
+
                     return RedirectToAction(nameof(Details), new { id = model.Assessment.Id });
                 }
                 catch (Exception ex)
