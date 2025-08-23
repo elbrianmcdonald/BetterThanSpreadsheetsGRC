@@ -266,6 +266,7 @@ namespace CyberRiskApp.Models
                 RiskBacklogAction.RiskReview => "🔄 Risk Review",
                 RiskBacklogAction.RiskReassessment => "📊 Risk Reassessment",
                 RiskBacklogAction.RiskClosure => "🔒 Risk Closure",
+                RiskBacklogAction.AssessmentApproval => "📝 Assessment Approval",
                 _ => ActionType.ToString()
             };
         }
@@ -291,6 +292,7 @@ namespace CyberRiskApp.Models
                     RiskBacklogAction.RiskAcceptance => "Risk Acceptance",
                     RiskBacklogAction.RiskExtension => "Risk Extension",
                     RiskBacklogAction.RiskReview => "Periodic Review",
+                    RiskBacklogAction.AssessmentApproval => "Risk Assessment",
                     _ => "Manual Entry"
                 };
             }

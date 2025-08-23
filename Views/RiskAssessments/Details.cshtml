@@ -577,7 +577,7 @@
                                                         {
                                                             <h6 class="text-success"><i class="fas fa-shield-alt me-1"></i>Controls</h6>
                                                             <div class="row">
-                                                                @foreach (var controlGroup in scenario.ThreatVector.Controls.GroupBy(tvc => new { tvc.ThreatControl.ControlType, tvc.ThreatControl.ControlCategory }))
+                                                                @foreach (var controlGroup in scenario.ThreatVector.Controls.Where(tvc => tvc.ThreatControl != null).GroupBy(tvc => new { tvc.ThreatControl.ControlType, tvc.ThreatControl.ControlCategory }))
                                                                 {
                                                                     <div class="col-md-6 mb-2">
                                                                         <div class="border rounded p-2 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "border-success" : "border-warning")">
@@ -587,7 +587,7 @@
                                                                             <ul class="list-unstyled mb-0 small">
                                                                                 @foreach (var tvc in controlGroup)
                                                                                 {
-                                                                                    <li><i class="fas fa-check-circle me-1"></i>@tvc.ThreatControl.ControlName</li>
+                                                                                    <li><i class="fas fa-check-circle me-1"></i>@(tvc.ThreatControl?.ControlName ?? "Unknown Control")</li>
                                                                                 }
                                                                             </ul>
                                                                         </div>

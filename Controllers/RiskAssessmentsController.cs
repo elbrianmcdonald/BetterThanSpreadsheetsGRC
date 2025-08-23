@@ -1068,7 +1068,7 @@ namespace CyberRiskApp.Controllers
                 {
                     var backlogEntry = await _backlogService.CreateBacklogEntryAsync(
                         riskId: null, // No specific risk - this is for assessment approval
-                        actionType: RiskBacklogAction.RiskReview, // Use RiskReview as closest match for assessment approval
+                        actionType: RiskBacklogAction.AssessmentApproval, // Use proper assessment approval action type
                         description: assessmentDescription,
                         justification: justification,
                         requesterId: User.GetUserId()

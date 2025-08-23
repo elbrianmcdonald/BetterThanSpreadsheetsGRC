@@ -274,7 +274,8 @@
         NewFinding = 6,
         FindingReview = 7,
         FindingClosure = 8,
-        RiskClosure = 9
+        RiskClosure = 9,
+        AssessmentApproval = 10 // New action type for risk assessment completion approval
     }
 
     public enum BacklogPriority

@@ -355,6 +355,21 @@ namespace CyberRiskApp.Services
                     throw new InvalidOperationException($"Failed to create finding from backlog entry: {ex.Message}", ex);
                 }
             }
+            else if (entry.ActionType == RiskBacklogAction.AssessmentApproval)
+            {
+                // ASSESSMENT APPROVAL - Create risks from assessment data
+                try
+                {
+                    var createdRisks = await CreateRisksFromAssessmentApprovalAsync(entry, managerId);
+                    _logger.LogInformation("Created {RiskCount} risks from approved assessment backlog entry {BacklogNumber}", 
+                        createdRisks.Count, entry.BacklogNumber);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to create risks from assessment approval backlog entry {BacklogNumber}", entry.BacklogNumber);
+                    throw new InvalidOperationException($"Failed to create risks from assessment approval: {ex.Message}", ex);
+                }
+            }
 
             await _context.SaveChangesAsync();
             await LogActivityAsync(backlogId, "ManagerApproval", "AssignedToManager", "Approved", "Approved by manager", managerId);
@@ -859,6 +874,7 @@ namespace CyberRiskApp.Services
                 RiskBacklogAction.NewFinding => BacklogPriority.Medium,
                 RiskBacklogAction.FindingReview => BacklogPriority.Medium,
                 RiskBacklogAction.FindingClosure => BacklogPriority.Low,
+                RiskBacklogAction.AssessmentApproval => BacklogPriority.High, // High priority for assessment approvals
                 _ => BacklogPriority.Medium
             };
         }
@@ -875,6 +891,7 @@ namespace CyberRiskApp.Services
                 RiskBacklogAction.NewFinding => 3, // 3 business days for new findings
                 RiskBacklogAction.FindingReview => 5,
                 RiskBacklogAction.FindingClosure => 2,
+                RiskBacklogAction.AssessmentApproval => 3, // 3 business days for assessment approvals
                 _ => 5
             };
 
@@ -1445,6 +1462,259 @@ namespace CyberRiskApp.Services
             // Reset the sequence for clean numbering
             await _context.Database.ExecuteSqlRawAsync("SELECT setval(pg_get_serial_sequence('\"RiskBacklogEntries\"', 'Id'), 1, false)");
             _logger.LogInformation("Reset backlog entry ID sequence");
+        }
+
+        /// <summary>
+        /// Creates Risk entities from a completed risk assessment that needs approval
+        /// </summary>
+        private async Task<List<Risk>> CreateRisksFromAssessmentApprovalAsync(RiskBacklogEntry entry, string approverId)
+        {
+            _logger.LogInformation("🔄 DEBUGGING CreateRisksFromAssessmentApproval: Processing backlog entry {BacklogNumber}", entry.BacklogNumber);
+
+            // Extract assessment ID from the description
+            var assessmentId = ExtractAssessmentIdFromDescription(entry.RequestDescription);
+            if (assessmentId == null)
+            {
+                _logger.LogError("❌ DEBUGGING: Could not extract assessment ID from backlog description");
+                throw new InvalidOperationException("Could not extract assessment ID from backlog entry description");
+            }
+
+            _logger.LogInformation("🔍 DEBUGGING: Extracted assessment ID {AssessmentId} from backlog description", assessmentId.Value);
+
+            // Get the full assessment with threat scenarios and risks
+            var assessment = await _context.RiskAssessments
+                .Include(a => a.ThreatScenarios)
+                    .ThenInclude(ts => ts.ScenarioRisks)
+                .FirstOrDefaultAsync(a => a.Id == assessmentId.Value);
+
+            if (assessment == null)
+            {
+                _logger.LogError("❌ DEBUGGING: Assessment {AssessmentId} not found in database", assessmentId.Value);
+                throw new InvalidOperationException($"Assessment {assessmentId.Value} not found");
+            }
+
+            _logger.LogInformation("✅ DEBUGGING: Found assessment '{AssessmentTitle}' with {ScenarioCount} threat scenarios", 
+                assessment.Title, assessment.ThreatScenarios?.Count() ?? 0);
+
+            var createdRisks = new List<Risk>();
+
+            // Create risks from threat scenarios and their scenario risks
+            if (assessment.ThreatScenarios?.Any() == true)
+            {
+                foreach (var scenario in assessment.ThreatScenarios)
+                {
+                    _logger.LogInformation("🔍 DEBUGGING: Processing scenario '{ScenarioName}' with {RiskCount} scenario risks", 
+                        scenario.ScenarioName, scenario.ScenarioRisks?.Count() ?? 0);
+
+                    if (scenario.ScenarioRisks?.Any() == true)
+                    {
+                        foreach (var scenarioRisk in scenario.ScenarioRisks)
+                        {
+                            try
+                            {
+                                var risk = new Risk
+                                {
+                                    Title = scenarioRisk.RiskName,
+                                    Description = scenarioRisk.RiskDescription ?? "",
+                                    ThreatScenario = scenario.Description ?? "",
+                                    Asset = assessment.Asset,
+                                    BusinessUnit = assessment.BusinessUnit ?? "",
+                                    Owner = assessment.BusinessOwner ?? approverId,
+                                    RiskAssessmentId = assessment.Id,
+                                    ThreatScenarioId = scenario.Id,
+                                    
+                                    // Map scenario risk values to risk entity (convert decimal to enum)
+                                    Impact = ConvertDecimalToImpactLevel(scenarioRisk.CurrentImpact ?? 3.0m),
+                                    Likelihood = ConvertDecimalToLikelihoodLevel(scenarioRisk.CurrentLikelihood ?? 2.0m),
+                                    Exposure = ConvertDecimalToExposureLevel(scenarioRisk.CurrentExposure ?? 0.8m),
+                                    
+                                    // Calculate risk level from current values
+                                    InherentRiskLevel = CalculateRiskLevel(
+                                        ConvertDecimalToImpactLevel(scenarioRisk.CurrentImpact ?? 3.0m),
+                                        ConvertDecimalToLikelihoodLevel(scenarioRisk.CurrentLikelihood ?? 2.0m),
+                                        ConvertDecimalToExposureLevel(scenarioRisk.CurrentExposure ?? 0.8m)),
+                                    RiskLevel = CalculateRiskLevel(
+                                        ConvertDecimalToImpactLevel(scenarioRisk.CurrentImpact ?? 3.0m),
+                                        ConvertDecimalToLikelihoodLevel(scenarioRisk.CurrentLikelihood ?? 2.0m),
+                                        ConvertDecimalToExposureLevel(scenarioRisk.CurrentExposure ?? 0.8m)),
+                                    
+                                    // Set risk status and dates
+                                    Status = RiskStatus.Open,
+                                    OpenDate = DateTime.UtcNow,
+                                    NextReviewDate = DateTime.Today.AddMonths(6),
+                                    Treatment = TreatmentStrategy.Mitigate,
+                                    
+                                    // Audit fields
+                                    CreatedBy = approverId,
+                                    UpdatedBy = approverId,
+                                    CreatedAt = DateTime.UtcNow,
+                                    UpdatedAt = DateTime.UtcNow
+                                };
+
+                                // Generate risk number and create the risk
+                                risk.RiskNumber = await _riskService.GenerateNextRiskNumberAsync();
+                                var createdRisk = await _riskService.CreateRiskAsync(risk);
+                                createdRisks.Add(createdRisk);
+                                
+                                _logger.LogInformation("✅ DEBUGGING: Created risk {RiskNumber} '{RiskTitle}' from scenario risk", 
+                                    createdRisk.RiskNumber, createdRisk.Title);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "❌ DEBUGGING: Failed to create risk '{RiskName}' from scenario '{ScenarioName}': {Error}", 
+                                    scenarioRisk.RiskName, scenario.ScenarioName, ex.Message);
+                                // Continue with other risks
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // For assessments without threat scenarios, create a single risk from the assessment itself
+                _logger.LogInformation("🔍 DEBUGGING: Assessment has no threat scenarios, creating single risk from assessment data");
+                
+                try
+                {
+                    var risk = new Risk
+                    {
+                        Title = $"Risk from Assessment: {assessment.Title}",
+                        Description = assessment.Description ?? "",
+                        ThreatScenario = assessment.ThreatScenario ?? "",
+                        Asset = assessment.Asset,
+                        BusinessUnit = assessment.BusinessUnit ?? "",
+                        Owner = assessment.BusinessOwner ?? approverId,
+                        RiskAssessmentId = assessment.Id,
+                        
+                        // Use assessment's risk values if available
+                        Impact = (ImpactLevel)(int)(assessment.QualitativeImpact ?? 3),
+                        Likelihood = (LikelihoodLevel)(int)(assessment.QualitativeLikelihood ?? 2),
+                        Exposure = (ExposureLevel)(int)((assessment.QualitativeExposure ?? 0.8m) * 5), // Convert 0.2-1.2 to 1-5
+                        
+                        InherentRiskLevel = MapQualitativeScoreToRiskLevel(assessment.QualitativeRiskScore ?? 4.0m),
+                        RiskLevel = MapQualitativeScoreToRiskLevel(assessment.QualitativeRiskScore ?? 4.0m),
+                        
+                        Status = RiskStatus.Open,
+                        OpenDate = DateTime.UtcNow,
+                        NextReviewDate = DateTime.Today.AddMonths(6),
+                        Treatment = TreatmentStrategy.Mitigate,
+                        
+                        CreatedBy = approverId,
+                        UpdatedBy = approverId,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    risk.RiskNumber = await _riskService.GenerateNextRiskNumberAsync();
+                    var createdRisk = await _riskService.CreateRiskAsync(risk);
+                    createdRisks.Add(createdRisk);
+                    
+                    _logger.LogInformation("✅ DEBUGGING: Created assessment-level risk {RiskNumber} '{RiskTitle}'", 
+                        createdRisk.RiskNumber, createdRisk.Title);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ DEBUGGING: Failed to create assessment-level risk: {Error}", ex.Message);
+                    throw;
+                }
+            }
+
+            _logger.LogInformation("✅ DEBUGGING: Successfully created {RiskCount} risks from assessment approval", createdRisks.Count);
+            return createdRisks;
+        }
+
+        /// <summary>
+        /// Extracts the assessment ID from the backlog entry description
+        /// </summary>
+        private int? ExtractAssessmentIdFromDescription(string description)
+        {
+            if (string.IsNullOrEmpty(description))
+                return null;
+
+            // Look for "Assessment ID: {number}" pattern
+            var match = System.Text.RegularExpressions.Regex.Match(description, @"Assessment ID:\s*(\d+)");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int assessmentId))
+            {
+                return assessmentId;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Calculate risk level from impact, likelihood, and exposure
+        /// </summary>
+        private RiskLevel CalculateRiskLevel(ImpactLevel impact, LikelihoodLevel likelihood, ExposureLevel exposure)
+        {
+            // Convert to numeric values for calculation
+            decimal impactScore = (decimal)impact;
+            decimal likelihoodScore = (decimal)likelihood;
+            decimal exposureScore = (decimal)exposure * 0.2m; // Convert 1-5 to 0.2-1.0 range
+
+            // Calculate risk score: Impact × Likelihood × Exposure
+            decimal riskScore = impactScore * likelihoodScore * exposureScore;
+
+            return MapQualitativeScoreToRiskLevel(riskScore);
+        }
+
+        /// <summary>
+        /// Maps a qualitative risk score to a RiskLevel enum
+        /// </summary>
+        private RiskLevel MapQualitativeScoreToRiskLevel(decimal score)
+        {
+            return score switch
+            {
+                >= 16 => RiskLevel.Extreme,
+                >= 10 => RiskLevel.Critical,
+                >= 6 => RiskLevel.High,
+                >= 3 => RiskLevel.Medium,
+                _ => RiskLevel.Low
+            };
+        }
+
+        /// <summary>
+        /// Convert decimal value to ImpactLevel enum
+        /// </summary>
+        private ImpactLevel ConvertDecimalToImpactLevel(decimal value)
+        {
+            return value switch
+            {
+                >= 5.0m => ImpactLevel.Extreme,
+                >= 4.0m => ImpactLevel.Critical,
+                >= 3.0m => ImpactLevel.High,
+                >= 2.0m => ImpactLevel.Medium,
+                _ => ImpactLevel.Low
+            };
+        }
+
+        /// <summary>
+        /// Convert decimal value to LikelihoodLevel enum
+        /// </summary>
+        private LikelihoodLevel ConvertDecimalToLikelihoodLevel(decimal value)
+        {
+            return value switch
+            {
+                >= 5.0m => LikelihoodLevel.Certain,
+                >= 4.0m => LikelihoodLevel.AlmostCertain,
+                >= 3.0m => LikelihoodLevel.Likely,
+                >= 2.0m => LikelihoodLevel.Possible,
+                _ => LikelihoodLevel.Unlikely
+            };
+        }
+
+        /// <summary>
+        /// Convert decimal value to ExposureLevel enum
+        /// </summary>
+        private ExposureLevel ConvertDecimalToExposureLevel(decimal value)
+        {
+            return value switch
+            {
+                >= 1.2m => ExposureLevel.CriticallyExposed,
+                >= 1.0m => ExposureLevel.HighlyExposed,
+                >= 0.8m => ExposureLevel.ModeratelyExposed,
+                >= 0.4m => ExposureLevel.Exposed,
+                _ => ExposureLevel.SlightlyExposed
+            };
         }
 
     }

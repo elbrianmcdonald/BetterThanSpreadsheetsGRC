@@ -19,6 +19,9 @@
                     }
                 </h2>
                 <div>
+                    <button type="button" class="btn btn-outline-info me-2" onclick="fillTestData()" title="Fill form with realistic test data for testing">
+                        <i class="fas fa-flask me-1"></i>Fill Test Data
+                    </button>
                     <a asp-action="SelectType" class="btn btn-outline-success me-2">
                         <i class="fas fa-exchange-alt me-1"></i>Change Type
                     </a>
@@ -2041,6 +2044,280 @@
             }
         }
 
+        // FILL TEST DATA FUNCTION
+        function fillTestData() {
+            console.log('Filling form with test data...');
+            
+            // Fill basic assessment fields
+            document.querySelector('input[name="Assessment.Title"]').value = 'TEST: Web Application Security Assessment';
+            document.querySelector('input[name="Assessment.Asset"]').value = 'Customer Portal Web Application';
+            document.querySelector('input[name="Assessment.BusinessUnit"]').value = 'Information Technology';
+            document.querySelector('input[name="Assessment.BusinessOwner"]').value = 'John Smith';
+            document.querySelector('textarea[name="Assessment.Description"]').value = 'Comprehensive security assessment of the customer-facing web portal including authentication, data handling, and transaction processing components. This assessment focuses on identifying potential security vulnerabilities and assessing the current risk posture.';
+            
+            // Set status to InProgress
+            const statusSelect = document.querySelector('select[name="Assessment.Status"]');
+            if (statusSelect) {
+                statusSelect.value = 'InProgress';
+            }
+            
+            // Select first available risk matrix
+            const matrixSelect = document.querySelector('select[name="Assessment.RiskMatrixId"]');
+            if (matrixSelect && matrixSelect.options.length > 1) {
+                matrixSelect.selectedIndex = 1; // Select first non-empty option
+                // Trigger change event to load matrix data
+                if (window.loadMatrixData) {
+                    window.loadMatrixData(matrixSelect.value);
+                }
+            }
+            
+            // Create test threat scenarios
+            setTimeout(function() {
+                createTestThreatScenarios();
+            }, 1000); // Wait for matrix to load
+        }
+        
+        function createTestThreatScenarios() {
+            console.log('Creating test threat scenarios...');
+            
+            // Clear any existing scenarios first
+            document.getElementById('threat-scenarios-container').innerHTML = '';
+            threatScenarioCounter = 0;
+            
+            // Scenario 1: SQL Injection Attack (High Risk)
+            addThreatScenario();
+            fillScenario1TestData();
+            
+            // Scenario 2: Phishing Attack (Medium Risk)
+            setTimeout(function() {
+                addThreatScenario();
+                fillScenario2TestData();
+            }, 500);
+            
+            setTimeout(function() {
+                updateOverallSummary();
+                console.log('Test data filling completed!');
+            }, 1500);
+        }
+        
+        function fillScenario1TestData() {
+            const scenarioIndex = 0;
+            
+            // Fill scenario header
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioId"]`).value = 'TS-001';
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioName"]`).value = 'SQL Injection Attack';
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].Description"]`).value = 'Attacker exploits insufficient input validation in web application forms to inject malicious SQL commands, potentially gaining unauthorized access to the database and sensitive customer information.';
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].CIAImpactType"]`).value = '7'; // All three
+            
+            // Fill threat vector
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatVector.Name"]`).value = 'Web Form Input Fields';
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatVector.MitreTechnique"]`).value = 'T1190 - Exploit Public-Facing Application';
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ThreatVector.Description"]`).value = 'Malicious SQL code injected through user input fields (login forms, search boxes, contact forms) that are not properly sanitized or parameterized.';
+            
+            // Fill threat actor objective
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.Name"]`).value = 'Database Access & Data Exfiltration';
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.MitreTechnique"]`).value = 'T1041 - Exfiltration Over C2 Channel';
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.Description"]`).value = 'Gain unauthorized access to backend database, extract customer personal information, payment details, and potentially install backdoors for persistent access.';
+            
+            // Add and fill threat actor steps
+            setTimeout(function() {
+                addThreatActorStep(scenarioIndex);
+                fillThreatStep(scenarioIndex, 0, 'Initial Reconnaissance', 'T1595 - Active Scanning', 'Attacker scans the web application to identify input fields and potential injection points using automated tools.');
+                
+                setTimeout(function() {
+                    addThreatActorStep(scenarioIndex);
+                    fillThreatStep(scenarioIndex, 1, 'SQL Injection Execution', 'T1059.004 - Unix Shell', 'Crafts and executes malicious SQL payloads through identified injection points to test database access.');
+                }, 200);
+            }, 300);
+            
+            // Add scenario risks
+            setTimeout(function() {
+                addScenarioRisk(scenarioIndex);
+                fillScenarioRisk(scenarioIndex, 0, {
+                    name: 'Customer Data Breach',
+                    description: 'Unauthorized access to customer personal information, account details, and transaction history stored in the database.',
+                    currentImpact: '4', // High
+                    currentLikelihood: '3', // Medium  
+                    currentExposure: '4', // High
+                    residualImpact: '2', // Low
+                    residualLikelihood: '2', // Low
+                    residualExposure: '2', // Low
+                    treatmentPlan: 'Implement parameterized queries, input validation, and database access controls. Deploy web application firewall.'
+                });
+                
+                setTimeout(function() {
+                    addScenarioRisk(scenarioIndex);
+                    fillScenarioRisk(scenarioIndex, 1, {
+                        name: 'Database Server Compromise',
+                        description: 'Complete compromise of database server allowing administrative access and potential lateral movement to other systems.',
+                        currentImpact: '5', // Very High
+                        currentLikelihood: '2', // Low
+                        currentExposure: '3', // Medium
+                        residualImpact: '3', // Medium
+                        residualLikelihood: '1', // Very Low
+                        residualExposure: '2', // Low
+                        treatmentPlan: 'Implement least privilege database access, network segmentation, and comprehensive database monitoring.'
+                    });
+                }, 300);
+            }, 800);
+        }
+        
+        function fillScenario2TestData() {
+            const scenarioIndex = 1;
+            
+            // Fill scenario header
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioId"]`).value = 'TS-002';
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioName"]`).value = 'Targeted Phishing Attack';
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].Description"]`).value = 'Sophisticated phishing campaign targeting employees with access to the customer portal, using social engineering to steal credentials and gain unauthorized system access.';
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].CIAImpactType"]`).value = '4'; // Confidentiality & Integrity
+            
+            // Fill threat vector
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatVector.Name"]`).value = 'Spear Phishing Email';
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatVector.MitreTechnique"]`).value = 'T1566.001 - Spearphishing Attachment';
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ThreatVector.Description"]`).value = 'Targeted emails containing malicious attachments or links designed to harvest credentials or install malware on employee workstations.';
+            
+            // Fill threat actor objective
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.Name"]`).value = 'Credential Harvesting & System Access';
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.MitreTechnique"]`).value = 'T1078 - Valid Accounts';
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ThreatActorObjective.Description"]`).value = 'Obtain legitimate user credentials to access the customer portal and internal systems, maintaining persistence while avoiding detection.';
+            
+            // Add and fill threat actor steps
+            setTimeout(function() {
+                addThreatActorStep(scenarioIndex);
+                fillThreatStep(scenarioIndex, 0, 'Social Engineering Research', 'T1589 - Gather Victim Identity Information', 'Research target employees through social media and company websites to craft convincing phishing messages.');
+                
+                setTimeout(function() {
+                    addThreatActorStep(scenarioIndex);
+                    fillThreatStep(scenarioIndex, 1, 'Credential Harvesting', 'T1056 - Input Capture', 'Deploy fake login pages or keyloggers to capture user credentials when victims interact with phishing content.');
+                }, 200);
+            }, 300);
+            
+            // Add scenario risks
+            setTimeout(function() {
+                addScenarioRisk(scenarioIndex);
+                fillScenarioRisk(scenarioIndex, 0, {
+                    name: 'Unauthorized Portal Access',
+                    description: 'Compromised employee credentials used to access customer portal and sensitive business information.',
+                    currentImpact: '3', // Medium
+                    currentLikelihood: '3', // Medium
+                    currentExposure: '3', // Medium
+                    residualImpact: '2', // Low
+                    residualLikelihood: '2', // Low
+                    residualExposure: '2', // Low
+                    treatmentPlan: 'Deploy multi-factor authentication, implement security awareness training, and enhance email security filtering.'
+                });
+            }, 800);
+        }
+        
+        function fillThreatStep(scenarioIndex, stepIndex, name, mitreTechnique, description) {
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatActorSteps[${stepIndex}].Name"]`).value = name;
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ThreatActorSteps[${stepIndex}].MitreTechnique"]`).value = mitreTechnique;
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ThreatActorSteps[${stepIndex}].Description"]`).value = description;
+        }
+        
+        function fillScenarioRisk(scenarioIndex, riskIndex, riskData) {
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].RiskName"]`).value = riskData.name;
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].RiskDescription"]`).value = riskData.description;
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].RiskTreatmentPlan"]`).value = riskData.treatmentPlan;
+            
+            // Set treatment status
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentPlanStatus"]`).value = '1'; // In Progress
+            
+            // Fill current risk ratings (dropdowns)
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].CurrentImpact"]`).value = riskData.currentImpact;
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].CurrentLikelihood"]`).value = riskData.currentLikelihood;
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].CurrentExposure"]`).value = riskData.currentExposure;
+            
+            // Fill residual risk ratings (dropdowns)
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].ResidualImpact"]`).value = riskData.residualImpact;
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].ResidualLikelihood"]`).value = riskData.residualLikelihood;
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].ResidualExposure"]`).value = riskData.residualExposure;
+            
+            // Trigger risk calculations
+            setTimeout(function() {
+                calculateRisk(scenarioIndex, riskIndex, 'current');
+                calculateRisk(scenarioIndex, riskIndex, 'residual');
+            }, 100);
+            
+            // Add treatment actions
+            setTimeout(function() {
+                addTreatmentAction(scenarioIndex, riskIndex);
+                fillTreatmentAction(scenarioIndex, riskIndex, 0);
+                
+                setTimeout(function() {
+                    addTreatmentAction(scenarioIndex, riskIndex);
+                    fillTreatmentAction(scenarioIndex, riskIndex, 1);
+                }, 200);
+            }, 300);
+        }
+        
+        function fillTreatmentAction(scenarioIndex, riskIndex, actionIndex) {
+            const actions = [
+                {
+                    description: 'Implement parameterized SQL queries and stored procedures',
+                    assignedTo: 'Sarah Johnson',
+                    team: 'Development Team',
+                    status: '1', // In Progress
+                    priority: '2', // High
+                    effort: '40'
+                },
+                {
+                    description: 'Deploy Web Application Firewall (WAF) with SQL injection detection',
+                    assignedTo: 'Mike Chen',
+                    team: 'Infrastructure Team', 
+                    status: '0', // Not Started
+                    priority: '2', // High
+                    effort: '16'
+                }
+            ];
+            
+            const phishingActions = [
+                {
+                    description: 'Implement multi-factor authentication for all portal access',
+                    assignedTo: 'Alex Rodriguez',
+                    team: 'Security Team',
+                    status: '1', // In Progress  
+                    priority: '3', // Critical
+                    effort: '24'
+                },
+                {
+                    description: 'Deploy advanced email security solution with anti-phishing protection',
+                    assignedTo: 'Lisa Wang',
+                    team: 'IT Operations',
+                    status: '0', // Not Started
+                    priority: '2', // High
+                    effort: '32'
+                }
+            ];
+            
+            const actionData = scenarioIndex === 0 ? actions[actionIndex] : phishingActions[actionIndex];
+            if (!actionData) return;
+            
+            // Set completion date (30-60 days from now)
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + (actionIndex === 0 ? 30 : 45));
+            const dateString = futureDate.toISOString().split('T')[0];
+            
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentActions[${actionIndex}].ActionDescription"]`).value = actionData.description;
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentActions[${actionIndex}].AssignedTo"]`).value = actionData.assignedTo;
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentActions[${actionIndex}].AssignedTeam"]`).value = actionData.team;
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentActions[${actionIndex}].ExpectedCompletionDate"]`).value = dateString;
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentActions[${actionIndex}].Status"]`).value = actionData.status;
+            document.querySelector(`select[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentActions[${actionIndex}].Priority"]`).value = actionData.priority;
+            document.querySelector(`input[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentActions[${actionIndex}].EstimatedEffortHours"]`).value = actionData.effort;
+            
+            const progressNotes = actionIndex === 0 ? 
+                'Code review in progress. Initial parameterized query implementation completed for user authentication module.' :
+                'Procurement process initiated. Evaluating vendor solutions and preparing technical requirements.';
+                
+            document.querySelector(`textarea[name="ThreatScenarios[${scenarioIndex}].ScenarioRisks[${riskIndex}].TreatmentActions[${actionIndex}].ProgressNotes"]`).value = progressNotes;
+            
+            // Update treatment summary after a delay
+            setTimeout(function() {
+                updateTreatmentSummary(scenarioIndex, riskIndex);
+            }, 200);
+        }
+
         // Make functions globally available
         window.addThreatScenario = addThreatScenario;
         window.removeThreatScenario = removeThreatScenario;
@@ -2058,5 +2335,6 @@
         window.removeTreatmentAction = removeTreatmentAction;
         window.updateTreatmentSummary = updateTreatmentSummary;
         window.checkTreatmentPlanSlaCompliance = checkTreatmentPlanSlaCompliance;
+        window.fillTestData = fillTestData; // Make test data function available globally
     </script>
 }
