@@ -143,6 +143,39 @@
                                     <small class="text-muted">Defines risk calculation method and SLA thresholds</small>
                                 </div>
 
+                                <!-- Matrix Settings Display -->
+                                <div id="matrixNotSelected" class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Select a risk matrix above</strong> to view calculation settings and risk level thresholds
+                                </div>
+
+                                <div id="matrixSettingsContent" class="mt-3" style="display: none;">
+                                    <div class="card border-info">
+                                        <div class="card-header bg-info bg-opacity-10">
+                                            <h6 class="mb-0">
+                                                <i class="fas fa-table me-2"></i>
+                                                Matrix Settings: <span id="matrixName">Loading...</span>
+                                            </h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Type:</small>
+                                                    <div id="matrixType">-</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Size:</small>
+                                                    <div id="matrixSize">-</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Default SLA:</small>
+                                                    <div id="matrixSla">-</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
                     </div>
