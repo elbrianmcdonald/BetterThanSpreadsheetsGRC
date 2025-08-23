@@ -48,119 +48,12 @@
         }
         
         <div class="d-flex gap-2">
-            @if (Model.CanApprove && 
-                (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.Unassigned ||
-                 Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || 
-                 Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
-            {
-                <button type="button" class="btn btn-success" onclick="showApproveModal(@Model.Entry.Id)">
-                    <i class="fas fa-check-circle me-1"></i>Approve
-                </button>
-                <button type="button" class="btn btn-warning" onclick="showRejectModal(@Model.Entry.Id)">
-                    <i class="fas fa-times-circle me-1"></i>Reject
-                </button>
-            }
             <a asp-controller="RiskBacklog" asp-action="Index" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i>Back to Backlog
             </a>
         </div>
     </div>
 
-    <!-- Decision Summary for Managers -->
-    @if (Model.CanApprove && (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager))
-    {
-        <div class="alert alert-info mb-4">
-            <h5 class="alert-heading">
-                <i class="fas fa-gavel me-2"></i>Decision Required
-            </h5>
-            <div class="row">
-                <div class="col-md-8">
-                    <p class="mb-2">This @Model.Entry.ActionType.ToString().Replace("_", " ").ToLower() request requires your review and approval.</p>
-                    
-                    <!-- Quick Decision Metrics -->
-                    <div class="row g-2 mb-3">
-                        @if (Model.Entry.RiskRating.HasValue)
-                        {
-                            <div class="col-auto">
-                                <span class="badge bg-@(Model.Entry.RiskRating.Value switch 
-                                { 
-                                    CyberRiskApp.Models.RiskRating.Low => "success",
-                                    CyberRiskApp.Models.RiskRating.Medium => "primary", 
-                                    CyberRiskApp.Models.RiskRating.High => "warning",
-                                    CyberRiskApp.Models.RiskRating.Critical => "danger",
-                                    _ => "secondary"
-                                }) fs-6">@Model.Entry.RiskRating Risk</span>
-                            </div>
-                        }
-                        @if (Model.Entry.Priority != CyberRiskApp.Models.BacklogPriority.Medium)
-                        {
-                            <div class="col-auto">
-                                <span class="badge bg-@(Model.Entry.Priority switch 
-                                { 
-                                    CyberRiskApp.Models.BacklogPriority.Low => "secondary",
-                                    CyberRiskApp.Models.BacklogPriority.Medium => "primary", 
-                                    CyberRiskApp.Models.BacklogPriority.High => "warning",
-                                    CyberRiskApp.Models.BacklogPriority.Critical => "danger",
-                                    _ => "secondary"
-                                }) fs-6">@Model.Entry.Priority Priority</span>
-                            </div>
-                        }
-                        @if (Model.Entry.IsOverdue())
-                        {
-                            <div class="col-auto">
-                                <span class="badge bg-danger fs-6"><i class="fas fa-clock me-1"></i>Overdue</span>
-                            </div>
-                        }
-                        @if (!string.IsNullOrEmpty(Model.Entry.BusinessUnit))
-                        {
-                            <div class="col-auto">
-                                <span class="badge bg-info fs-6"><i class="fas fa-building me-1"></i>@Model.Entry.BusinessUnit</span>
-                            </div>
-                        }
-                    </div>
-                    
-                    <!-- Key Decision Points -->
-                    <div class="decision-points">
-                        <strong>Key Considerations:</strong>
-                        <ul class="mb-0 mt-1">
-                            @if (Model.Entry.Risk != null)
-                            {
-                                <li>Risk Level: <strong>@Model.Entry.Risk.InherentRiskLevel</strong> - affects organizational risk profile</li>
-                                @if (Model.Entry.Risk.LinkedAssessment != null)
-                                {
-                                    <li>Source: <a asp-controller="RiskAssessments" asp-action="Details" asp-route-id="@Model.Entry.Risk.LinkedAssessment.Id" class="text-decoration-none fw-semibold">
-                                        Risk Assessment "@Model.Entry.Risk.LinkedAssessment.Title" <i class="fas fa-external-link-alt ms-1 small"></i>
-                                    </a></li>
-                                }
-                            }
-                            @if (Model.Entry.RiskRating.HasValue && Model.Entry.RiskRating >= CyberRiskApp.Models.RiskRating.High)
-                            {
-                                <li>High/Critical risk requires senior management attention</li>
-                            }
-                            @if (Model.Entry.IsOverdue())
-                            {
-                                <li>SLA deadline exceeded - escalation may be required</li>
-                            }
-                            @if (!string.IsNullOrEmpty(Model.Entry.BusinessOwner))
-                            {
-                                <li>Business Owner: @Model.Entry.BusinessOwner should be consulted</li>
-                            }
-                        </ul>
-                    </div>
-                </div>
-                <div class="col-md-4 text-end">
-                    @if (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
-                    {
-                        <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-outline-warning" onclick="showRejectModal(@Model.Entry.Id)">
-                                <i class="fas fa-times me-1"></i>Reject
-                            </button>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-    }
 
     <!-- Main Content Row -->
     <div class="row">
