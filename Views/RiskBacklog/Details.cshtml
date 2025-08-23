@@ -671,43 +671,6 @@
                             </div>
                         }
 
-                        <!-- Decision Factors -->
-                        <div class="mb-3">
-                            <h6><i class="fas fa-list-check me-2"></i>Review Checklist</h6>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="check1">
-                                <label class="form-check-label small" for="check1">
-                                    Risk level appropriate for organization
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="check2">
-                                <label class="form-check-label small" for="check2">
-                                    Justification is adequate
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="check3">
-                                <label class="form-check-label small" for="check3">
-                                    Business impact considered
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="check4">
-                                <label class="form-check-label small" for="check4">
-                                    Compliance requirements met
-                                </label>
-                            </div>
-                            @if (Model.Entry.Risk?.InherentRiskLevel >= CyberRiskApp.Models.RiskLevel.High)
-                            {
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="check5">
-                                    <label class="form-check-label small" for="check5">
-                                        High/Critical risk escalation considered
-                                    </label>
-                                </div>
-                            }
-                        </div>
 
                         <!-- Quick Decision Actions -->
                         @if (Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
