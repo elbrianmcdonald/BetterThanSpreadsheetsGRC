@@ -149,8 +149,9 @@
                                     <select asp-for="Assessment.Status" class="form-select">
                                         <option value="Draft">Draft</option>
                                         <option value="InProgress">In Progress</option>
-                                        <option value="UnderReview">Under Review</option>
+                                        <option value="ReadyForReview">Ready for Review</option>
                                         <option value="Completed">Completed</option>
+                                        <option value="Approved">Approved</option>
                                     </select>
                                     <span asp-validation-for="Assessment.Status" class="text-danger"></span>
                                 </div>

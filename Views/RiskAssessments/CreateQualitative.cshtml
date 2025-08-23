@@ -107,9 +107,10 @@
                                     <select asp-for="Assessment.Status" class="form-select">
                                         <option value="Draft" selected>Draft</option>
                                         <option value="InProgress">In Progress</option>
+                                        <option value="ReadyForReview">Ready for Review</option>
                                     </select>
                                     <span asp-validation-for="Assessment.Status" class="text-danger"></span>
-                                    <small class="text-muted">New assessments must be completed through the workflow. Use the "Complete" button when ready.</small>
+                                    <small class="text-muted">Set to "Ready for Review" to automatically submit for manager approval and create backlog entry.</small>
                                 </div>
 
                                 <div class="mb-3">
