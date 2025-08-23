@@ -401,15 +401,15 @@ namespace CyberRiskApp.Controllers
                 {
                     Console.WriteLine($"🔄 DEBUGGING: Starting CreateQualitative transaction");
                     
-                        // Set assessment metadata - FORCE Draft status for new assessments
+                        // Set assessment metadata - preserve user-selected status
                         model.Assessment.Assessor = User.GetUserId();
-                        model.Assessment.Status = AssessmentStatus.Draft; // Always Draft for new assessments
+                        // model.Assessment.Status is preserved from user input (don't override)
                         model.Assessment.CreatedAt = DateTime.UtcNow;
                         model.Assessment.UpdatedAt = DateTime.UtcNow;
                         model.Assessment.CreatedBy = User.GetUserId();
                         model.Assessment.UpdatedBy = User.GetUserId();
                         
-                        Console.WriteLine($"🔍 DEBUGGING: Assessment status forced to Draft: {model.Assessment.Status}");
+                        Console.WriteLine($"🔍 DEBUGGING: Assessment status set to: {model.Assessment.Status}");
 
                         createdAssessment = await _assessmentService.CreateAssessmentAsync(model.Assessment);
                     Console.WriteLine($"✅ DEBUGGING: Created assessment {createdAssessment.Id} - '{createdAssessment.Title}'");
@@ -592,9 +592,12 @@ namespace CyberRiskApp.Controllers
                     }
 
                     // ===== CREATE BACKLOG ENTRY FOR READY FOR REVIEW STATUS =====
+                    Console.WriteLine($"🔍 DEBUGGING: Checking if assessment status is ReadyForReview. Status: {createdAssessment.Status} (enum value: {(int)createdAssessment.Status})");
+                    Console.WriteLine($"🔍 DEBUGGING: AssessmentStatus.ReadyForReview enum value: {(int)AssessmentStatus.ReadyForReview}");
+                    
                     if (createdAssessment.Status == AssessmentStatus.ReadyForReview)
                     {
-                        Console.WriteLine("🔄 DEBUGGING: Creating backlog entry for ReadyForReview assessment...");
+                        Console.WriteLine("🔄 DEBUGGING: Status matches! Creating backlog entry for ReadyForReview assessment...");
                         
                         try 
                         {
@@ -616,6 +619,10 @@ namespace CyberRiskApp.Controllers
                             Console.WriteLine($"❌ DEBUGGING: Failed to create backlog entry for ReadyForReview assessment: {backlogEx.Message}");
                             // Don't fail the entire transaction - just log the error
                         }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"ℹ️ DEBUGGING: Assessment status is not ReadyForReview, no backlog entry created.");
                     }
 
                         // Commit the transaction if everything succeeded
