@@ -1067,6 +1067,31 @@ namespace CyberRiskApp.Controllers
             }
         }
 
+        [HttpPost]
+        [Authorize(Policy = "RequireGRCAnalystOrAbove")]
+        public async Task<IActionResult> ApproveEntryJson(int entryId, string comments)
+        {
+            try
+            {
+                var userId = User.GetUserId();
+                
+                if (string.IsNullOrWhiteSpace(comments))
+                {
+                    return Json(new { success = false, error = "Comments are required for approval." });
+                }
+
+                // Approve the entry
+                await _backlogService.ManagerApproveAsync(entryId, comments, userId);
+                
+                return Json(new { success = true, message = "Entry approved successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error approving entry {EntryId} with comments: {Comments}", entryId, comments);
+                return Json(new { success = false, error = "Error approving entry." });
+            }
+        }
+
         // TEMPORARY: Clear all backlog entries for fresh start
         [HttpPost]
         [Authorize(Policy = PolicyConstants.RequireAdminRole)]

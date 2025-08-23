@@ -3,6 +3,8 @@
     ViewData["Title"] = $"Backlog Entry - {Model.Entry.BacklogNumber}";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="container-fluid">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -1233,16 +1235,23 @@
         }
 
         try {
-            const url = `/RiskBacklog/ManagerApprove/${currentEntryId}`;
+            const url = `/RiskBacklog/ApproveEntryJson`;
             console.log('Fetching URL:', url);
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('entryId', currentEntryId);
+            formData.append('comments', justification);
+            formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value || '');
+            
+            console.log('Form data:', {
+                entryId: currentEntryId,
+                comments: justification
+            });
             
             const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
-                },
-                body: JSON.stringify({ comments: justification })
+                body: formData
             });
 
             console.log('Response status:', response.status);
@@ -1250,13 +1259,13 @@
             console.log('Response result:', result);
             
             if (result.success) {
-                toastr.success('Entry approved successfully.');
+                toastr.success(result.message || 'Entry approved successfully.');
                 bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
                 setTimeout(() => {
                     window.location.reload();
                 }, 1500);
             } else {
-                toastr.error(result.message || 'Failed to approve entry.');
+                toastr.error(result.error || 'Failed to approve entry.');
             }
         } catch (error) {
             console.error('Error approving entry:', error);
