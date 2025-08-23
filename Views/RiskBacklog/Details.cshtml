@@ -10,11 +10,19 @@
         // Try to find user in available users collections
         var allUsers = new List<CyberRiskApp.Models.User>();
         if (Model.AvailableAnalysts != null) allUsers.AddRange(Model.AvailableAnalysts);
+        if (Model.AvailableManagers != null) allUsers.AddRange(Model.AvailableManagers);
         
         var user = allUsers.FirstOrDefault(u => u.Id == userId);
         if (user != null)
         {
             return $"{user.FirstName} {user.LastName}".Trim();
+        }
+        
+        // Try to get FullName if available
+        var userWithFullName = allUsers.FirstOrDefault(u => u.Id == userId && !string.IsNullOrEmpty(u.FullName));
+        if (userWithFullName != null)
+        {
+            return userWithFullName.FullName;
         }
         
         // Fallback to username portion of email if available
@@ -23,7 +31,13 @@
             return userId.Split('@')[0];
         }
         
-        return userId; // Last resort - return the ID as-is
+        // Last resort - if it's a GUID, show as "User (GUID shortened)"
+        if (Guid.TryParse(userId, out _))
+        {
+            return $"User ({userId.Substring(0, 8)}...)";
+        }
+        
+        return userId;
     }
 }
 
@@ -65,8 +79,8 @@
                     <strong>Entry.Status:</strong> @Model.Entry.Status (@((int)Model.Entry.Status))<br/>
                     <strong>User Roles:</strong> @string.Join(", ", User.Claims.Where(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role).Select(c => c.Value))<br/>
                     <strong>User ID:</strong> @User.Identity.Name<br/>
-                    <strong>AssignedToAnalyst:</strong> @(Model.Entry.AssignedToAnalyst ?? "null")<br/>
-                    <strong>AssignedToManager:</strong> @(Model.Entry.AssignedToManager ?? "null")<br/>
+                    <strong>AssignedToAnalyst:</strong> @(string.IsNullOrEmpty(Model.Entry.AssignedToAnalyst) ? "null" : $"{GetUserDisplayName(Model.Entry.AssignedToAnalyst)} ({Model.Entry.AssignedToAnalyst})")<br/>
+                    <strong>AssignedToManager:</strong> @(string.IsNullOrEmpty(Model.Entry.AssignedToManager) ? "null" : $"{GetUserDisplayName(Model.Entry.AssignedToManager)} ({Model.Entry.AssignedToManager})")<br/>
                     <strong>IsITUser:</strong> @(User.IsInRole("ITUser"))<br/>
                     <strong>Status Check:</strong> @(Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.Unassigned || Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToAnalyst || Model.Entry.Status == CyberRiskApp.Models.RiskBacklogStatus.AssignedToManager)
                 </small>
@@ -134,9 +148,7 @@
                                 <div>
                                     @{
                                         var currentAssignee = Model.Entry.GetCurrentAssignee();
-                                        var assigneeName = Model.AvailableAnalysts.FirstOrDefault(a => a.Id == currentAssignee)?.FullName ??
-                                                          Model.AvailableManagers.FirstOrDefault(m => m.Id == currentAssignee)?.FullName ??
-                                                          currentAssignee;
+                                        var assigneeName = GetUserDisplayName(currentAssignee);
                                     }
                                     @if (!string.IsNullOrEmpty(assigneeName) && assigneeName != "Unassigned")
                                     {
@@ -165,12 +177,7 @@
                             <div class="mb-3">
                                 <label class="form-label text-muted">Requested By</label>
                                 <div>
-                                    @{
-                                        var requesterName = Model.AvailableAnalysts.FirstOrDefault(a => a.Id == Model.Entry.RequesterUserId)?.FullName ??
-                                                          Model.AvailableManagers.FirstOrDefault(m => m.Id == Model.Entry.RequesterUserId)?.FullName ??
-                                                          Model.Entry.RequesterUserId;
-                                    }
-                                    <span class="fw-semibold">@requesterName</span>
+                                    <span class="fw-semibold">@GetUserDisplayName(Model.Entry.RequesterUserId)</span>
                                 </div>
                                 <small class="text-muted">@Model.Entry.CreatedAt.ToString("MMM dd, yyyy 'at' HH:mm")</small>
                             </div>
