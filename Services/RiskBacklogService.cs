@@ -363,6 +363,21 @@ namespace CyberRiskApp.Services
                     var createdRisks = await CreateRisksFromAssessmentApprovalAsync(entry, managerId);
                     _logger.LogInformation("Created {RiskCount} risks from approved assessment backlog entry {BacklogNumber}", 
                         createdRisks.Count, entry.BacklogNumber);
+                    
+                    // Link the backlog entry to the first created risk to avoid orphaned entries
+                    if (createdRisks.Any())
+                    {
+                        var primaryRisk = createdRisks.First();
+                        entry.RiskId = primaryRisk.Id;
+                        entry.Risk = primaryRisk;
+                        _logger.LogInformation("Linked backlog entry {BacklogNumber} to primary risk {RiskNumber}", 
+                            entry.BacklogNumber, primaryRisk.RiskNumber);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No risks were created from assessment approval for backlog entry {BacklogNumber}", 
+                            entry.BacklogNumber);
+                    }
                 }
                 catch (Exception ex)
                 {
