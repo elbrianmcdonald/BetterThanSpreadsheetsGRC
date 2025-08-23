@@ -1251,15 +1251,30 @@
             console.log('Response result:', result);
             if (result.success) {
                 console.log('Success - showing toastr message');
-                alert('SUCCESS: Entry approved successfully!'); // Fallback visual confirmation
+                alert('SUCCESS: Entry approved successfully! Click OK to go back to backlog.'); // Fallback visual confirmation
                 toastr.success(result.message || 'Entry approved successfully.');
                 console.log('Hiding modal');
-                bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
-                console.log('Setting redirect timeout');
-                setTimeout(() => {
-                    console.log('Redirecting to /RiskBacklog');
+                
+                try {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('approveModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                } catch (modalError) {
+                    console.error('Modal hide failed:', modalError);
+                }
+                
+                console.log('Immediate redirect to /RiskBacklog');
+                try {
                     window.location.href = '/RiskBacklog';
-                }, 1500);
+                } catch (redirectError) {
+                    console.error('Immediate redirect failed:', redirectError);
+                    // Try alternative redirect methods
+                    setTimeout(() => {
+                        console.log('Trying delayed redirect');
+                        window.location.replace('/RiskBacklog');
+                    }, 500);
+                }
             } else {
                 console.log('Error response:', result.error);
                 alert('ERROR: ' + (result.error || 'Failed to approve entry.')); // Fallback error alert
