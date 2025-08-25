@@ -132,37 +132,47 @@ namespace CyberRiskApp.Models
             }
         }
 
-        // Methods for risk calculation
-        public void CalculateCurrentRisk()
+        // Methods for risk calculation using RiskMatrix - Updated to use configurable thresholds
+        public void CalculateCurrentRisk(RiskMatrix? riskMatrix = null)
         {
             if (CurrentImpact.HasValue && CurrentLikelihood.HasValue && CurrentExposure.HasValue)
             {
                 CurrentRiskScore = (CurrentLikelihood.Value * CurrentImpact.Value) * CurrentExposure.Value;
-                CurrentRiskLevel = GetRiskLevelFromScore(CurrentRiskScore.Value);
+                CurrentRiskLevel = GetRiskLevelFromScore(CurrentRiskScore.Value, riskMatrix);
+                IsCurrentRiskAboveAppetite = riskMatrix != null ? !riskMatrix.IsWithinRiskAppetite(CurrentRiskScore.Value) : CurrentRiskScore.Value > 6.0m;
             }
             else
             {
                 CurrentRiskScore = null;
                 CurrentRiskLevel = "Unknown";
+                IsCurrentRiskAboveAppetite = false;
             }
         }
 
-        public void CalculateResidualRisk()
+        public void CalculateResidualRisk(RiskMatrix? riskMatrix = null)
         {
             if (ResidualImpact.HasValue && ResidualLikelihood.HasValue && ResidualExposure.HasValue)
             {
                 ResidualRiskScore = (ResidualLikelihood.Value * ResidualImpact.Value) * ResidualExposure.Value;
-                ResidualRiskLevel = GetRiskLevelFromScore(ResidualRiskScore.Value);
+                ResidualRiskLevel = GetRiskLevelFromScore(ResidualRiskScore.Value, riskMatrix);
+                IsResidualRiskAboveAppetite = riskMatrix != null ? !riskMatrix.IsWithinRiskAppetite(ResidualRiskScore.Value) : ResidualRiskScore.Value > 6.0m;
             }
             else
             {
                 ResidualRiskScore = null;
                 ResidualRiskLevel = "Unknown";
+                IsResidualRiskAboveAppetite = false;
             }
         }
 
-        private string GetRiskLevelFromScore(decimal score)
+        private string GetRiskLevelFromScore(decimal score, RiskMatrix? riskMatrix = null)
         {
+            if (riskMatrix != null)
+            {
+                return riskMatrix.GetRiskLevel(score).ToString();
+            }
+            
+            // Fallback to hardcoded values if no risk matrix available
             return score switch
             {
                 >= 16 => "Critical",
@@ -172,8 +182,14 @@ namespace CyberRiskApp.Models
             };
         }
 
-        private int GetSlaHoursForRiskLevel(string riskLevel)
+        private int GetSlaHoursForRiskLevel(string riskLevel, RiskMatrix? riskMatrix = null)
         {
+            if (riskMatrix != null && Enum.TryParse<RiskLevel>(riskLevel, out var level))
+            {
+                return riskMatrix.GetRemediationSlaHoursForRiskLevel(level);
+            }
+
+            // Fallback to hardcoded values if no risk matrix available
             return riskLevel?.ToLower() switch
             {
                 "critical" => 4,    // 4 hours

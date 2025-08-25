@@ -804,7 +804,52 @@ namespace CyberRiskApp.Controllers
                     {
                         Id = ts.ThreatVector?.Id ?? 0,
                         Name = ts.ThreatVector?.Name ?? "",
-                        Description = ts.ThreatVector?.Description ?? ""
+                        Description = ts.ThreatVector?.Description ?? "",
+                        
+                        // Convert controls with null checks
+                        CurrentProtectiveControls = ts.ThreatVector?.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Protective && c.ThreatControl.ControlCategory == ControlCategory.Current)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        CurrentDetectiveControls = ts.ThreatVector?.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Detective && c.ThreatControl.ControlCategory == ControlCategory.Current)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        NeededProtectiveControls = ts.ThreatVector?.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Protective && c.ThreatControl.ControlCategory == ControlCategory.Needed)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        NeededDetectiveControls = ts.ThreatVector?.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Detective && c.ThreatControl.ControlCategory == ControlCategory.Needed)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>()
                     },
                     ThreatActorSteps = ts.ThreatActorSteps?.Select(step => new ThreatActorStepViewModel
                     {
@@ -812,16 +857,137 @@ namespace CyberRiskApp.Controllers
                         Name = step.Name ?? "",
                         Description = step.Description ?? "",
                         MitreTechnique = step.MitreTechnique ?? "",
-                        StepOrder = step.StepOrder
-                        // Add other properties as needed
+                        StepOrder = step.StepOrder,
+                        
+                        // Convert controls with null checks
+                        CurrentProtectiveControls = step.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Protective && c.ThreatControl.ControlCategory == ControlCategory.Current)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        CurrentDetectiveControls = step.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Detective && c.ThreatControl.ControlCategory == ControlCategory.Current)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        NeededProtectiveControls = step.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Protective && c.ThreatControl.ControlCategory == ControlCategory.Needed)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        NeededDetectiveControls = step.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Detective && c.ThreatControl.ControlCategory == ControlCategory.Needed)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>()
                     }).ToList() ?? new List<ThreatActorStepViewModel>(),
-                    // Convert associated risks
-                    ScenarioRisks = ts.IdentifiedRisks?.Select(risk => new ScenarioRiskViewModel
+                    // Convert threat actor objective
+                    ThreatActorObjective = ts.ThreatActorObjective != null ? new ThreatActorObjectiveViewModel
+                    {
+                        Id = ts.ThreatActorObjective.Id,
+                        Name = ts.ThreatActorObjective.Name ?? "",
+                        Description = ts.ThreatActorObjective.Description ?? "",
+                        MitreTechnique = ts.ThreatActorObjective.MitreTechnique ?? "",
+                        
+                        // Convert controls with null checks
+                        CurrentProtectiveControls = ts.ThreatActorObjective.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Protective && c.ThreatControl.ControlCategory == ControlCategory.Current)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        CurrentDetectiveControls = ts.ThreatActorObjective.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Detective && c.ThreatControl.ControlCategory == ControlCategory.Current)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        NeededProtectiveControls = ts.ThreatActorObjective.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Protective && c.ThreatControl.ControlCategory == ControlCategory.Needed)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>(),
+                            
+                        NeededDetectiveControls = ts.ThreatActorObjective.Controls?
+                            .Where(c => c.ThreatControl != null && c.ThreatControl.ControlType == ControlType.Detective && c.ThreatControl.ControlCategory == ControlCategory.Needed)
+                            .Select(c => new ControlSelectionViewModel
+                            {
+                                Id = c.ThreatControl.Id,
+                                ControlName = c.ThreatControl.ControlName,
+                                ControlDescription = c.ThreatControl.ControlDescription,
+                                ImplementationStatus = c.ImplementationStatus,
+                                IsSelected = true
+                            }).ToList() ?? new List<ControlSelectionViewModel>()
+                    } : new ThreatActorObjectiveViewModel(),
+                    // Convert associated risks with ALL properties
+                    ScenarioRisks = ts.ScenarioRisks?.Select(risk => new ScenarioRiskViewModel
                     {
                         Id = risk.Id,
-                        RiskName = risk.Title ?? "",
-                        RiskDescription = risk.Description ?? "",
-                        // Add other risk properties as needed
+                        RiskName = risk.RiskName ?? "",
+                        RiskDescription = risk.RiskDescription ?? "",
+                        
+                        // Current Risk Ratings
+                        CurrentImpact = risk.CurrentImpact,
+                        CurrentLikelihood = risk.CurrentLikelihood,
+                        CurrentExposure = risk.CurrentExposure,
+                        CurrentRiskScore = risk.CurrentRiskScore,
+                        CurrentRiskLevel = risk.CurrentRiskLevel ?? "Unknown",
+                        IsCurrentRiskAboveAppetite = risk.IsCurrentRiskAboveAppetite,
+                        
+                        // Residual Risk Ratings
+                        ResidualImpact = risk.ResidualImpact,
+                        ResidualLikelihood = risk.ResidualLikelihood,
+                        ResidualExposure = risk.ResidualExposure,
+                        ResidualRiskScore = risk.ResidualRiskScore,
+                        ResidualRiskLevel = risk.ResidualRiskLevel ?? "Unknown",
+                        IsResidualRiskAboveAppetite = risk.IsResidualRiskAboveAppetite,
+                        
+                        // Risk Treatment
+                        RiskTreatmentPlan = risk.RiskTreatmentPlan ?? "",
+                        ExpectedCompletionDate = risk.ExpectedCompletionDate,
+                        TreatmentPlanStatus = risk.TreatmentPlanStatus,
+                        
+                        // Computed Properties
+                        IsTreatmentOverdue = risk.IsTreatmentOverdue,
+                        IsTreatmentPastSla = risk.IsTreatmentPastSla
                     }).ToList() ?? new List<ScenarioRiskViewModel>()
                 }).ToList() ?? new List<ComprehensiveThreatScenario>(),
                 
@@ -842,20 +1008,146 @@ namespace CyberRiskApp.Controllers
             if (id != model.Assessment.Id)
                 return NotFound();
 
+            // Clean up ONLY completely empty threat scenarios before validation
+            if (model.ThreatScenarios != null)
+            {
+                model.ThreatScenarios = model.ThreatScenarios
+                    .Where(ts => 
+                        !string.IsNullOrWhiteSpace(ts.ScenarioName) || 
+                        !string.IsNullOrWhiteSpace(ts.Description) ||
+                        !string.IsNullOrWhiteSpace(ts.ScenarioId) ||
+                        (ts.ThreatVector != null && !string.IsNullOrWhiteSpace(ts.ThreatVector.Name)) ||
+                        (ts.ThreatActorSteps != null && ts.ThreatActorSteps.Any(s => !string.IsNullOrWhiteSpace(s.Name))) ||
+                        (ts.ScenarioRisks != null && ts.ScenarioRisks.Any(r => !string.IsNullOrWhiteSpace(r.RiskName))))
+                    .ToList();
+                    
+                // Clean up threat actor steps within scenarios
+                foreach (var scenario in model.ThreatScenarios)
+                {
+                    // Only clean up completely empty items - preserve existing data
+                    if (scenario.ThreatActorSteps != null)
+                    {
+                        scenario.ThreatActorSteps = scenario.ThreatActorSteps
+                            .Where(step => 
+                                !string.IsNullOrWhiteSpace(step.Name) || 
+                                !string.IsNullOrWhiteSpace(step.Description) ||
+                                !string.IsNullOrWhiteSpace(step.MitreTechnique))
+                            .ToList();
+                    }
+                    
+                    // Clean up scenario risks - keep if any field has data
+                    if (scenario.ScenarioRisks != null)
+                    {
+                        scenario.ScenarioRisks = scenario.ScenarioRisks
+                            .Where(risk => 
+                                !string.IsNullOrWhiteSpace(risk.RiskName) || 
+                                !string.IsNullOrWhiteSpace(risk.RiskDescription) ||
+                                !string.IsNullOrWhiteSpace(risk.RiskTreatmentPlan))
+                            .ToList();
+                    }
+                    
+                    // Only remove threat vector if ALL key fields are empty
+                    if (scenario.ThreatVector != null && 
+                        string.IsNullOrWhiteSpace(scenario.ThreatVector.Name) && 
+                        string.IsNullOrWhiteSpace(scenario.ThreatVector.Description) &&
+                        string.IsNullOrWhiteSpace(scenario.ThreatVector.MitreTechnique))
+                    {
+                        scenario.ThreatVector = null;
+                    }
+                }
+            }
+
+            // Ensure audit fields are set before revalidation
+            if (string.IsNullOrEmpty(model.Assessment.CreatedBy))
+            {
+                model.Assessment.CreatedBy = User.GetUserId();
+            }
+            if (string.IsNullOrEmpty(model.Assessment.UpdatedBy))
+            {
+                model.Assessment.UpdatedBy = User.GetUserId();
+            }
+            if (model.Assessment.CreatedAt == DateTime.MinValue)
+            {
+                model.Assessment.CreatedAt = DateTime.UtcNow;
+            }
+            if (model.Assessment.UpdatedAt == DateTime.MinValue)
+            {
+                model.Assessment.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Clear ModelState and validate only the core assessment fields, ignoring optional nested objects
+            ModelState.Clear();
+            
+            // Manually validate only required Assessment fields
+            if (string.IsNullOrWhiteSpace(model.Assessment.Title))
+                ModelState.AddModelError("Assessment.Title", "The Title field is required.");
+            if (string.IsNullOrWhiteSpace(model.Assessment.Asset))
+                ModelState.AddModelError("Assessment.Asset", "The Asset field is required.");
+
+            // Validate only populated threat scenarios (ignore empty ones)
+            if (model.ThreatScenarios != null)
+            {
+                for (int i = 0; i < model.ThreatScenarios.Count; i++)
+                {
+                    var scenario = model.ThreatScenarios[i];
+                    var hasScenarioData = !string.IsNullOrWhiteSpace(scenario.ScenarioName) || 
+                                         !string.IsNullOrWhiteSpace(scenario.Description) ||
+                                         scenario.ThreatActorSteps?.Any(s => !string.IsNullOrWhiteSpace(s.Name)) == true;
+                    
+                    if (hasScenarioData)
+                    {
+                        // Only validate if scenario has some data
+                        if (string.IsNullOrWhiteSpace(scenario.ScenarioName))
+                            ModelState.AddModelError($"ThreatScenarios[{i}].ScenarioName", "Scenario name is required when scenario data is provided.");
+                        if (string.IsNullOrWhiteSpace(scenario.Description))
+                            ModelState.AddModelError($"ThreatScenarios[{i}].Description", "Description is required when scenario data is provided.");
+                    }
+                }
+            }
+
             if (ModelState.IsValid)
             {
                 try
                 {
+                    Console.WriteLine($"DEBUG: Starting update for assessment ID: {id}");
+                    
+                    // Check if model and Assessment are not null
+                    if (model?.Assessment == null)
+                    {
+                        Console.WriteLine("ERROR: model.Assessment is null");
+                        return BadRequest("Assessment data is null");
+                    }
+
+                    Console.WriteLine($"DEBUG: model.Assessment.Id = {model.Assessment.Id}");
+                    
                     // Preserve original metadata
                     var originalAssessment = await _assessmentService.GetAssessmentByIdAsync(id);
                     if (originalAssessment == null)
+                    {
+                        Console.WriteLine($"ERROR: Original assessment not found for ID: {id}");
                         return NotFound();
+                    }
+
+                    Console.WriteLine($"DEBUG: Original assessment found: {originalAssessment.Title}");
+
+                    // Check User context
+                    var userId = User.GetUserId();
+                    if (string.IsNullOrEmpty(userId))
+                    {
+                        Console.WriteLine("ERROR: User.GetUserId() returned null or empty");
+                        return BadRequest("User ID not available");
+                    }
+
+                    Console.WriteLine($"DEBUG: User ID: {userId}");
 
                     // Update fields but preserve metadata
                     model.Assessment.CreatedAt = originalAssessment.CreatedAt;
+                    model.Assessment.CreatedBy = originalAssessment.CreatedBy; // Preserve original creator
                     model.Assessment.UpdatedAt = DateTime.UtcNow;
+                    model.Assessment.UpdatedBy = userId; // Set current user as updater
                     model.Assessment.Assessor = originalAssessment.Assessor; // Preserve original assessor
 
+                    Console.WriteLine($"DEBUG: About to call UpdateAssessmentAsync for ID: {model.Assessment.Id}");
                     await _assessmentService.UpdateAssessmentAsync(model.Assessment);
 
 
@@ -1023,7 +1315,26 @@ namespace CyberRiskApp.Controllers
                     }
 
                     // ===== COMPREHENSIVE THREAT SCENARIO PROCESSING =====
-                    await ProcessComprehensiveThreatScenarios(model.ThreatScenarios, id);
+                    Console.WriteLine($"DEBUG: About to process threat scenarios. Count: {model.ThreatScenarios?.Count ?? -1}");
+                    if (model.ThreatScenarios != null)
+                    {
+                        for (int i = 0; i < model.ThreatScenarios.Count; i++)
+                        {
+                            var scenario = model.ThreatScenarios[i];
+                            Console.WriteLine($"DEBUG: Scenario {i}: Name='{scenario?.ScenarioName}', Desc='{scenario?.Description?.Substring(0, Math.Min(50, scenario.Description?.Length ?? 0))}...'");
+                        }
+                    }
+                    try
+                    {
+                        await ProcessComprehensiveThreatScenarios(model.ThreatScenarios, id);
+                        Console.WriteLine("DEBUG: ProcessComprehensiveThreatScenarios completed successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"ERROR in ProcessComprehensiveThreatScenarios: {ex.Message}");
+                        Console.WriteLine($"ERROR StackTrace: {ex.StackTrace}");
+                        throw; // Re-throw to maintain original behavior
+                    }
 
                     // ===== CREATE BACKLOG ENTRY IF STATUS CHANGED TO READY FOR REVIEW =====
                     var statusChanged = originalAssessment.Status != model.Assessment.Status;
@@ -1058,14 +1369,18 @@ namespace CyberRiskApp.Controllers
                     }
                     else
                     {
-                        TempData["Success"] = "Risk assessment updated successfully! Any new identified risks have been submitted to the backlog for GRC review and approval.";
+                        TempData["Success"] = "Risk assessment updated successfully!";
                     }
 
                     return RedirectToAction(nameof(Details), new { id = model.Assessment.Id });
                 }
                 catch (Exception ex)
                 {
-                    TempData["Error"] = $"Error updating assessment: {ex.Message}";
+                    var innerMessage = ex.InnerException?.Message ?? "No inner exception";
+                    var fullMessage = $"Error updating assessment: {ex.Message}. Inner: {innerMessage}";
+                    Console.WriteLine($"🔧 Update Error: {fullMessage}");
+                    Console.WriteLine($"🔧 Stack Trace: {ex.StackTrace}");
+                    TempData["Error"] = fullMessage;
                 }
             }
 
@@ -1757,161 +2072,213 @@ namespace CyberRiskApp.Controllers
                 return;
             }
 
+            // Get the assessment with its risk matrix for proper risk calculations
+            var assessment = await _context.RiskAssessments
+                .Include(ra => ra.RiskMatrix)
+                .FirstOrDefaultAsync(ra => ra.Id == assessmentId);
+            
+            var riskMatrix = assessment?.RiskMatrix;
+            Console.WriteLine($"🔍 DEBUGGING: Assessment RiskMatrix: {riskMatrix?.Name ?? "None"}");
+
+            // Get existing threat scenarios for this assessment
+            var existingScenarios = await _context.ThreatScenarios
+                .Where(ts => ts.RiskAssessmentId == assessmentId)
+                .Include(ts => ts.ThreatVector)
+                .Include(ts => ts.ThreatActorSteps)
+                .Include(ts => ts.ThreatActorObjective)
+                .Include(ts => ts.ScenarioRisks)
+                .ToListAsync();
+
+            Console.WriteLine($"🔍 DEBUGGING: Found {existingScenarios.Count} existing scenarios");
+
             foreach (var scenarioViewModel in threatScenarios.Where(s => !string.IsNullOrEmpty(s.ScenarioName)))
             {
-                Console.WriteLine($"🔍 DEBUGGING: Processing threat scenario: {scenarioViewModel.ScenarioName}, CIA Impact: {scenarioViewModel.CIAImpactType}");
+                Console.WriteLine($"🔍 DEBUGGING: Processing threat scenario: {scenarioViewModel.ScenarioName}");
+                Console.WriteLine($"🔍 DEBUGGING: scenarioViewModel.Id = {scenarioViewModel.Id}");
+                Console.WriteLine($"🔍 DEBUGGING: Available existing scenario IDs: [{string.Join(", ", existingScenarios.Select(es => es.Id))}]");
                 
-                // Create the main threat scenario record
-                var threatScenario = new ThreatScenario
-                {
-                    RiskAssessmentId = assessmentId,
-                    ScenarioId = scenarioViewModel.ScenarioId,
-                    ScenarioName = scenarioViewModel.ScenarioName,
-                    Description = scenarioViewModel.Description,
-                    CIAImpactType = scenarioViewModel.CIAImpactType,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow,
-                    CreatedBy = User.GetUserId(),
-                    UpdatedBy = User.GetUserId()
-                };
-
-                Console.WriteLine($"🔍 DEBUGGING: Created ThreatScenario object, RowVersion = {(threatScenario.RowVersion == null ? "NULL" : "NOT NULL")}");
+                // Find existing scenario by ID or create new one
+                var threatScenario = existingScenarios.FirstOrDefault(ts => ts.Id == scenarioViewModel.Id);
                 
-                _context.ThreatScenarios.Add(threatScenario);
-                Console.WriteLine($"🔍 DEBUGGING: Added ThreatScenario to context, about to save...");
-                
-                try
+                if (threatScenario == null)
                 {
-                    await _context.SaveChangesAsync(); // Save to get the ID
-                    Console.WriteLine($"🔍 DEBUGGING: ThreatScenario saved successfully with ID: {threatScenario.Id}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"❌ DEBUGGING: Failed to save ThreatScenario: {ex.Message}");
-                    throw;
-                }
-
-                // Process Threat Vector
-                if (!string.IsNullOrEmpty(scenarioViewModel.ThreatVector.Name))
-                {
-                    Console.WriteLine($"🔍 DEBUGGING: Processing threat vector: {scenarioViewModel.ThreatVector.Name}");
-                    
-                    var threatVector = new ThreatVector
+                    Console.WriteLine($"🔍 DEBUGGING: Creating new threat scenario");
+                    // Create new threat scenario
+                    threatScenario = new ThreatScenario
                     {
-                        ThreatScenarioId = threatScenario.Id,
-                        Name = scenarioViewModel.ThreatVector.Name,
-                        Description = scenarioViewModel.ThreatVector.Description,
-                        MitreTechnique = scenarioViewModel.ThreatVector.MitreTechnique,
+                        RiskAssessmentId = assessmentId,
                         CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        CreatedBy = User.GetUserId(),
-                        UpdatedBy = User.GetUserId()
+                        CreatedBy = User.GetUserId()
                     };
-                    
-                    Console.WriteLine($"🔍 DEBUGGING: Created ThreatVector object, RowVersion = {(threatVector.RowVersion == null ? "NULL" : "NOT NULL")}");
-                    
-                    _context.ThreatVectors.Add(threatVector);
-                    Console.WriteLine($"🔍 DEBUGGING: Added ThreatVector to context, about to save...");
-                    
-                    try
-                    {
-                        await _context.SaveChangesAsync();
-                        Console.WriteLine($"🔍 DEBUGGING: ThreatVector saved successfully with ID: {threatVector.Id}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"❌ DEBUGGING: Failed to save ThreatVector: {ex.Message}");
-                        Console.WriteLine($"❌ DEBUGGING: ThreatVector details - ThreatScenarioId: {threatVector.ThreatScenarioId}, Name: {threatVector.Name}");
-                        throw;
-                    }
-
-                    // Process controls for threat vector
-                    await ProcessThreatVectorControls(threatVector.Id, scenarioViewModel.ThreatVector);
+                    _context.ThreatScenarios.Add(threatScenario);
+                }
+                else
+                {
+                    Console.WriteLine($"🔍 DEBUGGING: Updating existing threat scenario ID: {threatScenario.Id}");
                 }
 
-                // Process Threat Actor Steps
-                for (int stepIndex = 0; stepIndex < scenarioViewModel.ThreatActorSteps.Count; stepIndex++)
+                // Update fields
+                threatScenario.ScenarioId = scenarioViewModel.ScenarioId;
+                threatScenario.ScenarioName = scenarioViewModel.ScenarioName;
+                threatScenario.Description = scenarioViewModel.Description;
+                threatScenario.CIAImpactType = scenarioViewModel.CIAImpactType;
+                threatScenario.UpdatedAt = DateTime.UtcNow;
+                threatScenario.UpdatedBy = User.GetUserId();
+
+                // Save changes for this scenario (need ID for related entities)
+                await _context.SaveChangesAsync();
+
+                // Process Threat Vector - Update or Create
+                if (scenarioViewModel.ThreatVector != null && !string.IsNullOrEmpty(scenarioViewModel.ThreatVector.Name))
                 {
-                    var stepViewModel = scenarioViewModel.ThreatActorSteps[stepIndex];
-                    if (!string.IsNullOrEmpty(stepViewModel.Name))
+                    var existingThreatVector = threatScenario.ThreatVector;
+                    
+                    if (existingThreatVector == null)
                     {
-                        var threatStep = new ThreatActorStep
+                        // Create new threat vector
+                        var threatVector = new ThreatVector
                         {
                             ThreatScenarioId = threatScenario.Id,
-                            Name = stepViewModel.Name,
-                            Description = stepViewModel.Description,
-                            MitreTechnique = stepViewModel.MitreTechnique,
-                            StepOrder = stepIndex + 1,
                             CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow,
-                            CreatedBy = User.GetUserId(),
-                            UpdatedBy = User.GetUserId()
+                            CreatedBy = User.GetUserId()
                         };
-                        _context.ThreatActorSteps.Add(threatStep);
-                        await _context.SaveChangesAsync();
-
-                        // Process controls for threat actor step
-                        await ProcessThreatActorStepControls(threatStep.Id, stepViewModel);
+                        _context.ThreatVectors.Add(threatVector);
+                        existingThreatVector = threatVector;
                     }
+                    
+                    // Update fields
+                    existingThreatVector.Name = scenarioViewModel.ThreatVector.Name;
+                    existingThreatVector.Description = scenarioViewModel.ThreatVector.Description;
+                    existingThreatVector.MitreTechnique = string.IsNullOrWhiteSpace(scenarioViewModel.ThreatVector.MitreTechnique) ? "N/A" : scenarioViewModel.ThreatVector.MitreTechnique;
+                    existingThreatVector.UpdatedAt = DateTime.UtcNow;
+                    existingThreatVector.UpdatedBy = User.GetUserId();
+                    
+                    // Save changes
+                    await _context.SaveChangesAsync();
+
+                    // Process controls for threat vector
+                    await ProcessThreatVectorControls(existingThreatVector.Id, scenarioViewModel.ThreatVector);
                 }
 
-                // Process Threat Actor Objective
-                if (!string.IsNullOrEmpty(scenarioViewModel.ThreatActorObjective.Name))
+                // Process Threat Actor Steps - Update or Create
+                if (scenarioViewModel.ThreatActorSteps != null)
                 {
-                    var threatObjective = new ThreatActorObjective
+                    for (int stepIndex = 0; stepIndex < scenarioViewModel.ThreatActorSteps.Count; stepIndex++)
                     {
-                        ThreatScenarioId = threatScenario.Id,
-                        Name = scenarioViewModel.ThreatActorObjective.Name,
-                        Description = scenarioViewModel.ThreatActorObjective.Description,
-                        MitreTechnique = scenarioViewModel.ThreatActorObjective.MitreTechnique,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        CreatedBy = User.GetUserId(),
-                        UpdatedBy = User.GetUserId()
-                    };
-                    _context.ThreatActorObjectives.Add(threatObjective);
+                        var stepViewModel = scenarioViewModel.ThreatActorSteps[stepIndex];
+                        if (!string.IsNullOrEmpty(stepViewModel.Name))
+                        {
+                            // Find existing step or create new one
+                            var existingStep = threatScenario.ThreatActorSteps?.FirstOrDefault(s => s.Id == stepViewModel.Id);
+                            
+                            if (existingStep == null)
+                            {
+                                // Create new step
+                                existingStep = new ThreatActorStep
+                                {
+                                    ThreatScenarioId = threatScenario.Id,
+                                    CreatedAt = DateTime.UtcNow,
+                                    CreatedBy = User.GetUserId()
+                                };
+                                _context.ThreatActorSteps.Add(existingStep);
+                            }
+                            
+                            // Update fields
+                            existingStep.Name = stepViewModel.Name;
+                            existingStep.Description = stepViewModel.Description;
+                            existingStep.MitreTechnique = string.IsNullOrWhiteSpace(stepViewModel.MitreTechnique) ? "N/A" : stepViewModel.MitreTechnique;
+                            existingStep.StepOrder = stepIndex + 1;
+                            existingStep.UpdatedAt = DateTime.UtcNow;
+                            existingStep.UpdatedBy = User.GetUserId();
+                            
+                            await _context.SaveChangesAsync();
+
+                            // Process controls for threat actor step
+                            await ProcessThreatActorStepControls(existingStep.Id, stepViewModel);
+                    }
+                }
+                }
+
+                // Process Threat Actor Objective - Update or Create
+                if (scenarioViewModel.ThreatActorObjective != null && !string.IsNullOrEmpty(scenarioViewModel.ThreatActorObjective.Name))
+                {
+                    // Find existing objective or create new one
+                    var existingObjective = threatScenario.ThreatActorObjective;
+                    
+                    if (existingObjective == null)
+                    {
+                        // Create new objective
+                        existingObjective = new ThreatActorObjective
+                        {
+                            ThreatScenarioId = threatScenario.Id,
+                            CreatedAt = DateTime.UtcNow,
+                            CreatedBy = User.GetUserId()
+                        };
+                        _context.ThreatActorObjectives.Add(existingObjective);
+                    }
+                    
+                    // Update fields
+                    existingObjective.Name = scenarioViewModel.ThreatActorObjective.Name;
+                    existingObjective.Description = scenarioViewModel.ThreatActorObjective.Description;
+                    existingObjective.MitreTechnique = string.IsNullOrWhiteSpace(scenarioViewModel.ThreatActorObjective.MitreTechnique) ? "N/A" : scenarioViewModel.ThreatActorObjective.MitreTechnique;
+                    existingObjective.UpdatedAt = DateTime.UtcNow;
+                    existingObjective.UpdatedBy = User.GetUserId();
+                    
                     await _context.SaveChangesAsync();
 
                     // Process controls for threat actor objective
-                    await ProcessThreatActorObjectiveControls(threatObjective.Id, scenarioViewModel.ThreatActorObjective);
+                    await ProcessThreatActorObjectiveControls(existingObjective.Id, scenarioViewModel.ThreatActorObjective);
                 }
 
-                // Process Scenario Risks
-                foreach (var riskViewModel in scenarioViewModel.ScenarioRisks.Where(r => !string.IsNullOrEmpty(r.RiskName)))
+                // Process Scenario Risks - Update or Create
+                if (scenarioViewModel.ScenarioRisks != null)
                 {
-                    var scenarioRisk = new ScenarioRisk
+                    foreach (var riskViewModel in scenarioViewModel.ScenarioRisks.Where(r => !string.IsNullOrEmpty(r.RiskName)))
                     {
-                        ThreatScenarioId = threatScenario.Id,
-                        RiskName = riskViewModel.RiskName,
-                        RiskDescription = riskViewModel.RiskDescription,
+                        // Find existing risk or create new one
+                        var existingRisk = threatScenario.ScenarioRisks?.FirstOrDefault(r => r.Id == riskViewModel.Id);
+                        
+                        if (existingRisk == null)
+                        {
+                            // Create new risk
+                            existingRisk = new ScenarioRisk
+                            {
+                                ThreatScenarioId = threatScenario.Id,
+                                CreatedAt = DateTime.UtcNow,
+                                CreatedBy = User.GetUserId()
+                            };
+                            _context.ScenarioRisks.Add(existingRisk);
+                        }
+                        
+                        // Update fields
+                        existingRisk.RiskName = riskViewModel.RiskName;
+                        existingRisk.RiskDescription = riskViewModel.RiskDescription;
                         
                         // Current Risk Values
-                        CurrentImpact = riskViewModel.CurrentImpact,
-                        CurrentLikelihood = riskViewModel.CurrentLikelihood,
-                        CurrentExposure = riskViewModel.CurrentExposure,
+                        existingRisk.CurrentImpact = riskViewModel.CurrentImpact;
+                        existingRisk.CurrentLikelihood = riskViewModel.CurrentLikelihood;
+                        existingRisk.CurrentExposure = riskViewModel.CurrentExposure;
                         
                         // Residual Risk Values
-                        ResidualImpact = riskViewModel.ResidualImpact,
-                        ResidualLikelihood = riskViewModel.ResidualLikelihood,
-                        ResidualExposure = riskViewModel.ResidualExposure,
+                        existingRisk.ResidualImpact = riskViewModel.ResidualImpact;
+                        existingRisk.ResidualLikelihood = riskViewModel.ResidualLikelihood;
+                        existingRisk.ResidualExposure = riskViewModel.ResidualExposure;
                         
                         // Risk Treatment
-                        RiskTreatmentPlan = riskViewModel.RiskTreatmentPlan,
-                        ExpectedCompletionDate = riskViewModel.ExpectedCompletionDate,
-                        TreatmentPlanStatus = riskViewModel.TreatmentPlanStatus,
+                        existingRisk.RiskTreatmentPlan = string.IsNullOrWhiteSpace(riskViewModel.RiskTreatmentPlan) ? "N/A" : riskViewModel.RiskTreatmentPlan;
+                        existingRisk.ExpectedCompletionDate = riskViewModel.ExpectedCompletionDate;
+                        existingRisk.TreatmentPlanStatus = riskViewModel.TreatmentPlanStatus;
                         
                         // Audit fields
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        CreatedBy = User.GetUserId(),
-                        UpdatedBy = User.GetUserId()
-                    };
+                        existingRisk.UpdatedAt = DateTime.UtcNow;
+                        existingRisk.UpdatedBy = User.GetUserId();
 
-                    // Calculate risk scores
-                    scenarioRisk.CalculateCurrentRisk();
-                    scenarioRisk.CalculateResidualRisk();
-
-                    _context.ScenarioRisks.Add(scenarioRisk);
+                        // Calculate risk scores using the assessment's risk matrix
+                        existingRisk.CalculateCurrentRisk(riskMatrix);
+                        existingRisk.CalculateResidualRisk(riskMatrix);
+                        
+                        await _context.SaveChangesAsync();
+                }
                 }
 
                 await _context.SaveChangesAsync();

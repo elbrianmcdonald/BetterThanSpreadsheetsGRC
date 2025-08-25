@@ -37,7 +37,9 @@
                 </div>
             </div>
 
-            <form asp-action="@(isEdit ? "Edit" : "CreateQualitative")" method="post" class="needs-validation" novalidate>
+            <form asp-action="@(isEdit ? "Edit" : "CreateQualitative")" 
+                  asp-route-id="@(isEdit ? Model.Assessment.Id : (int?)null)" 
+                  method="post" class="needs-validation" novalidate>
                 @if (isEdit)
                 {
                     <input type="hidden" asp-for="Assessment.Id" />
@@ -2386,52 +2388,11 @@
         window.checkTreatmentPlanSlaCompliance = checkTreatmentPlanSlaCompliance;
         window.fillTestData = fillTestData; // Make test data function available globally
         
-        // ========== FORM SUBMISSION DEBUGGING ==========
-        const isEditMode = @Json.Serialize(isEdit);
-        console.log('🔧 Form Debug: Edit mode =', isEditMode);
-        
+        // Simple form action debugging
         document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('form');
-            const submitBtn = document.getElementById('submitBtn');
-            
-            console.log('🔧 Form Debug: Form found =', !!form);
-            console.log('🔧 Form Debug: Form action =', form?.action);
-            console.log('🔧 Form Debug: Form method =', form?.method);
-            console.log('🔧 Form Debug: Submit button found =', !!submitBtn);
-            
-            if (submitBtn) {
-                submitBtn.addEventListener('click', function(e) {
-                    console.log('🔧 Form Debug: Submit button clicked!');
-                    
-                    const formValid = form.checkValidity();
-                    console.log('🔧 Form Debug: Form is valid =', formValid);
-                    
-                    if (!formValid) {
-                        console.log('🔧 Form Debug: Form validation failed');
-                        e.preventDefault();
-                        form.reportValidity();
-                        return;
-                    }
-                    
-                    console.log('🔧 Form Debug: Form should submit normally');
-                });
-            }
-            
+            const form = document.querySelector('form.needs-validation');
             if (form) {
-                form.addEventListener('submit', function(e) {
-                    console.log('🔧 Form Debug: Form submit event fired!');
-                    console.log('🔧 Form Debug: Form data preview:');
-                    
-                    const formData = new FormData(form);
-                    let fieldCount = 0;
-                    for (let [key, value] of formData.entries()) {
-                        if (fieldCount < 10) { // Only show first 10 fields
-                            console.log(`  ${key}: ${value}`);
-                        }
-                        fieldCount++;
-                    }
-                    console.log(`🔧 Form Debug: Total form fields: ${fieldCount}`);
-                });
+                console.log('✅ Form action URL:', form.action);
             }
         });
     </script>

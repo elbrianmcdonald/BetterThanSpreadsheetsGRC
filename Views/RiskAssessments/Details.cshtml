@@ -1,6 +1,7 @@
 @model CyberRiskApp.Models.RiskAssessment
 @{
     ViewData["Title"] = $"Risk Assessment: {Model.Title}";
+    // Trigger hot reload - risk score fix applied
 }
 
 <!-- Enhanced Header -->
@@ -341,6 +342,11 @@
                                 <div class="col-lg-6">
                                     <div class="analysis-card">
                                         <h6><i class="fas fa-tachometer-alt me-2"></i>Risk Metrics</h6>
+                                        @{
+                                            var riskScores = Model.ThreatScenarios.Select(ts => ts.CalculateOverallRiskScore()).Where(s => s.HasValue).Select(s => s.Value).ToList();
+                                            var maxRiskScore = riskScores.Any() ? riskScores.Max() : (decimal?)null;
+                                            var minRiskScore = riskScores.Any() ? riskScores.Min() : (decimal?)null;
+                                        }
                                         <div class="metrics-grid">
                                             <div class="metric-item">
                                                 <span class="metric-label">Average Risk Score:</span>
@@ -348,11 +354,11 @@
                                             </div>
                                             <div class="metric-item">
                                                 <span class="metric-label">Highest Risk Score:</span>
-                                                <span class="metric-value">@(Model.ThreatScenarios.Select(ts => ts.CalculateOverallRiskScore()).Where(s => s.HasValue).DefaultIfEmpty(0).Max()?.ToString("F1") ?? "N/A")</span>
+                                                <span class="metric-value">@(maxRiskScore?.ToString("F1") ?? "N/A")</span>
                                             </div>
                                             <div class="metric-item">
                                                 <span class="metric-label">Lowest Risk Score:</span>
-                                                <span class="metric-value">@(Model.ThreatScenarios.Select(ts => ts.CalculateOverallRiskScore()).Where(s => s.HasValue).DefaultIfEmpty(0).Min()?.ToString("F1") ?? "N/A")</span>
+                                                <span class="metric-value">@(minRiskScore?.ToString("F1") ?? "N/A")</span>
                                             </div>
                                             <div class="metric-item">
                                                 <span class="metric-label">Total Scenarios:</span>
@@ -381,6 +387,7 @@
                                         <tbody>
                                             @foreach (var scenario in Model.ThreatScenarios.OrderByDescending(ts => ts.CalculateOverallRiskScore()))
                                             {
+                                                var scenarioRiskScore = scenario.CalculateOverallRiskScore();
                                                 <tr>
                                                     <td>
                                                         <strong>Scenario @(Model.ThreatScenarios.ToList().IndexOf(scenario) + 1)</strong>
@@ -389,10 +396,40 @@
                                                             <br><small class="text-muted">@scenario.Description.Substring(0, Math.Min(scenario.Description.Length, 50))@(scenario.Description.Length > 50 ? "..." : "")</small>
                                                         }
                                                     </td>
-                                                    <td><span class="badge bg-info">@("N/A" /* Legacy property removed */)</span></td>
-                                                    <td><span class="badge bg-warning">@("N/A" /* Legacy property removed */)</span></td>
-                                                    <td><span class="badge bg-secondary">@("N/A" /* Legacy property removed */)</span></td>
-                                                    <td><span class="badge bg-primary">@scenario.CalculateOverallRiskScore()?.ToString("F1") ?? "N/A"</span></td>
+                                                    <td>
+                                                        @if (scenario.ScenarioRisks?.Any() == true)
+                                                        {
+                                                            var avgLikelihood = scenario.ScenarioRisks.Where(r => r.CurrentLikelihood.HasValue).Average(r => r.CurrentLikelihood);
+                                                            <span class="badge bg-info">@(avgLikelihood?.ToString("F1") ?? "N/A")</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-info">N/A</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (scenario.ScenarioRisks?.Any() == true)
+                                                        {
+                                                            var avgImpact = scenario.ScenarioRisks.Where(r => r.CurrentImpact.HasValue).Average(r => r.CurrentImpact);
+                                                            <span class="badge bg-warning">@(avgImpact?.ToString("F1") ?? "N/A")</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning">N/A</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (scenario.ScenarioRisks?.Any() == true)
+                                                        {
+                                                            var avgExposure = scenario.ScenarioRisks.Where(r => r.CurrentExposure.HasValue).Average(r => r.CurrentExposure);
+                                                            <span class="badge bg-secondary">@(avgExposure?.ToString("F1") ?? "N/A")</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary">N/A</span>
+                                                        }
+                                                    </td>
+                                                    <td><span class="badge bg-primary">@(scenarioRiskScore?.ToString("F1") ?? "N/A")</span></td>
                                                     <td>
                                                         <span class="badge bg-@(scenario.CalculateOverallRiskLevel().ToLower() switch 
                                                         { 
@@ -502,33 +539,65 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="row g-2 mb-3">
-                                            @* Legacy risk properties removed - showing placeholder for now *@
                                             <div class="col-lg-2 col-md-4">
                                                 <div class="small-metric-card bg-info">
-                                                    <div class="small-metric-value">N/A</div>
+                                                    <div class="small-metric-value">
+                                                        @if (scenario.ScenarioRisks?.Any() == true)
+                                                        {
+                                                            var avgLikelihood = scenario.ScenarioRisks.Where(r => r.CurrentLikelihood.HasValue).Average(r => r.CurrentLikelihood);
+                                                            @(avgLikelihood?.ToString("F1") ?? "N/A")
+                                                        }
+                                                        else
+                                                        {
+                                                            @:N/A
+                                                        }
+                                                    </div>
                                                     <div class="small-metric-label">Likelihood</div>
                                                 </div>
                                             </div>
                                             
                                             <div class="col-lg-2 col-md-4">
                                                 <div class="small-metric-card bg-warning">
-                                                    <div class="small-metric-value">N/A</div>
+                                                    <div class="small-metric-value">
+                                                        @if (scenario.ScenarioRisks?.Any() == true)
+                                                        {
+                                                            var avgImpact = scenario.ScenarioRisks.Where(r => r.CurrentImpact.HasValue).Average(r => r.CurrentImpact);
+                                                            @(avgImpact?.ToString("F1") ?? "N/A")
+                                                        }
+                                                        else
+                                                        {
+                                                            @:N/A
+                                                        }
+                                                    </div>
                                                     <div class="small-metric-label">Impact</div>
                                                 </div>
                                             </div>
 
                                             <div class="col-lg-2 col-md-4">
                                                 <div class="small-metric-card bg-secondary">
-                                                    <div class="small-metric-value">N/A</div>
+                                                    <div class="small-metric-value">
+                                                        @if (scenario.ScenarioRisks?.Any() == true)
+                                                        {
+                                                            var avgExposure = scenario.ScenarioRisks.Where(r => r.CurrentExposure.HasValue).Average(r => r.CurrentExposure);
+                                                            @(avgExposure?.ToString("F1") ?? "N/A")
+                                                        }
+                                                        else
+                                                        {
+                                                            @:N/A
+                                                        }
+                                                    </div>
                                                     <div class="small-metric-label">Exposure</div>
                                                 </div>
                                             </div>
 
-                                            @if (scenario.CalculateOverallRiskScore().HasValue)
+                                            @{
+                                                var riskScore = scenario.CalculateOverallRiskScore();
+                                            }
+                                            @if (riskScore.HasValue)
                                             {
                                                 <div class="col-lg-3 col-md-6">
                                                     <div class="small-metric-card bg-primary">
-                                                        <div class="small-metric-value">@scenario.CalculateOverallRiskScore().Value.ToString("F1")</div>
+                                                        <div class="small-metric-value">@riskScore.Value.ToString("F1")</div>
                                                         <div class="small-metric-label">Risk Score</div>
                                                     </div>
                                                 </div>
@@ -627,7 +696,7 @@
                                                         {
                                                             <h6 class="text-success"><i class="fas fa-shield-alt me-1"></i>Controls</h6>
                                                             <div class="row">
-                                                                @foreach (var controlGroup in scenario.ThreatActorObjective.Controls.GroupBy(taoc => new { taoc.ThreatControl.ControlType, taoc.ThreatControl.ControlCategory }))
+                                                                @foreach (var controlGroup in scenario.ThreatActorObjective.Controls.Where(taoc => taoc.ThreatControl != null).GroupBy(taoc => new { taoc.ThreatControl.ControlType, taoc.ThreatControl.ControlCategory }))
                                                                 {
                                                                     <div class="col-md-6 mb-2">
                                                                         <div class="border rounded p-2 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "border-success" : "border-warning")">
@@ -682,7 +751,7 @@
                                                             {
                                                                 <h6 class="text-success small"><i class="fas fa-shield-alt me-1"></i>Controls</h6>
                                                                 <div class="row">
-                                                                    @foreach (var controlGroup in step.Controls.GroupBy(tasc => new { tasc.ThreatControl.ControlType, tasc.ThreatControl.ControlCategory }))
+                                                                    @foreach (var controlGroup in step.Controls.Where(tasc => tasc.ThreatControl != null).GroupBy(tasc => new { tasc.ThreatControl.ControlType, tasc.ThreatControl.ControlCategory }))
                                                                     {
                                                                         <div class="col-md-6 mb-2">
                                                                             <div class="border rounded p-2 @(controlGroup.Key.ControlCategory.ToString().ToLower() == "current" ? "border-success" : "border-warning")">

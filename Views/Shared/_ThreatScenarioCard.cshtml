@@ -26,6 +26,31 @@
     
     <div class="collapse show" id="scenario-content-@scenarioIndex">
         <div class="card-body">
+            <!-- Hidden fields to preserve IDs during form submission -->
+            <input type="hidden" name="ThreatScenarios[@scenarioIndex].Id" value="@Model.Id" />
+            @if (Model.ThreatVector != null)
+            {
+                <input type="hidden" name="ThreatScenarios[@scenarioIndex].ThreatVector.Id" value="@Model.ThreatVector.Id" />
+            }
+            @if (Model.ThreatActorObjective != null)
+            {
+                <input type="hidden" name="ThreatScenarios[@scenarioIndex].ThreatActorObjective.Id" value="@Model.ThreatActorObjective.Id" />
+            }
+            @if (Model.ThreatActorSteps != null)
+            {
+                for (int i = 0; i < Model.ThreatActorSteps.Count; i++)
+                {
+                    <input type="hidden" name="ThreatScenarios[@scenarioIndex].ThreatActorSteps[@i].Id" value="@Model.ThreatActorSteps[i].Id" />
+                }
+            }
+            @if (Model.ScenarioRisks != null)
+            {
+                for (int i = 0; i < Model.ScenarioRisks.Count; i++)
+                {
+                    <input type="hidden" name="ThreatScenarios[@scenarioIndex].ScenarioRisks[@i].Id" value="@Model.ScenarioRisks[i].Id" />
+                }
+            }
+            
             <!-- Scenario Header Information -->
             <div class="row mb-4">
                 <div class="col-md-6">
@@ -77,10 +102,20 @@
                          class="accordion-collapse collapse show" 
                          data-bs-parent="#scenario-accordion-@scenarioIndex">
                         <div class="accordion-body">
-                            @Html.Partial("_ThreatVectorForm", Model.ThreatVector, new ViewDataDictionary(ViewData) 
-                            { 
-                                ["ScenarioIndex"] = scenarioIndex 
-                            })
+                            @if (Model.ThreatVector != null)
+                            {
+                                @Html.Partial("_ThreatVectorForm", Model.ThreatVector, new ViewDataDictionary(ViewData) 
+                                { 
+                                    ["ScenarioIndex"] = scenarioIndex 
+                                })
+                            }
+                            else
+                            {
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No threat vector data available for this scenario.
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -135,10 +170,20 @@
                          class="accordion-collapse collapse" 
                          data-bs-parent="#scenario-accordion-@scenarioIndex">
                         <div class="accordion-body">
-                            @Html.Partial("_ThreatActorObjectiveForm", Model.ThreatActorObjective, new ViewDataDictionary(ViewData) 
-                            { 
-                                ["ScenarioIndex"] = scenarioIndex 
-                            })
+                            @if (Model.ThreatActorObjective != null)
+                            {
+                                @Html.Partial("_ThreatActorObjectiveForm", Model.ThreatActorObjective, new ViewDataDictionary(ViewData) 
+                                { 
+                                    ["ScenarioIndex"] = scenarioIndex 
+                                })
+                            }
+                            else
+                            {
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No threat actor objective data available for this scenario.
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
