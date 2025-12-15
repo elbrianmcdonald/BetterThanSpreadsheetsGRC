@@ -6,6 +6,12 @@ const config = {
   testMatch: ['**/__tests__/**/*.test.ts'],
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
+    '^@/env$': '<rootDir>/src/__tests__/__mocks__/env.ts',
+    '^superjson$': '<rootDir>/src/__tests__/__mocks__/superjson.ts',
+    '^next-auth$': '<rootDir>/src/__tests__/__mocks__/next-auth.ts',
+    '^next-auth/react$': '<rootDir>/src/__tests__/__mocks__/next-auth.ts',
+    '^next-auth/providers/discord$': '<rootDir>/src/__tests__/__mocks__/next-auth/providers/discord.ts',
+    '^@auth/prisma-adapter$': '<rootDir>/src/__tests__/__mocks__/@auth/prisma-adapter.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
@@ -23,7 +29,7 @@ const config = {
     ],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(superjson|@t3-oss)/)',
+    'node_modules/(?!(superjson|@t3-oss|@trpc)/)',
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

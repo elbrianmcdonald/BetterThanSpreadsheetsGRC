@@ -5,9 +5,8 @@
  * All pages under /admin require ORG_ADMIN role.
  */
 
-import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
-import { UserRole } from "@prisma/client";
+import { requireOrgAdmin } from "@/lib/auth/route-protection";
 import Link from "next/link";
 
 export default async function AdminLayout({
@@ -17,15 +16,8 @@ export default async function AdminLayout({
 }) {
   const session = await auth();
 
-  // Require authentication
-  if (!session || !session.user) {
-    redirect("/api/auth/signin?callbackUrl=/admin");
-  }
-
-  // Require ORG_ADMIN role
-  if (session.user.role !== UserRole.ORG_ADMIN) {
-    redirect("/?error=unauthorized");
-  }
+  // Require ORG_ADMIN role (handles auth + authorization)
+  requireOrgAdmin(session, "/admin");
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -27,14 +27,58 @@ export function CreateUserDialog({
   const [role, setRole] = useState<UserRole>(UserRole.AUDITOR);
   const [error, setError] = useState<string | null>(null);
 
+  const utils = api.useUtils();
+
   const createUserMutation = api.user.createUser.useMutation({
+    onMutate: async (newUser) => {
+      // Cancel outgoing refetches
+      await utils.user.listUsers.cancel();
+
+      // Snapshot previous value
+      const previousUsers = utils.user.listUsers.getData();
+
+      // Optimistically update to the new value
+      if (previousUsers) {
+        utils.user.listUsers.setData(
+          { skip: 0, take: 50 },
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              users: [
+                {
+                  id: "temp-id", // Temporary ID
+                  name: newUser.name,
+                  email: newUser.email,
+                  role: newUser.role,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                },
+                ...old.users,
+              ],
+              total: old.total + 1,
+            };
+          }
+        );
+      }
+
+      return { previousUsers };
+    },
+    onError: (err, newUser, context) => {
+      // Rollback on error
+      if (context?.previousUsers) {
+        utils.user.listUsers.setData({ skip: 0, take: 50 }, context.previousUsers);
+      }
+      toast.error(err.message);
+      setError(err.message);
+    },
     onSuccess: (data) => {
       toast.success(`User "${data.name}" created successfully!`);
       onSuccess();
     },
-    onError: (err) => {
-      toast.error(err.message);
-      setError(err.message);
+    onSettled: () => {
+      // Refetch to ensure consistency
+      void utils.user.listUsers.invalidate();
     },
   });
 

@@ -29,14 +29,48 @@ export function DeleteUserDialog({
     id: userId,
   });
 
+  const utils = api.useUtils();
+
   const deleteUserMutation = api.user.deleteUser.useMutation({
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches
+      await utils.user.listUsers.cancel();
+
+      // Snapshot previous value
+      const previousUsers = utils.user.listUsers.getData();
+
+      // Optimistically remove the user from the list
+      if (previousUsers) {
+        utils.user.listUsers.setData(
+          { skip: 0, take: 50 },
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              users: old.users.filter((u) => u.id !== variables.id),
+              total: old.total - 1,
+            };
+          }
+        );
+      }
+
+      return { previousUsers };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousUsers) {
+        utils.user.listUsers.setData({ skip: 0, take: 50 }, context.previousUsers);
+      }
+      toast.error(err.message);
+      setError(err.message);
+    },
     onSuccess: () => {
       toast.success("User deleted successfully");
       onSuccess();
     },
-    onError: (err) => {
-      toast.error(err.message);
-      setError(err.message);
+    onSettled: () => {
+      // Refetch to ensure consistency
+      void utils.user.listUsers.invalidate();
     },
   });
 

@@ -5,9 +5,8 @@
  * Requires ORG_ADMIN role.
  */
 
-import { redirect } from "next/navigation";
 import { auth } from "@/server/auth";
-import { UserRole } from "@prisma/client";
+import { requireOrgAdmin } from "@/lib/auth/route-protection";
 import { UserManagementClient } from "./client";
 
 export const metadata = {
@@ -18,15 +17,8 @@ export const metadata = {
 export default async function UserManagementPage() {
   const session = await auth();
 
-  // Require authentication
-  if (!session || !session.user) {
-    redirect("/api/auth/signin?callbackUrl=/admin/users");
-  }
-
-  // Require ORG_ADMIN role
-  if (session.user.role !== UserRole.ORG_ADMIN) {
-    redirect("/?error=unauthorized");
-  }
+  // Require ORG_ADMIN role (handles auth + authorization)
+  requireOrgAdmin(session, "/admin/users");
 
   return <UserManagementClient />;
 }

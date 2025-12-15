@@ -43,14 +43,51 @@ export function EditUserDialog({
     }
   }, [user]);
 
+  const utils = api.useUtils();
+
   const updateUserMutation = api.user.updateUser.useMutation({
+    onMutate: async (updatedUser) => {
+      // Cancel outgoing refetches
+      await utils.user.listUsers.cancel();
+
+      // Snapshot previous value
+      const previousUsers = utils.user.listUsers.getData();
+
+      // Optimistically update the user in the list
+      if (previousUsers) {
+        utils.user.listUsers.setData(
+          { skip: 0, take: 50 },
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              users: old.users.map((u) =>
+                u.id === updatedUser.id
+                  ? { ...u, ...updatedUser }
+                  : u
+              ),
+            };
+          }
+        );
+      }
+
+      return { previousUsers };
+    },
+    onError: (err, updatedUser, context) => {
+      // Rollback on error
+      if (context?.previousUsers) {
+        utils.user.listUsers.setData({ skip: 0, take: 50 }, context.previousUsers);
+      }
+      toast.error(err.message);
+      setError(err.message);
+    },
     onSuccess: (data) => {
       toast.success(`User "${data.name}" updated successfully!`);
       onSuccess();
     },
-    onError: (err) => {
-      toast.error(err.message);
-      setError(err.message);
+    onSettled: () => {
+      // Refetch to ensure consistency
+      void utils.user.listUsers.invalidate();
     },
   });
 
