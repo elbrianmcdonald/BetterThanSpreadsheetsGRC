@@ -8,6 +8,7 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { api } from "@/trpc/react";
 
 interface DeleteUserDialogProps {
@@ -30,9 +31,11 @@ export function DeleteUserDialog({
 
   const deleteUserMutation = api.user.deleteUser.useMutation({
     onSuccess: () => {
+      toast.success("User deleted successfully");
       onSuccess();
     },
     onError: (err) => {
+      toast.error(err.message);
       setError(err.message);
     },
   });

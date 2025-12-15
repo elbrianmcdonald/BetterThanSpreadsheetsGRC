@@ -8,6 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { api } from "@/trpc/react";
 import { UserRole } from "@prisma/client";
 import { roleDisplayConfig } from "@/schemas/user";
@@ -43,10 +44,12 @@ export function EditUserDialog({
   }, [user]);
 
   const updateUserMutation = api.user.updateUser.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      toast.success(`User "${data.name}" updated successfully!`);
       onSuccess();
     },
     onError: (err) => {
+      toast.error(err.message);
       setError(err.message);
     },
   });

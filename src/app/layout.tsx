@@ -4,6 +4,7 @@ import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "@/trpc/react";
+import { ToasterProvider } from "@/components/ToasterProvider";
 
 export const metadata: Metadata = {
   title: "BetterThanSpreadsheetsGRC",
@@ -22,7 +23,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          {children}
+          <ToasterProvider />
+        </TRPCReactProvider>
       </body>
     </html>
   );

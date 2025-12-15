@@ -8,6 +8,7 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { api } from "@/trpc/react";
 import { UserRole } from "@prisma/client";
 import { roleDisplayConfig } from "@/schemas/user";
@@ -27,10 +28,12 @@ export function CreateUserDialog({
   const [error, setError] = useState<string | null>(null);
 
   const createUserMutation = api.user.createUser.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      toast.success(`User "${data.name}" created successfully!`);
       onSuccess();
     },
     onError: (err) => {
+      toast.error(err.message);
       setError(err.message);
     },
   });
