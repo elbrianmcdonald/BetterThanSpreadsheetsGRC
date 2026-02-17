@@ -107,7 +107,7 @@ export function TechniquesClient() {
     : null;
 
   return (
-    <AppLayout breadcrumbs={[{ label: "MITRE ATT&CK", href: "/mitre/tactics" }, { label: "Techniques" }]}>
+    <AppLayout breadcrumbs={[{ label: "Governance", href: "/mitre/tactics" }, { label: "MITRE Techniques" }]}>
       {/* Header */}
       <div className="flex items-center gap-3">
         <Crosshair className="h-8 w-8 text-primary" />

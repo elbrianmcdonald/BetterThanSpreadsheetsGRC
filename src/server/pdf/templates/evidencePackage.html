@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{frameworkName}} Evidence Package</title>
+  <style>
+    /* Base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #333;
+    }
+
+    /* Page setup for PDF */
+    @page {
+      size: A4;
+      margin: 20mm 15mm;
+
+      @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 9pt;
+        color: #666;
+      }
+
+      @bottom-right {
+        content: "Generated: {{exportDate}}";
+        font-size: 8pt;
+        color: #888;
+      }
+    }
+
+    /* Title Page */
+    .title-page {
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 90vh;
+      text-align: center;
+    }
+
+    .title-page h1 {
+      font-size: 28pt;
+      color: #1a365d;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .title-page .subtitle {
+      font-size: 16pt;
+      color: #4a5568;
+      margin-bottom: 40px;
+    }
+
+    .title-page .org-name {
+      font-size: 14pt;
+      color: #2d3748;
+      margin-bottom: 20px;
+    }
+
+    .title-page .export-date {
+      font-size: 12pt;
+      color: #718096;
+      margin-bottom: 60px;
+    }
+
+    .summary-box {
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 30px 50px;
+      margin-top: 20px;
+    }
+
+    .summary-box h3 {
+      font-size: 14pt;
+      color: #2d3748;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #3182ce;
+      padding-bottom: 10px;
+    }
+
+    .summary-stats {
+      display: flex;
+      justify-content: space-around;
+      gap: 30px;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24pt;
+      font-weight: 700;
+      color: #3182ce;
+    }
+
+    .stat-label {
+      font-size: 10pt;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .coverage-bar {
+      width: 100%;
+      height: 12px;
+      background: #e2e8f0;
+      border-radius: 6px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+
+    .coverage-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3182ce, #38a169);
+      border-radius: 6px;
+    }
+
+    /* Table of Contents */
+    .toc {
+      page-break-after: always;
+    }
+
+    .toc h2 {
+      font-size: 18pt;
+      color: #1a365d;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #3182ce;
+      padding-bottom: 10px;
+    }
+
+    .toc-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px dotted #e2e8f0;
+    }
+
+    .toc-item .control-id {
+      color: #3182ce;
+      font-weight: 600;
+    }
+
+    .toc-item .control-name {
+      flex: 1;
+      margin-left: 15px;
+      color: #4a5568;
+    }
+
+    .toc-item .page-num {
+      color: #718096;
+    }
+
+    .toc-item.has-evidence {
+      background: #f0fff4;
+    }
+
+    .toc-item.no-evidence {
+      background: #fff5f5;
+    }
+
+    .toc-legend {
+      margin-top: 20px;
+      font-size: 9pt;
+      color: #718096;
+    }
+
+    .toc-legend span {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 5px;
+      border-radius: 2px;
+    }
+
+    .legend-has-evidence {
+      background: #c6f6d5;
+    }
+
+    .legend-no-evidence {
+      background: #fed7d7;
+    }
+
+    /* Control Sections */
+    .control-section {
+      page-break-inside: avoid;
+      margin-bottom: 30px;
+    }
+
+    .control-section h2 {
+      font-size: 14pt;
+      color: #1a365d;
+      background: #edf2f7;
+      padding: 12px 15px;
+      border-left: 4px solid #3182ce;
+      margin-bottom: 15px;
+    }
+
+    .control-section h2 .control-id {
+      color: #3182ce;
+      font-weight: 700;
+    }
+
+    .control-description {
+      font-size: 10pt;
+      color: #4a5568;
+      padding: 10px 15px;
+      background: #f7fafc;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      font-style: italic;
+    }
+
+    .evidence-list {
+      padding: 0 15px;
+    }
+
+    .evidence-list h4 {
+      font-size: 11pt;
+      color: #2d3748;
+      margin-bottom: 10px;
+    }
+
+    /* Two-column evidence layout */
+    .evidence-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .evidence-item {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 9pt;
+    }
+
+    .evidence-item .filename {
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: 8px;
+      word-break: break-all;
+    }
+
+    .evidence-item .meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: #718096;
+    }
+
+    .evidence-item .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .evidence-item .meta-label {
+      font-weight: 600;
+      min-width: 70px;
+    }
+
+    .evidence-item .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .evidence-item .tag {
+      background: #ebf4ff;
+      color: #3182ce;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 8pt;
+    }
+
+    .no-evidence-message {
+      padding: 20px;
+      background: #fff5f5;
+      border: 1px solid #feb2b2;
+      border-radius: 6px;
+      color: #c53030;
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* Audit Trail Section */
+    .audit-section {
+      page-break-before: always;
+    }
+
+    .audit-section h2 {
+      font-size: 18pt;
+      color: #1a365d;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #3182ce;
+      padding-bottom: 10px;
+    }
+
+    .audit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+    }
+
+    .audit-table th {
+      background: #edf2f7;
+      color: #2d3748;
+      text-align: left;
+      padding: 10px;
+      border-bottom: 2px solid #cbd5e0;
+    }
+
+    .audit-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+
+    .audit-table tr:nth-child(even) {
+      background: #f7fafc;
+    }
+
+    .audit-table .date-col {
+      width: 120px;
+      white-space: nowrap;
+    }
+
+    .audit-table .user-col {
+      width: 150px;
+    }
+
+    .audit-table .action-col {
+      width: auto;
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: 40px;
+      padding: 15px;
+      background: #fffaf0;
+      border: 1px solid #f6e05e;
+      border-radius: 6px;
+      font-size: 9pt;
+      color: #744210;
+    }
+
+    .disclaimer strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    /* Section breaks */
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+  <!-- Title Page -->
+  <div class="title-page">
+    <h1>Evidence Package</h1>
+    <div class="subtitle">{{frameworkName}}</div>
+    <div class="org-name">{{organizationName}}</div>
+    <div class="export-date">Generated on {{exportDate}}</div>
+
+    <div class="summary-box">
+      <h3>Compliance Summary</h3>
+      <div class="summary-stats">
+        <div class="stat-item">
+          <div class="stat-value">{{totalControls}}</div>
+          <div class="stat-label">Total Controls</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{controlsWithEvidence}}</div>
+          <div class="stat-label">With Evidence</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{coveragePercentage}}%</div>
+          <div class="stat-label">Coverage</div>
+        </div>
+      </div>
+      <div class="coverage-bar">
+        <div class="coverage-fill" style="width: {{coveragePercentage}}%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    {{#each controls}}
+    <div class="toc-item {{#if hasEvidence}}has-evidence{{else}}no-evidence{{/if}}">
+      <span class="control-id">{{controlId}}</span>
+      <span class="control-name">{{controlName}}</span>
+      <span class="evidence-count">{{evidenceCount}} evidence</span>
+    </div>
+    {{/each}}
+    <div class="toc-legend">
+      <span class="legend-has-evidence"></span> Has evidence
+      &nbsp;&nbsp;
+      <span class="legend-no-evidence"></span> No evidence
+    </div>
+  </div>
+
+  <!-- Control Sections -->
+  {{#each controls}}
+  <div class="control-section {{#if @index}}{{#if (shouldBreak @index)}}page-break{{/if}}{{/if}}">
+    <h2><span class="control-id">{{controlId}}</span> - {{controlName}}</h2>
+
+    {{#if controlDescription}}
+    <div class="control-description">{{controlDescription}}</div>
+    {{/if}}
+
+    <div class="evidence-list">
+      {{#if hasEvidence}}
+      <h4>Evidence Files ({{evidenceCount}})</h4>
+      <div class="evidence-grid">
+        {{#each evidence}}
+        <div class="evidence-item">
+          <div class="filename">{{filename}}</div>
+          <div class="meta">
+            <div class="meta-row">
+              <span class="meta-label">Uploaded by:</span>
+              <span>{{uploadedBy}}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Upload date:</span>
+              <span>{{uploadDate}}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Type:</span>
+              <span>{{evidenceType}}</span>
+            </div>
+            {{#if description}}
+            <div class="meta-row">
+              <span class="meta-label">Description:</span>
+              <span>{{description}}</span>
+            </div>
+            {{/if}}
+          </div>
+          {{#if tags.length}}
+          <div class="tags">
+            {{#each tags}}
+            <span class="tag">{{this}}</span>
+            {{/each}}
+          </div>
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+      {{else}}
+      <div class="no-evidence-message">
+        No evidence provided for this control
+      </div>
+      {{/if}}
+    </div>
+  </div>
+  {{/each}}
+
+  <!-- Audit Trail Section -->
+  <div class="audit-section">
+    <h2>Audit Trail</h2>
+    {{#if auditEntries.length}}
+    <table class="audit-table">
+      <thead>
+        <tr>
+          <th class="date-col">Date</th>
+          <th class="user-col">User</th>
+          <th class="action-col">Action</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each auditEntries}}
+        <tr>
+          <td class="date-col">{{date}}</td>
+          <td class="user-col">{{user}}</td>
+          <td class="action-col">{{action}}</td>
+          <td>{{details}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    {{else}}
+    <p>No audit entries recorded for this framework's evidence.</p>
+    {{/if}}
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer">
+    <strong>Disclaimer</strong>
+    This evidence package was generated by BetterThanSpreadsheetsGRC on {{exportDate}}.
+    Evidence files are available in their original format in the evidence repository.
+    This document provides a summary of uploaded evidence and should be validated against
+    the original files for audit purposes.
+  </div>
+</body>
+</html>

@@ -10,12 +10,13 @@
 import { useState } from "react";
 import { UserList } from "@/components/user/UserList";
 import { CreateUserDialog } from "@/components/user/CreateUserDialog";
+import { AppLayout } from "@/components/layout";
 
 export function UserManagementClient() {
   const [isCreating, setIsCreating] = useState(false);
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-8">
+    <AppLayout breadcrumbs={[{ label: "Administration" }, { label: "User Management" }]}>
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
           <h1 className="text-2xl font-semibold leading-6 text-gray-900">
@@ -47,6 +48,6 @@ export function UserManagementClient() {
           onSuccess={() => setIsCreating(false)}
         />
       )}
-    </div>
+    </AppLayout>
   );
 }

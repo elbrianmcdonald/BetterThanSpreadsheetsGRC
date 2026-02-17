@@ -15,8 +15,12 @@ out
 .env.test.local
 
 # Testing
+*.test.ts
+*.test.tsx
+__tests__
 coverage
 .nyc_output
+jest.config.cjs
 
 # IDE
 .vscode
@@ -33,12 +37,14 @@ Thumbs.db
 .git
 .gitignore
 
-# Docker
-Dockerfile
-.dockerignore
-docker-compose.yml
+# Docs / project management
+.bmad
+docs
+.claude
+README.md
+INSTALL.md
+CLAUDE.md
 
 # Misc
-README.md
 .prettierrc
 .eslintrc.json

@@ -1,193 +1,4243 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-    provider = "prisma-client-js"
-    output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// GRC Application Models
-
-model Organization {
-    id        String   @id @default(uuid())
-    name      String
-    slug      String   @unique
-    settings  Json?
-    active    Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    users      User[]
-    evidence   Evidence[]
-    risks      Risk[]
-    frameworks Framework[]
-    auditLogs  AuditLog[]
-
-    @@index([slug])
-    @@index([active])
-}
-
-enum UserRole {
-    ORG_ADMIN
-    GRC_ANALYST
-    SECURITY_ENGINEER
-    CISO
-    IT_STAKEHOLDER
-    BUSINESS_STAKEHOLDER
-    AUDITOR
-}
-
-enum Severity {
-    HIGH
-    MEDIUM
-    LOW
-}
-
-enum RiskStatus {
-    OPEN
-    REMEDIATED
-    CLOSED
-}
-
-// NextAuth.js Models
 model Account {
-    id                       String  @id @default(cuid())
-    userId                   String
-    type                     String
-    provider                 String
-    providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    refresh_token_expires_in Int?
+  id                       String  @id
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+  User                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([provider, providerAccountId])
-    @@index([userId])
-}
-
-model Session {
-    id           String   @id @default(cuid())
-    sessionToken String   @unique
-    userId       String
-    expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@index([userId])
-}
-
-model User {
-    id             String       @id @default(uuid())
-    name           String?
-    email          String?      @unique
-    emailVerified  DateTime?
-    image          String?
-    role           UserRole     @default(AUDITOR)
-    organizationId String
-
-    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-    accounts     Account[]
-    sessions     Session[]
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@index([organizationId])
-    @@index([email])
-}
-
-model VerificationToken {
-    identifier String
-    token      String   @unique
-    expires    DateTime
-
-    @@unique([identifier, token])
-}
-
-// Multi-Tenant Data Models
-
-model Evidence {
-    id             String       @id @default(uuid())
-    organizationId String
-    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    title       String
-    description String?
-    filePath    String
-    fileSize    Int
-    fileType    String
-    uploadedBy  String
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@index([organizationId])
-    @@index([organizationId, uploadedBy])
-    @@index([uploadedBy])
-}
-
-model Risk {
-    id             String       @id @default(uuid())
-    organizationId String
-    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    title       String
-    description String
-    severity    Severity
-    status      RiskStatus @default(OPEN)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@index([organizationId])
-    @@index([organizationId, status])
-    @@index([organizationId, severity])
-    @@index([status])
-    @@index([severity])
-}
-
-model Framework {
-    id             String       @id @default(uuid())
-    organizationId String
-    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-    name        String
-    identifier  String // e.g., "NIST-CSF", "SOC2", "ISO27001"
-    version     String
-    isActive    Boolean @default(false)
-    activatedAt DateTime?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@index([organizationId])
-    @@index([organizationId, isActive])
-    @@index([identifier])
-    @@index([isActive])
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model AuditLog {
-    id             String       @id @default(uuid())
-    organizationId String
-    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id             String       @id
+  organizationId String
+  userId         String?      // Nullable for SYSTEM actions (AC8)
+  action         AuditAction
+  entityType     String
+  entityId       String
+  changes        Json?
+  timestamp      DateTime     @default(now())
+  ipAddress      String?
+  userAgent      String?
+  // Story 4.12: Actor snapshots for audit compliance (AC7)
+  actorName      String?      // Snapshot of actor's name at time of action
+  actorRole      String?      // Snapshot of actor's role at time of action
+  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  User           User?        @relation(fields: [userId], references: [id])
 
-    action     String
-    entityType String
-    entityId   String
-    userId     String
-    changes    Json?
-    timestamp  DateTime @default(now())
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, timestamp])
+  @@index([organizationId, userId])
+  @@index([timestamp])
+  // Story 4.12: Index for audit trail queries by entity
+  @@index([entityId, timestamp])
+}
 
-    @@index([organizationId, timestamp])
-    @@index([entityType, entityId])
-    @@index([userId])
+model Control {
+  id              String       @id
+  organizationId  String
+  frameworkId     String
+  controlId       String
+  title           String
+  description     String
+  guidance        String?
+  parentControlId String?
+  baselines       String?      // Comma-separated baseline tags: "LOW,MODERATE,HIGH" or "PRIVACY"
+  isActive        Boolean      @default(true)
+  // Story 12.4: Track if control was imported from OSCAL (locked from editing)
+  isOscalImported Boolean      @default(false)
+  isCustom        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime
+  Framework       Framework    @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  Organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Control         Control?     @relation("ControlToControl", fields: [parentControlId], references: [id])
+  other_Control   Control[]    @relation("ControlToControl")
+  // Story 12.1: Control linkage relations
+  RiskLinks       RiskControlLink[]
+  FindingLinks    FindingControlLink[]
+  // Organizational Controls mapped to this framework control
+  OrganizationalControls OrganizationalControl[] @relation("OrgControlToFrameworkControl")
+  // Standards module: Standard controls mapped to this framework control
+  StandardControlMappings StandardControlMapping[]
+  // Compliance Assessment Module: Individual control scores
+  ControlAssessmentScores ControlAssessmentScore[]
+  // Base Framework Mapping: Controls mapped FROM this control (as source)
+  SourceMappings          FrameworkControlMapping[] @relation("SourceControlMappings")
+  // Base Framework Mapping: Controls mapped TO this control (as base target)
+  TargetMappings          FrameworkControlMapping[] @relation("TargetControlMappings")
+  // Control Domain tagging
+  ControlDomains          ControlDomainControl[]
+
+  @@unique([frameworkId, controlId])
+  @@index([frameworkId])
+  @@index([frameworkId, isActive])
+  @@index([organizationId, frameworkId])
+  @@index([organizationId, id])
+  @@index([organizationId])
+  @@index([organizationId, isCustom])
+  @@index([parentControlId])
+}
+
+model ControlDomain {
+  id                    String                  @id
+  code                  String                  @unique
+  name                  String
+  description           String
+  sortOrder             Int
+  isActive              Boolean                 @default(true)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  ControlDomainMapping  ControlDomainMapping[]
+  EvidenceControlDomain EvidenceControlDomain[]
+  // Control tagging relations
+  Controls              ControlDomainControl[]
+  StandardControls      ControlDomainStandardControl[]
+  MaturityDomains       ControlDomainMaturityDomain[]
+
+  @@index([isActive, sortOrder])
+  @@index([sortOrder])
+}
+
+model ControlDomainMapping {
+  id              String        @id
+  controlDomainId String
+  frameworkCode   String
+  controlId       String
+  confidence      Int           @default(100)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime
+  ControlDomain   ControlDomain @relation(fields: [controlDomainId], references: [id], onDelete: Cascade)
+
+  @@unique([controlDomainId, frameworkCode, controlId])
+  @@index([controlDomainId, frameworkCode])
+  @@index([controlDomainId])
+  @@index([frameworkCode, controlId])
+}
+
+model Evidence {
+  id                    String                  @id
+  organizationId        String
+  title                 String
+  originalFileName      String
+  description           String?
+  filePath              String
+  fileSize              Int
+  fileType              String
+  uploadedBy            String
+  currentVersion        Int                     @default(1)
+  isActive              Boolean                 @default(true)
+  deletedAt             DateTime?
+  // BU-Scoped Compliance: Evidence belongs to specific business unit
+  businessUnitId        String?                 // Nullable for migration, will be required
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  Organization          Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  User                  User                    @relation(fields: [uploadedBy], references: [id])
+  BusinessUnit          BusinessUnit?           @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+  EvidenceControlDomain EvidenceControlDomain[]
+  EvidenceVersion       EvidenceVersion[]
+  RiskEvidence          RiskEvidence[]
+  // Story 3.12: Evidence requests fulfilled by this evidence
+  EvidenceRequest       EvidenceRequest[]
+  // Story 14.6: Finding evidence attachments
+  FindingEvidence       FindingEvidence[]
+
+  // Story 3.1: Strategy module - Objectives linked to this evidence
+  linkedObjectives      Objective[]       @relation("ObjectiveLinkedEvidence")
+
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([organizationId, uploadedBy])
+  @@index([organizationId, deletedAt])
+  @@index([uploadedBy])
+  @@index([organizationId, businessUnitId])
+}
+
+model EvidenceVersion {
+  id            String    @id @default(cuid())
+  evidenceId    String
+  versionNumber Int
+  filename      String
+  fileSize      Int
+  storagePath   String
+  changeReason  String
+  uploadedById  String
+  uploadedAt    DateTime
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  Evidence      Evidence  @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  User          User      @relation(fields: [uploadedById], references: [id])
+
+  @@unique([evidenceId, versionNumber])
+  @@index([evidenceId, versionNumber])
+  @@index([evidenceId])
+}
+
+model EvidenceControlDomain {
+  id              String        @id
+  evidenceId      String
+  controlDomainId String
+  createdAt       DateTime      @default(now())
+  ControlDomain   ControlDomain @relation(fields: [controlDomainId], references: [id], onDelete: Cascade)
+  Evidence        Evidence      @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@unique([evidenceId, controlDomainId])
+  @@index([controlDomainId])
+  @@index([evidenceId])
+}
+
+// Control Domain to Framework Control tagging
+model ControlDomainControl {
+  id              String        @id @default(cuid())
+  controlDomainId String
+  controlId       String
+  createdAt       DateTime      @default(now())
+
+  ControlDomain   ControlDomain @relation(fields: [controlDomainId], references: [id], onDelete: Cascade)
+  Control         Control       @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@unique([controlDomainId, controlId])
+  @@index([controlDomainId])
+  @@index([controlId])
+}
+
+// Control Domain to Standard Control tagging
+model ControlDomainStandardControl {
+  id                String          @id @default(cuid())
+  controlDomainId   String
+  standardControlId String
+  createdAt         DateTime        @default(now())
+
+  ControlDomain     ControlDomain   @relation(fields: [controlDomainId], references: [id], onDelete: Cascade)
+  StandardControl   StandardControl @relation(fields: [standardControlId], references: [id], onDelete: Cascade)
+
+  @@unique([controlDomainId, standardControlId])
+  @@index([controlDomainId])
+  @@index([standardControlId])
+}
+
+// Control Domain to Maturity Domain tagging
+model ControlDomainMaturityDomain {
+  id               String         @id @default(cuid())
+  controlDomainId  String
+  maturityDomainId String
+  createdAt        DateTime       @default(now())
+
+  ControlDomain    ControlDomain  @relation(fields: [controlDomainId], references: [id], onDelete: Cascade)
+  MaturityDomain   MaturityDomain @relation(fields: [maturityDomainId], references: [id], onDelete: Cascade)
+
+  @@unique([controlDomainId, maturityDomainId])
+  @@index([controlDomainId])
+  @@index([maturityDomainId])
+}
+
+model Framework {
+  id                                 String       @id
+  organizationId                     String
+  code                               String
+  name                               String
+  version                            String
+  description                        String?
+  publicationDate                    DateTime?
+  sourceUrl                          String?
+  oscalCatalog                       Json?
+  isActive                           Boolean      @default(false)
+  activatedAt                        DateTime?
+  activatedBy                        String?
+  targetCompletionDate               DateTime?
+  deactivatedAt                      DateTime?
+  deactivatedBy                      String?
+  createdAt                          DateTime     @default(now())
+  updatedAt                          DateTime
+  Control                            Control[]
+  User_Framework_activatedByToUser   User?        @relation("Framework_activatedByToUser", fields: [activatedBy], references: [id])
+  User_Framework_deactivatedByToUser User?        @relation("Framework_deactivatedByToUser", fields: [deactivatedBy], references: [id])
+  Organization                       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Story 5.1: Framework coverage caching and history
+  FrameworkCoverage                  FrameworkCoverage[]
+  CoverageHistory                    CoverageHistory[]
+  // BU-Scoped Compliance: Business unit assignments for this framework
+  businessUnitAssignments            BusinessUnitFramework[]
+  // Compliance Assessment Module
+  ComplianceAssessment               ComplianceAssessment[]
+  // Base-centric Control Mapping: Organizations using this framework as base
+  OrganizationsAsBase                Organization[] @relation("BaseFramework")
+
+  @@unique([organizationId, code, version])
+  @@index([code])
+  @@index([isActive])
+  @@index([organizationId, id])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+}
+
+model LoginAttempt {
+  id        String   @id
+  email     String
+  ipAddress String?
+  success   Boolean  @default(false)
+  timestamp DateTime @default(now())
+
+  @@index([email, timestamp])
+  @@index([ipAddress, timestamp])
+}
+
+model Organization {
+  id              String            @id
+  name            String
+  slug            String            @unique
+  settings        Json?
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  AuditLog        AuditLog[]
+  Control         Control[]
+  Evidence        Evidence[]
+  Framework       Framework[]
+  Risk            Risk[]
+  User            User[]
+  // Story 3.12: Evidence Request workflow
+  EvidenceRequest EvidenceRequest[]
+  // Story 4.2: Risk Templates for organization
+  RiskTemplate    RiskTemplate[]
+  // Story 4.5: Remediation options for organization
+  RemediationOption RemediationOption[]
+  // Story 4.10: Risk status history for organization
+  RiskStatusHistory RiskStatusHistory[]
+  // Story 4.11: Risk comments for organization (AC5)
+  RiskComment       RiskComment[]
+  // Story 4.15: Email queue for organization
+  EmailQueue        EmailQueue[]
+  // Story 5.1: Framework coverage caching and history
+  FrameworkCoverage FrameworkCoverage[]
+  CoverageHistory   CoverageHistory[]
+  // Story 7.0.1: Business Units for organizational structure (AC15)
+  BusinessUnit      BusinessUnit[]
+  // Story 7.1: Findings for organization (AC19)
+  Finding           Finding[]
+  // Story 7.5: RiskAssessment relations
+  RiskAssessment    RiskAssessment[]
+  RiskScenario      RiskScenario[]
+  // Story 7.8.1: Assessment Types for organization (AC5)
+  AssessmentType    AssessmentType[]
+  // Assessment Tasks for proactive risk discovery
+  AssessmentTask    AssessmentTask[]
+  // Story 7.8.2: Risk Matrix Templates for organization
+  RiskMatrixTemplate RiskMatrixTemplate[]
+  // Story 7.10: Risk Register Entries for organization (AC15)
+  RiskRegisterEntry  RiskRegisterEntry[]
+  // Story 14.5: Finding comments for organization
+  FindingComment     FindingComment[]
+  // Story 14.6: Finding evidence for organization
+  FindingEvidence    FindingEvidence[]
+  // Story 15.8: Risk treatments for organization
+  RiskTreatment      RiskTreatment[]
+  // Person: Stakeholders for accountability tracking
+  Person             Person[]
+  // BU-Scoped Compliance: Framework-BU assignments for organization
+  BusinessUnitFramework BusinessUnitFramework[]
+  // Organizational Controls: User-defined controls
+  OrganizationalControl     OrganizationalControl[]
+  RiskOrganizationalControl RiskOrganizationalControl[]
+  // Story 1.1: Security Strategy Module - Strategies for organization
+  Strategy                  Strategy[]
+  // Standards Module: Standards and exceptions for organization
+  Standard                  Standard[]
+  ControlException          ControlException[]
+  // Maturity Assessment Module: Custom frameworks and assessments
+  MaturityFramework         MaturityFramework[]
+  MaturityAssessment        MaturityAssessment[]
+  MaturityQuestion          MaturityQuestion[]    @relation("MaturityQuestionOrg")
+  // Compliance Assessment Module
+  ComplianceAssessment      ComplianceAssessment[]
+  // Risk Assessment Project Module: Container-based risk discovery workflow
+  RiskAssessmentProject     RiskAssessmentProject[]
+  // Base Framework Mapping: Framework-to-framework control mappings
+  FrameworkControlMapping   FrameworkControlMapping[]
+
+  // Base-centric Control Mapping: Organization's base for control mappings
+  baseType                  BaseType?   // FRAMEWORK or STANDARD
+  baseFrameworkId           String?     // FK when baseType = FRAMEWORK
+  baseStandardId            String?     // FK when baseType = STANDARD
+
+  // Relations for base selection
+  BaseFramework             Framework?  @relation("BaseFramework", fields: [baseFrameworkId], references: [id], onDelete: SetNull)
+  BaseStandard              Standard?   @relation("BaseStandard", fields: [baseStandardId], references: [id], onDelete: SetNull)
+
+  // Epic 1: TPRM Vendor Registry
+  Vendor                    Vendor[]
+  // Epic 3: Vendor Assessment Workflow
+  VendorAssessment          VendorAssessment[]
+  // Epic 4: Questionnaire System
+  QuestionnaireTemplate     QuestionnaireTemplate[]
+  QuestionnaireSettings     QuestionnaireSettings?
+
+  // BIA Module: Business Impact Assessment
+  BIAConfiguration          BIAConfiguration?
+  BusinessFunction          BusinessFunction[]
+  BusinessProcess           BusinessProcess[]
+
+  // Epic 14: Asset Registry
+  Asset                     Asset[]
+  AssetOwner                AssetOwner[]
+
+  @@index([active])
+  @@index([slug])
+}
+
+// ============================================================================
+// Story 1.1: Security Strategy Module - Strategy & Goal Models
+// Enables organizations to define overarching security strategies with
+// hierarchical goals for tracking strategic initiatives
+// ============================================================================
+
+// Strategy Model - Top-level container for security strategic plans
+// Supports multiple strategies per organization (e.g., annual roadmap, compliance strategy)
+model Strategy {
+  id              String         @id @default(cuid())
+  organizationId  String
+  title           String
+  description     String?        @db.Text
+  fiscalYearStart Int            // Start year of strategy period (e.g., 2025)
+  fiscalYearEnd   Int            // End year of strategy period (e.g., 2026)
+  status          StrategyStatus @default(DRAFT)
+
+  // Ownership
+  ownerId         String?        // Executive sponsor/owner of the strategy
+  createdById     String?        // User who created the strategy
+
+  // Timestamps
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner           User?          @relation("StrategyOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy       User?          @relation("StrategyCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  goals           Goal[]         // Child goals within this strategy
+
+  // Story 4.1: History tracking
+  history         StrategyHistory[]
+
+  // Indexes for common queries
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+// Goal Model - Strategic goals within a strategy
+// Each goal contains objectives (added in Story 2.1)
+model Goal {
+  id          String    @id @default(cuid())
+  strategyId  String
+  title       String
+  description String?   @db.Text
+  sortOrder   Int       @default(0)  // Display order within strategy
+  targetDate  DateTime? // Target completion date for the goal
+
+  // Ownership
+  ownerId     String?   // Goal owner responsible for achievement
+  createdById String?   // User who created the goal
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  strategy    Strategy  @relation(fields: [strategyId], references: [id], onDelete: Cascade)
+  owner       User?     @relation("GoalOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy   User?     @relation("GoalCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Story 2.1: Objectives within this goal
+  objectives  Objective[]
+
+  // Story 2.4: Comments on this goal
+  comments    Comment[]
+
+  // Story 4.1: History tracking
+  history     GoalHistory[]
+
+  // Indexes for common queries
+  @@index([strategyId])
+  @@index([strategyId, sortOrder])
+}
+
+// Story 2.1: Objective Model - Measurable objectives within a goal
+// Each objective has a KPI type that determines how progress is calculated
+model Objective {
+  id           String          @id @default(cuid())
+  goalId       String
+  title        String
+  description  String?         @db.Text
+  status       ObjectiveStatus @default(NOT_STARTED)
+  sortOrder    Int             @default(0)  // Display order within goal
+  dueDate      DateTime?       // Target completion date
+
+  // KPI fields for progress tracking
+  kpiType      KpiType         @default(MANUAL_PERCENTAGE)
+  targetValue  Float?          // Target value for the KPI (e.g., 100 for percentage)
+  currentValue Float?          @default(0)  // Current progress value
+
+  // Ownership
+  createdById  String?         // User who created the objective
+
+  // Timestamps
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  // Relations
+  goal         Goal            @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  createdBy    User?           @relation("ObjectiveCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Many-to-many: Users assigned to this objective
+  assignees    ObjectiveAssignee[]
+
+  // Story 2.4: Comments on this objective
+  comments     Comment[]
+
+  // Story 3.1: Entity Linking - Many-to-many relations to operational GRC data
+  linkedRisks    Risk[]                 @relation("ObjectiveLinkedRisks")
+  linkedControls OrganizationalControl[] @relation("ObjectiveLinkedControls")
+  linkedEvidence Evidence[]             @relation("ObjectiveLinkedEvidence")
+
+  // Story 4.1: History tracking
+  history        ObjectiveHistory[]
+
+  // Indexes for common queries
+  @@index([goalId])
+  @@index([goalId, sortOrder])
+  @@index([status])
+  @@index([dueDate])
+}
+
+// Story 2.1: Join table for Objective-User many-to-many (assignees)
+model ObjectiveAssignee {
+  id          String    @id @default(cuid())
+  objectiveId String
+  userId      String
+  assignedAt  DateTime  @default(now())
+
+  objective   Objective @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+  user        User      @relation("ObjectiveAssignees", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([objectiveId, userId])
+  @@index([objectiveId])
+  @@index([userId])
+}
+
+// Story 2.4: Comment Model - Comments on Goals and Objectives
+// AC1: Polymorphic relation - Comment can belong to either Goal or Objective
+model Comment {
+  id          String    @id @default(cuid())
+  content     String    @db.Text  // AC2: Comment content
+  authorId    String               // AC2: User who wrote the comment
+
+  // Polymorphic relations - only one should be set
+  goalId      String?              // FK to Goal (if commenting on a goal)
+  objectiveId String?              // FK to Objective (if commenting on an objective)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())  // AC2: Creation timestamp
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  author      User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  goal        Goal?     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  objective   Objective? @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+
+  // Indexes for efficient queries
+  @@index([goalId])
+  @@index([objectiveId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// Story 4.1: History Tracking Models for Strategy Module
+// Immutable audit trail for all changes to Strategy, Goal, and Objective entities
+// ============================================================================
+
+// Story 4.1 AC1: Strategy History - Tracks all changes to Strategy entities
+// Story 6.3: History records are preserved when Strategy is deleted (onDelete: SetNull)
+model StrategyHistory {
+  id            String     @id @default(cuid())
+  strategyId    String?                       // FK to Strategy being tracked (nullable to preserve history after delete)
+  changeType    ChangeType                    // CREATE, UPDATE, or DELETE
+  changedFields Json                          // JSON object with old/new values for changed fields
+  changedById   String                        // User who made the change
+  changedAt     DateTime   @default(now())    // When the change occurred
+
+  // Relations - SetNull preserves history records when Strategy is deleted
+  strategy      Strategy?  @relation(fields: [strategyId], references: [id], onDelete: SetNull)
+  changedBy     User       @relation("StrategyHistoryChanger", fields: [changedById], references: [id])
+
+  // AC5: Indexes for efficient querying
+  @@index([strategyId, changedAt])
+  @@index([changedById])
+}
+
+// Story 4.1 AC2: Goal History - Tracks all changes to Goal entities
+// Story 6.3: History records are preserved when Goal is deleted (onDelete: SetNull)
+model GoalHistory {
+  id            String     @id @default(cuid())
+  goalId        String?                       // FK to Goal being tracked (nullable to preserve history after delete)
+  changeType    ChangeType                    // CREATE, UPDATE, or DELETE
+  changedFields Json                          // JSON object with old/new values for changed fields
+  changedById   String                        // User who made the change
+  changedAt     DateTime   @default(now())    // When the change occurred
+
+  // Relations - SetNull preserves history records when Goal is deleted
+  goal          Goal?      @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  changedBy     User       @relation("GoalHistoryChanger", fields: [changedById], references: [id])
+
+  // AC5: Indexes for efficient querying
+  @@index([goalId, changedAt])
+  @@index([changedById])
+}
+
+// Story 4.1 AC3: Objective History - Tracks all changes to Objective entities
+// Story 6.3: History records are preserved when Objective is deleted (onDelete: SetNull)
+model ObjectiveHistory {
+  id            String     @id @default(cuid())
+  objectiveId   String?                       // FK to Objective being tracked (nullable to preserve history after delete)
+  changeType    ChangeType                    // CREATE, UPDATE, or DELETE
+  changedFields Json                          // JSON object with old/new values for changed fields
+  changedById   String                        // User who made the change
+  changedAt     DateTime   @default(now())    // When the change occurred
+
+  // Relations - SetNull preserves history records when Objective is deleted
+  objective     Objective? @relation(fields: [objectiveId], references: [id], onDelete: SetNull)
+  changedBy     User       @relation("ObjectiveHistoryChanger", fields: [changedById], references: [id])
+
+  // AC5: Indexes for efficient querying
+  @@index([objectiveId, changedAt])
+  @@index([changedById])
+}
+
+// Story 7.8.1: Assessment Type Schema (AC1-AC5)
+// Categorizes risk assessments (IT Risk, Vendor Risk, Compliance Risk, etc.)
+model AssessmentType {
+  id              String   @id @default(cuid())
+  organizationId  String
+  name            String                 // AC2: Name required
+  description     String?  @db.Text      // AC2: Optional description
+  isActive        Boolean  @default(true) // AC2: Soft delete flag
+  isDefault       Boolean  @default(false) // Story 7.8.4 AC4: Cannot delete default type
+  createdAt       DateTime @default(now()) // AC2: Timestamp
+  updatedAt       DateTime @updatedAt      // AC2: Timestamp
+
+  // AC5: Relation to Organization
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Relation to RiskAssessments using this type
+  riskAssessments RiskAssessment[]
+  // Relation to AssessmentTasks using this type
+  assessmentTasks AssessmentTask[]
+
+  @@unique([organizationId, name])  // AC3: Unique name per organization
+  @@index([organizationId, isActive]) // AC4: Index for active type queries
+}
+
+// Assessment Task Model
+// Proactive risk assessment tasks that managers assign to analysts
+// Unlike RiskAssessment (which requires a Finding), these are created independently
+// to enable scheduled/ad-hoc risk discovery assessments
+model AssessmentTask {
+  id              String               @id @default(cuid())
+  organizationId  String
+
+  // Task identification
+  identifier      String               // TASK-YYYY-NNNN format
+  title           String               // e.g., "Q1 2026 IT Infrastructure Risk Assessment"
+  description     String?              @db.Text
+
+  // Scope definition - what area to assess
+  scope           String               @db.Text  // Description of assessment scope
+  businessUnitId  String?              // Optional: specific BU to assess
+  assessmentTypeId String?             // Optional: type of assessment (IT Risk, Vendor Risk, etc.)
+
+  // Assignment
+  assignedToId    String?              // Analyst assigned to perform the assessment
+  assignedById    String               // Manager who created/assigned the task
+  assignedAt      DateTime?            // When the task was assigned
+  selfAssignedAt  DateTime?            // When analyst self-assigned (null if admin-assigned)
+
+  // Unified assessment type (for cross-module assignments)
+  unifiedType     UnifiedAssessmentType @default(RISK_DISCOVERY)
+  entityId        String?              // Linked entity ID (Risk, Finding, Vendor, etc.)
+  entityType      String?              // Entity type string for routing ("Risk", "Finding", etc.)
+
+  // Lifecycle
+  status          AssessmentTaskStatus @default(PENDING)
+  priority        String               @default("MEDIUM") // HIGH, MEDIUM, LOW
+  dueDate         DateTime?            // When the assessment should be completed
+  startedAt       DateTime?            // When analyst started working
+  completedAt     DateTime?            // When assessment was completed
+
+  // Results summary (filled on completion)
+  risksIdentified Int                  @default(0) // Count of risks discovered
+  summary         String?              @db.Text    // Completion summary/notes
+
+  // Audit trail
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  // Relations
+  organization    Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedTo      User?                @relation("TaskAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedBy      User                 @relation("TaskAssigner", fields: [assignedById], references: [id])
+  businessUnit    BusinessUnit?        @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+  assessmentType  AssessmentType?      @relation(fields: [assessmentTypeId], references: [id], onDelete: SetNull)
+
+  // Risks discovered during this assessment task
+  discoveredRisks Risk[]               @relation("TaskDiscoveredRisks")
+
+  @@unique([organizationId, identifier])
+  @@index([organizationId, status])
+  @@index([organizationId, assignedToId])
+  @@index([organizationId, dueDate])
+  @@index([organizationId, unifiedType])
+  @@index([organizationId, entityType, entityId])
+}
+
+// Story 7.8.2: Risk Matrix Template Schema (AC1-AC7)
+// Container for risk matrix versions, defines structure and output scale
+model RiskMatrixTemplate {
+  id               String    @id @default(cuid())
+  organizationId   String
+  name             String                          // AC2: Name required
+  description      String?   @db.Text              // AC2: Optional description
+  dimensionCount   Int       @default(2)           // AC3: 2 = L×I, 3 = L×I×E
+  gridSize         Int       @default(5)           // Story 11.1: 3x3, 4x4, or 5x5 matrix grid
+  outputScaleMax   Decimal   @db.Decimal(10, 4)    // AC4: Max score value
+  currentVersionId String?   @unique               // AC5: Nullable until first publish
+  isActive         Boolean   @default(true)        // Soft delete flag
+  isDefault        Boolean   @default(false)       // Story 7.8.4: Cannot delete default template
+  createdAt        DateTime  @default(now())       // AC2: Timestamp
+  updatedAt        DateTime  @updatedAt            // AC2: Timestamp
+
+  // AC5: Relation to Organization
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Story 7.8.3: Version relations
+  versions         RiskMatrixVersion[] @relation("TemplateVersions")
+  currentVersion   RiskMatrixVersion?  @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+
+  @@unique([organizationId, name])  // AC6: Unique name per organization
+  @@index([organizationId, isActive]) // AC7: Index for active template queries
+}
+
+// Story 7.8.3: RiskMatrixVersion Schema & Lifecycle (AC1-AC8)
+// Stores versioned configurations of risk matrix scales and thresholds
+model RiskMatrixVersion {
+  id              String    @id @default(cuid())   // AC2: Unique identifier
+  templateId      String                           // AC2: Parent template reference
+  versionNumber   Int                              // AC5: Auto-incremented per template
+  scales          Json                             // AC2,AC3: MatrixScales JSON structure
+  thresholds      Json                             // AC2,AC4: Threshold[] JSON structure
+  isActive        Boolean   @default(false)        // AC19: Drafts start inactive
+  publishedAt     DateTime?                        // AC21: Set on publish
+  publishedBy     String?                          // AC21: User who published
+  createdAt       DateTime  @default(now())        // AC2: Timestamp
+
+  // AC8: Relations
+  template        RiskMatrixTemplate  @relation("TemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
+  templateCurrent RiskMatrixTemplate? @relation("CurrentVersion")
+  publisher       User?               @relation("MatrixVersionPublisher", fields: [publishedBy], references: [id])
+  assessmentProjects RiskAssessmentProject[] @relation("ProjectMatrixVersion")
+
+  @@unique([templateId, versionNumber])  // AC6: Unique version per template
+  @@index([templateId, isActive])        // AC7: Index for active version queries
+}
+
+// Story 7.0.1: Business Unit Schema with Hierarchy (AC1-AC10)
+// Supports hierarchical organizational structure for assignment and reporting
+model BusinessUnit {
+  id              String   @id @default(cuid())
+  organizationId  String
+  name            String
+  code            String?  // Short code like "FIN", "ENG-PLAT" (AC2)
+  parentId        String?  // Self-referencing for hierarchy (AC3)
+  isActive        Boolean  @default(true)   // Soft delete (AC9)
+  sortOrder       Int      @default(0)      // Display ordering within parent (AC10)
+
+  createdAt       DateTime @default(now())  // AC8
+  updatedAt       DateTime @updatedAt       // AC8
+
+  // Self-referencing hierarchy (AC4: BUHierarchy relation)
+  parent          BusinessUnit?  @relation("BUHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children        BusinessUnit[] @relation("BUHierarchy")
+
+  // Organization relation (AC5)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Story 7.0.2: Users in this BU (AC3)
+  users           User[]
+
+  // Story 7.0.6: Findings affecting this BU (AC5)
+  affectedFindings Finding[] @relation("FindingAffectedBUs")
+
+  // Story 15.2: Risks associated with this BU
+  risks           Risk[]
+
+  // BU-Scoped Compliance: Evidence in this BU
+  evidence        Evidence[]
+
+  // BU-Scoped Compliance: Frameworks assigned to this BU
+  frameworkAssignments BusinessUnitFramework[]
+
+  // BU-Scoped Compliance: Coverage records for this BU
+  frameworkCoverage    FrameworkCoverage[]
+  coverageHistory      CoverageHistory[]
+
+  // Story 16.1: Risk assessments for this BU
+  riskAssessments      RiskAssessment[] @relation("AssessmentBusinessUnit")
+  // Assessment tasks scoped to this BU
+  assessmentTasks      AssessmentTask[]
+
+  // Compliance assessments for this BU
+  complianceAssessments ComplianceAssessment[]
+
+  // Person: People in this BU for accountability tracking
+  people          Person[]
+
+  // Risk treatments scoped to this BU
+  riskTreatments  RiskTreatment[] @relation("TreatmentBusinessUnit")
+
+  // Epic 1: TPRM Vendor Registry - Vendors in this BU
+  vendors         Vendor[]
+
+  // Epic 14: Asset Registry - Assets in this BU
+  assets          Asset[]
+
+  @@unique([organizationId, name])          // AC6: Unique name per org
+  @@index([organizationId, parentId])       // AC7: Index for hierarchy queries
+  @@index([organizationId, isActive])       // Index for active BU queries
+}
+
+// Person: Accountability tracking for risk ownership and treatment assignments
+// Distinct from User (system accounts) - represents stakeholders who may or may not have system access
+model Person {
+  id              String   @id @default(cuid())
+  organizationId  String
+  name            String                      // Full name
+  email           String?                     // Contact email (optional)
+  jobTitle        String?                     // Role/title for context
+  businessUnitId  String?                     // Primary business unit
+  isActive        Boolean  @default(true)     // Soft delete
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessUnit    BusinessUnit? @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+
+  // Accountability relationships
+  treatmentAssignments  RiskTreatment[] @relation("TreatmentAssignee")
+  riskAssessmentOwner   RiskAssessment[] @relation("AssessmentRiskOwner")
+  projectRiskOwner      RiskAssessmentProject[] @relation("ProjectRiskOwner")
+
+  @@unique([organizationId, email])         // Unique email per org (when email provided)
+  @@index([organizationId, isActive])
+  @@index([organizationId, businessUnitId])
+  @@index([organizationId, name])
+}
+
+// BU-Scoped Compliance: Junction table for Framework-BusinessUnit assignments
+// Enables explicit assignment of which frameworks apply to which business units
+model BusinessUnitFramework {
+  id              String       @id @default(cuid())
+  businessUnitId  String
+  frameworkId     String
+  organizationId  String
+  assignedAt      DateTime     @default(now())
+  assignedById    String?
+
+  businessUnit    BusinessUnit @relation(fields: [businessUnitId], references: [id], onDelete: Cascade)
+  framework       Framework    @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedBy      User?        @relation("FrameworkAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@unique([businessUnitId, frameworkId])
+  @@index([organizationId, frameworkId])
+  @@index([organizationId, businessUnitId])
+}
+
+model PasswordResetToken {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expires   DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([expires])
+  @@index([token])
+  @@index([userId])
+}
+
+model Risk {
+  id              String            @id @default(cuid())
+  identifier      String?           // RISK-2026-0001 format (optional for backfill)
+  organizationId  String
+  title           String
+  description     String            @db.Text
+  affectedSystems String?           @db.Text
+  severity        Severity
+  status          RiskStatus        @default(OPEN)
+  createdById     String?
+  // Story 4.2: Optional template reference for tracking template usage
+  templateId      String?
+
+  // Story 4.3: Finding context fields (AC18-AC22)
+  findingSource    RiskFindingSource? // AC18: How the risk was discovered
+  cveId            String?            // AC19: CVE/Reference ID for vulnerability tracking
+  discoveryDate    DateTime?          // AC20: When the risk was discovered (defaults to createdAt if not specified)
+  technicalDetails String?            @db.Text // AC21: Collapsible technical details section with markdown
+
+  // Story 4.6: Risk ownership assignment (AC1-AC6)
+  itOwnerId       String?            // AC1: IT Stakeholder for technical remediation
+  businessOwnerId String?            // AC1: Business Stakeholder for business decisions
+  assignedAt      DateTime?          // AC5: When ownership was assigned
+  assignedById    String?            // AC5: Who assigned the ownership (GRC Analyst)
+
+  // Story 4.7: Impact calculation fields (AC7, AC8, AC13)
+  assetCriticality        AssetCriticality @default(MEDIUM) // AC8: Asset criticality for impact calculation
+  nextAuditDate           DateTime?        // AC13: Next audit date for proximity calculation
+  impactScore             Int              @default(0)      // AC7: Calculated impact score (0-100)
+  impactScoreCalculatedAt DateTime?        // When impact was last calculated
+
+  // Story 4.8: Business Impact Statement Generation (AC6)
+  businessImpactStatement        String?   @db.Text  // AC6: Auto-generated business impact statement
+  impactStatementManuallyEdited  Boolean   @default(false) // AC33-36: Flag for manual edits
+  impactStatementGeneratedAt     DateTime? // When statement was last generated
+
+  // Story 4.10: Remediation verification fields (AC36-AC40)
+  remediationVerifiedById           String?
+  remediationVerificationComments   String?   @db.Text  // AC40: Verification comments
+
+  // ============================================================================
+  // Story 15.5: MITRE ATT&CK Threat Modeling Integration
+  // ============================================================================
+  initialAccessVectorId String?  // Single technique for initial access vector
+
+  // ============================================================================
+  // Story 15.6-15.7: Inherent and Residual Severity Scoring
+  // ============================================================================
+  // Inherent scoring (before controls)
+  inherentLikelihood    Decimal?  @db.Decimal(10, 4)
+  inherentImpact        Decimal?  @db.Decimal(10, 4)
+  inherentExposure      Decimal?  @db.Decimal(10, 4)  // For 3D matrices
+  inherentScore         Decimal?  @db.Decimal(10, 4)
+  inherentScoreLabel    String?   // e.g., "Critical", "High", "Medium", "Low"
+
+  // Residual scoring (after controls)
+  residualLikelihood    Decimal?  @db.Decimal(10, 4)
+  residualImpact        Decimal?  @db.Decimal(10, 4)
+  residualExposure      Decimal?  @db.Decimal(10, 4)  // For 3D matrices
+  residualScore         Decimal?  @db.Decimal(10, 4)
+  residualScoreLabel    String?
+
+  // Matrix version used for scoring (locked at first save)
+  matrixVersionId       String?
+
+  // Controls documentation
+  mitigatingControlsInPlace    String?  @db.Text  // Current mitigating controls
+  preventativeControlsInPlace  String?  @db.Text  // Current preventative controls
+  mitigatingControlsNeeded     String?  @db.Text  // Needed mitigating controls
+  preventativeControlsNeeded   String?  @db.Text  // Needed preventative controls
+
+  // ============================================================================
+  // Risk Assessment Assignment & Approval Workflow
+  // Enables GRC managers to assign risk assessments to users with approval workflow
+  // ============================================================================
+  assessorId              String?   // User assigned to perform the assessment
+  assessmentCreatedAt     DateTime? // When the assessment was assigned
+  assessmentCreatedById   String?   // Manager who created/assigned the assessment
+  assessmentDueDate       DateTime? // SLA deadline for completing assessment
+  assessmentSubmittedAt   DateTime? // When assessor submitted for review
+  assessmentReviewerId    String?   // Manager who reviewed the assessment
+  assessmentReviewedAt    DateTime? // When review was completed (approved/rejected)
+  assessmentReviewNotes   String?   @db.Text  // Notes from reviewer (esp. for rejection)
+  assessmentRevisionCount Int       @default(0) // Number of revision cycles
+
+  // ============================================================================
+  // Story 15.10: Spawned from Finding Tracking
+  // ============================================================================
+  spawnedFromFindingId  String?  // Link to original finding if risk was spawned
+  spawnReason           RiskSpawnReason?  // Why the risk was spawned
+
+  // ============================================================================
+  // Story 15.2: Business Unit Association
+  // ============================================================================
+  businessUnitId        String?  // Business unit this risk belongs to
+
+  // ============================================================================
+  // Story 16.10: Risk Assessment Association
+  // ============================================================================
+  assessmentId          String?  // RiskAssessment this risk belongs to (for child risks)
+
+  // ============================================================================
+  // Assessment Task Association - Proactive Risk Discovery
+  // ============================================================================
+  assessmentTaskId      String?  // AssessmentTask this risk was discovered during
+
+  // ============================================================================
+  // Risk Assessment Project Feature - Container-based risk discovery
+  // ============================================================================
+  discoveryProjectId    String?                // RiskAssessmentProject this risk was discovered in
+  discoveryStatus       RiskDiscoveryStatus?   // PENDING until assessment approved, then PUBLISHED
+
+  // ============================================================================
+  // Epic 5: Vendor Risk Integration (FR48-FR49)
+  // Links risks to vendors and vendor assessments
+  // ============================================================================
+  vendorId              String?  // Vendor this risk is associated with
+  vendorAssessmentId    String?  // VendorAssessment where risk was identified
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relationships (AC13, AC14)
+  Organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  CreatedBy    User?           @relation("RiskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  // Story 4.2: Risk created from template (AC: Task 5.3)
+  Template     RiskTemplate?   @relation("RiskFromTemplate", fields: [templateId], references: [id], onDelete: SetNull)
+  RiskEvidence RiskEvidence[]
+  // Story 4.5: Remediation options for this risk (AC4)
+  RemediationOptions RemediationOption[]
+  // Story 4.6: Risk ownership relationships (AC1)
+  ITOwner      User?           @relation("RiskITOwner", fields: [itOwnerId], references: [id], onDelete: SetNull)
+  BusinessOwner User?          @relation("RiskBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
+  AssignedBy   User?           @relation("RiskAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+  // Risk Assessment Assignment Workflow relationships
+  Assessor               User?  @relation("RiskAssessor", fields: [assessorId], references: [id], onDelete: SetNull)
+  AssessmentCreatedBy    User?  @relation("RiskAssessmentCreatedBy", fields: [assessmentCreatedById], references: [id], onDelete: SetNull)
+  AssessmentReviewer     User?  @relation("RiskAssessmentReviewer", fields: [assessmentReviewerId], references: [id], onDelete: SetNull)
+  // Story 4.10: Status history and verification (AC31-AC40)
+  StatusHistory              RiskStatusHistory[]
+  RemediationVerifiedBy      User?    @relation("RiskRemediationVerifier", fields: [remediationVerifiedById], references: [id], onDelete: SetNull)
+  // Story 4.11: Risk comments for collaboration (AC5)
+  Comments                   RiskComment[]
+  // Story 12.1: Control linkage (AC1-AC8)
+  ControlLinks               RiskControlLink[]
+  // Organizational Controls: User-defined controls linked to this risk
+  OrganizationalControls     RiskOrganizationalControl[]
+
+  // Story 15.5: MITRE ATT&CK relationships
+  InitialAccessVector  MitreTechnique?    @relation("RiskInitialAccess", fields: [initialAccessVectorId], references: [id], onDelete: SetNull)
+  ThreatSteps          RiskThreatStep[]   // Attack chain techniques
+  ThreatObjectives     RiskThreatObjective[]  // Objective techniques
+
+  // Story 15.10: Spawned from finding relationship
+  SpawnedFromFinding   Finding?           @relation("RiskSpawnedFromFinding", fields: [spawnedFromFindingId], references: [id], onDelete: SetNull)
+
+  // Story 15.2: Business unit relationship
+  BusinessUnit         BusinessUnit?      @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+
+  // Story 16.10: Assessment relationship (child risks)
+  Assessment           RiskAssessment?    @relation("AssessmentChildRisks", fields: [assessmentId], references: [id], onDelete: SetNull)
+
+  // Assessment Task relationship (proactive discovery)
+  AssessmentTask       AssessmentTask?    @relation("TaskDiscoveredRisks", fields: [assessmentTaskId], references: [id], onDelete: SetNull)
+
+  // Risk Assessment Project relationship (container-based discovery)
+  DiscoveryProject     RiskAssessmentProject? @relation("ProjectDiscoveredRisks", fields: [discoveryProjectId], references: [id], onDelete: SetNull)
+
+  // Story 15.8: Treatment records
+  Treatments           RiskTreatment[]
+
+  // Story 3.1: Strategy module - Objectives linked to this risk
+  linkedObjectives     Objective[]        @relation("ObjectiveLinkedRisks")
+
+  // Epic 5: Vendor risk integration relations
+  Vendor               Vendor?            @relation("VendorRisks", fields: [vendorId], references: [id], onDelete: SetNull)
+  VendorAssessment     VendorAssessment?  @relation("VendorAssessmentRisks", fields: [vendorAssessmentId], references: [id], onDelete: SetNull)
+
+  // BIA Module: Business Processes linked to this risk (FR35)
+  businessProcessLinks BusinessProcessRisk[]
+
+  @@index([organizationId])
+  @@index([organizationId, severity])
+  @@index([organizationId, status])
+  @@index([severity])
+  @@index([status])
+  // Story 4.6: Indexes for assignment queries (Task 1.4)
+  @@index([itOwnerId])
+  @@index([businessOwnerId])
+  @@index([assignedById])
+  // Story 4.7: Indexes for impact score sorting (Task 1.4)
+  @@index([impactScore])
+  @@index([organizationId, impactScore])
+  // Story 15: New indexes
+  @@index([initialAccessVectorId])
+  @@index([spawnedFromFindingId])
+  @@index([businessUnitId])
+  @@index([assessmentTaskId])
+  @@index([inherentScore])
+  @@index([residualScore])
+  @@index([assessmentId])  // Story 16.10: Child risks query
+  // Risk Assessment Assignment Workflow indexes
+  @@index([assessorId])  // Assessor's assignment queries
+  @@index([organizationId, assessorId, status])  // My assignments query
+  @@index([organizationId, status, assessmentSubmittedAt])  // Review queue query
+  // Risk Assessment Project indexes (container-based discovery)
+  @@index([discoveryProjectId])  // Query risks within a project
+  @@index([discoveryStatus])  // Filter by discovery status
+  @@index([organizationId, discoveryStatus])  // Risk register filtered view
+  // Epic 5: Vendor risk integration indexes
+  @@index([vendorId])
+  @@index([vendorAssessmentId])
+  @@index([organizationId, vendorId])
+  // Risk identifier
+  @@unique([organizationId, identifier])
+}
+
+model RiskEvidence {
+  id         String               @id @default(cuid())
+  riskId     String
+  evidenceId String
+  linkType   RiskEvidenceLinkType
+  linkedById String
+  linkedAt   DateTime             @default(now())
+  Risk       Risk                 @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  Evidence   Evidence             @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  LinkedBy   User                 @relation(fields: [linkedById], references: [id])
+
+  @@unique([riskId, evidenceId])
+  @@index([riskId])
+  @@index([evidenceId])
+}
+
+// Story 4.10: Risk Status History model (AC31-AC34)
+// Immutable record of all status transitions for audit trail
+model RiskStatusHistory {
+  id             String       @id @default(cuid())
+  riskId         String
+  oldStatus      RiskStatus
+  newStatus      RiskStatus
+  reason         String?      @db.Text  // Required for reopening closed risks
+  changedById    String
+  organizationId String
+
+  changedAt      DateTime     @default(now())
+
+  // Relationships
+  Risk           Risk         @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  ChangedBy      User         @relation("RiskStatusChanger", fields: [changedById], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([riskId, changedAt])
+  @@index([organizationId])
+}
+
+// Story 4.11: Risk Comment model (AC1-AC6)
+// Enables collaboration on risks through comments with typed categories
+// Supports markdown formatting, soft delete, and audit trail
+model RiskComment {
+  id              String       @id @default(cuid())
+  riskId          String
+  comment         String       @db.Text  // AC3: Up to 5,000 characters with markdown
+  commentType     CommentType  @default(GENERAL) // AC2: Comment type enum
+  authorId        String?      // AC6: Null if author deleted (preserve comment history)
+  organizationId  String
+  deletedAt       DateTime?    // AC20: Soft delete for "deleted" placeholder
+
+  createdAt       DateTime     @default(now()) // AC4: Created timestamp
+  updatedAt       DateTime     @updatedAt      // AC4: Updated timestamp
+
+  // AC5: Relationships - belongs to Risk, User (author), Organization
+  Risk            Risk         @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  Author          User?        @relation("RiskCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  Organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // AC1: Indexes for efficient querying
+  @@index([riskId, createdAt])    // Comments sorted by time for a risk
+  @@index([organizationId])       // Multi-tenant query optimization
+}
+
+// Story 4.5: Remediation Option model (AC1-AC7)
+// Stores multiple remediation options per risk with cost estimates, timelines, and effort levels
+// Enables Business Stakeholders to evaluate different remediation approaches
+model RemediationOption {
+  id               String              @id @default(cuid())
+  riskId           String
+  title            String              @db.VarChar(200)
+  description      String              @db.Text
+  approach         String              @db.Text
+  costEstimate     Decimal             @db.Decimal(12, 2) // Up to $9,999,999,999.99
+  timelineEstimate String              @db.VarChar(100)   // Flexible text: "2-3 weeks", "1 month"
+  effortLevel      EffortLevel
+  priority         RemediationPriority
+  selectedStatus   SelectionStatus?    // null = not yet reviewed (AC7)
+  selectedAt       DateTime?
+  selectedById     String?
+  createdById      String              // AC5
+  organizationId   String              // AC5
+  createdAt        DateTime            @default(now()) // AC6
+  updatedAt        DateTime            @updatedAt      // AC6
+
+  // Relationships
+  Risk         Risk          @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  CreatedBy    User          @relation("RemediationOptionCreator", fields: [createdById], references: [id])
+  SelectedBy   User?         @relation("RemediationOptionApprover", fields: [selectedById], references: [id])
+  Organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([riskId])                     // AC4: Multiple options per risk
+  @@index([organizationId, riskId])     // Multi-tenant query optimization
+  @@index([organizationId])
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model User {
+  id                                      String            @id
+  name                                    String?
+  email                                   String?           @unique
+  emailVerified                           DateTime?
+  image                                   String?
+  hashedPassword                          String?
+  role                                    UserRole          @default(AUDITOR)
+  organizationId                          String
+  // Story 7.0.2: Business Unit assignment (AC1-AC4)
+  businessUnitId                          String?           // Optional - user not yet assigned to BU
+  // Story 3.7: Assigned framework codes for auditor role access control (AC19-AC21)
+  assignedFrameworks                      String[]          @default([])
+  createdAt                               DateTime          @default(now())
+  updatedAt                               DateTime
+  Account                                 Account[]
+  AuditLog                                AuditLog[]
+  Evidence                                Evidence[]
+  EvidenceVersion                         EvidenceVersion[]
+  Framework_Framework_activatedByToUser   Framework[]       @relation("Framework_activatedByToUser")
+  Framework_Framework_deactivatedByToUser Framework[]       @relation("Framework_deactivatedByToUser")
+  RiskEvidence                            RiskEvidence[]
+  Session                                 Session[]
+  Organization                            Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // Story 7.0.2: Business Unit relationship (AC2)
+  businessUnit                            BusinessUnit?     @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+  // Story 3.12: Evidence Request relationships
+  EvidenceRequestsReceived                EvidenceRequest[] @relation("EvidenceRequestRecipient")
+  EvidenceRequestsSent                    EvidenceRequest[] @relation("EvidenceRequestRequester")
+  // Story 4.1: Risks created by this user
+  RisksCreated                            Risk[]            @relation("RiskCreator")
+  // Story 4.5: Remediation options created/approved by this user
+  RemediationOptionsCreated               RemediationOption[] @relation("RemediationOptionCreator")
+  RemediationOptionsApproved              RemediationOption[] @relation("RemediationOptionApprover")
+  // Story 4.6: Risk ownership relationships (Task 1.2)
+  RisksAsITOwner                          Risk[]            @relation("RiskITOwner")
+  RisksAsBusinessOwner                    Risk[]            @relation("RiskBusinessOwner")
+  RisksAssignedByMe                       Risk[]            @relation("RiskAssignedBy")
+  // Risk Assessment Assignment Workflow relationships
+  RisksAssessedByMe                       Risk[]            @relation("RiskAssessor")
+  RiskAssessmentsCreatedByMe              Risk[]            @relation("RiskAssessmentCreatedBy")
+  RiskAssessmentsReviewedByMe             Risk[]            @relation("RiskAssessmentReviewer")
+  // Story 4.10: Status history and verification relationships
+  RiskStatusChanges                       RiskStatusHistory[] @relation("RiskStatusChanger")
+  RisksVerified                           Risk[]            @relation("RiskRemediationVerifier")
+  // Story 4.11: Risk comments authored by this user (AC5)
+  RiskComments                            RiskComment[]     @relation("RiskCommentAuthor")
+  // Story 7.1: Finding relationships (AC16-AC18)
+  FindingsCreated                         Finding[]         @relation("FindingCreator")
+  FindingsTriaged                         Finding[]         @relation("FindingTriager")
+  FindingsAccepted                        Finding[]         @relation("FindingAccepter")
+  // Story 7.0.8: Findings assigned to this user (AC3)
+  FindingsAssigned                        Finding[]         @relation("FindingAssignee")
+  // Story 7.5: RiskAssessment relationships (AC30-AC32)
+  AssessmentsCreated                      RiskAssessment[]  @relation("AssessmentCreator")
+  AssessmentsOwned                        RiskAssessment[]  @relation("AssessmentOwner")
+  AssessmentsApproved                     RiskAssessment[]  @relation("AssessmentApprover")
+  // Story 16.1: Assessment business context relations
+  AssessmentsAsBusinessOwner              RiskAssessment[]  @relation("AssessmentBusinessOwner")
+  AssessmentsPerformed                    RiskAssessment[]  @relation("AssessmentPerformer")
+  // Assessment Task relations - proactive risk assessments
+  AssessmentTasksAssigned                 AssessmentTask[]  @relation("TaskAssignee")
+  AssessmentTasksCreated                  AssessmentTask[]  @relation("TaskAssigner")
+  // Story 7.8.3: Matrix version publishing (AC8)
+  MatrixVersionsPublished                 RiskMatrixVersion[] @relation("MatrixVersionPublisher")
+  // Story 7.10: Risk Register Entry relationships (AC13-AC14)
+  RiskRegisterEntriesOwned                RiskRegisterEntry[] @relation("RiskRegisterOwner")
+  RiskRegisterEntriesClosed               RiskRegisterEntry[] @relation("RiskRegisterCloser")
+  // Story 16.6: Risk Register Status changes
+  RiskRegisterStatusChanges               RiskRegisterStatusHistory[] @relation("RiskRegisterStatusChanger")
+  // Story 12.1: Control linkage creator relationships
+  RiskControlLinksCreated                 RiskControlLink[]   @relation("RiskControlLinkCreator")
+  FindingControlLinksCreated              FindingControlLink[] @relation("FindingControlLinkCreator")
+  // Story 14.5: Finding comments authored by this user
+  FindingComments                         FindingComment[]    @relation("FindingCommentUser")
+  // Story 14.6: Finding evidence attached by this user
+  FindingEvidenceAttached                 FindingEvidence[]   @relation("FindingEvidenceAttacher")
+
+  // Story 15.8: Risk treatment decisions made/completed by this user
+  TreatmentsDecided                       RiskTreatment[]     @relation("TreatmentDecider")
+  TreatmentsCompleted                     RiskTreatment[]     @relation("TreatmentCompleter")
+  // BU-Scoped Compliance: Framework-BU assignments made by this user
+  FrameworkAssignments                    BusinessUnitFramework[] @relation("FrameworkAssigner")
+  // Organizational Controls: Controls created by this user
+  OrganizationalControlsCreated           OrganizationalControl[] @relation("OrgControlCreator")
+  RiskOrganizationalControlsCreated       RiskOrganizationalControl[] @relation("RiskOrgControlCreator")
+  // Story 1.1: Security Strategy Module - User relations for Strategy & Goal ownership
+  StrategiesOwned                         Strategy[]  @relation("StrategyOwner")
+  StrategiesCreated                       Strategy[]  @relation("StrategyCreator")
+  GoalsOwned                              Goal[]      @relation("GoalOwner")
+  GoalsCreated                            Goal[]      @relation("GoalCreator")
+  // Story 2.1: Objective relations - created by and assigned to
+  ObjectivesCreated                       Objective[] @relation("ObjectiveCreator")
+  ObjectiveAssignments                    ObjectiveAssignee[] @relation("ObjectiveAssignees")
+  // Story 2.4: Comments authored by this user
+  Comments                                Comment[] @relation("CommentAuthor")
+  // Story 4.1: History tracking - changes made by this user
+  StrategyHistoryChanges                  StrategyHistory[]  @relation("StrategyHistoryChanger")
+  GoalHistoryChanges                      GoalHistory[]      @relation("GoalHistoryChanger")
+  ObjectiveHistoryChanges                 ObjectiveHistory[] @relation("ObjectiveHistoryChanger")
+  // Standards Module: Standard ownership and exception workflow relations
+  StandardsOwned                          Standard[]         @relation("StandardOwner")
+  StandardsCreated                        Standard[]         @relation("StandardCreatedBy")
+  StandardMappingsCreated                 StandardControlMapping[] @relation("StandardMappingCreatedBy")
+  // Base Framework Mapping: Framework-to-framework mappings created by this user
+  FrameworkMappingsCreated                FrameworkControlMapping[] @relation("FrameworkMappingCreatedBy")
+  ExceptionsRequested                     ControlException[] @relation("ExceptionRequestedBy")
+  ExceptionsApproved                      ControlException[] @relation("ExceptionApprovedBy")
+  // Maturity Assessment Module: Assessment ownership and workflow relations
+  MaturityAssessmentsOwned                MaturityAssessment[]       @relation("MaturityAssessmentOwner")
+  MaturityAssessmentsSubmitted            MaturityAssessment[]       @relation("MaturityAssessmentSubmitter")
+  MaturityAssessmentsApproved             MaturityAssessment[]       @relation("MaturityAssessmentApprover")
+  MaturityDomainScoresAssessed            MaturityDomainScore[]      @relation("MaturityDomainScoreAssessor")
+  AssessorAssignments                     AssessorAssignment[]       @relation("AssessorAssignments")
+  MaturitySnapshotsTriggered              MaturitySnapshot[]         @relation("MaturitySnapshotTriggeredBy")
+  MaturityQuestionResponsesAnswered       MaturityQuestionResponse[] @relation("MaturityQuestionResponseAnswerer")
+  // Compliance Assessment Module: Assessment ownership and workflow relations
+  ComplianceAssessmentsOwned              ComplianceAssessment[]     @relation("ComplianceAssessmentOwner")
+  ComplianceAssessmentsAssessing          ComplianceAssessment[]     @relation("ComplianceAssessmentAssessor")
+  ComplianceAssessmentsSubmitted          ComplianceAssessment[]     @relation("ComplianceAssessmentSubmitter")
+  ComplianceAssessmentsApproved           ComplianceAssessment[]     @relation("ComplianceAssessmentApprover")
+  ControlScoresAssessed                   ControlAssessmentScore[]   @relation("ControlScoreAssessor")
+  // Risk Assessment Project Module: Container-based risk discovery workflow
+  AssessmentProjectsAssigned              RiskAssessmentProject[]    @relation("ProjectAssignee")
+  AssessmentProjectsCreated               RiskAssessmentProject[]    @relation("ProjectCreator")
+  AssessmentProjectsReviewed              RiskAssessmentProject[]    @relation("ProjectReviewer")
+  // Epic 1: TPRM Vendor Registry - User vendor ownership relations
+  VendorsAsITOwner                        Vendor[]                   @relation("VendorITOwner")
+  VendorsAsBusinessOwner                  Vendor[]                   @relation("VendorBusinessOwner")
+  VendorsCreated                          Vendor[]                   @relation("VendorCreator")
+  // Epic 3: Vendor Assessment Workflow - User assessment relations
+  VendorAssessmentsAssigned               VendorAssessment[]         @relation("AssessmentAssessor")
+  VendorAssessmentsCompleted              VendorAssessment[]         @relation("AssessmentCompletedBy")
+  VendorAssessmentsCreated                VendorAssessment[]         @relation("AssessmentCreator")
+  VendorAssessmentComments                VendorAssessmentComment[]
+  // Epic 4: Questionnaire System - User questionnaire relations
+  QuestionnaireTemplatesCreated           QuestionnaireTemplate[]    @relation("QuestionnaireTemplateCreator")
+  QuestionnairesSent                      AssessmentQuestionnaire[]  @relation("QuestionnaireSender")
+  ResponsesScored                         QuestionnaireResponse[]    @relation("ResponseScorer")
+
+  // BIA Module: Business Function and Process ownership relations
+  BusinessFunctionsCreated                BusinessFunction[]         @relation("BusinessFunctionCreator")
+  BusinessProcessesOwned                  BusinessProcess[]          @relation("BusinessProcessOwner")
+  BusinessProcessesAssessed               BusinessProcess[]          @relation("BusinessProcessAssessor")
+  BusinessProcessesOverridden             BusinessProcess[]          @relation("BusinessProcessOverrider")
+  BusinessProcessesCreated                BusinessProcess[]          @relation("BusinessProcessCreator")
+  AssessmentRequestsSent                  BIAAssessmentRequest[]     @relation("AssessmentRequester")
+
+  // Epic 14: Asset Registry relations
+  AssetsCreated                           Asset[]                    @relation("AssetCreator")
+  BusinessProcessAssetsCreated            BusinessProcessAsset[]     @relation("BusinessProcessAssetCreator")
+  AssetOwnersCreated                      AssetOwner[]               @relation("AssetOwnerCreator")
+
+  @@index([email])
+  @@index([organizationId])
+  // Story 7.0.2: Index for BU-based user queries (AC9)
+  @@index([organizationId, businessUnitId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Story 12.1: Risk-Control Link Type enum (AC2)
+// Defines the relationship between a risk and a control
+enum RiskControlLinkType {
+  MITIGATING  // Control helps mitigate this risk
+  GAP         // Control gap is causing/contributing to this risk
+  AFFECTED    // Risk affects the effectiveness of this control
+}
+
+// Story 12.1: Finding-Control Link Type enum (AC10)
+// Defines the relationship between a finding and a control
+enum FindingControlLinkType {
+  VIOLATION    // Finding represents a control violation
+  WEAKNESS     // Finding indicates a control weakness
+  OBSERVATION  // General observation related to control
+}
+
+enum AuditAction {
+  CREATE_USER
+  UPDATE_USER
+  DELETE_USER
+  UPDATE_ROLE
+  UPDATE_USER_ROLE
+  PASSWORD_RESET
+  PASSWORD_CHANGE
+  UPLOAD_EVIDENCE
+  UPDATE_EVIDENCE
+  DELETE_EVIDENCE
+  RESTORE_EVIDENCE
+  REPLACE_EVIDENCE_FILE
+  TAG_EVIDENCE
+  VIEW_EVIDENCE
+  DOWNLOAD_EVIDENCE
+  LINK_EVIDENCE_TO_RISK
+  UNLINK_EVIDENCE_FROM_RISK
+  // Story 3.12: Evidence Request audit actions
+  CREATE_EVIDENCE_REQUEST
+  FULFILL_EVIDENCE_REQUEST
+  CANCEL_EVIDENCE_REQUEST
+  SEND_EVIDENCE_REQUEST_EMAIL
+  SEND_EVIDENCE_REQUEST_REMINDER
+  // Story 4.14: Email Service audit actions
+  SEND_EMAIL
+  EMAIL_SEND_FAILED
+  CREATE_RISK
+  UPDATE_RISK
+  DELETE_RISK
+  // Story 4.5: Remediation Option audit actions
+  ADD_REMEDIATION_OPTION
+  UPDATE_REMEDIATION_OPTION
+  DELETE_REMEDIATION_OPTION
+  ASSIGN_RISK
+  REASSIGN_RISK
+  CLOSE_RISK
+  REOPEN_RISK
+  ADD_RISK_COMMENT
+  UPDATE_RISK_COMMENT
+  DELETE_RISK_COMMENT
+  UPDATE_RISK_STATUS
+  ACTIVATE_FRAMEWORK
+  DEACTIVATE_FRAMEWORK
+  IMPORT_OSCAL_CATALOG
+  UPDATE_OSCAL_CATALOG
+  CONTROL_ADDED
+  CONTROL_DEPRECATED
+  CONTROL_MODIFIED
+  ACTIVATE_DOMAIN
+  DEACTIVATE_DOMAIN
+  REORDER_DOMAINS
+  CREATE_MAPPING
+  UPDATE_MAPPING
+  DELETE_MAPPING
+  SIGN_IN
+  SIGN_OUT
+  FAILED_LOGIN
+  AUTHORIZATION_FAILED
+  BACKUP_CREATED
+  SYSTEM_CONFIGURATION_CHANGED
+  // Story 5.6: CSV Export audit action
+  EXPORT_RISKS
+  EXPORT_FINDINGS
+  // Story 5.7: PDF Evidence Package Export
+  EXPORT_EVIDENCE_PACKAGE
+  // Story 7.0.8: Finding assignment audit actions
+  ASSIGN_FINDING
+  REASSIGN_FINDING
+  // Story 7.0.9: Owner cascade audit action
+  OWNER_CASCADED_FROM_ASSIGNEE
+  // Story 7.2: Finding creation audit action
+  FINDING_CREATED
+  // Story 7.3: Finding triage workflow audit action
+  FINDING_TRANSITIONED
+  // Story 7.4: Finding acceptance audit action
+  FINDING_ACCEPTED
+  // Story 7.5: Risk Assessment audit actions
+  ASSESSMENT_CREATED
+  ASSESSMENT_TRANSITIONED
+  // Story 7.9: Approval Gates audit actions
+  ASSESSMENT_APPROVED
+  ASSESSMENT_REJECTED
+  RISK_REGISTER_ENTRY_CREATED
+  // Story 12.1: Control Linkage audit actions
+  LINK_RISK_TO_CONTROL
+  UNLINK_RISK_FROM_CONTROL
+  UPDATE_RISK_CONTROL_LINK
+  LINK_FINDING_TO_CONTROL
+  UNLINK_FINDING_FROM_CONTROL
+  UPDATE_FINDING_CONTROL_LINK
+  // Story 14.8: SLA Breach Detection
+  FINDING_SLA_BREACHED
+  // Story 15.5-15.10: Risk threat modeling and treatment audit actions
+  RISK_MITRE_UPDATED
+  RISK_TREATMENT_CREATED
+  RISK_TREATMENT_COMPLETED
+  RISK_TREATMENT_SLA_BREACHED
+  RISK_SPAWNED_FROM_FINDING
+  // Story 12.4: Control CRUD audit actions
+  CREATE_CONTROL
+  UPDATE_CONTROL
+  DELETE_CONTROL
+  DEPRECATE_CONTROL
+  RESTORE_CONTROL
+  BULK_IMPORT_CONTROLS
+  BULK_DEPRECATE_CONTROLS
+  BULK_RESTORE_CONTROLS
+  BULK_DELETE_CONTROLS
+  // Story 1.2: Strategy CRUD audit actions
+  STRATEGY_CREATED
+  STRATEGY_UPDATED
+  STRATEGY_DELETED
+  // Story 1.3: Goal CRUD audit actions
+  GOAL_CREATED
+  GOAL_UPDATED
+  GOAL_DELETED
+  GOAL_REORDERED
+  // Story 2.2: Objective CRUD audit actions
+  OBJECTIVE_CREATED
+  OBJECTIVE_UPDATED
+  OBJECTIVE_DELETED
+  OBJECTIVE_REORDERED
+  // Story 3.2: Objective entity linking audit actions
+  OBJECTIVE_RISK_LINKED
+  OBJECTIVE_RISK_UNLINKED
+  OBJECTIVE_CONTROL_LINKED
+  OBJECTIVE_CONTROL_UNLINKED
+  OBJECTIVE_EVIDENCE_LINKED
+  OBJECTIVE_EVIDENCE_UNLINKED
+  // Risk Assessment Project Module: Container-based risk discovery
+  ASSESSMENT_PROJECT_CREATED
+  ASSESSMENT_PROJECT_UPDATED
+  ASSESSMENT_PROJECT_CLAIMED
+  ASSESSMENT_PROJECT_ASSIGNED
+  ASSESSMENT_PROJECT_SUBMITTED
+  ASSESSMENT_PROJECT_APPROVED
+  ASSESSMENT_PROJECT_REJECTED
+  ASSESSMENT_RISK_RESCINDED
+  // Epic 1: TPRM Vendor Registry audit actions
+  VENDOR_CREATED
+  VENDOR_UPDATED
+  VENDOR_STATUS_CHANGED
+  VENDOR_DELETED
+  // Epic 2: Vendor Risk Tiering audit actions
+  VENDOR_TIER_CHANGED
+  VENDOR_REVIEW_DATE_OVERRIDDEN
+  // Epic 3: Vendor Assessment Workflow audit actions
+  VENDOR_ASSESSMENT_CREATED
+  VENDOR_ASSESSMENT_UPDATED
+  VENDOR_ASSESSMENT_STATUS_CHANGED
+  VENDOR_ASSESSMENT_ASSIGNEE_CHANGED
+  VENDOR_ASSESSMENT_COMPLETED
+  VENDOR_ASSESSMENT_COMMENT_ADDED
+  // Epic 4: Questionnaire System audit actions
+  QUESTIONNAIRE_TEMPLATE_CREATED
+  QUESTIONNAIRE_TEMPLATE_UPDATED
+  QUESTIONNAIRE_TEMPLATE_DELETED
+  QUESTIONNAIRE_ATTACHED
+  QUESTIONNAIRE_DETACHED
+  QUESTIONNAIRE_SENT
+  QUESTIONNAIRE_VOIDED
+  QUESTIONNAIRE_RESPONSE_SCORED
+  // BIA Module: Business Impact Assessment audit actions
+  BIA_CONFIG_UPDATED
+  BIA_IMPACT_CATEGORY_CREATED
+  BIA_IMPACT_CATEGORY_UPDATED
+  BIA_IMPACT_CATEGORY_DELETED
+  BIA_TIER_DEFINITION_CREATED
+  BIA_TIER_DEFINITION_UPDATED
+  BIA_TIER_DEFINITION_DELETED
+  BIA_TIER_CRITERIA_UPDATED
+  BIA_TIME_PERIOD_CREATED
+  BIA_TIME_PERIOD_UPDATED
+  BIA_TIME_PERIOD_DELETED
+  BUSINESS_FUNCTION_CREATED
+  BUSINESS_FUNCTION_UPDATED
+  BUSINESS_FUNCTION_DELETED
+  BUSINESS_PROCESS_CREATED
+  BUSINESS_PROCESS_UPDATED
+  BUSINESS_PROCESS_STATUS_CHANGED
+  BUSINESS_PROCESS_OWNER_CHANGED
+  BUSINESS_PROCESS_TIER_CALCULATED
+  BUSINESS_PROCESS_TIER_OVERRIDDEN
+  BUSINESS_PROCESS_ASSESSMENT_COMPLETED
+  BUSINESS_PROCESS_DEPENDENCY_ADDED
+  BUSINESS_PROCESS_DEPENDENCY_REMOVED
+  BUSINESS_PROCESS_VENDOR_LINKED
+  BUSINESS_PROCESS_VENDOR_UNLINKED
+  BUSINESS_PROCESS_RISK_LINKED
+  BUSINESS_PROCESS_RISK_UNLINKED
+  BUSINESS_PROCESS_RESOURCE_DEPS_UPDATED
+  BUSINESS_PROCESS_PEAK_TIME_UPDATED
+  // Epic 14: Asset Registry
+  ASSET_CREATED
+  ASSET_UPDATED
+  ASSET_STATUS_CHANGED
+  ASSET_TIER_RECALCULATED
+  ASSET_PROCESS_LINKED
+  ASSET_PROCESS_UNLINKED
+}
+
+enum RiskStatus {
+  DRAFT           // Assessment workflow: Assessor working on assessment
+  PENDING_REVIEW  // Assessment workflow: Submitted, awaiting manager approval
+  OPEN
+  ASSIGNED
+  REMEDIATED
+  CLOSED
+}
+
+// Story 1.1: Strategy Status enum for Security Strategy Module
+// Lifecycle states for strategic planning initiatives
+enum StrategyStatus {
+  DRAFT      // Strategy being prepared, not yet active
+  ACTIVE     // Strategy currently in execution
+  COMPLETED  // Strategy objectives achieved
+  ARCHIVED   // Strategy no longer relevant, kept for history
+}
+
+// Story 2.1: Objective Status enum for tracking objective lifecycle
+enum ObjectiveStatus {
+  NOT_STARTED  // Objective not yet begun
+  IN_PROGRESS  // Objective work is underway
+  AT_RISK      // Objective at risk of missing target
+  COMPLETED    // Objective successfully completed
+}
+
+// Story 2.1: KPI Type enum for objective measurement methods
+// Manual types allow direct user input, auto types calculate from linked entities
+enum KpiType {
+  // Manual KPI types (Story 2.1 - user enters values directly)
+  MANUAL_PERCENTAGE  // User enters a percentage value (0-100)
+  MANUAL_COUNT       // User enters a numeric count value
+  MANUAL_BOOLEAN     // User marks as achieved (1) or not (0)
+
+  // Auto-calculated KPI types (Story 3.4 - calculated from linked entities)
+  RISK_REMEDIATION_RATE      // % of linked risks with CLOSED status
+  RISK_OPEN_COUNT            // Count of linked risks with OPEN status
+  HIGH_SEVERITY_RISK_COUNT   // Count of linked risks with HIGH/CRITICAL severity
+  CONTROL_IMPLEMENTATION_RATE // % of linked controls with IMPLEMENTED status
+  CONTROL_EFFECTIVENESS_AVG  // Average effectiveness score of linked controls
+  EVIDENCE_FRESHNESS_RATE    // % of linked evidence uploaded within 90 days
+  EVIDENCE_COVERAGE          // % of control domains with linked evidence
+}
+
+// Story 4.1: Change Type enum for history tracking
+// Tracks what type of change was made to Strategy, Goal, or Objective
+enum ChangeType {
+  CREATE  // Entity was created
+  UPDATE  // Entity was updated
+  DELETE  // Entity was deleted (soft or hard)
+}
+
+// Story 4.7: Asset Criticality for impact calculation (AC8)
+enum AssetCriticality {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  NONE
+}
+
+enum Severity {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum UserRole {
+  ORG_ADMIN
+  GRC_MANAGER
+  GRC_ANALYST
+  SECURITY_ENGINEER
+  CISO
+  IT_STAKEHOLDER
+  BUSINESS_STAKEHOLDER
+  AUDITOR
+}
+
+enum RiskEvidenceLinkType {
+  FINDING
+  REMEDIATION
+}
+
+// Story 4.3: Risk Finding Source enum (AC18)
+// Tracks how the risk was discovered for context and reporting
+enum RiskFindingSource {
+  VULNERABILITY_SCAN
+  PENETRATION_TEST
+  AUDIT_FINDING
+  SECURITY_REVIEW
+  COMPLIANCE_ASSESSMENT
+  OTHER
+}
+
+// Story 15.10: Risk Spawn Reason enum
+// Tracks why a risk was created from a finding
+enum RiskSpawnReason {
+  ACCEPTED           // Finding accepted as risk by analyst
+  SLA_BREACH         // Finding auto-promoted due to SLA breach
+}
+
+// Story 15.8: Treatment Type for risk treatment decisions
+enum TreatmentDecision {
+  ACCEPT             // Accept the risk with justification
+  REMEDIATE          // Remediate the risk
+  TRANSFER           // Transfer risk (e.g., insurance)
+  AVOID              // Avoid by eliminating the source
+}
+
+// Treatment Action Status for tracking progress
+enum TreatmentActionStatus {
+  NOT_STARTED        // Waiting to begin
+  IN_PROGRESS        // Active work underway
+  COMPLETED          // Successfully completed
+  ON_HOLD            // Paused or blocked
+  CANCELLED          // No longer needed
+}
+
+// Story 4.5: Remediation Option effort level (AC2)
+// Defines how much effort is required to implement this remediation option
+enum EffortLevel {
+  LOW        // < 1 week
+  MEDIUM     // 1-4 weeks
+  HIGH       // 1-3 months
+  VERY_HIGH  // > 3 months
+}
+
+// Story 4.5: Remediation Option priority (AC3)
+// GRC Analyst recommendation for stakeholder decision-making
+enum RemediationPriority {
+  RECOMMENDED      // Best option - recommended approach
+  ALTERNATIVE      // Viable alternative option
+  NOT_RECOMMENDED  // Documented but not recommended
+}
+
+// Story 4.5: Remediation Option selection status (AC7)
+// Tracks stakeholder decision on each option
+enum SelectionStatus {
+  PENDING   // Not yet reviewed
+  ACCEPTED  // Stakeholder accepted this option
+  REJECTED  // Stakeholder rejected this option
+}
+
+// Story 4.2: Risk Template categories for pre-built assessment templates
+enum RiskTemplateCategory {
+  CLOUD_INFRASTRUCTURE
+  ACCESS_CONTROL
+  DATA_SECURITY
+  NETWORK_SECURITY
+  APPLICATION_SECURITY
+}
+
+// Story 3.12: Evidence Request Workflow status enum
+enum EvidenceRequestStatus {
+  PENDING
+  FULFILLED
+  CANCELLED
+}
+
+// Story 4.11: Risk Comment Types (AC2)
+enum CommentType {
+  GENERAL              // General comment or note
+  QUESTION             // Ask for clarification or additional information
+  REMEDIATION_UPDATE   // Provide progress update on remediation work
+  DECISION_RATIONALE   // Explain why a particular decision was made
+  VERIFICATION_NOTE    // Notes from remediation verification by GRC Analyst
+}
+
+// Story 4.15: Email Queue status (AC2)
+enum EmailQueueStatus {
+  PENDING   // Email waiting to be sent
+  SENT      // Email successfully sent
+  FAILED    // Email failed after max retries
+  RETRYING  // Email failed, waiting for retry
+}
+
+// Story 7.1: Finding Source enum (AC2)
+// Tracks how the finding was discovered for context and reporting
+enum FindingSource {
+  AUDIT     // From internal or external audit
+  PENTEST   // From penetration testing
+  SCANNER   // From automated security scanner
+  INCIDENT  // From security incident
+  MANUAL    // Manually reported finding
+}
+
+// Story 7.1: Finding Status enum (AC3)
+// State machine for finding workflow: NEW → NEEDS_INFO → TRIAGED → ACCEPTED (or DUPLICATE/REJECTED)
+enum FindingStatus {
+  NEW        // Initial state - just created, awaiting triage
+  NEEDS_INFO // Triager needs more information before proceeding
+  TRIAGED    // Reviewed and ready for acceptance decision
+  DUPLICATE  // Marked as duplicate of another finding
+  REJECTED   // Rejected - not a valid security finding
+  ACCEPTED   // Accepted - will create Risk Assessment
+}
+
+// Story 7.5: Assessment Status enum (AC2)
+// State machine for risk assessment workflow: DRAFT → APPROVED (or REJECTED)
+enum AssessmentStatus {
+  DRAFT     // Initial state - assessment being prepared
+  APPROVED  // Terminal - assessment approved and added to risk register
+  REJECTED  // Terminal - assessment rejected
+}
+
+// Assessment Task Status enum
+// Lifecycle states for proactive risk assessment tasks assigned to analysts
+enum AssessmentTaskStatus {
+  PENDING       // Task created but not yet started
+  IN_PROGRESS   // Analyst actively working on assessment
+  COMPLETED     // Assessment completed, risks documented
+  CANCELLED     // Task cancelled before completion
+}
+
+// Unified Assessment Type enum
+// Categorizes assessment tasks across different GRC modules
+enum UnifiedAssessmentType {
+  RISK_DISCOVERY         // Existing behavior (default) - general risk discovery
+  RISK_ASSESSMENT        // Risk assessment task linked to a Risk
+  FINDING_CREATION       // Finding creation/triage task
+  VENDOR_ASSESSMENT      // Third-party vendor assessment
+  BIA_ASSESSMENT         // Business Impact Analysis assessment
+  COMPLIANCE_ASSESSMENT  // Compliance assessment task
+}
+
+// ============================================================================
+// Risk Assessment Project Feature - Container-based risk discovery workflow
+// ============================================================================
+
+// Assessment Project Status enum
+// Lifecycle states for risk assessment project containers
+enum AssessmentProjectStatus {
+  IN_PROGRESS   // Analyst actively discovering risks
+  SUBMITTED     // Submitted for manager review
+  APPROVED      // Manager approved, risks published to register
+}
+
+// Risk Discovery Status enum
+// Tracks whether a risk discovered during an assessment is pending or published
+enum RiskDiscoveryStatus {
+  PENDING       // Risk discovered but assessment not yet approved
+  PUBLISHED     // Risk published to register after assessment approval
+}
+
+// Story 7.5: Treatment Type enum (AC3)
+// Risk treatment options for approved assessments
+enum TreatmentType {
+  ACCEPT    // Accept the risk as-is
+  MITIGATE  // Implement controls to reduce risk
+  TRANSFER  // Transfer risk to third party (insurance, outsource)
+  AVOID     // Avoid the risk by eliminating the activity
+}
+
+// Story 7.10: Risk Register Entry Status (AC2)
+// Lifecycle states for risks in the register after approval
+enum RiskRegisterStatus {
+  OPEN           // Initial state - risk registered and awaiting treatment
+  IN_TREATMENT   // Treatment plan in progress
+  ACCEPTED       // Risk accepted as-is (treatment: ACCEPT)
+  TRANSFERRED    // Risk transferred to third party
+  MITIGATED      // Controls implemented, risk reduced
+  CLOSED         // Risk closed - no longer active
+}
+
+// Story 4.15: Email Type for categorization (AC24-AC29)
+enum EmailType {
+  RISK_ASSIGNED        // Critical: Risk assigned to stakeholder
+  STATUS_CHANGED       // Normal: Risk status changed
+  DECISION_REQUIRED    // Critical: Stakeholder decision needed
+  EVIDENCE_REQUESTED   // Critical: Evidence request notification
+  RISK_CLOSED          // Normal: Risk has been closed
+  COMMENT_ADDED        // Normal: New comment on risk
+  SLA_AT_RISK          // Story 16.8: Treatment SLA at risk (3 days remaining)
+  SLA_BREACHED         // Story 16.8: Treatment SLA breached (past due)
+
+  // Epic 8: TPRM Notifications
+  QUESTIONNAIRE_ASSIGNED        // Critical: Questionnaire sent to vendor (FR61)
+  ASSESSMENT_STATUS_CHANGED     // Normal: Assessment status changed (FR62)
+  VENDOR_OWNER_ASSIGNED         // Normal: IT/Business owner assigned to vendor (FR63)
+  QUESTIONNAIRE_RESPONSE        // Critical: Vendor submitted questionnaire (FR64)
+  REVIEW_DUE_REMINDER           // Normal: Vendor review due in 7 days (FR65)
+  REVIEW_OVERDUE                // Critical: Vendor review overdue (FR65)
+}
+
+// Story 3.12: Evidence Request Workflow model
+// Enables GRC Analysts to request evidence from users for specific control domains
+// Story 4.2: Risk Template model for pre-built assessment templates (AC1-AC6)
+// Templates provide pre-populated control domains and evidence guidance for common security findings
+model RiskTemplate {
+  id                      String               @id @default(cuid())
+  name                    String
+  category                RiskTemplateCategory
+  description             String               @db.Text
+  prePopulatedDomains     String[]             // Array of control domain names
+  evidenceGuidance        String               @db.Text
+  severityDefault         Severity
+  affectedSystemsGuidance String?              @db.Text
+  organizationId          String
+
+  // Relationships
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  risks        Risk[]       @relation("RiskFromTemplate")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, category])
+  @@index([organizationId])
+}
+
+model EvidenceRequest {
+  id                 String                @id @default(cuid())
+  recipientUserId    String
+  requestedById      String
+  controlTaxonomyIds String[]              // Array of control domain IDs
+  dueDate            DateTime
+  instructions       String                @db.Text
+  frameworkCode      String?
+  status             EvidenceRequestStatus @default(PENDING)
+  evidenceId         String?               // Linked when fulfilled
+  organizationId     String
+  fulfilledAt        DateTime?
+  deletedAt          DateTime?             // Soft delete for user deletion cascade
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  // Relationships
+  recipient    User          @relation("EvidenceRequestRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  requestedBy  User          @relation("EvidenceRequestRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  evidence     Evidence?     @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Indexes for performance (AC9: organizationId + recipientUserId + status, AC9: organizationId + requestedById)
+  @@index([organizationId, recipientUserId, status])
+  @@index([organizationId, requestedById])
+  @@index([dueDate, status])
+  @@index([organizationId])
+}
+
+// Story 5.1: Framework Coverage Cache (AC11-AC12)
+// Caches calculated framework coverage for performance (refreshed on evidence changes)
+// BU-Scoped Compliance: Now supports per-BU coverage (null = org-level rollup)
+model FrameworkCoverage {
+  id                      String        @id @default(cuid())
+  frameworkId             String
+  organizationId          String
+  // BU-Scoped Compliance: null = org-level rollup, otherwise BU-specific coverage
+  businessUnitId          String?
+  coveragePercentage      Decimal       @db.Decimal(5, 2)  // 0.00 - 100.00
+  satisfiedControlsCount  Int
+  totalControlsCount      Int
+  lastCalculatedAt        DateTime
+
+  framework               Framework     @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  organization            Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessUnit            BusinessUnit? @relation(fields: [businessUnitId], references: [id], onDelete: Cascade)
+
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  @@unique([frameworkId, organizationId, businessUnitId])
+  @@index([organizationId])
+  @@index([organizationId, businessUnitId])
+}
+
+// Story 5.1: Coverage History for Trend Tracking (AC23-AC27)
+// Stores daily snapshots of coverage for trend calculation
+// BU-Scoped Compliance: Now supports per-BU history (null = org-level snapshot)
+model CoverageHistory {
+  id                      String        @id @default(cuid())
+  frameworkId             String
+  organizationId          String
+  // BU-Scoped Compliance: null = org-level snapshot, otherwise BU-specific snapshot
+  businessUnitId          String?
+  coveragePercentage      Decimal       @db.Decimal(5, 2)  // 0.00 - 100.00
+  satisfiedControlsCount  Int
+  totalControlsCount      Int
+  snapshotDate            DateTime      @db.Date           // Date of snapshot (no time component)
+
+  framework               Framework     @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  organization            Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessUnit            BusinessUnit? @relation(fields: [businessUnitId], references: [id], onDelete: Cascade)
+
+  createdAt               DateTime      @default(now())
+
+  @@unique([frameworkId, organizationId, businessUnitId, snapshotDate])
+  @@index([organizationId, snapshotDate])
+  @@index([frameworkId, snapshotDate])
+  @@index([organizationId, businessUnitId, snapshotDate])
+}
+
+// Story 7.1: Identifier Sequence for sequential ID generation (AC11-AC15)
+// Enables atomic generation of human-readable identifiers (FND-YYYY-NNNN, RSK-YYYY-NNNN, RR-YYYY-NNNN)
+model IdentifierSequence {
+  id             String @id @default(cuid())
+  organizationId String
+  prefix         String // FND, RSK, RR
+  year           Int    // 4-digit year
+  lastSequence   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, prefix, year])
+  @@index([organizationId])
+}
+
+// Story 7.1: Finding model for Findings Register (AC1-AC10)
+// Core entity for tracking security findings from various sources through triage to acceptance
+model Finding {
+  id             String        @id @default(cuid())
+  organizationId String
+  identifier     String        // FND-YYYY-NNNN (AC5)
+  title          String
+  description    String        @db.Text
+  source         FindingSource // AC2: AUDIT, PENTEST, SCANNER, INCIDENT, MANUAL
+  severity       Severity      // Reuses existing Severity enum (HIGH, MEDIUM, LOW)
+  status         FindingStatus @default(NEW) // AC3: NEW → TRIAGED → ACCEPTED
+
+  // Array fields for related data
+  affectedAssets String[] @default([]) // List of affected systems/assets
+  evidenceIds    String[] @default([]) // IDs of linked evidence
+
+  // Story 7.0.6: Many-to-many relation with BusinessUnit (AC1-AC6)
+  affectedBusinessUnits BusinessUnit[] @relation("FindingAffectedBUs")
+
+  // Story 7.0.8: Finding assignment to users (AC1-AC4)
+  assigneeId String?
+
+  // Duplicate tracking (AC9)
+  duplicateOfId String?
+
+  // Frozen snapshot when finding is accepted (AC6)
+  lockedSnapshot Json?
+
+  // Audit trail fields (AC7)
+  createdBy  String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  triagedBy  String?
+  triagedAt  DateTime?
+  acceptedBy String?
+  acceptedAt DateTime?
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator      User         @relation("FindingCreator", fields: [createdBy], references: [id])
+  triager      User?        @relation("FindingTriager", fields: [triagedBy], references: [id])
+  accepter     User?        @relation("FindingAccepter", fields: [acceptedBy], references: [id])
+  assignee     User?        @relation("FindingAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  duplicateOf  Finding?     @relation("FindingDuplicates", fields: [duplicateOfId], references: [id], onDelete: SetNull)
+  duplicates   Finding[]    @relation("FindingDuplicates")
+
+  // Story 14.7: SLA Tracking fields
+  dueDate    DateTime? // SLA due date for remediation
+  slaBreached Boolean   @default(false) // Set true when dueDate passes
+  closedAt   DateTime? // When finding was closed/remediated
+
+  // AC8: Relation to RiskAssessment (1:1, optional until accepted)
+  // Story 7.5: RiskAssessment relation
+  riskAssessment RiskAssessment?
+  // Story 12.1: Control linkage (AC9-AC16)
+  ControlLinks   FindingControlLink[]
+  // Story 14.5: Finding Comments
+  comments       FindingComment[]
+  // Story 14.6: Finding Evidence Attachment
+  evidenceLinks  FindingEvidence[]
+
+  // Story 15.10: Risks spawned from this finding
+  spawnedRisks   Risk[] @relation("RiskSpawnedFromFinding")
+
+  // ============================================================================
+  // Epic 5: Vendor Risk & Finding Integration (FR45-FR50)
+  // Links findings to vendors, assessments, and questionnaire responses
+  // ============================================================================
+  vendorId                String?  // Vendor this finding is associated with
+  vendorAssessmentId      String?  // VendorAssessment where finding was discovered
+  questionnaireResponseId String?  @unique // QuestionnaireResponse that triggered this finding (1:1)
+
+  // Relations
+  vendor                  Vendor?               @relation("VendorFindings", fields: [vendorId], references: [id], onDelete: SetNull)
+  vendorAssessment        VendorAssessment?     @relation("VendorAssessmentFindings", fields: [vendorAssessmentId], references: [id], onDelete: SetNull)
+  questionnaireResponse   QuestionnaireResponse? @relation("ResponseFinding", fields: [questionnaireResponseId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, identifier]) // AC10: Unique identifier per organization
+  @@index([organizationId, id])
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, source])
+  @@index([organizationId, assigneeId]) // Story 7.0.8: AC4 - Index for assignee filtering
+  @@index([organizationId, dueDate]) // Story 14.7: SLA queries
+  @@index([slaBreached, status]) // Story 14.8: SLA breach detection
+  // Epic 5: Vendor integration indexes
+  @@index([vendorId])
+  @@index([vendorAssessmentId])
+  @@index([organizationId, vendorId])
+}
+
+// Story 7.5: Risk Assessment model (AC1-AC15)
+// Bridges findings intake and risk register management with state machine and approval gates
+model RiskAssessment {
+  id                String           @id @default(cuid())
+  organizationId    String
+  identifier        String           // RSK-YYYY-NNNN (AC4)
+  title             String
+  context           String?          @db.Text
+  riskCategory      String?
+  affectedSystems   String[]         @default([])
+
+  // Scoring - decimal values for matrix-based scoring (AC5)
+  likelihoodValue   Decimal?         @db.Decimal(10, 4)
+  impactValue       Decimal?         @db.Decimal(10, 4)
+  exposureValue     Decimal?         @db.Decimal(10, 4)  // For 3D matrices (future)
+  inherentScore     Decimal?         @db.Decimal(10, 4)
+  inherentScoreLabel String?
+
+  // Treatment and ownership (AC7)
+  treatment         TreatmentType?
+  ownerId           String?
+  status            AssessmentStatus @default(DRAFT)
+
+  // Story 16.1: Business Context Fields
+  businessOwnerId   String?          // Business stakeholder for business decisions
+  businessUnitId    String?          // Business unit this assessment belongs to
+  performedById     String?          // User who performed the assessment (assessor)
+  overallSeverityScore Int?          // Highest severity score from child risks
+  overallSeverityLabel String?       // Severity label for overall assessment
+
+  // Risk Owner: Person accountable for this risk assessment
+  riskOwnerId       String?          // Person responsible for this risk
+
+  // Source finding link - 1:1 relationship (AC6, AC9)
+  findingId         String           @unique
+
+  // Story 7.8.x relations (AC11-AC14)
+  assessmentTypeId  String?          // Story 7.8.1 - links to AssessmentType
+  matrixVersionId   String?          // Story 7.8.2 - locked at first save (AC15)
+
+  // Story 7.8.1: Assessment Type relation (AC11)
+  assessmentType    AssessmentType?  @relation(fields: [assessmentTypeId], references: [id])
+
+  // Audit trail (AC8)
+  createdBy         String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  approvedBy        String?
+  approvedAt        DateTime?
+
+  // Relations
+  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  finding           Finding          @relation(fields: [findingId], references: [id])
+  creator           User             @relation("AssessmentCreator", fields: [createdBy], references: [id])
+  owner             User?            @relation("AssessmentOwner", fields: [ownerId], references: [id])
+  approver          User?            @relation("AssessmentApprover", fields: [approvedBy], references: [id])
+  // Story 16.1: Business context relations
+  businessOwner     User?            @relation("AssessmentBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
+  businessUnit      BusinessUnit?    @relation("AssessmentBusinessUnit", fields: [businessUnitId], references: [id], onDelete: SetNull)
+  performedBy       User?            @relation("AssessmentPerformer", fields: [performedById], references: [id], onDelete: SetNull)
+  // Risk Owner: Person accountable for this assessment
+  riskOwner         Person?          @relation("AssessmentRiskOwner", fields: [riskOwnerId], references: [id], onDelete: SetNull)
+  scenarios         RiskScenario[]   // AC10: Has many risk scenarios
+  // Story 16.10: Child risks for this assessment (AC1-AC4)
+  childRisks        Risk[]           @relation("AssessmentChildRisks")
+  // Story 7.10: Risk Register Entry relation (AC11-AC12)
+  riskRegisterEntry RiskRegisterEntry?  // Optional 1:1 - created when approved
+
+  @@unique([organizationId, identifier])
+  @@index([organizationId, id])
+  @@index([organizationId, status])
+  @@index([organizationId, findingId])
+  @@index([organizationId, createdAt])
+  @@index([riskOwnerId])
+}
+
+// Story 7.5: Risk Scenario model (AC16-AC19)
+// Stores risk scenarios for each assessment with ordering
+model RiskScenario {
+  id              String         @id @default(cuid())
+  organizationId  String         // AC17: Tenant isolation
+  assessmentId    String
+  description     String         @db.Text
+  order           Int            @default(0)
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations (AC18: Cascade delete when assessment deleted)
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assessment      RiskAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, assessmentId]) // AC19: Index for scenario queries
+}
+
+// Story 7.10: Risk Register Entry (AC1, AC3-AC10)
+// The operational record for managing approved risks with treatment plans and SLAs
+model RiskRegisterEntry {
+  id              String             @id @default(cuid())
+  organizationId  String
+  identifier      String             // RR-YYYY-NNNN (AC3)
+  status          RiskRegisterStatus @default(OPEN) // AC8
+  treatmentPlan   String?            @db.Text // AC6
+  slaDueDate      DateTime?          // AC7
+  ownerId         String             // AC5: Required, inherited from assessment
+  assessmentId    String             @unique // AC4: 1:1 with RiskAssessment
+
+  // Audit fields (AC9)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  closedAt        DateTime?
+  closedBy        String?
+
+  // Relations
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assessment      RiskAssessment     @relation(fields: [assessmentId], references: [id])
+  owner           User               @relation("RiskRegisterOwner", fields: [ownerId], references: [id])
+  closer          User?              @relation("RiskRegisterCloser", fields: [closedBy], references: [id])
+  // Story 16.6: Status history relation (AC13-AC14)
+  statusHistory   RiskRegisterStatusHistory[]
+
+  // Indexes (AC10)
+  @@unique([organizationId, identifier])
+  @@index([organizationId, id])
+  @@index([organizationId, status])
+  @@index([organizationId, ownerId])
+  @@index([organizationId, slaDueDate])
+}
+
+// Story 16.6: Risk Register Status History (AC13-AC14)
+// Tracks status transitions with comments and user info
+model RiskRegisterStatusHistory {
+  id             String             @id @default(cuid())
+  entryId        String
+  oldStatus      RiskRegisterStatus
+  newStatus      RiskRegisterStatus
+  comment        String?            @db.Text  // Required for Accept/Close actions
+  changedById    String
+  organizationId String
+
+  changedAt      DateTime           @default(now())
+
+  // Relations
+  entry          RiskRegisterEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  changedBy      User               @relation("RiskRegisterStatusChanger", fields: [changedById], references: [id])
+
+  @@index([entryId, changedAt])
+  @@index([organizationId])
+}
+
+// Story 12.1: Risk-Control Link (AC1-AC8)
+// Links risks to framework controls with typed relationships
+model RiskControlLink {
+  id             String              @id @default(cuid())
+  organizationId String
+  riskId         String
+  controlId      String
+  linkType       RiskControlLinkType // MITIGATING, GAP, AFFECTED
+  notes          String?             @db.VarChar(500) // Optional justification
+
+  createdById    String
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  // Relations
+  risk           Risk                @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  control        Control             @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  createdBy      User                @relation("RiskControlLinkCreator", fields: [createdById], references: [id])
+
+  @@unique([riskId, controlId]) // AC6: One link per risk-control pair
+  @@index([organizationId, riskId]) // AC8: Fast queries by risk
+  @@index([organizationId, controlId]) // AC8: Fast queries by control
+  @@index([controlId, linkType]) // For control health aggregation
+}
+
+// Story 12.1: Finding-Control Link (AC9-AC16)
+// Links findings to framework controls with typed relationships
+model FindingControlLink {
+  id             String                 @id @default(cuid())
+  organizationId String
+  findingId      String
+  controlId      String
+  linkType       FindingControlLinkType // VIOLATION, WEAKNESS, OBSERVATION
+  notes          String?                @db.VarChar(500) // Optional context
+
+  createdById    String
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  // Relations
+  finding        Finding                @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  control        Control                @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  createdBy      User                   @relation("FindingControlLinkCreator", fields: [createdById], references: [id])
+
+  @@unique([findingId, controlId]) // AC14: One link per finding-control pair
+  @@index([organizationId, findingId]) // AC16: Fast queries by finding
+  @@index([organizationId, controlId]) // AC16: Fast queries by control
+  @@index([controlId, linkType]) // For control health aggregation
+}
+
+// Story 14.5: Finding Comments & Collaboration
+// Allows stakeholders to add comments to findings for collaboration on resolution
+model FindingComment {
+  id             String   @id @default(cuid())
+  organizationId String
+  findingId      String
+  userId         String
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  finding      Finding      @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  user         User         @relation("FindingCommentUser", fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, findingId])
+  @@index([findingId, createdAt])
+}
+
+// Story 14.6: Finding Evidence Attachment
+// Links findings to evidence from the evidence repository
+model FindingEvidence {
+  id             String   @id @default(cuid())
+  organizationId String
+  findingId      String
+  evidenceId     String
+  attachedById   String
+  attachedAt     DateTime @default(now())
+  notes          String?  @db.VarChar(500) // Optional context for why evidence was attached
+
+  // Relations
+  finding      Finding      @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  evidence     Evidence     @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  attachedBy   User         @relation("FindingEvidenceAttacher", fields: [attachedById], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([findingId, evidenceId]) // One attachment per finding-evidence pair
+  @@index([organizationId, findingId])
+  @@index([evidenceId])
+}
+
+// ============================================================================
+// Story 15.5: MITRE ATT&CK Threat Modeling - Risk Junction Tables
+// ============================================================================
+
+// Story 15.5: Risk Threat Step (Attack Chain Techniques)
+// Links risks to MITRE techniques representing attack chain steps
+model RiskThreatStep {
+  id           String   @id @default(cuid())
+  riskId       String
+  techniqueId  String
+  stepOrder    Int      @default(0)  // Order in the attack chain
+  notes        String?  @db.VarChar(500)
+
+  createdAt    DateTime @default(now())
+
+  // Relations
+  risk         Risk           @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  technique    MitreTechnique @relation("ThreatStepTechniques", fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([riskId, techniqueId])  // One technique per risk
+  @@index([riskId, stepOrder])
+  @@index([techniqueId])
+}
+
+// Story 15.5: Risk Threat Objective (Target Objectives)
+// Links risks to MITRE techniques representing attacker objectives
+model RiskThreatObjective {
+  id           String   @id @default(cuid())
+  riskId       String
+  techniqueId  String
+  notes        String?  @db.VarChar(500)
+
+  createdAt    DateTime @default(now())
+
+  // Relations
+  risk         Risk           @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  technique    MitreTechnique @relation("ThreatObjectiveTechniques", fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([riskId, techniqueId])  // One technique per risk per objective type
+  @@index([riskId])
+  @@index([techniqueId])
+}
+
+// ============================================================================
+// Story 15.8: Risk Treatment with SLA Tracking
+// ============================================================================
+
+// Story 15.8: Risk Treatment Record
+// Tracks treatment decisions for risks with SLA enforcement
+model RiskTreatment {
+  id              String            @id @default(cuid())
+  organizationId  String
+  riskId          String
+  treatmentType   TreatmentDecision // ACCEPT, REMEDIATE, TRANSFER, AVOID
+  justification   String            @db.Text  // Required for ACCEPT decisions
+
+  // Treatment Action Details
+  detail                  String?               @db.Text  // What needs to be done
+  assignedToId            String?               // Person responsible for execution
+  treatmentBusinessUnitId String?               // Business unit scope
+  targetCompletionDate    DateTime?             // When it should be completed
+  actionStatus            TreatmentActionStatus @default(NOT_STARTED)
+
+  // SLA tracking (Story 15.9, Story 16.8)
+  slaDays           Int?              // SLA from severity threshold
+  dueDate           DateTime?         // Calculated from decision date + SLA days
+  slaBreached       Boolean           @default(false)
+  atRiskNotifiedAt  DateTime?         // Story 16.8: When at-risk notification was sent
+
+  // Workflow tracking
+  decidedById     String
+  decidedAt       DateTime          @default(now())
+  completedAt     DateTime?         // When treatment was completed
+  completedById   String?
+
+  // Expected residual severity after this treatment (optional)
+  residualLikelihood    Decimal?  @db.Decimal(10, 4)
+  residualImpact        Decimal?  @db.Decimal(10, 4)
+  residualExposure      Decimal?  @db.Decimal(10, 4)  // For 3D matrices
+  residualScore         Decimal?  @db.Decimal(10, 4)
+  residualScoreLabel    String?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  risk            Risk         @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  decidedBy       User         @relation("TreatmentDecider", fields: [decidedById], references: [id])
+  completedBy     User?        @relation("TreatmentCompleter", fields: [completedById], references: [id])
+  assignedTo      Person?      @relation("TreatmentAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  treatmentBusinessUnit BusinessUnit? @relation("TreatmentBusinessUnit", fields: [treatmentBusinessUnitId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, riskId])
+  @@index([riskId])
+  @@index([organizationId, dueDate])
+  @@index([slaBreached, dueDate])  // For SLA breach detection job
+  @@index([assignedToId])
+  @@index([treatmentBusinessUnitId])
+  @@index([actionStatus, targetCompletionDate])
+}
+
+// Story 4.15: Email Queue with Retry Logic (AC1-AC6)
+// Queues email notifications for background processing with automatic retry on failure
+model EmailQueue {
+  id                String           @id @default(cuid())
+  to                String           // Recipient email address
+  subject           String           // Email subject line
+  htmlContent       String           @db.Text // HTML email body
+  textContent       String?          @db.Text // Plain text fallback
+  emailType         EmailType        // Type for categorization and max retries
+  relatedEntityType String?          // "RISK", "EVIDENCE", etc.
+  relatedEntityId   String?          // ID of related entity
+  status            EmailQueueStatus @default(PENDING)
+  retryCount        Int              @default(0) // Current retry attempt
+  maxRetries        Int              @default(3) // Max retries (5 for critical, 3 for normal)
+  lastRetryAt       DateTime?        // When to attempt next retry
+  sentAt            DateTime?        // When email was successfully sent
+  error             String?          @db.Text // Error message if failed
+  organizationId    String
+
+  // Relationships
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Indexes for queue processing (AC4: status + createdAt for FIFO processing)
+  @@index([status, createdAt])
+  @@index([organizationId, status])
+  @@index([relatedEntityId])
+  @@index([status, lastRetryAt]) // For retry scheduling
+}
+
+// ============================================================================
+// Story 13.1: MITRE ATT&CK Data Models
+// ============================================================================
+
+// MITRE ATT&CK Tactic (14 tactics in kill chain order)
+model MitreTactic {
+  id          String   @id @default(cuid())
+  externalId  String   @unique // e.g., "TA0001"
+  name        String   // e.g., "Initial Access"
+  description String   @db.Text
+  url         String   // Official MITRE page URL
+  shortName   String   // e.g., "initial-access" (used in kill chain phases)
+  killChainOrder Int   @default(0) // Order in kill chain (1-14)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Many-to-many with techniques via junction table
+  techniques  MitreTacticTechnique[]
+
+  @@index([killChainOrder])
+  @@index([shortName])
+}
+
+// MITRE ATT&CK Technique (~200 parent techniques, ~490 sub-techniques)
+model MitreTechnique {
+  id              String   @id @default(cuid())
+  externalId      String   @unique // e.g., "T1566" or "T1566.001"
+  name            String   // e.g., "Phishing" or "Spearphishing Attachment"
+  description     String   @db.Text
+  url             String   // Official MITRE page URL
+  isSubTechnique  Boolean  @default(false)
+
+  // Self-referential relation for sub-techniques
+  parentId        String?
+  parent          MitreTechnique?  @relation("TechniqueSubTechniques", fields: [parentId], references: [id])
+  subTechniques   MitreTechnique[] @relation("TechniqueSubTechniques")
+
+  // Detection and mitigation info (optional, parsed from STIX)
+  detection       String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Many-to-many with tactics via junction table
+  tactics         MitreTacticTechnique[]
+
+  // Story 15.5: Risk linkages via this technique
+  risksAsInitialAccess  Risk[]             @relation("RiskInitialAccess")
+  riskThreatSteps       RiskThreatStep[]   @relation("ThreatStepTechniques")
+  riskThreatObjectives  RiskThreatObjective[] @relation("ThreatObjectiveTechniques")
+
+  @@index([isSubTechnique])
+  @@index([parentId])
+  @@index([name])
+}
+
+// Junction table for Tactic-Technique many-to-many relationship
+model MitreTacticTechnique {
+  id          String @id @default(cuid())
+  tacticId    String
+  techniqueId String
+
+  tactic      MitreTactic    @relation(fields: [tacticId], references: [id], onDelete: Cascade)
+  technique   MitreTechnique @relation(fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([tacticId, techniqueId])
+  @@index([tacticId])
+  @@index([techniqueId])
+}
+
+// MITRE ATT&CK sync metadata - tracks last sync for admin UI
+model MitreSyncMetadata {
+  id            String   @id @default(cuid())
+  lastSyncAt    DateTime
+  version       String?  // ATT&CK version if available from STIX
+  tacticsCount  Int      @default(0)
+  techniquesCount Int    @default(0)
+  subTechniquesCount Int @default(0)
+  syncStatus    MitreSyncStatus @default(SUCCESS)
+  errorMessage  String?  @db.Text
+
+  createdAt     DateTime @default(now())
+}
+
+enum MitreSyncStatus {
+  SUCCESS
+  FAILED
+  IN_PROGRESS
+}
+
+// ============================================================================
+// Organizational Controls - User-defined controls that can be linked to risks
+// and optionally mapped to framework controls
+// ============================================================================
+
+enum OrgControlType {
+  MITIGATING    // Controls that reduce risk impact
+  PREVENTATIVE  // Controls that prevent risk occurrence
+}
+
+enum OrgControlStatus {
+  ACTIVE        // Control is actively implemented
+  PLANNED       // Control is planned for implementation
+  DEPRECATED    // Control is no longer in use
+}
+
+enum RiskOrgControlRole {
+  IN_PLACE      // Control is currently in place for this risk
+  NEEDED        // Control is needed but not yet implemented
+}
+
+model OrganizationalControl {
+  id              String           @id @default(cuid())
+  organizationId  String
+  name            String           // e.g., "MFA on Admin Accounts"
+  description     String?          @db.Text
+  controlType     OrgControlType   @default(MITIGATING)
+  status          OrgControlStatus @default(ACTIVE)
+
+  // Optional mapping to a framework control
+  frameworkControlId String?
+
+  createdById     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relationships
+  Organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  FrameworkControl Control?          @relation("OrgControlToFrameworkControl", fields: [frameworkControlId], references: [id], onDelete: SetNull)
+  CreatedBy        User?             @relation("OrgControlCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  RiskLinks        RiskOrganizationalControl[]
+
+  // Story 3.1: Strategy module - Objectives linked to this control
+  linkedObjectives Objective[]       @relation("ObjectiveLinkedControls")
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([frameworkControlId])
+}
+
+model RiskOrganizationalControl {
+  id                       String              @id @default(cuid())
+  organizationId           String
+  riskId                   String
+  organizationalControlId  String
+  role                     RiskOrgControlRole  // IN_PLACE or NEEDED
+  notes                    String?             @db.VarChar(500)
+
+  createdById              String?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+
+  // Relationships
+  Organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Risk                  Risk                  @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  OrganizationalControl OrganizationalControl @relation(fields: [organizationalControlId], references: [id], onDelete: Cascade)
+  CreatedBy             User?                 @relation("RiskOrgControlCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([riskId, organizationalControlId])
+  @@index([organizationId])
+  @@index([riskId])
+  @@index([organizationalControlId])
+}
+
+// ============================================================================
+// Standards Module - Internal organizational standards with framework mappings
+// and exception management for compliance auditing
+// ============================================================================
+
+enum StandardStatus {
+  DRAFT
+  ACTIVE
+  DEPRECATED
+}
+
+enum StandardControlCriticality {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum StandardMappingType {
+  COVERS   // Standard control fully covers the framework control
+  PARTIAL  // Standard control partially covers the framework control
+  EXCEEDS  // Standard control exceeds framework requirements
+}
+
+// Framework-to-Framework Mapping Type
+// Used for base framework mapping feature
+enum FrameworkMappingType {
+  COVERS   // Source control fully covers the base control
+  PARTIAL  // Source control partially covers the base control
+  EXCEEDS  // Source control exceeds base control requirements
+}
+
+// Base type for organization-level base control mapping
+// Determines whether organization uses a framework or standard as their base
+enum BaseType {
+  FRAMEWORK  // Using a framework as the base for mappings
+  STANDARD   // Using a standard as the base for mappings
+}
+
+enum ControlExceptionStatus {
+  PENDING
+  APPROVED
+  DENIED
+  EXPIRED
+}
+
+// ============================================================================
+// Maturity Assessment Module - Framework Maturity Scoring
+// Supports NIST CSF 2.0 and C2M2 maturity frameworks
+// ============================================================================
+
+enum MaturityFrameworkType {
+  NIST_CSF_2   // NIST Cybersecurity Framework 2.0 - Tiers 1-4
+  C2M2         // Cybersecurity Capability Maturity Model - MIL 0-3
+  OWASP_SAMM   // OWASP Software Assurance Maturity Model v2.1 - Levels 0-3
+}
+
+enum AssessmentDepth {
+  FUNCTION      // Top level (6 for NIST CSF)
+  CATEGORY      // Mid level (22 for NIST CSF)
+  SUBCATEGORY   // Detailed (106 for NIST CSF)
+}
+
+enum AssessmentMode {
+  SELF          // Quick self-scoring
+  GUIDED        // Wizard with questions
+  HYBRID        // Mix of both
+}
+
+enum MaturityAssessmentStatus {
+  DRAFT
+  IN_PROGRESS
+  IN_REVIEW
+  COMPLETED
+  ARCHIVED
+}
+
+enum AssessorAssignmentStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+}
+
+// ============================================================================
+// Compliance Assessment Module - Enums
+// ============================================================================
+
+// Compliance status for individual control assessments
+enum ComplianceStatus {
+  COMPLIANT
+  NON_COMPLIANT
+  PARTIALLY_COMPLIANT
+  NOT_ASSESSED
+  NOT_APPLICABLE
+}
+
+// Status lifecycle for compliance assessments
+enum ComplianceAssessmentStatus {
+  DRAFT
+  IN_PROGRESS
+  IN_REVIEW
+  COMPLETED
+  ARCHIVED
+}
+
+// Epic 1: TPRM Vendor Registry - Vendor Status enum
+// Lifecycle states for vendor management (FR5)
+enum VendorStatus {
+  ACTIVE        // Vendor is actively engaged
+  INACTIVE      // Vendor temporarily inactive
+  UNDER_REVIEW  // Vendor under compliance/security review
+  OFFBOARDED    // Vendor relationship terminated (soft delete)
+}
+
+// Risk tier classification for vendors (FR11)
+enum VendorRiskTier {
+  CRITICAL      // 6-month review cycle
+  HIGH          // 12-month review cycle
+  MEDIUM        // 18-month review cycle
+  LOW           // 24-month review cycle
+}
+
+// Epic 3: Vendor Assessment Workflow - Status enum (FR20)
+// Lifecycle states for vendor assessments
+enum VendorAssessmentStatus {
+  DRAFT         // Assessment created, not yet started
+  IN_PROGRESS   // Assessor actively working on assessment
+  IN_REVIEW     // Submitted for review, awaiting approval
+  COMPLETED     // Assessment finalized and closed
+}
+
+// Epic 3: Vendor Assessment Recommendation (FR22)
+// Assessment outcome recommendations
+enum VendorAssessmentRecommendation {
+  APPROVE              // Vendor approved without conditions
+  CONDITIONAL_APPROVE  // Vendor approved with conditions that must be met
+  REJECT               // Vendor rejected, engagement not recommended
+}
+
+// Epic 4: Questionnaire System - Question Types (FR28)
+// Supported question types for questionnaire builder
+enum QuestionType {
+  TEXT          // Short or long text answer
+  YES_NO        // Boolean yes/no selection
+  MULTI_CHOICE  // Single selection from options
+  FILE_UPLOAD   // File attachment for evidence
+}
+
+// Epic 4: Questionnaire System - Questionnaire Status (FR32)
+// Tracks questionnaire delivery and response lifecycle
+enum QuestionnaireStatus {
+  DRAFT         // Questionnaire created but not sent
+  SENT          // Sent to vendor, awaiting response
+  VIEWED        // Vendor accessed the link
+  IN_PROGRESS   // Vendor started responding
+  COMPLETED     // Vendor submitted responses
+  VOIDED        // Questionnaire cancelled/invalidated
+}
+
+// Epic 4: Questionnaire System - Response Score (FR35)
+// Assessor scoring for individual responses
+enum ResponseScore {
+  ACCEPTABLE       // Response is satisfactory
+  NEEDS_FOLLOWUP   // Response requires further clarification
+  UNACCEPTABLE     // Response indicates a concern/issue
+}
+
+// Organizational Standard - Internal policies and standards
+model Standard {
+  id              String         @id @default(cuid())
+  organizationId  String
+  title           String
+  description     String         @db.Text
+  ownerId         String?
+  effectiveDate   DateTime
+  reviewCycleMonths Int          @default(12)
+  status          StandardStatus @default(DRAFT)
+  version         Int            @default(1)
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  createdById     String?
+
+  // Relationships
+  Organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Owner           User?          @relation("StandardOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  CreatedBy       User?          @relation("StandardCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  Controls        StandardControl[]
+  // Base-centric Control Mapping: Organizations using this standard as base
+  OrganizationsAsBase Organization[] @relation("BaseStandard")
+
+  @@unique([organizationId, title])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([ownerId])
+}
+
+// Standard Control - Specific requirements within a standard
+model StandardControl {
+  id              String                     @id @default(cuid())
+  standardId      String
+  code            String                     // e.g., "SEC-001", "AC-1.1"
+  title           String
+  description     String?                    @db.Text
+  criticality     StandardControlCriticality @default(MEDIUM)
+  sortOrder       Int                        @default(0)
+
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  // Relationships
+  Standard        Standard                   @relation(fields: [standardId], references: [id], onDelete: Cascade)
+  FrameworkMappings StandardControlMapping[]
+  Exceptions      ControlException[]
+  // Control Domain tagging
+  ControlDomains  ControlDomainStandardControl[]
+
+  @@unique([standardId, code])
+  @@index([standardId])
+  @@index([standardId, sortOrder])
+}
+
+// Standard Control to Framework Control Mapping
+model StandardControlMapping {
+  id                  String              @id @default(cuid())
+  standardControlId   String
+  controlId           String              // Framework control ID
+  mappingType         StandardMappingType @default(COVERS)
+  notes               String?             @db.Text
+
+  createdAt           DateTime            @default(now())
+  createdById         String?
+
+  // Relationships
+  StandardControl     StandardControl     @relation(fields: [standardControlId], references: [id], onDelete: Cascade)
+  FrameworkControl    Control             @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  CreatedBy           User?               @relation("StandardMappingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([standardControlId, controlId])
+  @@index([standardControlId])
+  @@index([controlId])
+}
+
+// Framework Control to Framework Control Mapping (Base Framework Mapping Feature)
+// Maps controls from other frameworks to controls in the designated "base framework"
+model FrameworkControlMapping {
+  id                  String               @id @default(cuid())
+  organizationId      String
+
+  sourceControlId     String               // FK to Control (from non-base framework)
+  targetControlId     String               // FK to Control (from base framework)
+
+  mappingType         FrameworkMappingType @default(COVERS)
+  confidence          Int                  @default(100)  // 0-100
+  notes               String?              @db.Text
+
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  createdById         String?
+
+  // Relationships
+  Organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  SourceControl       Control              @relation("SourceControlMappings", fields: [sourceControlId], references: [id], onDelete: Cascade)
+  TargetControl       Control              @relation("TargetControlMappings", fields: [targetControlId], references: [id], onDelete: Cascade)
+  CreatedBy           User?                @relation("FrameworkMappingCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([sourceControlId, targetControlId])
+  @@index([organizationId])
+  @@index([organizationId, sourceControlId])
+  @@index([organizationId, targetControlId])
+}
+
+// Control Exception - Time-bound exemptions from standard controls
+model ControlException {
+  id                  String                 @id @default(cuid())
+  organizationId      String
+  standardControlId   String
+
+  status              ControlExceptionStatus @default(PENDING)
+  justification       String                 @db.Text
+  compensatingControls String?               @db.Text
+
+  requestedById       String
+  requestedAt         DateTime               @default(now())
+
+  approvedById        String?
+  approvedAt          DateTime?
+  approvalNotes       String?                @db.Text
+
+  expiresAt           DateTime
+  renewalCount        Int                    @default(0)
+
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  // Relationships
+  Organization        Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  StandardControl     StandardControl        @relation(fields: [standardControlId], references: [id], onDelete: Cascade)
+  RequestedBy         User                   @relation("ExceptionRequestedBy", fields: [requestedById], references: [id])
+  ApprovedBy          User?                  @relation("ExceptionApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([standardControlId])
+  @@index([requestedById])
+  @@index([expiresAt])
+  @@index([status, expiresAt])  // For expiration check jobs
+}
+
+// ============================================================================
+// Maturity Assessment Module - Models
+// ============================================================================
+
+// MaturityFramework - Template for maturity frameworks (NIST CSF 2.0, C2M2)
+model MaturityFramework {
+  id               String                @id @default(cuid())
+  organizationId   String?               // null = system template
+  type             MaturityFrameworkType
+  name             String
+  version          String
+  description      String?               @db.Text
+
+  // Scoring configuration
+  minLevel         Int                   // 0 for C2M2, 1 for others
+  maxLevel         Int                   // 3 for C2M2, 4 for NIST
+  scoringLevels    Json                  // [{value, label, description, criteria}]
+
+  isActive         Boolean               @default(true)
+  isSystemTemplate Boolean               @default(false)
+
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  organization     Organization?         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  domains          MaturityDomain[]
+  assessments      MaturityAssessment[]
+  questions        MaturityQuestion[]
+
+  @@unique([organizationId, type, version])
+  @@index([organizationId, isActive])
+  @@index([type])
+}
+
+// MaturityDomain - Hierarchical domains within a framework (Function → Category → Subcategory)
+model MaturityDomain {
+  id              String            @id @default(cuid())
+  frameworkId     String
+  parentId        String?           // Self-referencing hierarchy
+  code            String            // GV, ID, PR, etc.
+  name            String
+  description     String?           @db.Text
+  level           AssessmentDepth   // FUNCTION, CATEGORY, SUBCATEGORY
+  sortOrder       Int               @default(0)
+
+  framework       MaturityFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  parent          MaturityDomain?   @relation("DomainHierarchy", fields: [parentId], references: [id])
+  children        MaturityDomain[]  @relation("DomainHierarchy")
+
+  scores          MaturityDomainScore[]
+  questions       MaturityQuestion[]
+  // Control Domain tagging
+  ControlDomains  ControlDomainMaturityDomain[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([frameworkId, code])
+  @@index([frameworkId, level])
+  @@index([parentId])
+}
+
+// MaturityAssessment - An organization's assessment against a maturity framework
+model MaturityAssessment {
+  id              String                    @id @default(cuid())
+  organizationId  String
+  frameworkId     String
+  identifier      String                    // MAT-YYYY-NNNN
+  name            String
+  description     String?                   @db.Text
+
+  assessmentDepth AssessmentDepth           @default(FUNCTION)
+  assessmentMode  AssessmentMode            @default(SELF)
+  status          MaturityAssessmentStatus  @default(DRAFT)
+
+  // Current scores (editable)
+  overallLevel    Int?
+  overallScore    Decimal?                  @db.Decimal(5, 2)
+
+  // Target planning
+  targetLevel     Int?
+  targetDate      DateTime?
+
+  // Ownership
+  ownerId         String
+
+  // Approval workflow
+  submittedAt     DateTime?
+  submittedBy     String?
+  approvedAt      DateTime?
+  approvedBy      String?
+
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  framework       MaturityFramework         @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  owner           User                      @relation("MaturityAssessmentOwner", fields: [ownerId], references: [id])
+  submitter       User?                     @relation("MaturityAssessmentSubmitter", fields: [submittedBy], references: [id])
+  approver        User?                     @relation("MaturityAssessmentApprover", fields: [approvedBy], references: [id])
+
+  domainScores    MaturityDomainScore[]
+  assignees       AssessorAssignment[]
+  snapshots       MaturitySnapshot[]
+  responses       MaturityQuestionResponse[]
+
+  @@unique([organizationId, identifier])
+  @@index([organizationId, status])
+  @@index([organizationId, frameworkId])
+}
+
+// MaturityDomainScore - Score for a specific domain within an assessment
+model MaturityDomainScore {
+  id              String            @id @default(cuid())
+  assessmentId    String
+  domainId        String
+
+  currentLevel    Int?
+  targetLevel     Int?
+  confidence      String?           // LOW, MEDIUM, HIGH
+  notes           String?           @db.Text
+  evidenceLinks   String[]          @default([])
+
+  assessedBy      String?
+  assessedAt      DateTime?
+
+  assessment      MaturityAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  domain          MaturityDomain     @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  assessor        User?              @relation("MaturityDomainScoreAssessor", fields: [assessedBy], references: [id])
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([assessmentId, domainId])
+  @@index([assessmentId])
+}
+
+// AssessorAssignment - Multi-assessor workflow assignments
+model AssessorAssignment {
+  id              String                   @id @default(cuid())
+  assessmentId    String
+  userId          String
+
+  assignedDomains String[]                 // Domain codes
+  status          AssessorAssignmentStatus @default(PENDING)
+
+  assignedAt      DateTime                 @default(now())
+  submittedAt     DateTime?
+
+  assessment      MaturityAssessment       @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user            User                     @relation("AssessorAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([assessmentId, userId])
+  @@index([assessmentId])
+  @@index([userId, status])
+}
+
+// MaturitySnapshot - Historical point-in-time snapshots of assessments
+model MaturitySnapshot {
+  id              String            @id @default(cuid())
+  assessmentId    String
+  snapshotDate    DateTime          @db.Date
+
+  overallLevel    Int
+  overallScore    Decimal           @db.Decimal(5, 2)
+  domainScores    Json              // Frozen copy of all domain scores
+
+  triggeredBy     String            // User who triggered snapshot
+  reason          String?           // Why snapshot was taken
+
+  assessment      MaturityAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  user            User               @relation("MaturitySnapshotTriggeredBy", fields: [triggeredBy], references: [id])
+
+  createdAt       DateTime          @default(now())
+
+  @@unique([assessmentId, snapshotDate])
+  @@index([assessmentId, snapshotDate])
+}
+
+// MaturityQuestion - Questions for guided assessment (official + custom)
+model MaturityQuestion {
+  id              String            @id @default(cuid())
+  frameworkId     String
+  domainId        String?           // null = framework-level question
+  organizationId  String?           // null = official, set = custom
+
+  questionText    String            @db.Text
+  guidanceText    String?           @db.Text
+  answerType      String            // SCALE, YES_NO, TEXT, EVIDENCE, PRACTICE
+  weight          Decimal           @db.Decimal(3, 2) @default(1.0)
+  isOfficial      Boolean           @default(false)
+  isActive        Boolean           @default(true)
+  sortOrder       Int               @default(0)
+
+  // C2M2 Practice-specific fields / SAMM question fields
+  practiceCode    String?           // e.g., "ASSET-1a", "THREAT-2c", "G-SM-A-1"
+  practiceLevel   Int?              // MIL level this practice belongs to (1, 2, or 3)
+  answerOptions   Json?             // SAMM: [{value: 0, label: "No", weight: 0}, {value: 1, label: "Yes, for some...", weight: 0.25}, ...]
+
+  framework       MaturityFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  domain          MaturityDomain?   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  organization    Organization?     @relation("MaturityQuestionOrg", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  responses       MaturityQuestionResponse[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@unique([frameworkId, practiceCode]) // Prevent duplicate practice codes per framework
+  @@index([frameworkId, domainId])
+  @@index([organizationId, isActive])
+  @@index([frameworkId, practiceLevel]) // For efficient MIL-level queries
+}
+
+// MaturityQuestionResponse - Responses to guided assessment questions
+model MaturityQuestionResponse {
+  id              String            @id @default(cuid())
+  assessmentId    String
+  questionId      String
+
+  answer          String?           @db.Text
+  scaleValue      Int?
+  isPerformed     Boolean?          // For C2M2 practices: true = performed, false = not performed
+  evidenceIds     String[]          @default([])
+  notes           String?           @db.Text
+
+  answeredBy      String
+  answeredAt      DateTime          @default(now())
+
+  assessment      MaturityAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  question        MaturityQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user            User               @relation("MaturityQuestionResponseAnswerer", fields: [answeredBy], references: [id])
+
+  @@unique([assessmentId, questionId])
+  @@index([assessmentId])
+}
+
+// ============================================================================
+// Compliance Assessment Module - Models
+// ============================================================================
+
+// ComplianceAssessment - Formal assessment of compliance against a framework
+model ComplianceAssessment {
+  id              String                      @id @default(cuid())
+  organizationId  String
+  frameworkId     String
+  businessUnitId  String?                     // Optional: Which BU is being assessed
+  identifier      String                      // COMP-YYYY-NNNN
+  name            String
+  description     String?                     @db.Text
+  status          ComplianceAssessmentStatus  @default(DRAFT)
+  baseline        String?                     // Selected baseline filter: "LOW", "MODERATE", "HIGH", "PRIVACY", or null (all)
+
+  // Metrics (auto-calculated from control scores)
+  totalControls       Int     @default(0)
+  compliantCount      Int     @default(0)
+  nonCompliantCount   Int     @default(0)
+  partialCount        Int     @default(0)
+  notApplicableCount  Int     @default(0)
+  notAssessedCount    Int     @default(0)
+  complianceScore     Decimal? @db.Decimal(5, 2)  // 0-100 percentage
+
+  // Ownership
+  ownerId         String
+  assessorId      String?
+
+  // Workflow
+  submittedAt     DateTime?
+  submittedById   String?
+  approvedAt      DateTime?
+  approvedById    String?
+
+  // Target dates
+  targetCompletionDate DateTime?
+  dueDate              DateTime?
+
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  // Relations
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  framework       Framework                   @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
+  businessUnit    BusinessUnit?               @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+  owner           User                        @relation("ComplianceAssessmentOwner", fields: [ownerId], references: [id])
+  assessor        User?                       @relation("ComplianceAssessmentAssessor", fields: [assessorId], references: [id])
+  submittedBy     User?                       @relation("ComplianceAssessmentSubmitter", fields: [submittedById], references: [id])
+  approvedBy      User?                       @relation("ComplianceAssessmentApprover", fields: [approvedById], references: [id])
+
+  controlScores   ControlAssessmentScore[]
+
+  @@unique([organizationId, identifier])
+  @@index([organizationId, status])
+  @@index([organizationId, frameworkId])
+  @@index([organizationId, businessUnitId])
+  @@index([ownerId])
+  @@index([assessorId])
+}
+
+// ControlAssessmentScore - Individual control compliance scores within an assessment
+model ControlAssessmentScore {
+  id              String            @id @default(cuid())
+  assessmentId    String
+  controlId       String
+
+  status          ComplianceStatus  @default(NOT_ASSESSED)
+  notes           String?           @db.Text
+  evidenceLinks   String[]          @default([])
+
+  // Gap tracking
+  gapDescription    String?         @db.Text
+  remediationPlan   String?         @db.Text
+  remediationDueDate DateTime?
+
+  // Audit
+  assessedById    String?
+  assessedAt      DateTime?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  assessment      ComplianceAssessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  control         Control              @relation(fields: [controlId], references: [id], onDelete: Cascade)
+  assessedBy      User?                @relation("ControlScoreAssessor", fields: [assessedById], references: [id])
+
+  @@unique([assessmentId, controlId])
+  @@index([assessmentId])
+  @@index([controlId])
+  @@index([assessmentId, status])
+}
+
+// ============================================================================
+// Risk Assessment Project Feature - Container-based risk discovery workflow
+// Enables analysts to create assessment "containers" for subjects, discover
+// multiple risks, and submit for manager approval before publishing to register
+// ============================================================================
+
+model RiskAssessmentProject {
+  id                    String                  @id @default(cuid())
+  organizationId        String
+
+  // Assessment subject and description
+  subject               String                  // What is being assessed (e.g., "AWS Migration Project")
+  description           String?                 @db.Text  // Optional description/scope of the assessment
+
+  // Risk matrix for scoring all risks in this project
+  matrixVersionId       String?                 // Risk matrix version used for scoring
+
+  // Assignment and ownership
+  assigneeId            String?                 // Analyst assigned to perform the assessment (null = backlog)
+  createdById           String                  // User who created the assessment
+  riskOwnerId           String?                 // Person accountable for risks in this assessment
+
+  // Workflow status
+  status                AssessmentProjectStatus @default(IN_PROGRESS)
+  dueDate               DateTime                // Deadline for completing the assessment
+
+  // Submission tracking
+  submittedAt           DateTime?               // When analyst submitted for review
+
+  // Review tracking
+  reviewerId            String?                 // Manager who reviewed the assessment
+  reviewedAt            DateTime?               // When review was completed
+  rejectionNotes        String?                 @db.Text  // Notes from reviewer if rejected
+
+  // Reassessment chain
+  parentAssessmentId    String?                 // Link to parent assessment for reassessments
+  reassessmentDueDate   DateTime?               // Calculated on approval based on highest severity
+
+  // Timestamps
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  // Relations
+  organization          Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignee              User?                   @relation("ProjectAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy             User                    @relation("ProjectCreator", fields: [createdById], references: [id])
+  reviewer              User?                   @relation("ProjectReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  riskOwner             Person?                 @relation("ProjectRiskOwner", fields: [riskOwnerId], references: [id], onDelete: SetNull)
+  parentAssessment      RiskAssessmentProject?  @relation("ReassessmentChain", fields: [parentAssessmentId], references: [id], onDelete: SetNull)
+  childAssessments      RiskAssessmentProject[] @relation("ReassessmentChain")
+  matrixVersion         RiskMatrixVersion?      @relation("ProjectMatrixVersion", fields: [matrixVersionId], references: [id], onDelete: SetNull)
+
+  // Discovered risks within this assessment project
+  discoveredRisks       Risk[]                  @relation("ProjectDiscoveredRisks")
+
+  // Indexes for efficient querying
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, assigneeId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([reassessmentDueDate])
+  @@index([organizationId, reassessmentDueDate])
+  @@index([parentAssessmentId])
+  @@index([createdById])
+  @@index([matrixVersionId])
+  @@index([riskOwnerId])
+}
+
+// ============================================================================
+// Epic 1: TPRM Vendor Registry Module - Vendor Model
+// Central registry for third-party vendors with ownership, status tracking,
+// and role-based access control
+// ============================================================================
+
+model Vendor {
+  id                  String          @id @default(cuid())
+  identifier          String          // VND-YYYY-NNNN format
+  organizationId      String
+  name                String
+  category            String?         // e.g., "Cloud Services", "Security Tools"
+  status              VendorStatus    @default(ACTIVE)
+
+  // Risk Tiering (FR11-FR16)
+  riskTier            VendorRiskTier? // Critical, High, Medium, Low
+  nextReviewDate      DateTime?       // Auto-calculated based on tier, can be overridden
+  reviewDateOverridden Boolean        @default(false) // True if manually overridden
+  reviewOverrideReason String?        // Reason for manual override (required if overridden)
+
+  // Primary Contact (FR1)
+  primaryContactName  String?
+  primaryContactEmail String?
+
+  // Ownership (FR6, FR7)
+  businessUnitId      String?         // Which BU owns this vendor relationship
+  itOwnerId           String?         // IT stakeholder responsible for technical oversight
+  businessOwnerId     String?         // Business stakeholder responsible for relationship
+
+  // Audit fields
+  notes               String?         @db.Text
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  createdById         String?
+
+  // Relations
+  organization        Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessUnit        BusinessUnit?   @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+  itOwner             User?           @relation("VendorITOwner", fields: [itOwnerId], references: [id], onDelete: SetNull)
+  businessOwner       User?           @relation("VendorBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
+  createdBy           User?           @relation("VendorCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Relations to assessments (Epic 3)
+  assessments         VendorAssessment[]
+
+  // Epic 5: Findings and Risks linked to this vendor (FR47, FR49)
+  findings            Finding[]          @relation("VendorFindings")
+  risks               Risk[]             @relation("VendorRisks")
+
+  // BIA Module: Business Processes linked to this vendor (FR33, FR40)
+  businessProcessLinks BusinessProcessVendor[]
+
+  // Unique identifier per organization
+  @@unique([organizationId, identifier])
+
+  // Indexes for efficient querying (FR2, FR8-FR10, FR11-FR16)
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, riskTier])
+  @@index([organizationId, nextReviewDate])
+  @@index([organizationId, businessUnitId])
+  @@index([itOwnerId])
+  @@index([businessOwnerId])
+}
+
+// ============================================================================
+// Epic 3: Vendor Assessment Workflow
+// Structured vendor assessments with status tracking, scoring, recommendations
+// FR17-FR26
+// ============================================================================
+
+model VendorAssessment {
+  id                  String                         @id @default(cuid())
+  identifier          String                         // VA-YYYY-NNNN format
+  organizationId      String
+  vendorId            String
+
+  // Assessment Details (FR17, FR19)
+  title               String
+  dueDate             DateTime?
+
+  // Status Workflow (FR20)
+  status              VendorAssessmentStatus         @default(DRAFT)
+  statusChangedAt     DateTime?                      // When status last changed
+
+  // Assessor Assignment (FR18)
+  assessorId          String?                        // User assigned to conduct assessment
+
+  // Scoring and Recommendation (FR21, FR22)
+  riskScore           Int?                           // 0-100 risk score
+  recommendation      VendorAssessmentRecommendation?
+  conditions          String?                        @db.Text // Conditions for CONDITIONAL_APPROVE
+  rejectionReason     String?                        @db.Text // Reason if REJECT
+
+  // Summary and Notes (FR23)
+  summary             String?                        @db.Text
+
+  // Completion tracking
+  completedAt         DateTime?
+  completedById       String?                        // User who marked as completed
+
+  // Audit fields
+  createdAt           DateTime                       @default(now())
+  updatedAt           DateTime                       @updatedAt
+  createdById         String?
+
+  // Relations
+  organization        Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vendor              Vendor                         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  assessor            User?                          @relation("AssessmentAssessor", fields: [assessorId], references: [id], onDelete: SetNull)
+  completedBy         User?                          @relation("AssessmentCompletedBy", fields: [completedById], references: [id], onDelete: SetNull)
+  createdBy           User?                          @relation("AssessmentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Comments (FR26)
+  comments            VendorAssessmentComment[]
+
+  // Questionnaires (FR30)
+  questionnaires      AssessmentQuestionnaire[]
+
+  // Epic 5: Findings and Risks created from this assessment (FR45-FR50)
+  findings            Finding[]          @relation("VendorAssessmentFindings")
+  risks               Risk[]             @relation("VendorAssessmentRisks")
+
+  // Unique identifier per organization
+  @@unique([organizationId, identifier])
+
+  // Indexes for efficient querying
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, vendorId])
+  @@index([vendorId])
+  @@index([assessorId])
+  @@index([organizationId, dueDate])
+}
+
+// Comments on vendor assessments (FR26)
+// IT Stakeholders can add comments to assessments for vendors they own
+model VendorAssessmentComment {
+  id                  String               @id @default(cuid())
+  assessmentId        String
+  authorId            String
+  content             String               @db.Text
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  // Relations
+  assessment          VendorAssessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  author              User                 @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+  @@index([authorId])
+}
+
+// ============================================================================
+// Epic 4: Questionnaire System (FR27-FR36)
+// Enables structured information gathering from vendors via customizable
+// questionnaires attached to vendor assessments
+// ============================================================================
+
+// Questionnaire Template (FR27, FR28, FR29)
+// Reusable questionnaire templates that can be attached to assessments
+model QuestionnaireTemplate {
+  id              String       @id @default(cuid())
+  organizationId  String?      // Null for system templates (pre-built)
+  name            String
+  description     String?      @db.Text
+  isSystemTemplate Boolean     @default(false) // True for pre-built templates
+  isActive        Boolean      @default(true)
+  version         Int          @default(1)
+
+  // Timestamps
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  createdById     String?
+
+  // Relations
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy       User?        @relation("QuestionnaireTemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Child entities
+  sections        QuestionnaireSection[]
+  questionnaires  AssessmentQuestionnaire[] // Instances created from this template
+
+  @@unique([organizationId, name, version])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([isSystemTemplate])
+}
+
+// Questionnaire Section (FR28)
+// Groups questions within a template
+model QuestionnaireSection {
+  id              String                 @id @default(cuid())
+  templateId      String
+  title           String
+  description     String?                @db.Text
+  sortOrder       Int                    @default(0)
+
+  // Timestamps
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  // Relations
+  template        QuestionnaireTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  questions       QuestionnaireQuestion[]
+
+  @@index([templateId])
+  @@index([templateId, sortOrder])
+}
+
+// Questionnaire Question (FR28)
+// Individual questions within a section
+model QuestionnaireQuestion {
+  id              String                 @id @default(cuid())
+  sectionId       String
+  questionText    String                 @db.Text
+  helpText        String?                @db.Text // Optional guidance for respondents
+  questionType    QuestionType
+  isRequired      Boolean                @default(false)
+  sortOrder       Int                    @default(0)
+
+  // For TEXT type
+  isLongText      Boolean                @default(false) // True for textarea, false for input
+
+  // Timestamps
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  // Relations
+  section         QuestionnaireSection   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  choices         QuestionChoice[]       // Options for MULTI_CHOICE type
+  responses       QuestionnaireResponse[]
+
+  @@index([sectionId])
+  @@index([sectionId, sortOrder])
+}
+
+// Question Choice (FR28)
+// Options for multi-choice questions
+model QuestionChoice {
+  id              String                 @id @default(cuid())
+  questionId      String
+  choiceText      String
+  sortOrder       Int                    @default(0)
+  isConcerning    Boolean                @default(false) // Flag response for review if selected
+
+  // Timestamps
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  // Relations
+  question        QuestionnaireQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@index([questionId, sortOrder])
+}
+
+// Assessment Questionnaire (FR30)
+// Instance of a questionnaire template attached to an assessment
+model AssessmentQuestionnaire {
+  id                String                 @id @default(cuid())
+  assessmentId      String
+  templateId        String
+  status            QuestionnaireStatus    @default(DRAFT)
+
+  // Sending info (FR31)
+  recipientEmail    String?                // Email questionnaire was sent to
+  sentAt            DateTime?              // When questionnaire was sent
+  sentById          String?                // User who sent it
+
+  // Tracking (FR32)
+  accessToken       String?                @unique // Secure token for vendor portal access
+  tokenExpiresAt    DateTime?              // Token expiration (7 days of inactivity)
+  viewedAt          DateTime?              // When vendor first accessed
+  startedAt         DateTime?              // When vendor started responding
+  completedAt       DateTime?              // When vendor submitted
+
+  // Custom message
+  customMessage     String?                @db.Text // Message included in email
+
+  // Scoring summary
+  overallScore      Float?                 // Calculated % acceptable after scoring
+
+  // Timestamps
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  // Relations
+  assessment        VendorAssessment       @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  template          QuestionnaireTemplate  @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  sentBy            User?                  @relation("QuestionnaireSender", fields: [sentById], references: [id], onDelete: SetNull)
+
+  // Child entities
+  responses         QuestionnaireResponse[]
+  reminders         QuestionnaireReminder[]
+
+  @@index([assessmentId])
+  @@index([templateId])
+  @@index([accessToken])
+  @@index([status])
+}
+
+// Questionnaire Response (FR34, FR39)
+// Vendor's response to a question
+model QuestionnaireResponse {
+  id                  String                  @id @default(cuid())
+  questionnaireId     String
+  questionId          String
+
+  // Response data (varies by question type)
+  textResponse        String?                 @db.Text    // For TEXT and YES_NO
+  selectedChoiceId    String?                 // For MULTI_CHOICE
+  fileUrl             String?                 // For FILE_UPLOAD - path to uploaded file
+  fileName            String?                 // Original filename for FILE_UPLOAD
+
+  // Pre-fill tracking (FR42, FR43)
+  isPreFilled         Boolean                 @default(false)
+  preFilledFromId     String?                 // ID of response this was pre-filled from
+  wasModified         Boolean                 @default(false) // True if vendor modified pre-fill
+
+  // Assessor scoring (FR35)
+  score               ResponseScore?
+  scoreComment        String?                 @db.Text
+  scoredAt            DateTime?
+  scoredById          String?
+
+  // Timestamps
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  // Relations
+  questionnaire       AssessmentQuestionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  question            QuestionnaireQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  scoredBy            User?                   @relation("ResponseScorer", fields: [scoredById], references: [id], onDelete: SetNull)
+
+  // Epic 5: Finding created from this response (FR45, FR50)
+  finding             Finding?                @relation("ResponseFinding")
+
+  @@unique([questionnaireId, questionId])
+  @@index([questionnaireId])
+  @@index([questionId])
+}
+
+// Questionnaire Reminder (FR33)
+// Tracks automated reminder emails sent
+model QuestionnaireReminder {
+  id                String                  @id @default(cuid())
+  questionnaireId   String
+  sentAt            DateTime                @default(now())
+  recipientEmail    String
+  success           Boolean                 @default(true)
+  failureReason     String?
+
+  // Relations
+  questionnaire     AssessmentQuestionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+
+  @@index([questionnaireId])
+  @@index([questionnaireId, sentAt])
+}
+
+// Questionnaire Settings (FR36)
+// Organization-level settings for questionnaire reminders
+model QuestionnaireSettings {
+  id                    String       @id @default(cuid())
+  organizationId        String       @unique
+
+  // Reminder configuration
+  firstReminderDays     Int          @default(7)   // Days after sending to first reminder
+  followUpIntervalDays  Int          @default(7)   // Days between subsequent reminders
+  maxReminders          Int          @default(3)   // Maximum number of reminders to send
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// BIA Module - Business Impact Assessment
+// Epic 9: BIA Configuration Admin
+// Epic 10: BIA Core Module
+// Epic 11: BIA Impact Assessment
+// Epic 12: BIA Dependencies & Integration
+// Epic 13: BIA Reporting & Compliance
+// ============================================================================
+
+// Business Process Status enum
+enum BusinessProcessStatus {
+  ACTIVE        // Process is actively operational
+  INACTIVE      // Process temporarily inactive
+  UNDER_REVIEW  // Process under BIA review
+  DELETED       // Soft deleted (preserved for audit)
+}
+
+// BIA Assessment Status enum
+enum BIAAssessmentStatus {
+  NOT_STARTED   // No assessment begun
+  DRAFT         // Assessment in progress, not submitted
+  COMPLETED     // Assessment submitted and finalized
+}
+
+// BIA Configuration (Story 9.1 - FR7, FR8)
+// Organization-level BIA methodology configuration
+model BIAConfiguration {
+  id                    String       @id @default(cuid())
+  organizationId        String       @unique
+
+  // Score Scale (FR2)
+  scoreScaleMin         Int          @default(1)
+  scoreScaleMax         Int          @default(5)
+
+  // Tier Threshold Rules (FR6) - JSON for flexibility
+  // Format: [{ "minScore": 4.5, "maxScore": 5.0, "tierId": "tier-id" }, ...]
+  tierThresholds        Json         @default("[]")
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Child entities
+  impactCategories      BIAImpactCategory[]
+  tierDefinitions       BIATierDefinition[]
+  timePeriods           BIATimePeriod[]
+}
+
+// Impact Category (Story 9.2 - FR1)
+// Configurable impact dimensions (Financial, Compliance, Operational, Strategic, etc.)
+model BIAImpactCategory {
+  id                    String       @id @default(cuid())
+  configurationId       String
+  name                  String       // e.g., "Financial", "Compliance"
+  description           String?      @db.Text
+  weight                Float        @default(25)  // Percentage weight (should sum to 100)
+  sortOrder             Int          @default(0)
+  isActive              Boolean      @default(true)
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  configuration         BIAConfiguration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+
+  // Child entities
+  tierCriteria          BIATierCriteria[]
+  impactScores          BIAImpactScore[]
+  timeImpactScores      BIATimeImpactScore[]
+
+  @@unique([configurationId, name])
+  @@index([configurationId])
+  @@index([configurationId, isActive, sortOrder])
+}
+
+// Tier Definition (Story 9.4 - FR3)
+// Configurable tier levels (Mission Critical, High, Medium, Low)
+model BIATierDefinition {
+  id                    String       @id @default(cuid())
+  configurationId       String
+  name                  String       // e.g., "Mission Critical", "High"
+  tierLevel             Int          // 0 = highest priority, 3 = lowest
+  rtoText               String       // e.g., "30 minutes", "4 hours"
+  rpoText               String       // e.g., "No data loss", "1 hour"
+  colorHex              String       @default("#EF4444")  // Display color
+  description           String?      @db.Text
+  sortOrder             Int          @default(0)
+  isActive              Boolean      @default(true)
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  configuration         BIAConfiguration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+
+  // Child entities
+  tierCriteria          BIATierCriteria[]
+
+  // Business Process relations (named to disambiguate)
+  calculatedProcesses   BusinessProcess[]  @relation("CalculatedTierProcesses")
+  overrideProcesses     BusinessProcess[]  @relation("OverrideTierProcesses")
+
+  // Epic 14: Asset tier inheritance
+  calculatedAssets      Asset[]            @relation("CalculatedTierAssets")
+
+  @@unique([configurationId, name])
+  @@unique([configurationId, tierLevel])
+  @@index([configurationId])
+  @@index([configurationId, isActive, sortOrder])
+}
+
+// Tier Criteria (Story 9.5 - FR4)
+// Descriptions for each category/tier intersection (16 for 4x4 matrix)
+model BIATierCriteria {
+  id                    String       @id @default(cuid())
+  categoryId            String
+  tierId                String
+  description           String       @db.Text  // e.g., "$200M+ financial impact"
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  category              BIAImpactCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tier                  BIATierDefinition @relation(fields: [tierId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, tierId])
+  @@index([categoryId])
+  @@index([tierId])
+}
+
+// Time Period (Story 9.6 - FR5)
+// Configurable time periods for time-to-impact matrix
+model BIATimePeriod {
+  id                    String       @id @default(cuid())
+  configurationId       String
+  label                 String       // e.g., "30 minutes", "4 hours"
+  durationMinutes       Int          // For sorting (e.g., 30, 240, 1440)
+  sortOrder             Int          @default(0)
+  isActive              Boolean      @default(true)
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  configuration         BIAConfiguration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+
+  // Child entities
+  timeImpactScores      BIATimeImpactScore[]
+
+  @@unique([configurationId, label])
+  @@index([configurationId])
+  @@index([configurationId, isActive, sortOrder])
+}
+
+// Business Function (Story 10.1 - FR9)
+// Parent categories for organizing business processes
+model BusinessFunction {
+  id                    String       @id @default(cuid())
+  identifier            String       // BF-YYYY-NNNN format
+  organizationId        String
+  name                  String
+  description           String?      @db.Text
+  isActive              Boolean      @default(true)
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  createdById           String?
+
+  // Relations
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy             User?        @relation("BusinessFunctionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Child entities
+  businessProcesses     BusinessProcess[]
+
+  @@unique([organizationId, identifier])
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+// Business Process (Story 10.2 - FR10-FR19, FR52)
+// Core BIA entity representing a business process to assess
+model BusinessProcess {
+  id                    String                @id @default(cuid())
+  identifier            String                // BP-YYYY-NNNN format
+  organizationId        String
+  businessFunctionId    String?               // Optional - process may not be assigned to a function
+  name                  String
+  description           String?               @db.Text
+  status                BusinessProcessStatus @default(ACTIVE)
+
+  // Ownership (FR11, FR12, FR17)
+  ownerId               String?               // Process Owner (User)
+
+  // Workaround Documentation (FR18)
+  workaroundProcedure   String?               @db.Text
+
+  // Assessment Status
+  assessmentStatus      BIAAssessmentStatus   @default(NOT_STARTED)
+  lastAssessedAt        DateTime?
+  lastAssessedById      String?
+
+  // Tier Assignment (FR23, FR24, FR25)
+  calculatedTierId      String?               // Auto-calculated tier
+  overrideTierId        String?               // Manual override tier
+  overrideJustification String?               @db.Text
+  overrideAt            DateTime?
+  overrideById          String?
+
+  // Peak Time Criticality (FR39)
+  peakTimeDescription   String?               @db.Text  // e.g., "Quarter-end processing"
+  peakDays              String?               // JSON array of days ["Monday", "Friday"]
+  peakStartTime         String?               // e.g., "09:00"
+  peakEndTime           String?               // e.g., "17:00"
+
+  // Resource Dependencies (FR36, FR37, FR38) - JSON for flexibility
+  peopleDependencies    Json                  @default("[]")
+  facilitiesDependencies Json                 @default("[]")
+  transportDependencies Json                  @default("[]")
+
+  // Audit fields
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  createdById           String?
+
+  // Relations
+  organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessFunction      BusinessFunction?     @relation(fields: [businessFunctionId], references: [id], onDelete: SetNull)
+  owner                 User?                 @relation("BusinessProcessOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  lastAssessedBy        User?                 @relation("BusinessProcessAssessor", fields: [lastAssessedById], references: [id], onDelete: SetNull)
+  calculatedTier        BIATierDefinition?    @relation("CalculatedTierProcesses", fields: [calculatedTierId], references: [id], onDelete: SetNull)
+  overrideTier          BIATierDefinition?    @relation("OverrideTierProcesses", fields: [overrideTierId], references: [id], onDelete: SetNull)
+  overrideBy            User?                 @relation("BusinessProcessOverrider", fields: [overrideById], references: [id], onDelete: SetNull)
+  createdBy             User?                 @relation("BusinessProcessCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Child entities
+  impactScores          BIAImpactScore[]
+  timeImpactScores      BIATimeImpactScore[]
+
+  // Dependencies (FR29, FR30)
+  upstreamDependencies  BusinessProcessDependency[] @relation("DownstreamProcess")
+  downstreamDependencies BusinessProcessDependency[] @relation("UpstreamProcess")
+
+  // Vendor Linkage (FR31, FR32, FR33, FR40)
+  vendorLinks           BusinessProcessVendor[]
+
+  // Risk Linkage (FR34, FR35)
+  riskLinks             BusinessProcessRisk[]
+
+  // Epic 14: Asset Linkage
+  assetLinks            BusinessProcessAsset[]
+
+  // Assessment Requests (FR26, FR41, FR42, FR43, FR44)
+  assessmentRequests    BIAAssessmentRequest[]
+
+  @@unique([organizationId, identifier])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, businessFunctionId])
+  @@index([organizationId, ownerId])
+  @@index([organizationId, calculatedTierId])
+  @@index([organizationId, assessmentStatus])
+  @@index([ownerId])
+}
+
+// Impact Score (Story 11.2 - FR20, FR21)
+// Score and description for each impact category
+model BIAImpactScore {
+  id                    String       @id @default(cuid())
+  processId             String
+  categoryId            String
+  score                 Int          // Score within configured scale (e.g., 1-5)
+  description           String?      @db.Text  // Specific impact description
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  process               BusinessProcess   @relation(fields: [processId], references: [id], onDelete: Cascade)
+  category              BIAImpactCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, categoryId])
+  @@index([processId])
+  @@index([categoryId])
+}
+
+// Time-to-Impact Score (Story 11.3 - FR22)
+// Score for each category × time period cell in the matrix
+model BIATimeImpactScore {
+  id                    String       @id @default(cuid())
+  processId             String
+  categoryId            String
+  timePeriodId          String
+  score                 Int          // Score within configured scale (e.g., 1-5)
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  process               BusinessProcess   @relation(fields: [processId], references: [id], onDelete: Cascade)
+  category              BIAImpactCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  timePeriod            BIATimePeriod     @relation(fields: [timePeriodId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, categoryId, timePeriodId])
+  @@index([processId])
+  @@index([categoryId])
+  @@index([timePeriodId])
+}
+
+// Business Process Dependency (Story 12.1, 12.2 - FR29, FR30)
+// Self-referential many-to-many for upstream/downstream dependencies
+model BusinessProcessDependency {
+  id                    String       @id @default(cuid())
+  upstreamProcessId     String       // The process being depended on
+  downstreamProcessId   String       // The process that depends on upstream
+  notes                 String?      @db.Text
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  upstreamProcess       BusinessProcess @relation("UpstreamProcess", fields: [upstreamProcessId], references: [id], onDelete: Cascade)
+  downstreamProcess     BusinessProcess @relation("DownstreamProcess", fields: [downstreamProcessId], references: [id], onDelete: Cascade)
+
+  @@unique([upstreamProcessId, downstreamProcessId])
+  @@index([upstreamProcessId])
+  @@index([downstreamProcessId])
+}
+
+// Business Process Vendor Link (Story 12.3 - FR31, FR32, FR33, FR40)
+// Junction table linking processes to TPRM vendors
+model BusinessProcessVendor {
+  id                    String       @id @default(cuid())
+  processId             String
+  vendorId              String
+  notes                 String?      @db.Text
+  criticality           String?      // HIGH, MEDIUM, LOW
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  process               BusinessProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  vendor                Vendor          @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, vendorId])
+  @@index([processId])
+  @@index([vendorId])
+}
+
+// Business Process Risk Link (Story 12.4 - FR34, FR35)
+// Junction table linking processes to Risk Registry risks
+model BusinessProcessRisk {
+  id                    String       @id @default(cuid())
+  processId             String
+  riskId                String
+  notes                 String?      @db.Text
+
+  // Timestamps
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  process               BusinessProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  risk                  Risk            @relation(fields: [riskId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, riskId])
+  @@index([processId])
+  @@index([riskId])
+}
+
+// BIA Assessment Request (Story 11.7 - FR26, FR41, FR42, FR43, FR44)
+// Tracks assessment requests sent to Process Owners
+enum BIAAssessmentRequestStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model BIAAssessmentRequest {
+  id                    String                      @id @default(cuid())
+  processId             String
+  requestedById         String                      // GRC Analyst who requested
+  requestedAt           DateTime                    @default(now())
+  dueDate               DateTime?                   // Optional due date
+  status                BIAAssessmentRequestStatus  @default(PENDING)
+  completedAt           DateTime?
+  message               String?                     @db.Text  // Custom message from requester
+
+  // Relations
+  process               BusinessProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  requestedBy           User            @relation("AssessmentRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@index([processId])
+  @@index([requestedById])
+  @@index([status])
+}
+
+// =============================================================================
+// Epic 14: Asset Registry & BIA Integration
+// =============================================================================
+
+enum AssetType {
+  SERVER
+  DATABASE
+  APPLICATION
+  NETWORK
+  STORAGE
+  ENDPOINT
+}
+
+enum AssetStatus {
+  ACTIVE
+  INACTIVE
+  DECOMMISSIONED
+  UNDER_MAINTENANCE
+}
+
+// Epic 14: Asset Owner - separate from User for flexible ownership
+model AssetOwner {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  email          String?
+  phone          String?
+  department     String?
+  title          String?
+
+  // Audit fields
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdById    String?
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User?        @relation("AssetOwnerCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  assets         Asset[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model Asset {
+  id                String       @id @default(cuid())
+  identifier        String       // AST-YYYY-NNNN format
+  organizationId    String
+  name              String
+  type              AssetType
+  status            AssetStatus  @default(ACTIVE)
+  description       String?      @db.Text
+
+  // Ownership
+  ownerId           String?
+  businessUnitId    String?
+
+  // Calculated tier (MAX criticality of linked processes)
+  calculatedTierId  String?
+
+  // Audit fields
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  createdById       String?
+
+  // Relations
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner             AssetOwner?  @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  businessUnit      BusinessUnit? @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
+  calculatedTier    BIATierDefinition? @relation("CalculatedTierAssets", fields: [calculatedTierId], references: [id], onDelete: SetNull)
+  createdBy         User?        @relation("AssetCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  // Process links (many-to-many)
+  businessProcessLinks BusinessProcessAsset[]
+
+  @@unique([organizationId, identifier])
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, type])
+  @@index([organizationId, calculatedTierId])
+  @@index([ownerId])
+  @@index([businessUnitId])
+}
+
+// Junction table for Asset-BusinessProcess many-to-many relationship
+model BusinessProcessAsset {
+  id                String   @id @default(cuid())
+  businessProcessId String
+  assetId           String
+  dependencyType    String?  // "PRIMARY", "BACKUP", "SUPPORTING"
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now())
+  createdById       String?
+
+  businessProcess   BusinessProcess @relation(fields: [businessProcessId], references: [id], onDelete: Cascade)
+  asset             Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdBy         User?           @relation("BusinessProcessAssetCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([businessProcessId, assetId])
+  @@index([businessProcessId])
+  @@index([assetId])
 }

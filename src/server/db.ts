@@ -1,5 +1,21 @@
 import { env } from "@/env";
-import { PrismaClient } from "../../generated/prisma";
+import { PrismaClient } from "@prisma/client";
+import { organizationFilterMiddleware } from "@/server/db/middleware/organization-filter";
+
+/**
+ * Raw Prisma Client without organization filtering
+ *
+ * SECURITY WARNING: Only use this for:
+ * - Test cleanup operations
+ * - System migrations
+ * - Organization creation/deletion workflows
+ *
+ * Never use rawPrisma for regular business logic - always use `db` instead
+ * to ensure multi-tenant isolation.
+ */
+export const rawPrisma = new PrismaClient({
+  log: env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+});
 
 /**
  * Multi-tenant models that require automatic organizationId filtering.
@@ -8,7 +24,8 @@ import { PrismaClient } from "../../generated/prisma";
  * System models (Organization, Account, Session, VerificationToken) are excluded
  * because they are either root tenant tables or NextAuth system tables.
  *
- * @see docs/MULTI_TENANT_ARCHITECTURE.md for the complete multi-tenancy strategy
+ * @see docs/MULTI_TENANCY.md for the complete multi-tenancy strategy
+ * @see Story 1.9: Multi-Tenant Data Access Middleware
  */
 const MULTI_TENANT_MODELS = [
   "User",
@@ -20,29 +37,38 @@ const MULTI_TENANT_MODELS = [
 
 const createPrismaClient = () => {
   /**
-   * Base Prisma Client
+   * Base Prisma Client with Multi-Tenant Extension
    *
-   * Note: Prisma middleware ($use) was deprecated in Prisma 5+.
-   * For query logging and validation, use Prisma Client Extensions or
-   * implement validation at the tRPC procedure level.
+   * IMPORTANT: Multi-tenant data isolation is AUTOMATICALLY enforced through:
+   * 1. Prisma Client Extension that injects organizationId filters on ALL queries (see middleware/)
+   * 2. tRPC organizationProcedure middleware that sets organization context (see src/server/api/trpc.ts)
+   * 3. Database foreign key constraints (see prisma/schema.prisma)
    *
-   * IMPORTANT: Multi-tenant data isolation is enforced through:
-   * 1. Database foreign key constraints (see prisma/schema.prisma)
-   * 2. tRPC organizationProcedure middleware (see src/server/api/trpc.ts)
-   * 3. Explicit organizationId filtering in all queries (developer responsibility)
+   * The Client Extension approach eliminates an entire class of bugs by making it
+   * impossible to forget organization filtering. Developers no longer need to
+   * manually add organizationId to queries - it's automatic!
    *
    * Best Practice:
    * - Always use organizationProcedure for multi-tenant data access
-   * - Always include { where: { organizationId: ctx.organizationId } } in queries
-   * - Database constraints prevent invalid cross-tenant references
+   * - The extension will automatically filter all queries by organizationId
+   * - No need to manually add { where: { organizationId: ctx.organizationId } }
+   * - Cross-organization access attempts return NOT_FOUND (not FORBIDDEN)
    *
-   * @see src/server/api/trpc.ts - organizationProcedure enforces organizationId context
-   * @see docs/MULTI_TENANT_ARCHITECTURE.md - Complete multi-tenancy strategy
+   * @see src/server/db/middleware/organization-filter.ts - Automatic filtering implementation
+   * @see src/server/api/trpc.ts - organizationProcedure sets organization context
+   * @see docs/MULTI_TENANCY.md - Complete multi-tenancy strategy
    */
-  const client = new PrismaClient({
+  const baseClient = new PrismaClient({
     log:
       env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
+
+  // Extend client with organization filtering (Prisma 6 Client Extensions)
+  // This extension automatically:
+  // - Filters read queries by organizationId
+  // - Validates write operations against organizationId
+  // - Prevents cross-organizational data leakage
+  const client = organizationFilterMiddleware(baseClient);
 
   return client;
 };

@@ -12,57 +12,86 @@
  */
 
 import { type UserRole } from "@prisma/client";
+import { randomUUID } from "crypto";
 import { db } from "@/server/db";
 import { appRouter } from "@/server/api/root";
 
 // Test data setup
 let orgA: { id: string; name: string };
 let orgB: { id: string; name: string };
-let adminA: { id: string; email: string; role: UserRole; organizationId: string };
-let analystA: { id: string; email: string; role: UserRole; organizationId: string };
-let adminB: { id: string; email: string; role: UserRole; organizationId: string };
+let adminA: { id: string; email: string | null; role: UserRole; organizationId: string };
+let analystA: { id: string; email: string | null; role: UserRole; organizationId: string };
+let adminB: { id: string; email: string | null; role: UserRole; organizationId: string };
 
 beforeAll(async () => {
+  // Cleanup any residual data from previous failed runs
+  const existingOrgA = await db.organization.findUnique({
+    where: { slug: "test-org-a-user-mgmt" },
+  });
+  if (existingOrgA) {
+    await db.auditLog.deleteMany({ where: { organizationId: existingOrgA.id } });
+    await db.user.deleteMany({ where: { organizationId: existingOrgA.id } });
+    await db.organization.delete({ where: { id: existingOrgA.id } });
+  }
+  const existingOrgB = await db.organization.findUnique({
+    where: { slug: "test-org-b-user-mgmt" },
+  });
+  if (existingOrgB) {
+    await db.auditLog.deleteMany({ where: { organizationId: existingOrgB.id } });
+    await db.user.deleteMany({ where: { organizationId: existingOrgB.id } });
+    await db.organization.delete({ where: { id: existingOrgB.id } });
+  }
+
   // Create test organizations
   orgA = await db.organization.create({
     data: {
+      id: randomUUID(),
       name: "Test Org A",
       slug: "test-org-a-user-mgmt",
+      updatedAt: new Date(),
     },
   });
 
   orgB = await db.organization.create({
     data: {
+      id: randomUUID(),
       name: "Test Org B",
       slug: "test-org-b-user-mgmt",
+      updatedAt: new Date(),
     },
   });
 
   // Create test users
   adminA = await db.user.create({
     data: {
+      id: randomUUID(),
       name: "Admin A",
       email: "admin-a@test-user-mgmt.com",
       role: "ORG_ADMIN",
       organizationId: orgA.id,
+      updatedAt: new Date(),
     },
   });
 
   analystA = await db.user.create({
     data: {
+      id: randomUUID(),
       name: "Analyst A",
       email: "analyst-a@test-user-mgmt.com",
       role: "GRC_ANALYST",
       organizationId: orgA.id,
+      updatedAt: new Date(),
     },
   });
 
   adminB = await db.user.create({
     data: {
+      id: randomUUID(),
       name: "Admin B",
       email: "admin-b@test-user-mgmt.com",
       role: "ORG_ADMIN",
       organizationId: orgB.id,
+      updatedAt: new Date(),
     },
   });
 });
@@ -87,11 +116,12 @@ function createCaller(user: typeof adminA) {
     session: {
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email ?? "",
         role: user.role as UserRole,
         organizationId: user.organizationId,
-        name: null,
+        name: "",
         image: null,
+        assignedFrameworks: [], // Story 3.7
       },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     },
@@ -210,7 +240,7 @@ describe("User Management - Role-Based Access Control (AC16, AC6)", () => {
         email: "unauthorized@test.com",
         role: "AUDITOR",
       })
-    ).rejects.toThrow("Only Organization Administrators can manage users");
+    ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
   });
 
   it("should prevent GRC_ANALYST from updating users", async () => {
@@ -221,7 +251,7 @@ describe("User Management - Role-Based Access Control (AC16, AC6)", () => {
         id: adminA.id,
         name: "Hacked Admin Name",
       })
-    ).rejects.toThrow("Only Organization Administrators can manage users");
+    ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
   });
 
   it("should prevent GRC_ANALYST from deleting users", async () => {
@@ -229,7 +259,7 @@ describe("User Management - Role-Based Access Control (AC16, AC6)", () => {
 
     await expect(
       caller.user.deleteUser({ id: adminA.id })
-    ).rejects.toThrow("Only Organization Administrators can manage users");
+    ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
   });
 
   it("should allow GRC_ANALYST to list users (view-only)", async () => {
@@ -271,26 +301,25 @@ describe("User Management - Security Validations", () => {
     ).rejects.toThrow("A user with this email already exists");
   });
 
-  it("should allow same email in different organizations", async () => {
+  it("should enforce globally unique email across all organizations", async () => {
     const callerA = createCaller(adminA);
     const callerB = createCaller(adminB);
 
     // Create user in Org A
     await callerA.user.createUser({
       name: "User in A",
-      email: "shared-email@test.com",
+      email: "global-unique-email@test.com",
       role: "AUDITOR",
     });
 
-    // Should be able to create user with same email in Org B
-    const userInB = await callerB.user.createUser({
-      name: "User in B",
-      email: "shared-email@test.com",
-      role: "AUDITOR",
-    });
-
-    expect(userInB.email).toBe("shared-email@test.com");
-    expect(userInB.organizationId).toBe(orgB.id);
+    // Should NOT be able to create user with same email in Org B (global uniqueness)
+    await expect(
+      callerB.user.createUser({
+        name: "User in B",
+        email: "global-unique-email@test.com",
+        role: "AUDITOR",
+      })
+    ).rejects.toThrow();
   });
 });
 
@@ -333,7 +362,7 @@ describe("User Management - Audit Logging (AC9)", () => {
         entityId: analystA.id,
         organizationId: orgA.id,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { timestamp: "desc" },
     });
 
     expect(auditLog).toBeDefined();

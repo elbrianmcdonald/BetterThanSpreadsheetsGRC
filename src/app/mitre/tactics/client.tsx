@@ -83,7 +83,7 @@ export function TacticsClient() {
 
   if (isLoading) {
     return (
-      <AppLayout breadcrumbs={[{ label: "MITRE ATT&CK" }]}>
+      <AppLayout breadcrumbs={[{ label: "Governance", href: "/mitre/tactics" }, { label: "MITRE ATT&CK" }]}>
         <div className="space-y-6">
           <Skeleton className="h-10 w-64" />
           <div className="grid gap-4 md:grid-cols-2">
@@ -99,7 +99,7 @@ export function TacticsClient() {
   // Empty state - offer to seed
   if (!tactics || tactics.length === 0) {
     return (
-      <AppLayout breadcrumbs={[{ label: "MITRE ATT&CK" }]}>
+      <AppLayout breadcrumbs={[{ label: "Governance", href: "/mitre/tactics" }, { label: "MITRE ATT&CK" }]}>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Target className="h-16 w-16 text-muted-foreground mb-6" />
           <h2 className="text-2xl font-semibold mb-2">No MITRE Data Available</h2>
@@ -130,7 +130,7 @@ export function TacticsClient() {
 
   if (error) {
     return (
-      <AppLayout breadcrumbs={[{ label: "MITRE ATT&CK" }]}>
+      <AppLayout breadcrumbs={[{ label: "Governance", href: "/mitre/tactics" }, { label: "MITRE ATT&CK" }]}>
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <AlertTriangle className="h-16 w-16 text-red-500 mb-6" />
           <h2 className="text-2xl font-semibold mb-2">Error Loading Tactics</h2>
@@ -145,7 +145,7 @@ export function TacticsClient() {
   }
 
   return (
-    <AppLayout breadcrumbs={[{ label: "MITRE ATT&CK" }]}>
+    <AppLayout breadcrumbs={[{ label: "Governance", href: "/mitre/tactics" }, { label: "MITRE ATT&CK" }]}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

@@ -17,6 +17,8 @@
 
 import { db } from "@/server/db";
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { randomUUID } from "crypto";
+import { setOrganizationContext, runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 
 // Test organization IDs (match seed data)
 const ORG_A_ID = "550e8400-e29b-41d4-a716-446655440001"; // Acme Corporation
@@ -24,18 +26,169 @@ const ORG_B_ID = "550e8400-e29b-41d4-a716-446655440002"; // Globex Inc
 
 describe("Multi-Tenant Data Isolation", () => {
   beforeAll(async () => {
-    // Verify seed data exists before running tests
-    const [orgA, orgB] = await Promise.all([
-      db.organization.findUnique({ where: { id: ORG_A_ID } }),
-      db.organization.findUnique({ where: { id: ORG_B_ID } }),
+    // Upsert both test organizations so the test DB is self-contained
+    await Promise.all([
+      db.organization.upsert({
+        where: { id: ORG_A_ID },
+        update: {},
+        create: {
+          id: ORG_A_ID,
+          name: "Acme Corp",
+          slug: "acme-corp",
+          active: true,
+          updatedAt: new Date(),
+        },
+      }),
+      db.organization.upsert({
+        where: { id: ORG_B_ID },
+        update: {},
+        create: {
+          id: ORG_B_ID,
+          name: "Globex Corp",
+          slug: "globex-corp",
+          active: true,
+          updatedAt: new Date(),
+        },
+      }),
     ]);
 
-    if (!orgA || !orgB) {
-      throw new Error(
-        "Seed data missing! Please run 'npm run db:seed' before running tests. " +
-        `Missing: ${!orgA ? "Org A (Acme)" : ""} ${!orgB ? "Org B (Globex)" : ""}`
-      );
-    }
+    // Deterministic IDs for child records so upserts are idempotent
+    const USER_A_ID = "550e8400-e29b-41d4-a716-446655440011";
+    const USER_B_ID = "550e8400-e29b-41d4-a716-446655440012";
+    const EVIDENCE_A_ID = "550e8400-e29b-41d4-a716-446655440021";
+    const EVIDENCE_B_ID = "550e8400-e29b-41d4-a716-446655440022";
+    const RISK_A_ID = "550e8400-e29b-41d4-a716-446655440031";
+    const RISK_B_ID = "550e8400-e29b-41d4-a716-446655440032";
+    const FRAMEWORK_A_ID = "550e8400-e29b-41d4-a716-446655440041";
+    const AUDIT_LOG_A_ID = "550e8400-e29b-41d4-a716-446655440051";
+
+    // Ensure at least one User per org
+    await Promise.all([
+      db.user.upsert({
+        where: { id: USER_A_ID },
+        update: {},
+        create: {
+          id: USER_A_ID,
+          email: "alice@acme-corp.example.com",
+          name: "Alice Acme",
+          role: "ORG_ADMIN",
+          organizationId: ORG_A_ID,
+          updatedAt: new Date(),
+        },
+      }),
+      db.user.upsert({
+        where: { id: USER_B_ID },
+        update: {},
+        create: {
+          id: USER_B_ID,
+          email: "bob@globex-corp.example.com",
+          name: "Bob Globex",
+          role: "ORG_ADMIN",
+          organizationId: ORG_B_ID,
+          updatedAt: new Date(),
+        },
+      }),
+    ]);
+
+    // Ensure at least one Evidence per org (must use runWithOrganizationContext for org-scoped models)
+    await runWithOrganizationContext(ORG_A_ID, async () => {
+      await db.evidence.upsert({
+        where: { id: EVIDENCE_A_ID },
+        update: {},
+        create: {
+          id: EVIDENCE_A_ID,
+          organizationId: ORG_A_ID,
+          title: "Acme Test Evidence",
+          originalFileName: "acme-test.pdf",
+          filePath: "/test/acme",
+          fileSize: 1000,
+          fileType: "application/pdf",
+          uploadedBy: USER_A_ID,
+          updatedAt: new Date(),
+        },
+      });
+    });
+    await runWithOrganizationContext(ORG_B_ID, async () => {
+      await db.evidence.upsert({
+        where: { id: EVIDENCE_B_ID },
+        update: {},
+        create: {
+          id: EVIDENCE_B_ID,
+          organizationId: ORG_B_ID,
+          title: "Globex Test Evidence",
+          originalFileName: "globex-test.pdf",
+          filePath: "/test/globex",
+          fileSize: 2000,
+          fileType: "application/pdf",
+          uploadedBy: USER_B_ID,
+          updatedAt: new Date(),
+        },
+      });
+    });
+
+    // Ensure at least one Risk per org
+    await runWithOrganizationContext(ORG_A_ID, async () => {
+      await db.risk.upsert({
+        where: { id: RISK_A_ID },
+        update: {},
+        create: {
+          id: RISK_A_ID,
+          organizationId: ORG_A_ID,
+          title: "Acme Test Risk",
+          description: "Test risk for Acme Corp",
+          severity: "LOW",
+          status: "OPEN",
+          updatedAt: new Date(),
+        },
+      });
+    });
+    await runWithOrganizationContext(ORG_B_ID, async () => {
+      await db.risk.upsert({
+        where: { id: RISK_B_ID },
+        update: {},
+        create: {
+          id: RISK_B_ID,
+          organizationId: ORG_B_ID,
+          title: "Globex Test Risk",
+          description: "Test risk for Globex Corp",
+          severity: "LOW",
+          status: "OPEN",
+          updatedAt: new Date(),
+        },
+      });
+    });
+
+    // Ensure at least one Framework and one AuditLog exist (AC2 & AC7 assertions)
+    await runWithOrganizationContext(ORG_A_ID, async () => {
+      await db.framework.upsert({
+        where: { id: FRAMEWORK_A_ID },
+        update: {},
+        create: {
+          id: FRAMEWORK_A_ID,
+          organizationId: ORG_A_ID,
+          name: "Acme Test Framework",
+          code: "TEST-FW",
+          version: "1.0",
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      });
+    });
+
+    await runWithOrganizationContext(ORG_A_ID, async () => {
+      await db.auditLog.upsert({
+        where: { id: AUDIT_LOG_A_ID },
+        update: {},
+        create: {
+          id: AUDIT_LOG_A_ID,
+          organizationId: ORG_A_ID,
+          userId: USER_A_ID,
+          action: "CREATE_USER",
+          entityType: "Organization",
+          entityId: ORG_A_ID,
+        },
+      });
+    });
   });
   describe("AC1: Organization table created with required fields", () => {
     it("should have Organization table with id, name, slug, settings, active, timestamps", async () => {
@@ -56,9 +209,11 @@ describe("Multi-Tenant Data Isolation", () => {
       await expect(
         db.organization.create({
           data: {
+            id: randomUUID(),
             name: "Duplicate Org",
             slug: "acme-corp", // This slug already exists
             active: true,
+            updatedAt: new Date(),
           },
         })
       ).rejects.toThrow();
@@ -105,24 +260,24 @@ describe("Multi-Tenant Data Isolation", () => {
   describe("AC4: User table links to Organization", () => {
     it("should load user with organization relation", async () => {
       const user = await db.user.findFirst({
-        include: { organization: true },
+        include: { Organization: true },
       });
 
       expect(user).toBeDefined();
-      expect(user?.organization).toBeDefined();
-      expect(user?.organization.id).toBe(user?.organizationId);
+      expect(user?.Organization).toBeDefined();
+      expect(user?.Organization.id).toBe(user?.organizationId);
     });
 
     it("should load organization with users relation", async () => {
       const org = await db.organization.findUnique({
         where: { id: ORG_A_ID },
-        include: { users: true },
+        include: { User: true },
       });
 
       expect(org).toBeDefined();
-      expect(org?.users).toBeDefined();
-      expect(org?.users.length).toBeGreaterThan(0);
-      expect(org?.users.every(u => u.organizationId === ORG_A_ID)).toBe(true);
+      expect(org?.User).toBeDefined();
+      expect(org?.User.length).toBeGreaterThan(0);
+      expect(org?.User.every(u => u.organizationId === ORG_A_ID)).toBe(true);
     });
   });
 
@@ -131,9 +286,11 @@ describe("Multi-Tenant Data Isolation", () => {
       await expect(
         db.user.create({
           data: {
+            id: randomUUID(),
             email: "test@example.com",
             name: "Test User",
             role: "AUDITOR",
+            updatedAt: new Date(),
             // Missing organizationId - should fail
           } as any,
         })
@@ -144,10 +301,12 @@ describe("Multi-Tenant Data Isolation", () => {
       await expect(
         db.user.create({
           data: {
+            id: randomUUID(),
             email: "test2@example.com",
             name: "Test User 2",
             role: "AUDITOR",
             organizationId: "invalid-org-id",
+            updatedAt: new Date(),
           },
         })
       ).rejects.toThrow();
@@ -157,15 +316,20 @@ describe("Multi-Tenant Data Isolation", () => {
   describe("AC6: Database constraints prevent cross-organization access", () => {
     it("should prevent creating evidence with invalid organizationId", async () => {
       await expect(
-        db.evidence.create({
-          data: {
-            organizationId: "non-existent-org",
-            title: "Test Evidence",
-            filePath: "/test/path",
-            fileSize: 1000,
-            fileType: "application/pdf",
-            uploadedBy: "test-user",
-          },
+        runWithOrganizationContext("non-existent-org", async () => {
+          await db.evidence.create({
+            data: {
+              id: randomUUID(),
+              organizationId: "non-existent-org",
+              title: "Test Evidence",
+              originalFileName: "test.pdf",
+              filePath: "/test/path",
+              fileSize: 1000,
+              fileType: "application/pdf",
+              uploadedBy: "test-user",
+              updatedAt: new Date(),
+            },
+          });
         })
       ).rejects.toThrow();
     });
@@ -261,46 +425,57 @@ describe("Multi-Tenant Data Isolation", () => {
       // Create a test organization with related data
       const testOrg = await db.organization.create({
         data: {
+          id: randomUUID(),
           name: "Test Org for Deletion",
           slug: `test-cascade-delete-${Date.now()}`,
           active: true,
+          updatedAt: new Date(),
         },
       });
       testOrgId = testOrg.id;
 
-      // Create related records
-      const testUser = await db.user.create({
-        data: {
-          email: `test-cascade-${Date.now()}@example.com`,
-          name: "Test User for Cascade",
-          role: "AUDITOR",
-          organizationId: testOrgId,
-        },
-      });
-      testUserId = testUser.id;
+      // Create related records within organization context
+      await runWithOrganizationContext(testOrgId, async () => {
+        const testUser = await db.user.create({
+          data: {
+            id: randomUUID(),
+            email: `test-cascade-${Date.now()}@example.com`,
+            name: "Test User for Cascade",
+            role: "AUDITOR",
+            organizationId: testOrgId,
+            updatedAt: new Date(),
+          },
+        });
+        testUserId = testUser.id;
 
-      const testEvidence = await db.evidence.create({
-        data: {
-          organizationId: testOrgId,
-          title: "Test Evidence for Cascade",
-          filePath: "/test/cascade",
-          fileSize: 1000,
-          fileType: "application/pdf",
-          uploadedBy: testUserId,
-        },
-      });
-      testEvidenceId = testEvidence.id;
+        const testEvidence = await db.evidence.create({
+          data: {
+            id: randomUUID(),
+            organizationId: testOrgId,
+            title: "Test Evidence for Cascade",
+            originalFileName: "cascade-test.pdf",
+            filePath: "/test/cascade",
+            fileSize: 1000,
+            fileType: "application/pdf",
+            uploadedBy: testUserId,
+            updatedAt: new Date(),
+          },
+        });
+        testEvidenceId = testEvidence.id;
 
-      const testRisk = await db.risk.create({
-        data: {
-          organizationId: testOrgId,
-          title: "Test Risk for Cascade",
-          description: "Test cascade delete",
-          severity: "LOW",
-          status: "OPEN",
-        },
+        const testRisk = await db.risk.create({
+          data: {
+            id: randomUUID(),
+            organizationId: testOrgId,
+            title: "Test Risk for Cascade",
+            description: "Test cascade delete",
+            severity: "LOW",
+            status: "OPEN",
+            updatedAt: new Date(),
+          },
+        });
+        testRiskId = testRisk.id;
       });
-      testRiskId = testRisk.id;
     });
 
     it("should cascade delete all related data when organization is deleted", async () => {
@@ -339,27 +514,27 @@ describe("Multi-Tenant Data Isolation", () => {
       const orgA = await db.organization.findUnique({
         where: { id: ORG_A_ID },
         include: {
-          users: true,
-          evidence: true,
-          risks: true,
+          User: true,
+          Evidence: true,
+          Risk: true,
         },
       });
 
       const orgB = await db.organization.findUnique({
         where: { id: ORG_B_ID },
         include: {
-          users: true,
-          evidence: true,
-          risks: true,
+          User: true,
+          Evidence: true,
+          Risk: true,
         },
       });
 
       expect(orgA).toBeDefined();
       expect(orgB).toBeDefined();
-      expect(orgA?.users.length).toBeGreaterThan(0);
-      expect(orgA?.evidence.length).toBeGreaterThan(0);
-      expect(orgB?.users.length).toBeGreaterThan(0);
-      expect(orgB?.evidence.length).toBeGreaterThan(0);
+      expect(orgA?.User.length).toBeGreaterThan(0);
+      expect(orgA?.Evidence.length).toBeGreaterThan(0);
+      expect(orgB?.User.length).toBeGreaterThan(0);
+      expect(orgB?.Evidence.length).toBeGreaterThan(0);
     });
   });
 
@@ -405,14 +580,16 @@ describe("Data Integrity and Performance", () => {
   });
 
   it("should support bulk operations scoped to organization", async () => {
-    const updated = await db.risk.updateMany({
-      where: {
-        organizationId: ORG_A_ID,
-        status: "OPEN",
-      },
-      data: {
-        status: "OPEN", // No actual change, just testing the query
-      },
+    const updated = await runWithOrganizationContext(ORG_A_ID, async () => {
+      return await db.risk.updateMany({
+        where: {
+          organizationId: ORG_A_ID,
+          status: "OPEN",
+        },
+        data: {
+          status: "OPEN", // No actual change, just testing the query
+        },
+      });
     });
 
     expect(updated.count).toBeGreaterThanOrEqual(0);

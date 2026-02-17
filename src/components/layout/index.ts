@@ -5,6 +5,8 @@
  */
 
 export { AppLayout, type BreadcrumbItem } from "./AppLayout";
+export { AppSidebar } from "./AppSidebar";
+export { AppTopBar } from "./AppTopBar";
 export { AppNav } from "./AppNav";
 export { AppBreadcrumb } from "./AppBreadcrumb";
 export { RoleBasedRiskNav, getDefaultRiskPage } from "./RoleBasedRiskNav";

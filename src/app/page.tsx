@@ -1,62 +1,90 @@
+/**
+ * Home Page / Dashboard
+ *
+ * Main landing page for BetterThanSpreadsheetsGRC.
+ * Shows dashboard widgets and quick stats.
+ */
+
+// Force dynamic rendering to ensure proper hydration with session-dependent UI
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { BarChart3, Plus } from "lucide-react";
 
 import { auth } from "@/server/auth";
-import { api, HydrateClient } from "@/trpc/server";
+import { StaleDraftsWidget, HomeMetricsCards } from "@/components/dashboard";
+import { AppLayout } from "@/components/layout";
+import { Button } from "@/components/ui/button";
 
 export default async function Home() {
-  const hello = await api.post.hello({ text: "from tRPC" });
   const session = await auth();
 
-  return (
-    <HydrateClient>
-      <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-        <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-          <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
-            Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-          </h1>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-            <Link
-              className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-              href="https://create.t3.gg/en/usage/first-steps"
-              target="_blank"
-            >
-              <h3 className="text-2xl font-bold">First Steps →</h3>
-              <div className="text-lg">
-                Just the basics - Everything you need to know to set up your
-                database and authentication.
-              </div>
-            </Link>
-            <Link
-              className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-              href="https://create.t3.gg/en/introduction"
-              target="_blank"
-            >
-              <h3 className="text-2xl font-bold">Documentation →</h3>
-              <div className="text-lg">
-                Learn more about Create T3 App, the libraries it uses, and how
-                to deploy it.
-              </div>
-            </Link>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-2xl text-white">
-              {hello ? hello.greeting : "Loading tRPC query..."}
-            </p>
+  // Redirect to login if not authenticated
+  if (!session) {
+    redirect("/login");
+  }
 
-            <div className="flex flex-col items-center justify-center gap-4">
-              <p className="text-center text-2xl text-white">
-                {session && <span>Logged in as {session.user?.name}</span>}
-              </p>
-              <Link
-                href={session ? "/api/auth/signout" : "/api/auth/signin"}
-                className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
-              >
-                {session ? "Sign out" : "Sign in"}
+  const isAdmin = session.user?.role === "ORG_ADMIN";
+  const isGrcAnalyst = session.user?.role === "GRC_ANALYST";
+  const isSecurityEngineer = session.user?.role === "SECURITY_ENGINEER";
+
+  const canManageRisks = isAdmin || isGrcAnalyst || isSecurityEngineer;
+  const canManageFindings = isAdmin || isGrcAnalyst || isSecurityEngineer;
+
+  return (
+    <AppLayout showBreadcrumbs={false}>
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">
+          Welcome back, {session.user?.name?.split(" ")[0]}!
+        </h1>
+        <p className="mt-2 text-gray-600">
+          Here&apos;s an overview of your GRC program.
+        </p>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="flex flex-wrap gap-3">
+          {canManageRisks && (
+            <Button asChild>
+              <Link href="/risks/new">
+                <Plus className="h-4 w-4 mr-2" />
+                New Risk
               </Link>
-            </div>
+            </Button>
+          )}
+          {canManageFindings && (
+            <Button asChild variant="outline">
+              <Link href="/findings/new">
+                <Plus className="h-4 w-4 mr-2" />
+                New Finding
+              </Link>
+            </Button>
+          )}
+          <Button asChild variant="outline">
+            <Link href="/compliance/dashboard">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View Compliance
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Key Metrics */}
+      <HomeMetricsCards />
+
+      {/* Attention Required Section */}
+      {canManageRisks && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Attention Required</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <StaleDraftsWidget />
           </div>
         </div>
-      </main>
-    </HydrateClient>
+      )}
+    </AppLayout>
   );
 }

@@ -1,0 +1,23 @@
+# Test Container for Running Integration Tests
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for Prisma
+RUN apk add --no-cache openssl
+
+# Copy package files
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+
+# Install all dependencies (including devDependencies for testing)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Default command (overridden by docker-compose)
+CMD ["npm", "test"]

@@ -10,7 +10,11 @@
  * - BUSINESS_STAKEHOLDER: Show "Decisions Pending" link
  * - GRC_ANALYST, SECURITY_ENGINEER, ORG_ADMIN: Show "All Risks" link
  *
+ * Story 16.5: Unified Risk Register Page (AC22)
+ * - Added "Risk Register" link for GRC Analyst, Security Engineer, ORG_ADMIN
+ *
  * @see Story 4.9: Role-Based Risk Views
+ * @see Story 16.5: Unified Risk Register Page
  */
 
 import Link from "next/link";
@@ -67,12 +71,16 @@ export function RoleBasedRiskNav({
       case UserRole.SECURITY_ENGINEER:
       case UserRole.ORG_ADMIN:
         return [
+          { href: "/risks/register", label: "Risk Register" },
           { href: "/risks", label: "Risk Registry" },
           { href: "/risks/my-risks", label: "My Risks" },
         ];
 
       case UserRole.AUDITOR:
-        return [{ href: "/risks", label: "Risk Registry" }];
+        return [
+          { href: "/risks/register", label: "Risk Register" },
+          { href: "/risks", label: "Risk Registry" },
+        ];
 
       default:
         return [];

@@ -3,12 +3,13 @@
 /**
  * Application Layout Component
  *
- * Provides consistent layout with navigation and breadcrumbs
+ * Provides consistent layout with sidebar navigation and top bar
  * for all authenticated pages.
  */
 
 import type { ReactNode } from "react";
-import { AppNav } from "./AppNav";
+import { AppSidebar } from "./AppSidebar";
+import { AppTopBar } from "./AppTopBar";
 import { AppBreadcrumb, type BreadcrumbItem } from "./AppBreadcrumb";
 import { cn } from "@/lib/utils";
 
@@ -28,32 +29,40 @@ export function AppLayout({
   children,
   breadcrumbs = [],
   className,
-  fullWidth = false,
+  fullWidth = true,
   showBreadcrumbs = true,
 }: AppLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AppNav />
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Sidebar Navigation */}
+      <AppSidebar />
 
-      {showBreadcrumbs && breadcrumbs.length > 0 && (
-        <div className={cn(
-          "px-4 sm:px-6 lg:px-8 py-4",
-          !fullWidth && "mx-auto max-w-7xl"
-        )}>
-          <AppBreadcrumb items={breadcrumbs} />
-        </div>
-      )}
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Bar */}
+        <AppTopBar />
 
-      <main
-        className={cn(
-          "px-4 sm:px-6 lg:px-8 pb-8",
-          !fullWidth && "mx-auto max-w-7xl",
-          !showBreadcrumbs && "pt-6",
-          className
+        {/* Breadcrumbs */}
+        {showBreadcrumbs && breadcrumbs.length > 0 && (
+          <div className={cn(
+            "px-6 py-4 bg-white border-b",
+            !fullWidth && "max-w-7xl"
+          )}>
+            <AppBreadcrumb items={breadcrumbs} />
+          </div>
         )}
-      >
-        {children}
-      </main>
+
+        {/* Page Content */}
+        <main
+          className={cn(
+            "flex-1 px-6 py-6",
+            !fullWidth && "max-w-7xl",
+            className
+          )}
+        >
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

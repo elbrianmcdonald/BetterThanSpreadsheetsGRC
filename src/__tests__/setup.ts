@@ -4,8 +4,19 @@
  * This file runs before all tests to set up the test environment.
  */
 
+// Import jest-dom matchers for better assertions
+import '@testing-library/jest-dom';
+
+// Import jest-axe matchers for accessibility testing
+import 'jest-axe/extend-expect';
+
 // Ensure we're using the test database
-process.env.NODE_ENV = 'test';
+if (process.env.NODE_ENV !== 'test') {
+  Object.defineProperty(process.env, 'NODE_ENV', {
+    value: 'test',
+    writable: true,
+  });
+}
 
 // Configure test database (use TEST_DATABASE_URL if set, otherwise append _test suffix)
 if (!process.env.TEST_DATABASE_URL && process.env.DATABASE_URL) {

@@ -15,6 +15,7 @@ interface RoleBadgeProps {
 
 const colorClasses = {
   purple: "bg-purple-100 text-purple-800 border-purple-200",
+  violet: "bg-violet-100 text-violet-800 border-violet-200",
   blue: "bg-blue-100 text-blue-800 border-blue-200",
   cyan: "bg-cyan-100 text-cyan-800 border-cyan-200",
   indigo: "bg-indigo-100 text-indigo-800 border-indigo-200",

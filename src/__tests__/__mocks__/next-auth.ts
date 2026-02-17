@@ -16,6 +16,7 @@ export const mockSession: Session = {
     email: "test@example.com",
     role: "AUDITOR" as UserRole,
     organizationId: "test-org-id",
+    assignedFrameworks: [], // Story 3.7: Auditor framework access
   },
   expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
 };
@@ -41,3 +42,8 @@ export const handlers = {
 export const auth = jest.fn(async () => mockSession);
 export const signIn = jest.fn();
 export const signOut = jest.fn();
+export const useSession = jest.fn(() => ({
+  data: mockSession,
+  status: "authenticated",
+  update: jest.fn(),
+}));

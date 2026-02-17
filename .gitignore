@@ -44,3 +44,19 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# generated prisma client (rebuilt on npm install / docker build)
+/generated
+
+# uploads (user data, not source)
+/uploads
+
+# test artifacts
+/test-results
+/playwright-report
+
+# claude code
+/.claude
+
+# Windows artifacts
+nul

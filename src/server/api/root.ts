@@ -1,5 +1,51 @@
 import { postRouter } from "@/server/api/routers/post";
 import { userRouter } from "@/server/api/routers/user";
+import { passwordResetRouter } from "@/server/api/routers/passwordReset";
+import { auditRouter } from "@/server/api/routers/audit";
+import { frameworkRouter } from "@/server/api/routers/framework";
+import { controlDomainRouter } from "@/server/api/routers/controlDomain";
+import { mappingRouter } from "@/server/api/routers/mapping";
+import { coverageRouter } from "@/server/api/routers/coverage";
+import { complianceRouter } from "@/server/api/routers/compliance";
+import { evidenceRouter } from "@/server/api/routers/evidence";
+import { evidenceRequestRouter } from "@/server/api/routers/evidence-request";
+import { riskRouter } from "@/server/api/routers/risk";
+import { emailQueueRouter } from "@/server/api/routers/emailQueue";
+import { workerRouter } from "@/server/api/routers/worker";
+import { businessUnitRouter } from "@/server/api/routers/businessUnit";
+import { businessUnitFrameworkRouter } from "@/server/api/routers/businessUnitFramework";
+import { findingRouter } from "@/server/api/routers/finding";
+import { riskAssessmentRouter } from "@/server/api/routers/riskAssessment";
+import { assessmentTypeRouter } from "@/server/api/routers/assessmentType";
+import { assessmentTaskRouter } from "@/server/api/routers/assessmentTask";
+import { riskMatrixRouter } from "@/server/api/routers/riskMatrix";
+import { riskRegisterRouter } from "@/server/api/routers/riskRegister";
+import { controlLinkRouter } from "@/server/api/routers/controlLink";
+import { mitreRouter } from "@/server/api/routers/mitre";
+import { organizationalControlRouter } from "@/server/api/routers/organizationalControl";
+import { strategyRouter } from "@/server/api/routers/strategy";
+import { goalRouter } from "@/server/api/routers/goal";
+import { objectiveRouter } from "@/server/api/routers/objective";
+import { strategyDashboardRouter } from "@/server/api/routers/strategyDashboard";
+import { standardRouter } from "@/server/api/routers/standard";
+import { maturityRouter } from "@/server/api/routers/maturity";
+import { complianceAssessmentRouter } from "@/server/api/routers/complianceAssessment";
+import { riskAssessmentProjectRouter } from "@/server/api/routers/riskAssessmentProject";
+import { baseFrameworkMappingRouter } from "@/server/api/routers/baseFrameworkMapping";
+import { personRouter } from "@/server/api/routers/person";
+import { myAssignmentsRouter } from "@/server/api/routers/myAssignments";
+import { vendorRouter } from "@/server/api/routers/vendor";
+import { vendorAssessmentRouter } from "@/server/api/routers/vendorAssessment";
+import { questionnaireRouter } from "@/server/api/routers/questionnaire";
+import { vendorPortalRouter } from "@/server/api/routers/vendorPortal";
+import { biaConfigRouter } from "@/server/api/routers/biaConfig";
+import { businessFunctionRouter } from "@/server/api/routers/businessFunction";
+import { businessProcessRouter } from "@/server/api/routers/businessProcess";
+import { biaAssessmentRouter } from "@/server/api/routers/biaAssessment";
+import { biaDependencyRouter } from "@/server/api/routers/biaDependency";
+import { biaDashboardRouter } from "@/server/api/routers/biaDashboard";
+import { assetRouter } from "@/server/api/routers/asset";
+import { assetOwnerRouter } from "@/server/api/routers/assetOwner";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 
 /**
@@ -10,6 +56,52 @@ import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 export const appRouter = createTRPCRouter({
   post: postRouter,
   user: userRouter,
+  passwordReset: passwordResetRouter,
+  audit: auditRouter,
+  framework: frameworkRouter, // Story 2.1: OSCAL Catalog Import Pipeline
+  controlDomain: controlDomainRouter, // Story 2.3: Simplified Control Taxonomy
+  mapping: mappingRouter, // Story 2.4: OSCAL Translation Engine
+  coverage: coverageRouter, // Story 2.6: Framework Coverage Calculation
+  compliance: complianceRouter, // Story 5.1: Compliance Summary Dashboard
+  evidence: evidenceRouter, // Story 3.1: Evidence File Upload
+  evidenceRequest: evidenceRequestRouter, // Story 3.12: Evidence Request Workflow
+  risk: riskRouter, // Story 3.6: Evidence-to-Risk Linkage
+  emailQueue: emailQueueRouter, // Story 4.15: Email Queue with Retry Logic
+  worker: workerRouter, // Story 4.18: Background Job Processing
+  businessUnit: businessUnitRouter, // Story 7.0.3: BU Admin CRUD UI
+  businessUnitFramework: businessUnitFrameworkRouter, // BU-Scoped Compliance: Framework-BU assignments
+  finding: findingRouter, // Story 7.2: Finding Creation Form
+  riskAssessment: riskAssessmentRouter, // Story 7.6: Risk Assessment Form with Auto-Save
+  assessmentType: assessmentTypeRouter, // Story 7.8.1: Assessment Type CRUD
+  assessmentTask: assessmentTaskRouter, // Proactive Risk Assessment Task Management
+  riskMatrix: riskMatrixRouter, // Story 7.8.2: Risk Matrix Template CRUD
+  riskRegister: riskRegisterRouter, // Story 7.10: Risk Register Entry Creation
+  controlLink: controlLinkRouter, // Story 12.1: Control Linkage Data Models & tRPC Router
+  mitre: mitreRouter, // Story 13.1: MITRE ATT&CK Data Model & tRPC Router
+  organizationalControl: organizationalControlRouter, // Organizational Controls for risks
+  strategy: strategyRouter, // Story 1.2: Strategy CRUD API
+  goal: goalRouter, // Story 1.3: Goal CRUD API
+  objective: objectiveRouter, // Story 2.2: Objective CRUD API
+  strategyDashboard: strategyDashboardRouter, // Story 5.1: Strategy Dashboard API
+  standard: standardRouter, // Standards Module: Standards, Controls, Mappings, Exceptions
+  maturity: maturityRouter, // Maturity Assessment Module: NIST CSF 2.0, C2M2
+  complianceAssessment: complianceAssessmentRouter, // Compliance Assessment Module
+  riskAssessmentProject: riskAssessmentProjectRouter, // Risk Assessment Project Module: Container-based risk discovery
+  baseFrameworkMapping: baseFrameworkMappingRouter, // Base Framework Mapping: Framework-to-framework control mappings
+  person: personRouter, // Person: Stakeholder accountability tracking
+  myAssignments: myAssignmentsRouter, // Unified work assignments across domains
+  vendor: vendorRouter, // Epic 1: TPRM Vendor Registry
+  vendorAssessment: vendorAssessmentRouter, // Epic 3: Vendor Assessment Workflow
+  questionnaire: questionnaireRouter, // Epic 4: Questionnaire System
+  vendorPortal: vendorPortalRouter, // Epic 6: Vendor Portal (public token-based access)
+  biaConfig: biaConfigRouter, // Epic 9: BIA Configuration Admin
+  businessFunction: businessFunctionRouter, // Epic 10: BIA Business Functions
+  businessProcess: businessProcessRouter, // Epic 10: BIA Business Processes
+  biaAssessment: biaAssessmentRouter, // Epic 11: BIA Impact Assessment
+  biaDependency: biaDependencyRouter, // Epic 12: BIA Dependencies & Integration
+  biaDashboard: biaDashboardRouter, // Epic 13: BIA Reporting & Compliance
+  asset: assetRouter, // Epic 14: Asset Registry & BIA Integration
+  assetOwner: assetOwnerRouter, // Epic 14: Asset Owners (separate from Users)
 });
 
 // export type definition of API

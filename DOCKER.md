@@ -165,58 +165,244 @@ docker-logs.bat
 
 ## Volume Management
 
-### Backup Volumes
+### Named Volumes
 
-#### PostgreSQL Data Backup
+The application uses three named Docker volumes for persistent data:
 
-```bash
-# Create backup directory
-mkdir -p backups
+| Volume | Mount Point | Purpose |
+|--------|-------------|---------|
+| `postgres_data` | `/var/lib/postgresql/data` | PostgreSQL database files |
+| `app_uploads` | `/app/uploads` | Evidence file storage |
+| `clamav_data` | `/var/lib/clamav` | ClamAV virus definitions |
 
-# Backup PostgreSQL data
-docker run --rm \\
-  -v betterthanspreadsheetsgrc_postgres_data:/data \\
-  -v $(pwd)/backups:/backup \\
-  alpine tar czf /backup/postgres-backup-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
+### Evidence File Storage Structure
+
+Evidence files are stored in a multi-tenant directory structure:
+
+```
+/app/uploads/
+├── {organizationId-1}/
+│   ├── {evidenceId-1}/
+│   │   └── {uuid}_{original-filename}
+│   └── {evidenceId-2}/
+│       └── {uuid}_{original-filename}
+└── {organizationId-2}/
+    └── {evidenceId-3}/
+        └── {uuid}_{original-filename}
 ```
 
-#### Application Uploads Backup
+- **Organization isolation**: Each organization's files are in separate directories
+- **Evidence isolation**: Each evidence record has its own subdirectory
+- **Unique filenames**: UUID prefix prevents filename collisions
+- **Atomic writes**: Files are written to temp location first, then renamed
+
+### Health Checks
+
+#### Application Health
+```bash
+curl http://localhost:3000
+```
+
+#### Storage Health (Story 3.2)
+```bash
+# Check file storage is mounted and writable
+curl http://localhost:3000/api/health/storage
+```
+
+Response (healthy):
+```json
+{
+  "healthy": true,
+  "uploadDir": "/app/uploads",
+  "exists": true,
+  "writable": true,
+  "availableSpace": 50000000000
+}
+```
+
+### Backup Volumes
+
+**IMPORTANT**: Always backup both the database AND uploads together to maintain consistency between file metadata and actual files.
+
+#### Complete Backup (Database + Files)
 
 ```bash
-# Backup uploaded files
-docker run --rm \\
-  -v betterthanspreadsheetsgrc_app_uploads:/data \\
-  -v $(pwd)/backups:/backup \\
-  alpine tar czf /backup/uploads-backup-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
+# Create backup directory with timestamp
+BACKUP_DIR="backups/$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$BACKUP_DIR"
+
+# Backup PostgreSQL data
+docker run --rm \
+  -v betterthanspreadsheetsgrc_postgres_data:/data \
+  -v $(pwd)/$BACKUP_DIR:/backup \
+  alpine tar czf /backup/postgres-backup.tar.gz -C /data .
+
+# Backup uploaded evidence files
+docker run --rm \
+  -v betterthanspreadsheetsgrc_app_uploads:/data \
+  -v $(pwd)/$BACKUP_DIR:/backup \
+  alpine tar czf /backup/uploads-backup.tar.gz -C /data .
+
+echo "Backup complete: $BACKUP_DIR"
+```
+
+#### Windows PowerShell Backup
+
+```powershell
+# Create backup directory
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$backupDir = "backups\$timestamp"
+New-Item -ItemType Directory -Force -Path $backupDir
+
+# Backup PostgreSQL
+docker run --rm `
+  -v betterthanspreadsheetsgrc_postgres_data:/data `
+  -v ${PWD}\${backupDir}:/backup `
+  alpine tar czf /backup/postgres-backup.tar.gz -C /data .
+
+# Backup uploads
+docker run --rm `
+  -v betterthanspreadsheetsgrc_app_uploads:/data `
+  -v ${PWD}\${backupDir}:/backup `
+  alpine tar czf /backup/uploads-backup.tar.gz -C /data .
+
+Write-Host "Backup complete: $backupDir"
+```
+
+#### Automated Backup Script
+
+Create `backup.sh` for scheduled backups:
+
+```bash
+#!/bin/bash
+# BetterThanSpreadsheetsGRC Backup Script
+# Run via cron: 0 2 * * * /path/to/backup.sh
+
+BACKUP_ROOT="/path/to/backups"
+RETENTION_DAYS=30
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_DIR="$BACKUP_ROOT/$TIMESTAMP"
+
+mkdir -p "$BACKUP_DIR"
+
+# Backup database
+docker run --rm \
+  -v betterthanspreadsheetsgrc_postgres_data:/data \
+  -v "$BACKUP_DIR":/backup \
+  alpine tar czf /backup/postgres.tar.gz -C /data .
+
+# Backup uploads
+docker run --rm \
+  -v betterthanspreadsheetsgrc_app_uploads:/data \
+  -v "$BACKUP_DIR":/backup \
+  alpine tar czf /backup/uploads.tar.gz -C /data .
+
+# Clean up old backups
+find "$BACKUP_ROOT" -type d -mtime +$RETENTION_DAYS -exec rm -rf {} +
+
+echo "[$TIMESTAMP] Backup complete"
 ```
 
 ### Restore Volumes
 
-#### PostgreSQL Data Restore
+#### Complete Restore (Database + Files)
+
+**WARNING**: Restoring will overwrite existing data!
 
 ```bash
-# Stop services first
+# Stop services
 docker-compose down
 
 # Restore PostgreSQL data
-docker run --rm \\
-  -v betterthanspreadsheetsgrc_postgres_data:/data \\
-  -v $(pwd)/backups:/backup \\
-  alpine sh -c "cd /data && tar xzf /backup/postgres-backup-YYYYMMDD-HHMMSS.tar.gz"
+docker run --rm \
+  -v betterthanspreadsheetsgrc_postgres_data:/data \
+  -v $(pwd)/backups/YYYYMMDD-HHMMSS:/backup \
+  alpine sh -c "cd /data && rm -rf * && tar xzf /backup/postgres-backup.tar.gz"
+
+# Restore uploaded files
+docker run --rm \
+  -v betterthanspreadsheetsgrc_app_uploads:/data \
+  -v $(pwd)/backups/YYYYMMDD-HHMMSS:/backup \
+  alpine sh -c "cd /data && rm -rf * && tar xzf /backup/uploads-backup.tar.gz"
 
 # Start services
 docker-compose up -d
+
+# Verify restore
+curl http://localhost:3000/api/health/storage
 ```
 
-#### Application Uploads Restore
+#### Selective File Recovery
+
+To recover a single organization's files without full restore:
 
 ```bash
-# Restore uploaded files
-docker run --rm \\
-  -v betterthanspreadsheetsgrc_app_uploads:/data \\
-  -v $(pwd)/backups:/backup \\
-  alpine sh -c "cd /data && tar xzf /backup/uploads-backup-YYYYMMDD-HHMMSS.tar.gz"
+# Extract specific organization's files
+docker run --rm \
+  -v betterthanspreadsheetsgrc_app_uploads:/data \
+  -v $(pwd)/backups/YYYYMMDD-HHMMSS:/backup \
+  alpine sh -c "cd /data && tar xzf /backup/uploads-backup.tar.gz {organizationId}"
 ```
+
+### Disaster Recovery
+
+#### Full Recovery from Backup
+
+1. **Stop and remove all containers**:
+   ```bash
+   docker-compose down
+   ```
+
+2. **Remove existing volumes** (if corrupted):
+   ```bash
+   docker volume rm betterthanspreadsheetsgrc_postgres_data
+   docker volume rm betterthanspreadsheetsgrc_app_uploads
+   ```
+
+3. **Create fresh volumes**:
+   ```bash
+   docker volume create betterthanspreadsheetsgrc_postgres_data
+   docker volume create betterthanspreadsheetsgrc_app_uploads
+   ```
+
+4. **Restore from backup**:
+   ```bash
+   # Restore database
+   docker run --rm \
+     -v betterthanspreadsheetsgrc_postgres_data:/data \
+     -v $(pwd)/backups/YYYYMMDD-HHMMSS:/backup \
+     alpine tar xzf /backup/postgres-backup.tar.gz -C /data
+
+   # Restore uploads
+   docker run --rm \
+     -v betterthanspreadsheetsgrc_app_uploads:/data \
+     -v $(pwd)/backups/YYYYMMDD-HHMMSS:/backup \
+     alpine tar xzf /backup/uploads-backup.tar.gz -C /data
+   ```
+
+5. **Start services**:
+   ```bash
+   docker-compose up -d
+   ```
+
+6. **Verify recovery**:
+   ```bash
+   # Check application health
+   curl http://localhost:3000
+
+   # Check storage health
+   curl http://localhost:3000/api/health/storage
+
+   # Check database connectivity
+   docker-compose exec app npx prisma migrate status
+   ```
+
+### Volume Persistence
+
+- Volumes persist across container restarts (`docker-compose restart`)
+- Volumes persist after `docker-compose down`
+- Volumes are **deleted** only by `docker-compose down -v` or `docker volume rm`
+- Always backup before running destructive commands
 
 ## Troubleshooting
 
@@ -417,4 +603,4 @@ For issues or questions:
 
 ---
 
-Last updated: 2025-12-15
+Last updated: 2025-12-18 (Story 3.2: File Storage in Docker Volumes)
