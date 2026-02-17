@@ -112,18 +112,6 @@ ENABLE_CLAMAV=true
 CLAMAV_HOST=clamav
 ```
 
-### Azure AD / Entra ID SSO
-
-Set in `.env`:
-```env
-AZURE_AD_CLIENT_ID=your-client-id
-AZURE_AD_CLIENT_SECRET=your-client-secret
-AZURE_AD_TENANT_ID=your-tenant-id
-```
-
-Configure the redirect URI in Azure Portal:
-`https://your-domain.com/api/auth/callback/azure-ad`
-
 ### Email Notifications
 
 **SendGrid:**

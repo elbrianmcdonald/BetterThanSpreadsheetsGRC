@@ -22,7 +22,6 @@
   - ✅ Email service placeholders (SendGrid/SES)
   - ✅ File storage path: `./uploads`
   - ✅ ClamAV malware scanner path
-  - ⚠️ Azure AD credentials (empty - requires Azure Portal setup)
 
 ### 3. Docker Compose Configuration
 - **Status:** ✅ Complete
@@ -80,45 +79,7 @@ This will:
 - Generate the Prisma Client
 - Create the migration files
 
-### 3. Azure AD / Entra ID Configuration
-**Action Required:** Set up Azure AD application:
-
-1. Go to Azure Portal → Microsoft Entra ID → App registrations
-2. Create new registration:
-   - Name: BetterThanSpreadsheetsGRC (Dev)
-   - Redirect URI: `http://localhost:3000/api/auth/callback/azure-ad`
-3. Copy values to `.env`:
-   ```
-   AZURE_AD_CLIENT_ID="<Application (client) ID>"
-   AZURE_AD_TENANT_ID="<Directory (tenant) ID>"
-   ```
-4. Go to Certificates & secrets → New client secret
-5. Copy secret to `.env`:
-   ```
-   AZURE_AD_CLIENT_SECRET="<secret-value>"
-   ```
-
-### 4. Configure NextAuth with Azure AD Provider
-**Action Required:** Update `/src/server/auth/config.ts`
-
-Add Azure AD provider:
-```typescript
-import AzureADProvider from "next-auth/providers/azure-ad";
-
-export const authConfig = {
-  providers: [
-    AzureADProvider({
-      clientId: env.AZURE_AD_CLIENT_ID,
-      clientSecret: env.AZURE_AD_CLIENT_SECRET,
-      tenantId: env.AZURE_AD_TENANT_ID,
-    }),
-    // ... other providers
-  ],
-  // ... rest of config
-};
-```
-
-### 5. Email Service Configuration (Optional for MVP)
+### 3. Email Service Configuration (Optional for MVP)
 **Action Required:** Set up SendGrid or AWS SES:
 
 **Option A: SendGrid**
@@ -138,7 +99,7 @@ export const authConfig = {
 3. Create SMTP credentials
 4. Update `.env` with SES SMTP settings
 
-### 6. Verify Development Server
+### 4. Verify Development Server
 **Action Required:** Test the setup:
 ```bash
 npm run dev
@@ -160,7 +121,6 @@ After completing the pending setup steps, follow the architecture document's imp
 - [ ] Implement audit logging middleware (`/src/server/api/trpc.ts`)
 
 ### Week 2-3: Authentication & Authorization
-- [ ] Configure Azure AD provider in NextAuth
 - [ ] Implement permission enforcement middleware (`enforcePermission`)
 - [ ] Create role-based UI components
 - [ ] Build user management pages (`/src/app/admin/users/`)
@@ -195,7 +155,7 @@ Full architectural guidance available at:
 ## 📝 Notes
 
 - **Database:** PostgreSQL 16 configured but not yet running (requires Docker Desktop)
-- **Authentication:** NextAuth configured with Discord provider by default - Azure AD requires manual setup
+- **Authentication:** NextAuth configured with Credentials provider (email/password)
 - **Multi-tenancy:** Prisma schema ready, middleware implementation needed
 - **File Storage:** Local filesystem configured (`./uploads`), S3 migration path documented
 - **Malware Scanning:** ClamAV configured in docker-compose.yml, not yet started
@@ -230,7 +190,6 @@ Before proceeding to implementation:
 - [ ] PostgreSQL container started and healthy
 - [ ] Prisma migration completed successfully
 - [ ] Development server starts without errors
-- [ ] Azure AD credentials configured (or Discord/Email provider for development)
 - [ ] Environment variables validated
 - [ ] shadcn/ui components render correctly
 

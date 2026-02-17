@@ -28,47 +28,6 @@ A modern GRC (Governance, Risk, and Compliance) platform built with the T3 Stack
 - Explicit multi-tenant filtering in all database queries
 - Complete audit trail for all user management operations
 
-### Azure AD / Entra ID Authentication (Story 1.5)
-
-**Enterprise Single Sign-On** - Secure authentication using Microsoft Azure Active Directory (Entra ID) with automatic organization assignment and role-based access control.
-
-**Key Capabilities:**
-- ✅ **Azure AD OAuth 2.0 Integration** - Corporate Microsoft account authentication
-- ✅ **Automatic Organization Assignment** - Users assigned to organizations based on email domain
-- ✅ **Default Role Assignment** - New users start with AUDITOR role (most restrictive)
-- ✅ **Database-Backed Sessions** - PostgreSQL session storage for multi-device support
-- ✅ **24-Hour Session Expiry** - Automatic session timeout after 24 hours of inactivity
-- ✅ **Custom Login/Error Pages** - User-friendly authentication flow
-- ✅ **Sign Out Functionality** - Invalidates database sessions completely
-- ✅ **Development Fallback** - Discord OAuth for local development without Azure AD
-
-**Authentication Flow:**
-1. User clicks "Sign in with Microsoft" on `/login` page
-2. Azure AD handles authentication with corporate credentials
-3. User profile retrieved from Microsoft Graph API
-4. Organization automatically created/assigned based on email domain (`user@company.com` → `company-com` organization)
-5. User assigned default AUDITOR role (upgradable by Organization Administrator)
-6. Database session created with user info (id, email, name, role, organizationId)
-7. User redirected to application homepage
-
-**Configuration:** See [AUTHENTICATION.md](./docs/AUTHENTICATION.md) for complete Azure AD setup guide including:
-- Azure Portal app registration steps
-- Environment variable configuration
-- Organization assignment behavior
-- Role upgrade procedures
-- Session management and expiry policy
-- Multi-device session behavior
-- Troubleshooting common issues
-- Security best practices
-
-**Security Features:**
-- Client secrets rotation with expiry tracking
-- HTTPS-only redirect URIs in production
-- Multi-tenant isolation via organizationId
-- 24-hour session expiry with automatic cleanup
-- Session invalidation on sign-out
-- Audit logging for authentication events
-
 ### Email Notifications (Story 4.14)
 
 **Enterprise Email Service Integration** - Send email notifications via SendGrid or AWS SES for risk assignments, evidence requests, and workflow notifications.
@@ -164,30 +123,12 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/grc"
 AUTH_SECRET="<generate-with-openssl-rand-base64-32>"
 NEXTAUTH_URL="http://localhost:3000"
 
-# Azure AD / Entra ID Authentication (Optional for development)
-# See docs/AUTHENTICATION.md for complete setup guide
-AZURE_AD_CLIENT_ID="<your-application-client-id>"
-AZURE_AD_CLIENT_SECRET="<your-client-secret-value>"
-AZURE_AD_TENANT_ID="<your-directory-tenant-id>"
-
-# Development Fallback: Discord OAuth (optional)
-AUTH_DISCORD_ID="<discord-client-id>"
-AUTH_DISCORD_SECRET="<discord-client-secret>"
 ```
 
 Generate AUTH_SECRET:
 ```bash
 openssl rand -base64 32
 ```
-
-**Azure AD Setup:** For production deployments, follow the step-by-step guide in [docs/AUTHENTICATION.md](./docs/AUTHENTICATION.md) to:
-1. Create Azure AD App Registration
-2. Generate client secret (set expiry reminder!)
-3. Configure API permissions
-4. Add production redirect URIs
-5. Copy credentials to environment variables
-
-**Important:** Azure AD credentials are **optional** for local development. You can use Discord OAuth as a fallback if Azure AD is not configured.
 
 ### 4. Start Database (Using Docker)
 
@@ -401,18 +342,13 @@ betterthanspreadsheetsgrc/
 ### Authentication
 
 - **NextAuth.js 5.x**: Modern authentication with Auth.js
-- **Azure AD / Entra ID**: Primary enterprise authentication provider via OAuth 2.0
-- **Database sessions**: Sessions stored in PostgreSQL via Prisma adapter (not JWT)
-- **Session expiry**: 24-hour inactivity timeout with automatic extension every hour
-- **Multi-device support**: Users can have concurrent sessions across devices
-- **Role propagation**: Role updates reflect across all active sessions (database is source of truth)
-- **Multiple providers**: Azure AD (primary), Discord (development fallback)
-- **Automatic organization assignment**: Users assigned to organizations based on email domain
+- **Credentials provider**: Email/password authentication with bcrypt hashing
+- **JWT sessions**: Stateless session tokens with 24-hour expiry
+- **Rate limiting**: Account lockout after repeated failed login attempts
+- **Role propagation**: Role included in JWT for authorization
 - **Default role system**: New users start with AUDITOR role, upgradable by Organization Admins
 - **Type-safe**: Session extended with `role` and `organizationId` for authorization
 - **Custom pages**: Dedicated `/login` and `/auth/error` pages for better UX
-- **Session invalidation**: Sign-out removes database session completely
-- **Automated cleanup**: Expired sessions removed via scheduled script (`db:cleanup-sessions`)
 
 ### Database
 
@@ -486,7 +422,7 @@ betterthanspreadsheetsgrc/
 
 - [T3 Stack Documentation](https://create.t3.gg/)
 - [T3 Stack Tutorial](https://create.t3.gg/en/usage/first-steps)
-- [T3 Community Discord](https://t3.gg/discord)
+- [T3 Community](https://t3.gg/)
 
 ### Technology Documentation
 

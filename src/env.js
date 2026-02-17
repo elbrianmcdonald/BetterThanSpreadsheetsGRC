@@ -12,14 +12,6 @@ export const env = createEnv({
         ? z.string()
         : z.string().optional(),
     AUTH_URL: z.string().url().optional(), // NextAuth v5 base URL
-    AUTH_DISCORD_ID: z.string().optional(),
-    AUTH_DISCORD_SECRET: z.string().optional(),
-    // Azure AD / Entra ID Authentication
-    // Optional for development (can use Discord instead)
-    // If provided, all three must be non-empty strings
-    AZURE_AD_TENANT_ID: z.string().min(1).optional(),
-    AZURE_AD_CLIENT_ID: z.string().min(1).optional(),
-    AZURE_AD_CLIENT_SECRET: z.string().min(1).optional(),
     DATABASE_URL: z.string().url(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -72,11 +64,6 @@ export const env = createEnv({
   runtimeEnv: {
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_URL: process.env.AUTH_URL,
-    AUTH_DISCORD_ID: process.env.AUTH_DISCORD_ID,
-    AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
-    AZURE_AD_TENANT_ID: process.env.AZURE_AD_TENANT_ID,
-    AZURE_AD_CLIENT_ID: process.env.AZURE_AD_CLIENT_ID,
-    AZURE_AD_CLIENT_SECRET: process.env.AZURE_AD_CLIENT_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     // File Upload Configuration (Story 3.1)
