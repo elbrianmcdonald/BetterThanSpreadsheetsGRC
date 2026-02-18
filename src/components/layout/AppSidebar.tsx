@@ -157,11 +157,6 @@ const NAV_SECTIONS: NavSection[] = [
         roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.CISO],
       },
       {
-        href: "/compliance/management",
-        label: "Compliance Management",
-        icon: <BarChart3 className="h-4 w-4" />,
-      },
-      {
         href: "/admin/evidence",
         label: "Evidence",
         icon: <FileText className="h-4 w-4" />,

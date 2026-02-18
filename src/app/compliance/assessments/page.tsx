@@ -1,11 +1,23 @@
 /**
- * Compliance Assessments List Page
+ * Compliance Assessments Page
  *
- * Server component wrapper for the assessments list.
+ * Displays compliance management dashboard with frameworks and assessments.
  */
 
-import { ComplianceAssessmentsClient } from "./client";
+import { auth } from "@/server/auth";
+import { redirect } from "next/navigation";
+import { CoverageDashboardClient } from "./client";
 
-export default function ComplianceAssessmentsPage() {
-  return <ComplianceAssessmentsClient />;
+export const metadata = {
+  title: "Compliance Assessments | Compliance",
+  description: "Manage frameworks and track compliance assessments",
+};
+
+export default async function ComplianceAssessmentsPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/api/auth/signin");
+  }
+
+  return <CoverageDashboardClient />;
 }

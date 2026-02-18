@@ -923,7 +923,7 @@ export function ComplianceAssessmentDetailClient({
 
   // Breadcrumbs
   const breadcrumbs = [
-    { label: "Compliance", href: "/compliance/management" },
+    { label: "Compliance", href: "/compliance/assessments" },
     { label: "Assessments", href: "/compliance/assessments" },
     { label: assessment?.identifier || "Assessment" },
   ];
