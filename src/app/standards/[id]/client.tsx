@@ -1182,10 +1182,10 @@ export function StandardDetailClient() {
                     <SelectValue placeholder={mappingForm.frameworkId ? "Select a control" : "Select a framework first"} />
                   </SelectTrigger>
                   <SelectContent className="max-h-64">
-                    {frameworkControls?.controls.map((ctrl) => (
+                    {frameworkControls?.controls?.map((ctrl) => (
                       <SelectItem key={ctrl.id} value={ctrl.id}>
                         <span className="font-mono">{ctrl.controlId}</span>
-                        <span className="ml-2 text-muted-foreground truncate">{ctrl.title.slice(0, 50)}</span>
+                        <span className="ml-2 text-muted-foreground truncate">{(ctrl.title ?? "").slice(0, 50)}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>

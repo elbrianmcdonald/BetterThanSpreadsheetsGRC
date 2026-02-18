@@ -35,6 +35,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -50,6 +58,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { StartAssessmentDialog } from "@/components/compliance/StartAssessmentDialog";
 
 // Type for assessment list items with included relations
 interface AssessmentListItem {
@@ -155,12 +164,7 @@ export function ComplianceAssessmentsClient() {
             </p>
           </div>
 
-          <Button asChild>
-            <Link href="/compliance/dashboard">
-              <Plus className="mr-2 h-4 w-4" />
-              New Assessment
-            </Link>
-          </Button>
+          <NewAssessmentButton frameworks={frameworksData} />
         </div>
 
         {/* Filters */}
@@ -247,12 +251,9 @@ export function ComplianceAssessmentsClient() {
                     ? "No assessments match the selected filters"
                     : "Create your first compliance assessment to get started"}
                 </p>
-                <Button asChild className="mt-4">
-                  <Link href="/compliance/dashboard">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Start Assessment
-                  </Link>
-                </Button>
+                <div className="mt-4">
+                  <NewAssessmentButton frameworks={frameworksData} />
+                </div>
               </div>
             ) : (
               <Table>
@@ -386,5 +387,89 @@ export function ComplianceAssessmentsClient() {
         </Card>
       </div>
     </AppLayout>
+  );
+}
+
+/**
+ * New Assessment Button with framework picker dialog
+ *
+ * Lets user select a framework, then opens StartAssessmentDialog to create the assessment.
+ */
+function NewAssessmentButton({
+  frameworks,
+}: {
+  frameworks?: Array<{ id: string; name: string; code: string }>;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedFramework, setSelectedFramework] = useState<{
+    id: string;
+    name: string;
+    code: string;
+  } | null>(null);
+
+  // If a framework is selected, render the StartAssessmentDialog
+  if (selectedFramework) {
+    return (
+      <StartAssessmentDialog
+        frameworkId={selectedFramework.id}
+        frameworkName={selectedFramework.name}
+        frameworkCode={selectedFramework.code}
+        trigger={
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            New Assessment
+          </Button>
+        }
+        onSuccess={() => setSelectedFramework(null)}
+      />
+    );
+  }
+
+  return (
+    <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
+          New Assessment
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Select Framework</DialogTitle>
+          <DialogDescription>
+            Choose a framework to assess. You&apos;ll configure assessment details in the next step.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 py-4">
+          {!frameworks || frameworks.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No frameworks available. Activate a framework first in{" "}
+              <Link href="/admin/frameworks" className="underline">
+                Administration
+              </Link>
+              .
+            </p>
+          ) : (
+            frameworks.map((fw) => (
+              <Button
+                key={fw.id}
+                variant="outline"
+                className="w-full justify-start gap-3"
+                onClick={() => {
+                  setPickerOpen(false);
+                  setSelectedFramework(fw);
+                }}
+              >
+                <Shield className="h-4 w-4 text-primary" />
+                <div className="text-left">
+                  <div className="font-medium">{fw.code}</div>
+                  <div className="text-xs text-muted-foreground">{fw.name}</div>
+                </div>
+              </Button>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

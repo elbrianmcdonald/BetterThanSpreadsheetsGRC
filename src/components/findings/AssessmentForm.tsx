@@ -48,6 +48,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+import { CreatableBusinessUnitPicker } from "@/components/business-unit/CreatableBusinessUnitPicker";
 import { SaveIndicator, type SaveStatus } from "./SaveIndicator";
 import { RiskScoreDisplay } from "./RiskScoreDisplay";
 import { RISK_CATEGORY_OPTIONS } from "@/lib/constants/risk-categories";
@@ -150,13 +151,6 @@ export function AssessmentForm({
     { take: 100 },
     { enabled: !isReadOnly }
   );
-
-  // Story 16.1: Fetch business units for dropdown
-  const { data: businessUnitsData } = api.businessUnit.list.useQuery(
-    { includeInactive: false },
-    { enabled: !isReadOnly }
-  );
-  const businessUnits = businessUnitsData?.flatOptions;
 
   // Update mutation
   const updateMutation = api.riskAssessment.update.useMutation({
@@ -547,24 +541,14 @@ export function AssessmentForm({
                 render={({ field }) => (
                   <FormItem className="mb-4">
                     <FormLabel>Business Unit</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? undefined}
-                      disabled={effectiveReadOnly}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select business unit..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {businessUnits?.map((bu) => (
-                          <SelectItem key={bu.id} value={bu.id}>
-                            {bu.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CreatableBusinessUnitPicker
+                        value={field.value ?? null}
+                        onChange={(value) => field.onChange(value ?? undefined)}
+                        placeholder="Select or create business unit..."
+                        disabled={effectiveReadOnly}
+                      />
+                    </FormControl>
                     <FormDescription>
                       The business unit this assessment applies to
                     </FormDescription>

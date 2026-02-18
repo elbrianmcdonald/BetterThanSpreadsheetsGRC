@@ -30,7 +30,6 @@ import {
   CheckCircle,
   Shield,
   UserPlus,
-  Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -73,6 +72,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
+import { CreatableBusinessUnitPicker } from "@/components/business-unit/CreatableBusinessUnitPicker";
 import { RiskItemCard } from "./RiskItemCard";
 import type { MatrixScales, Threshold } from "@/lib/matrix";
 
@@ -142,12 +142,9 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
 
   // Dialog state for creating new items
   const [showNewUserDialog, setShowNewUserDialog] = useState(false);
-  const [showNewBUDialog, setShowNewBUDialog] = useState(false);
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
-  const [newBUName, setNewBUName] = useState("");
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-  const [isCreatingBU, setIsCreatingBU] = useState(false);
 
   // ============================================================================
   // Data Fetching
@@ -161,12 +158,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
   // Fetch users for dropdowns
   const { data: usersData } = api.user.listUsers.useQuery({ take: 100 });
   const users = usersData?.users ?? [];
-
-  // Fetch business units
-  const { data: businessUnitsData } = api.businessUnit.list.useQuery({
-    includeInactive: false,
-  });
-  const businessUnits = businessUnitsData?.flatOptions ?? [];
 
   // ============================================================================
   // Form Setup
@@ -256,22 +247,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
     },
   });
 
-  const createBUMutation = api.businessUnit.create.useMutation({
-    onSuccess: async (newBU) => {
-      await utils.businessUnit.list.invalidate();
-      form.setValue("businessUnitId", newBU.id);
-      setShowNewBUDialog(false);
-      setNewBUName("");
-      toast.success(`Business unit "${newBU.name}" created`);
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to create business unit");
-    },
-    onSettled: () => {
-      setIsCreatingBU(false);
-    },
-  });
-
   const handleCreateUser = useCallback(async () => {
     const trimmedName = newUserName.trim();
     const trimmedEmail = newUserEmail.trim();
@@ -290,17 +265,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
       role: "BUSINESS_STAKEHOLDER",
     });
   }, [newUserEmail, newUserName, createUserMutation]);
-
-  const handleCreateBU = useCallback(async () => {
-    if (!newBUName.trim()) {
-      toast.error("Name is required");
-      return;
-    }
-    setIsCreatingBU(true);
-    createBUMutation.mutate({
-      name: newBUName.trim(),
-    });
-  }, [newBUName, createBUMutation]);
 
   // ============================================================================
   // Handlers
@@ -554,35 +518,13 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Business Unit</FormLabel>
-                    <Select
-                      value={field.value ?? ""}
-                      onValueChange={(v) => {
-                        if (v === "__new__") {
-                          setShowNewBUDialog(true);
-                        } else {
-                          field.onChange(v || null);
-                        }
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select unit" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {businessUnits.map((bu) => (
-                          <SelectItem key={bu.id} value={bu.id}>
-                            {bu.label}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__new__" className="text-primary">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4" />
-                            <span>Add new unit...</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <CreatableBusinessUnitPicker
+                        value={field.value ?? null}
+                        onChange={(value) => field.onChange(value)}
+                        placeholder="Select or create business unit..."
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -806,52 +748,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
         </DialogContent>
       </Dialog>
 
-      {/* ================================================================== */}
-      {/* Create New Business Unit Dialog */}
-      {/* ================================================================== */}
-      <Dialog open={showNewBUDialog} onOpenChange={setShowNewBUDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Add New Business Unit
-            </DialogTitle>
-            <DialogDescription>
-              Create a new business unit for organizational grouping.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="newBUName">Name *</Label>
-              <Input
-                id="newBUName"
-                placeholder="Business unit name"
-                value={newBUName}
-                onChange={(e) => setNewBUName(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowNewBUDialog(false)}
-              disabled={isCreatingBU}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleCreateBU} disabled={isCreatingBU}>
-              {isCreatingBU ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Unit"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Form>
   );
 }

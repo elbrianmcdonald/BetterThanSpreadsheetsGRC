@@ -41,7 +41,7 @@ import {
   HardDrive,
   Monitor,
 } from "lucide-react";
-import { CreateBusinessUnitDialog } from "./CreateBusinessUnitDialog";
+import { CreatableBusinessUnitPicker } from "@/components/business-unit/CreatableBusinessUnitPicker";
 import { CreateOwnerDialog } from "./CreateOwnerDialog";
 
 // Asset type display config
@@ -107,9 +107,6 @@ export function AssetForm({
 
   // Fetch owners
   const { data: owners } = api.asset.getAvailableOwners.useQuery({});
-
-  // Fetch business units
-  const { data: businessUnits } = api.businessUnit.getAll.useQuery();
 
   return (
     <Form {...form}>
@@ -263,36 +260,13 @@ export function AssetForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Business Unit</FormLabel>
-              <div className="flex gap-2">
-                <Select
-                  onValueChange={(value) => field.onChange(value === "_none" ? "" : value)}
-                  value={field.value || "_none"}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select business unit" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="_none">No business unit assigned</SelectItem>
-                    {businessUnits?.map((bu: any) => (
-                      <SelectItem key={bu.id} value={bu.id}>
-                        {bu.name}
-                      </SelectItem>
-                    ))}
-                    {canCreate && (
-                      <>
-                        <SelectSeparator />
-                        <CreateBusinessUnitDialog
-                          onCreated={(bu) => {
-                            field.onChange(bu.id);
-                          }}
-                        />
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+              <FormControl>
+                <CreatableBusinessUnitPicker
+                  value={field.value || null}
+                  onChange={(value) => field.onChange(value ?? "")}
+                  placeholder="Select or create business unit..."
+                />
+              </FormControl>
               <FormDescription>
                 Business unit that owns this asset
               </FormDescription>

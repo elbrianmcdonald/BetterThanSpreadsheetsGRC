@@ -21,7 +21,6 @@ import {
   Calendar,
   User,
   FileText,
-  Building2,
   Shield,
 } from "lucide-react";
 
@@ -61,6 +60,7 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { CreatableBusinessUnitPicker } from "@/components/business-unit/CreatableBusinessUnitPicker";
 
 /**
  * Form schema with Zod validation
@@ -106,12 +106,6 @@ export function StartAssessmentDialog({
   // Fetch users for assessor selection
   const { data: usersData } = api.user.listUsers.useQuery(
     { skip: 0, take: 100 },
-    { enabled: open }
-  );
-
-  // Fetch business units for selection
-  const { data: businessUnitsData } = api.businessUnit.list.useQuery(
-    { includeInactive: false },
     { enabled: open }
   );
 
@@ -271,26 +265,13 @@ export function StartAssessmentDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Business Unit</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a business unit (optional)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {businessUnitsData?.flatOptions.map((bu) => (
-                        <SelectItem key={bu.id} value={bu.id}>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-3 w-3" />
-                            {bu.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <CreatableBusinessUnitPicker
+                      value={field.value ?? null}
+                      onChange={(value) => field.onChange(value ?? undefined)}
+                      placeholder="Select or create business unit..."
+                    />
+                  </FormControl>
                   <FormDescription>
                     Optional: Which business unit is being assessed
                   </FormDescription>

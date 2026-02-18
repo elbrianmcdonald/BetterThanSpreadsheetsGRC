@@ -42,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CreatableBusinessUnitPicker } from "@/components/business-unit/CreatableBusinessUnitPicker";
 
 /**
  * Form validation schema
@@ -86,11 +87,8 @@ export function VendorForm({
   const router = useRouter();
   const utils = api.useUtils();
 
-  // Fetch business units for dropdown
-  const { data: businessUnits, isLoading: loadingBUs } = api.businessUnit.getAll.useQuery();
-
   // Fetch users for owner dropdowns
-  const { data: usersData, isLoading: loadingUsers } = api.user.listUsers.useQuery({});
+  const { data: usersData } = api.user.listUsers.useQuery({});
   const users = usersData?.users ?? [];
 
   // Filter users for IT Owner (IT_STAKEHOLDER, SECURITY_ENGINEER, ORG_ADMIN, GRC_ANALYST)
@@ -144,7 +142,7 @@ export function VendorForm({
       riskTier: defaultValues?.riskTier || "__none__",
       primaryContactName: defaultValues?.primaryContactName ?? "",
       primaryContactEmail: defaultValues?.primaryContactEmail ?? "",
-      businessUnitId: defaultValues?.businessUnitId || "__none__",
+      businessUnitId: defaultValues?.businessUnitId ?? undefined,
       itOwnerId: defaultValues?.itOwnerId || "__none__",
       businessOwnerId: defaultValues?.businessOwnerId || "__none__",
       notes: defaultValues?.notes ?? "",
@@ -174,7 +172,7 @@ export function VendorForm({
       category: rest.category || undefined,
       primaryContactName: rest.primaryContactName || undefined,
       primaryContactEmail: rest.primaryContactEmail || undefined,
-      businessUnitId: rest.businessUnitId === "__none__" ? undefined : (rest.businessUnitId || undefined),
+      businessUnitId: rest.businessUnitId || undefined,
       itOwnerId: rest.itOwnerId === "__none__" ? undefined : (rest.itOwnerId || undefined),
       businessOwnerId: rest.businessOwnerId === "__none__" ? undefined : (rest.businessOwnerId || undefined),
       notes: rest.notes || undefined,
@@ -196,7 +194,6 @@ export function VendorForm({
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const isLoading = loadingBUs || loadingUsers;
 
   return (
     <Form {...form}>
@@ -255,7 +252,6 @@ export function VendorForm({
                 <Select
                   onValueChange={field.onChange}
                   value={field.value}
-                  disabled={isLoading}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -338,27 +334,15 @@ export function VendorForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Business Unit</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  disabled={isLoading}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select business unit" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
-                    {businessUnits?.map((bu) => (
-                      <SelectItem key={bu.id} value={bu.id}>
-                        {bu.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CreatableBusinessUnitPicker
+                    value={field.value ?? null}
+                    onChange={(value) => field.onChange(value ?? undefined)}
+                    placeholder="Select or create business unit..."
+                  />
+                </FormControl>
                 <FormDescription>
-                  Which business unit owns this vendor relationship
+                  Which business unit owns this vendor relationship. You can create a new one inline.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -375,7 +359,6 @@ export function VendorForm({
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
-                    disabled={isLoading}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -408,7 +391,6 @@ export function VendorForm({
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
-                    disabled={isLoading}
                   >
                     <FormControl>
                       <SelectTrigger>
