@@ -166,9 +166,9 @@ export function RiskFilterPanel({
   // Fetch active frameworks for framework filter (AC13)
   const { data: frameworksData } = api.framework.listActive.useQuery();
 
-  // Fetch users for owner filters (AC16-AC17)
-  const { data: usersData } = api.user.listUsers.useQuery(
-    { take: 100, skip: 0 },
+  // Fetch persons for owner filters (AC16-AC17)
+  const { data: personsData } = api.person.getAll.useQuery(
+    undefined,
     { enabled: showOwnerFilters }
   );
 
@@ -243,13 +243,8 @@ export function RiskFilterPanel({
     (filters.itOwnerId ? 1 : 0) +
     (filters.businessOwnerId ? 1 : 0);
 
-  // Filter users by role for owner dropdowns
-  const itStakeholders = usersData?.users.filter(
-    (u) => u.role === "IT_STAKEHOLDER"
-  ) ?? [];
-  const businessStakeholders = usersData?.users.filter(
-    (u) => u.role === "BUSINESS_STAKEHOLDER"
-  ) ?? [];
+  // All active persons are available for both owner dropdowns
+  const persons = personsData ?? [];
 
   return (
     <div className="space-y-4">
@@ -326,7 +321,7 @@ export function RiskFilterPanel({
               IT Owner:{" "}
               {filters.itOwnerId === "unassigned"
                 ? "Unassigned"
-                : usersData?.users.find((u) => u.id === filters.itOwnerId)?.name ?? "Unknown"}
+                : personsData?.find((p) => p.id === filters.itOwnerId)?.name ?? "Unknown"}
               <button
                 onClick={() => setFilter("itOwnerId", null)}
                 className="ml-1 hover:bg-muted rounded-full p-0.5"
@@ -340,7 +335,7 @@ export function RiskFilterPanel({
               Business Owner:{" "}
               {filters.businessOwnerId === "unassigned"
                 ? "Unassigned"
-                : usersData?.users.find((u) => u.id === filters.businessOwnerId)?.name ?? "Unknown"}
+                : personsData?.find((p) => p.id === filters.businessOwnerId)?.name ?? "Unknown"}
               <button
                 onClick={() => setFilter("businessOwnerId", null)}
                 className="ml-1 hover:bg-muted rounded-full p-0.5"
@@ -501,9 +496,9 @@ export function RiskFilterPanel({
                     <SelectContent>
                       <SelectItem value="all">All IT Owners</SelectItem>
                       <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {itStakeholders.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name ?? user.email}
+                      {persons.map((person) => (
+                        <SelectItem key={person.id} value={person.id}>
+                          {person.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -524,9 +519,9 @@ export function RiskFilterPanel({
                     <SelectContent>
                       <SelectItem value="all">All Business Owners</SelectItem>
                       <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {businessStakeholders.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name ?? user.email}
+                      {persons.map((person) => (
+                        <SelectItem key={person.id} value={person.id}>
+                          {person.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -193,23 +193,12 @@ export const vendorAssessmentRouter = createTRPCRouter({
     .input(listAssessmentsSchema)
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
       const { vendorId, status, assessorId, search, page, pageSize, sortBy, sortOrder } = input;
 
       // Build where clause
       const where: Prisma.VendorAssessmentWhereInput = {
         organizationId,
       };
-
-      // Role-based filtering (FR25)
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        // IT Stakeholder can only see assessments for vendors they own
-        where.vendor = { itOwnerId: userId };
-      } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        // Business Stakeholder can only see assessments for vendors they own
-        where.vendor = { businessOwnerId: userId };
-      }
 
       // Apply filters
       if (vendorId) {
@@ -263,8 +252,6 @@ export const vendorAssessmentRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
 
       const assessment = await ctx.db.vendorAssessment.findFirst({
         where: { id: input.id, organizationId },
@@ -275,8 +262,6 @@ export const vendorAssessmentRouter = createTRPCRouter({
               identifier: true,
               name: true,
               riskTier: true,
-              itOwnerId: true,
-              businessOwnerId: true,
             },
           },
           assessor: { select: { id: true, name: true, email: true } },
@@ -296,23 +281,6 @@ export const vendorAssessmentRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Assessment not found",
         });
-      }
-
-      // Check role-based access (FR25)
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        if (assessment.vendor.itOwnerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Access denied",
-          });
-        }
-      } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        if (assessment.vendor.businessOwnerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Access denied",
-          });
-        }
       }
 
       return assessment;
@@ -526,15 +494,11 @@ export const vendorAssessmentRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
       const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
       const { assessmentId, content } = input;
 
-      // Get assessment with vendor info
+      // Verify assessment exists
       const assessment = await ctx.db.vendorAssessment.findFirst({
         where: { id: assessmentId, organizationId },
-        include: {
-          vendor: { select: { itOwnerId: true, businessOwnerId: true } },
-        },
       });
 
       if (!assessment) {
@@ -542,23 +506,6 @@ export const vendorAssessmentRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Assessment not found",
         });
-      }
-
-      // Check access for stakeholders (FR26)
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        if (assessment.vendor.itOwnerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Access denied",
-          });
-        }
-      } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        if (assessment.vendor.businessOwnerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Access denied",
-          });
-        }
       }
 
       // Create comment
@@ -645,15 +592,9 @@ export const vendorAssessmentRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       const organizationId = ctx.organizationId!;
       const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
 
-      // Build base where clause with role-based filtering
+      // Build base where clause
       const baseWhere: Prisma.VendorAssessmentWhereInput = { organizationId };
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        baseWhere.vendor = { itOwnerId: userId };
-      } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        baseWhere.vendor = { businessOwnerId: userId };
-      }
 
       const now = new Date();
 

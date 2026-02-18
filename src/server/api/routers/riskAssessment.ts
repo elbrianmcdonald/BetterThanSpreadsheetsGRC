@@ -284,7 +284,7 @@ export const riskAssessmentRouter = createTRPCRouter({
 
       // Story 16.1: Validate business context fields
       if (businessOwnerId) {
-        const validBusinessOwner = await ctx.db.user.findFirst({
+        const validBusinessOwner = await ctx.db.person.findFirst({
           where: { id: businessOwnerId, organizationId },
         });
         if (!validBusinessOwner) {

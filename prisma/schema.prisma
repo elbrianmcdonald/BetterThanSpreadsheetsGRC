@@ -855,6 +855,13 @@ model Person {
   riskAssessmentOwner   RiskAssessment[] @relation("AssessmentRiskOwner")
   projectRiskOwner      RiskAssessmentProject[] @relation("ProjectRiskOwner")
 
+  // Ownership relationships (IT Owner / Business Owner)
+  vendorsAsITOwner           Vendor[]          @relation("VendorITOwner")
+  vendorsAsBusinessOwner     Vendor[]          @relation("VendorBusinessOwner")
+  risksAsITOwner             Risk[]            @relation("RiskITOwner")
+  risksAsBusinessOwner       Risk[]            @relation("RiskBusinessOwner")
+  assessmentsAsBusinessOwner RiskAssessment[]  @relation("AssessmentBusinessOwner")
+
   @@unique([organizationId, email])         // Unique email per org (when email provided)
   @@index([organizationId, isActive])
   @@index([organizationId, businessUnitId])
@@ -1025,8 +1032,8 @@ model Risk {
   // Story 4.5: Remediation options for this risk (AC4)
   RemediationOptions RemediationOption[]
   // Story 4.6: Risk ownership relationships (AC1)
-  ITOwner      User?           @relation("RiskITOwner", fields: [itOwnerId], references: [id], onDelete: SetNull)
-  BusinessOwner User?          @relation("RiskBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
+  ITOwner      Person?         @relation("RiskITOwner", fields: [itOwnerId], references: [id], onDelete: SetNull)
+  BusinessOwner Person?        @relation("RiskBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
   AssignedBy   User?           @relation("RiskAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
   // Risk Assessment Assignment Workflow relationships
   Assessor               User?  @relation("RiskAssessor", fields: [assessorId], references: [id], onDelete: SetNull)
@@ -1250,9 +1257,7 @@ model User {
   // Story 4.5: Remediation options created/approved by this user
   RemediationOptionsCreated               RemediationOption[] @relation("RemediationOptionCreator")
   RemediationOptionsApproved              RemediationOption[] @relation("RemediationOptionApprover")
-  // Story 4.6: Risk ownership relationships (Task 1.2)
-  RisksAsITOwner                          Risk[]            @relation("RiskITOwner")
-  RisksAsBusinessOwner                    Risk[]            @relation("RiskBusinessOwner")
+  // Story 4.6: Risk assignment tracking
   RisksAssignedByMe                       Risk[]            @relation("RiskAssignedBy")
   // Risk Assessment Assignment Workflow relationships
   RisksAssessedByMe                       Risk[]            @relation("RiskAssessor")
@@ -1273,8 +1278,6 @@ model User {
   AssessmentsCreated                      RiskAssessment[]  @relation("AssessmentCreator")
   AssessmentsOwned                        RiskAssessment[]  @relation("AssessmentOwner")
   AssessmentsApproved                     RiskAssessment[]  @relation("AssessmentApprover")
-  // Story 16.1: Assessment business context relations
-  AssessmentsAsBusinessOwner              RiskAssessment[]  @relation("AssessmentBusinessOwner")
   AssessmentsPerformed                    RiskAssessment[]  @relation("AssessmentPerformer")
   // Assessment Task relations - proactive risk assessments
   AssessmentTasksAssigned                 AssessmentTask[]  @relation("TaskAssignee")
@@ -1342,9 +1345,7 @@ model User {
   AssessmentProjectsAssigned              RiskAssessmentProject[]    @relation("ProjectAssignee")
   AssessmentProjectsCreated               RiskAssessmentProject[]    @relation("ProjectCreator")
   AssessmentProjectsReviewed              RiskAssessmentProject[]    @relation("ProjectReviewer")
-  // Epic 1: TPRM Vendor Registry - User vendor ownership relations
-  VendorsAsITOwner                        Vendor[]                   @relation("VendorITOwner")
-  VendorsAsBusinessOwner                  Vendor[]                   @relation("VendorBusinessOwner")
+  // Epic 1: TPRM Vendor Registry - User vendor creation relation
   VendorsCreated                          Vendor[]                   @relation("VendorCreator")
   // Epic 3: Vendor Assessment Workflow - User assessment relations
   VendorAssessmentsAssigned               VendorAssessment[]         @relation("AssessmentAssessor")
@@ -2156,7 +2157,7 @@ model RiskAssessment {
   owner             User?            @relation("AssessmentOwner", fields: [ownerId], references: [id])
   approver          User?            @relation("AssessmentApprover", fields: [approvedBy], references: [id])
   // Story 16.1: Business context relations
-  businessOwner     User?            @relation("AssessmentBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
+  businessOwner     Person?          @relation("AssessmentBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
   businessUnit      BusinessUnit?    @relation("AssessmentBusinessUnit", fields: [businessUnitId], references: [id], onDelete: SetNull)
   performedBy       User?            @relation("AssessmentPerformer", fields: [performedById], references: [id], onDelete: SetNull)
   // Risk Owner: Person accountable for this assessment
@@ -3387,8 +3388,8 @@ model Vendor {
   // Relations
   organization        Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   businessUnit        BusinessUnit?   @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
-  itOwner             User?           @relation("VendorITOwner", fields: [itOwnerId], references: [id], onDelete: SetNull)
-  businessOwner       User?           @relation("VendorBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
+  itOwner             Person?         @relation("VendorITOwner", fields: [itOwnerId], references: [id], onDelete: SetNull)
+  businessOwner       Person?         @relation("VendorBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
   createdBy           User?           @relation("VendorCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   // Relations to assessments (Epic 3)

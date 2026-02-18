@@ -28,7 +28,7 @@ import { AssetCriticality } from "@prisma/client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AssetCriticalityBadge } from "@/components/risk/AssetCriticalityBadge";
 import { cn } from "@/lib/utils";
 
@@ -44,13 +44,11 @@ interface RiskMetadataSidebarProps {
       id: string;
       name: string | null;
       email: string | null;
-      image?: string | null;
     } | null;
     businessOwner?: {
       id: string;
       name: string | null;
       email: string | null;
-      image?: string | null;
     } | null;
     // Story 4.17 AC55: Frameworks affected (computed from evidence mappings)
     frameworksAffected?: Array<{
@@ -207,10 +205,6 @@ export function RiskMetadataSidebar({
             {risk.itOwner ? (
               <div className="flex items-center gap-2">
                 <Avatar className="h-6 w-6">
-                  <AvatarImage
-                    src={risk.itOwner.image ?? undefined}
-                    alt={risk.itOwner.name || risk.itOwner.email || "User"}
-                  />
                   <AvatarFallback className="text-xs">
                     {getInitials(risk.itOwner.name, risk.itOwner.email)}
                   </AvatarFallback>
@@ -235,10 +229,6 @@ export function RiskMetadataSidebar({
             {risk.businessOwner ? (
               <div className="flex items-center gap-2">
                 <Avatar className="h-6 w-6">
-                  <AvatarImage
-                    src={risk.businessOwner.image ?? undefined}
-                    alt={risk.businessOwner.name || risk.businessOwner.email || "User"}
-                  />
                   <AvatarFallback className="text-xs">
                     {getInitials(risk.businessOwner.name, risk.businessOwner.email)}
                   </AvatarFallback>

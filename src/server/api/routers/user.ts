@@ -34,7 +34,7 @@ import {
   listUsersSchema,
   bulkUpdateBusinessUnitSchema,
 } from "@/schemas/user";
-import { UserRole, RiskStatus } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { z } from "zod";
 import { generateSecurePassword, hashPassword } from "@/server/services/auth/passwordService";
 
@@ -728,50 +728,19 @@ export const userRouter = createTRPCRouter({
           email: true,
           image: true,
           role: true,
-          // Count risks where user is IT owner with active status
-          _count: {
-            select: {
-              RisksAsITOwner: {
-                where: {
-                  status: { in: [RiskStatus.OPEN, RiskStatus.ASSIGNED] },
-                },
-              },
-              RisksAsBusinessOwner: {
-                where: {
-                  status: { in: [RiskStatus.OPEN, RiskStatus.ASSIGNED] },
-                },
-              },
-            },
-          },
         },
         orderBy: { name: "asc" },
       });
 
-      // Map to include combined workload count
-      // AC33: Only count OPEN and ASSIGNED risks
-      const usersWithWorkload = users.map((user) => {
-        // For IT_STAKEHOLDER, count IT owner risks
-        // For BUSINESS_STAKEHOLDER, count Business owner risks
-        const assignedRiskCount =
-          input.role === "IT_STAKEHOLDER"
-            ? user._count.RisksAsITOwner
-            : user._count.RisksAsBusinessOwner;
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-          role: user.role,
-          assignedRiskCount,
-        };
-      });
-
-      // Sort by workload (ascending) so least busy users appear first
-      // AC34: Helps GRC Analyst balance assignments
-      usersWithWorkload.sort((a, b) => a.assignedRiskCount - b.assignedRiskCount);
-
-      return usersWithWorkload;
+      // Ownership moved to Person model — workload counts no longer available on User
+      return users.map((user) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        role: user.role,
+        assignedRiskCount: 0,
+      }));
     }),
 
   /**

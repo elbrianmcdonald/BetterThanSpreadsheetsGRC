@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CreatableBusinessUnitPicker } from "@/components/business-unit/CreatableBusinessUnitPicker";
+import { PersonPicker } from "@/components/person/PersonPicker";
 
 /**
  * Form validation schema
@@ -87,20 +88,6 @@ export function VendorForm({
   const router = useRouter();
   const utils = api.useUtils();
 
-  // Fetch users for owner dropdowns
-  const { data: usersData } = api.user.listUsers.useQuery({});
-  const users = usersData?.users ?? [];
-
-  // Filter users for IT Owner (IT_STAKEHOLDER, SECURITY_ENGINEER, ORG_ADMIN, GRC_ANALYST)
-  const itOwnerUsers = users.filter((u) =>
-    ["IT_STAKEHOLDER", "SECURITY_ENGINEER", "ORG_ADMIN", "GRC_ANALYST"].includes(u.role)
-  );
-
-  // Filter users for Business Owner (BUSINESS_STAKEHOLDER, ORG_ADMIN, GRC_ANALYST)
-  const businessOwnerUsers = users.filter((u) =>
-    ["BUSINESS_STAKEHOLDER", "ORG_ADMIN", "GRC_ANALYST"].includes(u.role)
-  );
-
   // Create mutation
   const createMutation = api.vendor.create.useMutation({
     onSuccess: (vendor) => {
@@ -143,8 +130,8 @@ export function VendorForm({
       primaryContactName: defaultValues?.primaryContactName ?? "",
       primaryContactEmail: defaultValues?.primaryContactEmail ?? "",
       businessUnitId: defaultValues?.businessUnitId ?? undefined,
-      itOwnerId: defaultValues?.itOwnerId || "__none__",
-      businessOwnerId: defaultValues?.businessOwnerId || "__none__",
+      itOwnerId: defaultValues?.itOwnerId ?? undefined,
+      businessOwnerId: defaultValues?.businessOwnerId ?? undefined,
       notes: defaultValues?.notes ?? "",
     },
   });
@@ -173,8 +160,8 @@ export function VendorForm({
       primaryContactName: rest.primaryContactName || undefined,
       primaryContactEmail: rest.primaryContactEmail || undefined,
       businessUnitId: rest.businessUnitId || undefined,
-      itOwnerId: rest.itOwnerId === "__none__" ? undefined : (rest.itOwnerId || undefined),
-      businessOwnerId: rest.businessOwnerId === "__none__" ? undefined : (rest.businessOwnerId || undefined),
+      itOwnerId: rest.itOwnerId || undefined,
+      businessOwnerId: rest.businessOwnerId || undefined,
       notes: rest.notes || undefined,
     };
 
@@ -356,24 +343,12 @@ export function VendorForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>IT Owner</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select IT owner" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="__none__">None</SelectItem>
-                      {itOwnerUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name || user.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <PersonPicker
+                      value={field.value ?? null}
+                      onChange={(value) => field.onChange(value ?? undefined)}
+                    />
+                  </FormControl>
                   <FormDescription>
                     Technical stakeholder responsible for this vendor
                   </FormDescription>
@@ -388,24 +363,12 @@ export function VendorForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Business Owner</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select business owner" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="__none__">None</SelectItem>
-                      {businessOwnerUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name || user.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <PersonPicker
+                      value={field.value ?? null}
+                      onChange={(value) => field.onChange(value ?? undefined)}
+                    />
+                  </FormControl>
                   <FormDescription>
                     Business stakeholder responsible for this vendor relationship
                   </FormDescription>

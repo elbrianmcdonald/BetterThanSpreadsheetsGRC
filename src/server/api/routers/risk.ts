@@ -169,9 +169,9 @@ const COMMENT_FULL_ACCESS_ROLES = [
 ];
 
 /**
- * Story 4.11: Roles that can only comment on assigned risks (AC39-AC40)
- * - IT Stakeholder: Can comment only if itOwnerId = userId
- * - Business Stakeholder: Can comment only if businessOwnerId = userId
+ * Story 4.11: Roles that can comment on org risks (AC39-AC40)
+ * - IT Stakeholder: Can comment on any risk in their org
+ * - Business Stakeholder: Can comment on any risk in their org
  */
 const COMMENT_RESTRICTED_ROLES = [
   UserRole.IT_STAKEHOLDER,
@@ -795,9 +795,8 @@ export const riskRouter = createTRPCRouter({
    * List risks with role-based filtering
    *
    * Story 4.9: Role-Based Risk Views (AC23-AC28)
-   * - IT_STAKEHOLDER: Only sees risks where itOwnerId = current user
-   * - BUSINESS_STAKEHOLDER: Only sees risks where businessOwnerId = current user
-   * - GRC_ANALYST, SECURITY_ENGINEER, ORG_ADMIN, AUDITOR: See all org risks
+   * - All roles: See all org risks (filtered by organizationId)
+   * - GRC_ANALYST, SECURITY_ENGINEER, ORG_ADMIN, AUDITOR, IT_STAKEHOLDER, BUSINESS_STAKEHOLDER: See all org risks
    *
    * Returns risks for the user's organization with role-based filtering.
    */
@@ -837,10 +836,6 @@ export const riskRouter = createTRPCRouter({
       const { page, pageSize, search, status, severity, sortBy, sortOrder, ownerId, ownerType, frameworkId, findingSource, itOwnerId: inputItOwnerId, businessOwnerId: inputBusinessOwnerId } = input;
       const skip = (page - 1) * pageSize;
 
-      // Story 4.9 (AC23-AC24): Build role-based WHERE clause
-      const userRole = ctx.session?.user?.role as UserRole;
-      const userId = ctx.session?.user?.id;
-
       // Base where clause with organization filter
       // Story 5.5 AC23-AC26: Build dynamic WHERE clause based on filters
       // Story 6.4: Filter to only show PUBLISHED or directly-created risks
@@ -860,16 +855,8 @@ export const riskRouter = createTRPCRouter({
         ],
       };
 
-      // AC1, AC23: IT_STAKEHOLDER only sees risks assigned to them as IT owner
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        where.itOwnerId = userId;
-      }
-      // AC7, AC24: BUSINESS_STAKEHOLDER only sees risks assigned to them as business owner
-      else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        where.businessOwnerId = userId;
-      }
-      // AC13: GRC_ANALYST, SECURITY_ENGINEER, ORG_ADMIN, AUDITOR see all org risks
-      // No additional filter needed - organizationId is already set
+      // All roles see all org risks filtered by organizationId
+      // No additional owner-based scoping - organizationId is already set
 
       // AC16: Optional filter by specific owner (for full view users) - legacy support
       if (ownerId && ownerType) {
@@ -1047,21 +1034,10 @@ export const riskRouter = createTRPCRouter({
    * - Respects role-based access (IT/Business stakeholders see only their risks)
    */
   getFilterCounts: organizationProcedure.query(async ({ ctx }) => {
-    const userRole = ctx.session?.user?.role as UserRole;
-    const userId = ctx.session?.user?.id;
-
-    // Build role-based where clause
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const baseWhere: any = {
       organizationId: ctx.organizationId,
     };
-
-    // Role-based filtering
-    if (userRole === UserRole.IT_STAKEHOLDER) {
-      baseWhere.itOwnerId = userId;
-    } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-      baseWhere.businessOwnerId = userId;
-    }
 
     // Get counts by status
     const statusCounts = await ctx.db.risk.groupBy({
@@ -1171,7 +1147,6 @@ export const riskRouter = createTRPCRouter({
               id: true,
               name: true,
               email: true,
-              image: true,
             },
           },
           BusinessOwner: {
@@ -1179,7 +1154,6 @@ export const riskRouter = createTRPCRouter({
               id: true,
               name: true,
               email: true,
-              image: true,
             },
           },
           AssignedBy: {
@@ -1231,30 +1205,8 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // Story 4.9 (AC17-AC22): Role-based access control for risk detail
-      const userRole = ctx.session?.user?.role as UserRole;
-      const userId = ctx.session?.user?.id;
-
-      // AC17: IT_STAKEHOLDER can only access risks where they are the IT owner
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        if (risk.itOwnerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only view risks assigned to you as IT owner",
-          });
-        }
-      }
-      // AC18: BUSINESS_STAKEHOLDER can only access risks where they are the business owner
-      else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        if (risk.businessOwnerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only view risks assigned to you for business decision",
-          });
-        }
-      }
-      // AC19-AC20: GRC_ANALYST, SECURITY_ENGINEER, ORG_ADMIN, AUDITOR can access all org risks
-      // No additional check needed - organization check is sufficient
+      // All roles in the organization can access any org risk
+      // Organization check above is sufficient for access control
 
       // Story 4.17 AC55: Extract unique framework codes and fetch framework names
       const frameworkCodes = new Set<string>();
@@ -1965,8 +1917,8 @@ export const riskRouter = createTRPCRouter({
    * AC7: Mutation accepts: riskId, itOwnerId?, businessOwnerId?
    * AC8: Validates user role
    * AC9: Validates risk belongs to user's organization
-   * AC10: Validates IT owner has IT_STAKEHOLDER role (if provided)
-   * AC11: Validates Business owner has BUSINESS_STAKEHOLDER role (if provided)
+   * AC10: Validates IT owner Person exists in organization (if provided)
+   * AC11: Validates Business owner Person exists in organization (if provided)
    * AC12: Updates risk with owner IDs, assignedAt timestamp, assignedById
    * AC13: Changes risk status from OPEN to ASSIGNED
    */
@@ -2018,14 +1970,14 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // AC10: Validate IT owner has IT_STAKEHOLDER role (if provided)
+      // Validate IT owner exists in org as a Person (if provided)
       if (input.itOwnerId) {
-        const itOwner = await ctx.db.user.findFirst({
+        const itOwner = await ctx.db.person.findFirst({
           where: {
             id: input.itOwnerId,
             organizationId: ctx.organizationId,
           },
-          select: { id: true, role: true, name: true },
+          select: { id: true, name: true },
         });
 
         if (!itOwner) {
@@ -2034,36 +1986,22 @@ export const riskRouter = createTRPCRouter({
             message: "IT Owner not found in your organization",
           });
         }
-
-        if (itOwner.role !== UserRole.IT_STAKEHOLDER) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `IT Owner must have IT_STAKEHOLDER role. ${itOwner.name} has role ${itOwner.role}`,
-          });
-        }
       }
 
-      // AC11: Validate Business owner has BUSINESS_STAKEHOLDER role (if provided)
+      // Validate Business owner exists in org as a Person (if provided)
       if (input.businessOwnerId) {
-        const businessOwner = await ctx.db.user.findFirst({
+        const businessOwner = await ctx.db.person.findFirst({
           where: {
             id: input.businessOwnerId,
             organizationId: ctx.organizationId,
           },
-          select: { id: true, role: true, name: true },
+          select: { id: true, name: true },
         });
 
         if (!businessOwner) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Business Owner not found in your organization",
-          });
-        }
-
-        if (businessOwner.role !== UserRole.BUSINESS_STAKEHOLDER) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Business Owner must have BUSINESS_STAKEHOLDER role. ${businessOwner.name} has role ${businessOwner.role}`,
           });
         }
       }
@@ -2187,14 +2125,14 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // Validate new IT owner if provided
+      // Validate new IT owner exists in org as a Person (if provided)
       if (input.itOwnerId) {
-        const itOwner = await ctx.db.user.findFirst({
+        const itOwner = await ctx.db.person.findFirst({
           where: {
             id: input.itOwnerId,
             organizationId: ctx.organizationId,
           },
-          select: { id: true, role: true, name: true },
+          select: { id: true, name: true },
         });
 
         if (!itOwner) {
@@ -2203,36 +2141,22 @@ export const riskRouter = createTRPCRouter({
             message: "IT Owner not found in your organization",
           });
         }
-
-        if (itOwner.role !== UserRole.IT_STAKEHOLDER) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `IT Owner must have IT_STAKEHOLDER role. ${itOwner.name} has role ${itOwner.role}`,
-          });
-        }
       }
 
-      // Validate new Business owner if provided
+      // Validate new Business owner exists in org as a Person (if provided)
       if (input.businessOwnerId) {
-        const businessOwner = await ctx.db.user.findFirst({
+        const businessOwner = await ctx.db.person.findFirst({
           where: {
             id: input.businessOwnerId,
             organizationId: ctx.organizationId,
           },
-          select: { id: true, role: true, name: true },
+          select: { id: true, name: true },
         });
 
         if (!businessOwner) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Business Owner not found in your organization",
-          });
-        }
-
-        if (businessOwner.role !== UserRole.BUSINESS_STAKEHOLDER) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Business Owner must have BUSINESS_STAKEHOLDER role. ${businessOwner.name} has role ${businessOwner.role}`,
           });
         }
       }
@@ -2936,13 +2860,20 @@ export const riskRouter = createTRPCRouter({
   getMyRisksSummary: organizationProcedure
     .use(requireRole([UserRole.IT_STAKEHOLDER, UserRole.ORG_ADMIN]))
     .query(async ({ ctx }) => {
-      const userId = ctx.session?.user?.id;
+      const organizationId = ctx.organizationId!;
 
-      // Get all open/assigned risks for this IT owner
+      // Find Person records for the current user matched by email
+      const myPersonRecords = await ctx.db.person.findMany({
+        where: { organizationId, email: ctx.session!.user.email },
+        select: { id: true },
+      });
+      const myPersonIds = myPersonRecords.map((p) => p.id);
+
+      // Get all open/assigned risks for this IT owner (matched via Person)
       const risks = await ctx.db.risk.findMany({
         where: {
-          organizationId: ctx.organizationId!,
-          itOwnerId: userId,
+          organizationId,
+          itOwnerId: { in: myPersonIds },
           status: { in: ["OPEN", "ASSIGNED"] },
         },
         select: {
@@ -2985,13 +2916,20 @@ export const riskRouter = createTRPCRouter({
   getDecisionsSummary: organizationProcedure
     .use(requireRole([UserRole.BUSINESS_STAKEHOLDER, UserRole.ORG_ADMIN]))
     .query(async ({ ctx }) => {
-      const userId = ctx.session?.user?.id;
+      const organizationId = ctx.organizationId!;
+
+      // Find Person records for the current user matched by email
+      const myPersonRecords = await ctx.db.person.findMany({
+        where: { organizationId, email: ctx.session!.user.email },
+        select: { id: true },
+      });
+      const myPersonIds = myPersonRecords.map((p) => p.id);
 
       // Get all risks pending business decision (ASSIGNED status with this business owner)
       const risks = await ctx.db.risk.findMany({
         where: {
-          organizationId: ctx.organizationId!,
-          businessOwnerId: userId,
+          organizationId,
+          businessOwnerId: { in: myPersonIds },
           status: "ASSIGNED",
         },
         select: {
@@ -3457,8 +3395,6 @@ export const riskRouter = createTRPCRouter({
           id: true,
           organizationId: true,
           title: true,
-          itOwnerId: true,
-          businessOwnerId: true,
         },
       });
 
@@ -3476,31 +3412,10 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // AC39-AC42: Role-based comment access
-      // Full access roles can comment on any org risk
-      if ((COMMENT_FULL_ACCESS_ROLES as UserRole[]).includes(userRole)) {
-        // Allowed to comment
-      }
-      // AC39: IT_STAKEHOLDER can only comment on risks where they are IT owner
-      else if (userRole === UserRole.IT_STAKEHOLDER) {
-        if (risk.itOwnerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only comment on risks assigned to you as IT owner",
-          });
-        }
-      }
-      // AC40: BUSINESS_STAKEHOLDER can only comment on risks where they are business owner
-      else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        if (risk.businessOwnerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only comment on risks assigned to you for business decision",
-          });
-        }
-      }
-      // AC42: AUDITOR cannot comment (handled by requireRole, but double-check)
-      else {
+      // Role-based comment access: all roles allowed by COMMENT_ALLOWED_ROLES can comment
+      // on any org risk - role alone is sufficient, no ownership check needed
+      if (!(COMMENT_FULL_ACCESS_ROLES as UserRole[]).includes(userRole) &&
+          !(COMMENT_RESTRICTED_ROLES as UserRole[]).includes(userRole)) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Your role cannot add comments to risks",
@@ -3796,8 +3711,6 @@ export const riskRouter = createTRPCRouter({
         select: {
           id: true,
           organizationId: true,
-          itOwnerId: true,
-          businessOwnerId: true,
         },
       });
 
@@ -3815,25 +3728,8 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // Role-based access for viewing comments (same as viewing risks)
-      const userId = ctx.session?.user?.id;
-      const userRole = ctx.session?.user?.role as UserRole;
-
-      // IT_STAKEHOLDER can only view their assigned risks
-      if (userRole === UserRole.IT_STAKEHOLDER && risk.itOwnerId !== userId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You can only view comments on risks assigned to you",
-        });
-      }
-
-      // BUSINESS_STAKEHOLDER can only view their assigned risks
-      if (userRole === UserRole.BUSINESS_STAKEHOLDER && risk.businessOwnerId !== userId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You can only view comments on risks assigned to you",
-        });
-      }
+      // All roles in the organization can view comments on any org risk
+      // Organization check above is sufficient for access control
 
       // AC23: Fetch comments sorted by createdAt ASC (oldest first)
       // Include soft-deleted comments to show placeholder
@@ -4355,14 +4251,14 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // Validate IT owner has IT_STAKEHOLDER role (if provided)
+      // Validate IT owner exists in org as a Person (if provided)
       if (input.itOwnerId) {
-        const itOwner = await ctx.db.user.findFirst({
+        const itOwner = await ctx.db.person.findFirst({
           where: {
             id: input.itOwnerId,
             organizationId: ctx.organizationId!,
           },
-          select: { id: true, role: true, name: true },
+          select: { id: true, name: true },
         });
 
         if (!itOwner) {
@@ -4371,36 +4267,22 @@ export const riskRouter = createTRPCRouter({
             message: "IT Owner not found in your organization",
           });
         }
-
-        if (itOwner.role !== UserRole.IT_STAKEHOLDER) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `IT Owner must have IT_STAKEHOLDER role. ${itOwner.name} has role ${itOwner.role}`,
-          });
-        }
       }
 
-      // Validate Business owner has BUSINESS_STAKEHOLDER role (if provided)
+      // Validate Business owner exists in org as a Person (if provided)
       if (input.businessOwnerId) {
-        const businessOwner = await ctx.db.user.findFirst({
+        const businessOwner = await ctx.db.person.findFirst({
           where: {
             id: input.businessOwnerId,
             organizationId: ctx.organizationId!,
           },
-          select: { id: true, role: true, name: true },
+          select: { id: true, name: true },
         });
 
         if (!businessOwner) {
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Business Owner not found in your organization",
-          });
-        }
-
-        if (businessOwner.role !== UserRole.BUSINESS_STAKEHOLDER) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Business Owner must have BUSINESS_STAKEHOLDER role. ${businessOwner.name} has role ${businessOwner.role}`,
           });
         }
       }
@@ -4750,8 +4632,8 @@ export const riskRouter = createTRPCRouter({
         updatedAt: risk.updatedAt,
         affectedSystems: risk.affectedSystems,
         closedAt: risk.status === "CLOSED" ? risk.updatedAt : null,
-        itOwner: risk.ITOwner ? { name: risk.ITOwner.name, email: risk.ITOwner.email ?? "" } : null,
-        businessOwner: risk.BusinessOwner ? { name: risk.BusinessOwner.name, email: risk.BusinessOwner.email ?? "" } : null,
+        itOwner: risk.ITOwner ? { name: risk.ITOwner.name, email: risk.ITOwner.email } : null,
+        businessOwner: risk.BusinessOwner ? { name: risk.BusinessOwner.name, email: risk.BusinessOwner.email } : null,
         assignedAt: risk.assignedAt,
         assignedBy: risk.AssignedBy,
         linkedEvidence: risk.RiskEvidence.map((re) => ({

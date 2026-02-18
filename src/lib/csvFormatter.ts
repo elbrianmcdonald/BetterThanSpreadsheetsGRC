@@ -26,11 +26,11 @@ export interface RiskExportData {
   closedAt: Date | null;
   itOwner: {
     name: string | null;
-    email: string;
+    email: string | null;
   } | null;
   businessOwner: {
     name: string | null;
-    email: string;
+    email: string | null;
   } | null;
   assignedAt: Date | null;
   assignedBy: {
@@ -104,10 +104,12 @@ export function getFrameworksAffected(
  * Returns "Not assigned" if owner is null
  */
 export function formatOwner(
-  owner: { name: string | null; email: string } | null
+  owner: { name: string | null; email: string | null } | null
 ): string {
   if (!owner) return "Not assigned";
-  return owner.name ? `${owner.name} (${owner.email})` : owner.email;
+  if (owner.name && owner.email) return `${owner.name} (${owner.email})`;
+  if (owner.name) return owner.name;
+  return owner.email ?? "Unknown";
 }
 
 /**

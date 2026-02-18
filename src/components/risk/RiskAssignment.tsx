@@ -22,7 +22,7 @@ import { UserPlus, RefreshCw, User, Briefcase, Clock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AssignRiskDialog } from "./AssignRiskDialog";
@@ -32,7 +32,6 @@ interface OwnerInfo {
   id: string;
   name: string | null;
   email: string;
-  image?: string | null;
 }
 
 interface RiskAssignmentProps {
@@ -109,7 +108,6 @@ export function RiskAssignment({
         {owner ? (
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={owner.image ?? undefined} />
               <AvatarFallback>{getInitials(owner.name)}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">

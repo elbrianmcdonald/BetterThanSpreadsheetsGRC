@@ -181,36 +181,28 @@ export const vendorRouter = createTRPCRouter({
         }
       }
 
-      // Validate IT owner belongs to organization and has appropriate role
+      // Validate IT owner belongs to organization
       if (input.itOwnerId) {
-        const validITOwner = await ctx.db.user.findFirst({
-          where: {
-            id: input.itOwnerId,
-            organizationId,
-            role: { in: [UserRole.IT_STAKEHOLDER, UserRole.SECURITY_ENGINEER, UserRole.ORG_ADMIN, UserRole.GRC_ANALYST] },
-          },
+        const validITOwner = await ctx.db.person.findFirst({
+          where: { id: input.itOwnerId, organizationId },
         });
         if (!validITOwner) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Invalid IT owner - must be in same organization with appropriate role",
+            message: "Invalid IT owner - must be in same organization",
           });
         }
       }
 
-      // Validate business owner belongs to organization and has appropriate role
+      // Validate business owner belongs to organization
       if (input.businessOwnerId) {
-        const validBusinessOwner = await ctx.db.user.findFirst({
-          where: {
-            id: input.businessOwnerId,
-            organizationId,
-            role: { in: [UserRole.BUSINESS_STAKEHOLDER, UserRole.ORG_ADMIN, UserRole.GRC_ANALYST] },
-          },
+        const validBusinessOwner = await ctx.db.person.findFirst({
+          where: { id: input.businessOwnerId, organizationId },
         });
         if (!validBusinessOwner) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Invalid business owner - must be in same organization with appropriate role",
+            message: "Invalid business owner - must be in same organization",
           });
         }
       }
@@ -268,17 +260,13 @@ export const vendorRouter = createTRPCRouter({
    *
    * Story 1.2: Vendor List View with Filtering (FR2)
    * Story 1.7: Role-Based Vendor Access (FR8, FR9, FR10)
-   * - IT_STAKEHOLDER: only vendors where itOwnerId = userId
-   * - BUSINESS_STAKEHOLDER: only vendors where businessOwnerId = userId
-   * - Others: all vendors
+   * - All roles see all vendors in their organization
    */
   list: organizationProcedure
     .use(requireRole(VENDOR_VIEW_ROLES))
     .input(listVendorSchema)
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
       const { status, riskTier, businessUnitId, search, reviewStatus, sortBy, sortOrder, page, limit } = input;
 
       // Build where clause with filters
@@ -311,14 +299,6 @@ export const vendorRouter = createTRPCRouter({
           where.nextReviewDate = { lte: ninetyDaysFromNow, gte: now };
         }
       }
-
-      // Apply role-based filtering (FR8, FR9, FR10)
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        where.itOwnerId = userId;
-      } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        where.businessOwnerId = userId;
-      }
-      // CISO, AUDITOR, GRC_ANALYST, ORG_ADMIN, SECURITY_ENGINEER: see all vendors
 
       // Build orderBy clause
       const orderBy: Prisma.VendorOrderByWithRelationInput = {
@@ -375,8 +355,6 @@ export const vendorRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
 
       const vendor = await ctx.db.vendor.findFirst({
         where: {
@@ -403,20 +381,6 @@ export const vendorRouter = createTRPCRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Vendor not found",
-        });
-      }
-
-      // Role-based access check (FR8, FR9, FR10)
-      if (userRole === UserRole.IT_STAKEHOLDER && vendor.itOwnerId !== userId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You can only view vendors assigned to you as IT owner",
-        });
-      }
-      if (userRole === UserRole.BUSINESS_STAKEHOLDER && vendor.businessOwnerId !== userId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You can only view vendors assigned to you as business owner",
         });
       }
 
@@ -463,34 +427,26 @@ export const vendorRouter = createTRPCRouter({
 
       // Validate IT owner if changing
       if (updateData.itOwnerId) {
-        const validITOwner = await ctx.db.user.findFirst({
-          where: {
-            id: updateData.itOwnerId,
-            organizationId,
-            role: { in: [UserRole.IT_STAKEHOLDER, UserRole.SECURITY_ENGINEER, UserRole.ORG_ADMIN, UserRole.GRC_ANALYST] },
-          },
+        const validITOwner = await ctx.db.person.findFirst({
+          where: { id: updateData.itOwnerId, organizationId },
         });
         if (!validITOwner) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Invalid IT owner - must be in same organization with appropriate role",
+            message: "Invalid IT owner - must be in same organization",
           });
         }
       }
 
       // Validate business owner if changing
       if (updateData.businessOwnerId) {
-        const validBusinessOwner = await ctx.db.user.findFirst({
-          where: {
-            id: updateData.businessOwnerId,
-            organizationId,
-            role: { in: [UserRole.BUSINESS_STAKEHOLDER, UserRole.ORG_ADMIN, UserRole.GRC_ANALYST] },
-          },
+        const validBusinessOwner = await ctx.db.person.findFirst({
+          where: { id: updateData.businessOwnerId, organizationId },
         });
         if (!validBusinessOwner) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Invalid business owner - must be in same organization with appropriate role",
+            message: "Invalid business owner - must be in same organization",
           });
         }
       }
@@ -765,16 +721,9 @@ export const vendorRouter = createTRPCRouter({
     .use(requireRole(VENDOR_VIEW_ROLES))
     .query(async ({ ctx }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
 
-      // Build base where clause with role-based filtering
+      // Build base where clause
       const baseWhere: Prisma.VendorWhereInput = { organizationId };
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        baseWhere.itOwnerId = userId;
-      } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        baseWhere.businessOwnerId = userId;
-      }
 
       const now = new Date();
       const thirtyDaysFromNow = new Date(now);
@@ -1081,24 +1030,17 @@ export const vendorRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
       const { type, limit } = input;
 
       const now = new Date();
       const thirtyDaysFromNow = new Date(now);
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-      // Build base where clause with role-based filtering
+      // Build base where clause
       const baseWhere: Prisma.VendorWhereInput = {
         organizationId,
         nextReviewDate: { not: null },
       };
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        baseWhere.itOwnerId = userId;
-      } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        baseWhere.businessOwnerId = userId;
-      }
 
       // Apply date filter based on type
       if (type === "overdue") {
@@ -1336,8 +1278,6 @@ export const vendorRouter = createTRPCRouter({
     }).optional())
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role;
 
       // Build where clause
       const where: Prisma.VendorWhereInput = { organizationId };
@@ -1349,13 +1289,6 @@ export const vendorRouter = createTRPCRouter({
       }
       if (input?.businessUnitId) {
         where.businessUnitId = input.businessUnitId;
-      }
-
-      // Apply role-based filtering
-      if (userRole === UserRole.IT_STAKEHOLDER) {
-        where.itOwnerId = userId;
-      } else if (userRole === UserRole.BUSINESS_STAKEHOLDER) {
-        where.businessOwnerId = userId;
       }
 
       const vendors = await ctx.db.vendor.findMany({

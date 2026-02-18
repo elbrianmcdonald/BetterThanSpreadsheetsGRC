@@ -49,6 +49,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 import { CreatableBusinessUnitPicker } from "@/components/business-unit/CreatableBusinessUnitPicker";
+import { PersonPicker } from "@/components/person/PersonPicker";
 import { SaveIndicator, type SaveStatus } from "./SaveIndicator";
 import { RiskScoreDisplay } from "./RiskScoreDisplay";
 import { RISK_CATEGORY_OPTIONS } from "@/lib/constants/risk-categories";
@@ -557,31 +558,19 @@ export function AssessmentForm({
                 )}
               />
 
-              {/* Business Owner dropdown */}
+              {/* Business Owner picker (Person) */}
               <FormField
                 control={form.control}
                 name="businessOwnerId"
                 render={({ field }) => (
                   <FormItem className="mb-4">
                     <FormLabel>Business Owner</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value ?? undefined}
-                      disabled={effectiveReadOnly}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select business owner..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {users?.users.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name ?? user.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <PersonPicker
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
                     <FormDescription>
                       Business stakeholder responsible for risk decisions
                     </FormDescription>

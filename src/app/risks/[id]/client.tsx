@@ -245,10 +245,6 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
     );
   }
 
-  // Check if user is assigned as owner
-  const isItOwner = risk.itOwnerId === userId;
-  const isBusinessOwner = risk.businessOwnerId === userId;
-
   // Get counts for tabs
   const counts = {
     controlsCount: controlLinks?.length ?? 0,
@@ -390,8 +386,6 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
         }}
         userRole={userRole}
         userId={userId}
-        isItOwner={isItOwner}
-        isBusinessOwner={isBusinessOwner}
         onEditClick={() => setEditDialogOpen(true)}
         onChangeStatusClick={() => setStatusTransitionOpen(true)}
         onDeleteClick={handleDelete}
@@ -431,13 +425,8 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
             risk={{
               id: risk.id,
               status: risk.status as RiskStatus,
-              itOwnerId: risk.itOwnerId,
-              businessOwnerId: risk.businessOwnerId,
             }}
             userRole={userRole}
-            userId={userId}
-            isItOwner={isItOwner}
-            isBusinessOwner={isBusinessOwner}
             hasRemediationOptions={(risk.RemediationOptions?.length ?? 0) > 0}
             onAssignClick={() => setAssignDialogOpen(true)}
             onChangeStatusClick={() => setStatusTransitionOpen(true)}

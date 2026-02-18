@@ -37,17 +37,9 @@ interface RiskActionsSidebarProps {
   risk: {
     id: string;
     status: RiskStatus;
-    itOwnerId?: string | null;
-    businessOwnerId?: string | null;
   };
   /** Current user's role */
   userRole?: UserRole;
-  /** Current user's ID */
-  userId?: string;
-  /** Whether user is assigned as IT owner */
-  isItOwner?: boolean;
-  /** Whether user is assigned as business owner */
-  isBusinessOwner?: boolean;
   /** Whether remediation options exist */
   hasRemediationOptions?: boolean;
   /** Callback for Assign Risk button */
@@ -82,9 +74,6 @@ const CAN_CLOSE_ROLES: UserRole[] = [
 export function RiskActionsSidebar({
   risk,
   userRole,
-  userId: _userId, // Reserved for future use
-  isItOwner = false,
-  isBusinessOwner = false,
   hasRemediationOptions = false,
   onAssignClick,
   onChangeStatusClick,
@@ -101,25 +90,22 @@ export function RiskActionsSidebar({
     CAN_CLOSE_ROLES.includes(userRole) &&
     risk.status === RiskStatus.REMEDIATED;
 
-  // IT Stakeholder can mark remediated if they are the IT owner and risk is ASSIGNED
+  // IT Stakeholder can mark remediated based on role alone; owner check happens server-side
   const canMarkRemediated =
     userRole === UserRole.IT_STAKEHOLDER &&
-    isItOwner &&
     risk.status === RiskStatus.ASSIGNED;
 
-  // Business Stakeholder can approve/reject if they are business owner
-  // and there are remediation options to review
+  // Business Stakeholder can approve/reject based on role alone; owner check happens server-side
   const canApproveReject =
     userRole === UserRole.BUSINESS_STAKEHOLDER &&
-    isBusinessOwner &&
     hasRemediationOptions;
 
   // General status change permission (for the dialog)
   const canChangeStatus =
     userRole &&
     (CAN_ASSIGN_ROLES.includes(userRole) ||
-      (userRole === UserRole.IT_STAKEHOLDER && isItOwner) ||
-      (userRole === UserRole.BUSINESS_STAKEHOLDER && isBusinessOwner));
+      userRole === UserRole.IT_STAKEHOLDER ||
+      userRole === UserRole.BUSINESS_STAKEHOLDER);
 
   // Story 16.7: Can start treatment if user can assign and risk is OPEN
   const canStartTreatment = canAssign && risk.status === RiskStatus.OPEN;

@@ -52,10 +52,6 @@ interface RiskDetailHeroProps {
   userRole?: UserRole;
   /** Current user's ID */
   userId?: string;
-  /** Whether user is assigned as IT owner */
-  isItOwner?: boolean;
-  /** Whether user is assigned as business owner */
-  isBusinessOwner?: boolean;
   /** Callback when Edit button is clicked */
   onEditClick?: () => void;
   /** Callback when Change Status button is clicked */
@@ -91,8 +87,6 @@ export function RiskDetailHero({
   risk,
   userRole,
   userId,
-  isItOwner,
-  isBusinessOwner,
   onEditClick,
   onChangeStatusClick,
   onDeleteClick,
@@ -103,10 +97,7 @@ export function RiskDetailHero({
   const canChangeStatus =
     userRole &&
     (CAN_CHANGE_STATUS_ROLES.includes(userRole) ||
-      // IT_STAKEHOLDER can change status if assigned
-      (userRole === UserRole.IT_STAKEHOLDER && isItOwner) ||
-      // BUSINESS_STAKEHOLDER can change status if assigned
-      (userRole === UserRole.BUSINESS_STAKEHOLDER && isBusinessOwner));
+      userRole === UserRole.BUSINESS_STAKEHOLDER);
   const canDelete = userRole && CAN_DELETE_ROLES.includes(userRole);
 
   return (

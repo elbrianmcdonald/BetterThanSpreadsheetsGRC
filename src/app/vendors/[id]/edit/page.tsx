@@ -107,8 +107,8 @@ export default async function EditVendorPage({
                 primaryContactName: vendor.primaryContactName || "",
                 primaryContactEmail: vendor.primaryContactEmail || "",
                 businessUnitId: vendor.businessUnit?.id || "",
-                itOwnerId: vendor.itOwner?.id || "",
-                businessOwnerId: vendor.businessOwner?.id || "",
+                itOwnerId: vendor.itOwner?.id ?? undefined,
+                businessOwnerId: vendor.businessOwner?.id ?? undefined,
                 notes: vendor.notes || "",
               }}
             />

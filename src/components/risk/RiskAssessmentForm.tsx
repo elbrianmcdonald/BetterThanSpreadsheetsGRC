@@ -29,7 +29,6 @@ import {
   AlertTriangle,
   CheckCircle,
   Shield,
-  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -61,18 +60,10 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 import { CreatableBusinessUnitPicker } from "@/components/business-unit/CreatableBusinessUnitPicker";
+import { PersonPicker } from "@/components/person/PersonPicker";
 import { RiskItemCard } from "./RiskItemCard";
 import type { MatrixScales, Threshold } from "@/lib/matrix";
 
@@ -140,12 +131,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
   const [expandedRiskIndex, setExpandedRiskIndex] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Dialog state for creating new items
-  const [showNewUserDialog, setShowNewUserDialog] = useState(false);
-  const [newUserName, setNewUserName] = useState("");
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [isCreatingUser, setIsCreatingUser] = useState(false);
-
   // ============================================================================
   // Data Fetching
   // ============================================================================
@@ -169,7 +154,7 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
       title: "",
       matrixVersionId: "",
       description: "",
-      businessOwnerId: null,
+      businessOwnerId: undefined,
       businessUnitId: null,
       performedById: null,
       overallSeverity: null,
@@ -225,46 +210,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
     if (!matrixVersion?.templateId || !matrixTemplates) return null;
     return matrixTemplates.find((t) => t.id === matrixVersion.templateId);
   }, [matrixVersion, matrixTemplates]);
-
-  // ============================================================================
-  // Create New User/Business Unit Mutations
-  // ============================================================================
-
-  const createUserMutation = api.user.createUser.useMutation({
-    onSuccess: async (newUser) => {
-      await utils.user.listUsers.invalidate();
-      form.setValue("businessOwnerId", newUser.id);
-      setShowNewUserDialog(false);
-      setNewUserName("");
-      setNewUserEmail("");
-      toast.success(`User "${newUser.name || newUser.email}" created`);
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to create user");
-    },
-    onSettled: () => {
-      setIsCreatingUser(false);
-    },
-  });
-
-  const handleCreateUser = useCallback(async () => {
-    const trimmedName = newUserName.trim();
-    const trimmedEmail = newUserEmail.trim();
-    if (!trimmedName) {
-      toast.error("Name is required");
-      return;
-    }
-    if (!trimmedEmail) {
-      toast.error("Email is required");
-      return;
-    }
-    setIsCreatingUser(true);
-    createUserMutation.mutate({
-      name: trimmedName,
-      email: trimmedEmail,
-      role: "BUSINESS_STAKEHOLDER",
-    });
-  }, [newUserEmail, newUserName, createUserMutation]);
 
   // ============================================================================
   // Handlers
@@ -478,35 +423,12 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Business Owner</FormLabel>
-                    <Select
-                      value={field.value ?? ""}
-                      onValueChange={(v) => {
-                        if (v === "__new__") {
-                          setShowNewUserDialog(true);
-                        } else {
-                          field.onChange(v || null);
-                        }
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select owner" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {users.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name ?? user.email}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__new__" className="text-primary">
-                          <div className="flex items-center gap-2">
-                            <UserPlus className="h-4 w-4" />
-                            <span>Add new owner...</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <PersonPicker
+                        value={field.value ?? null}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -690,63 +612,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
           </Button>
         </div>
       </form>
-
-      {/* ================================================================== */}
-      {/* Create New User Dialog */}
-      {/* ================================================================== */}
-      <Dialog open={showNewUserDialog} onOpenChange={setShowNewUserDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Add New Business Owner
-            </DialogTitle>
-            <DialogDescription>
-              Create a new user who can be assigned as a business owner.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="newUserName">Name *</Label>
-              <Input
-                id="newUserName"
-                placeholder="Full name"
-                value={newUserName}
-                onChange={(e) => setNewUserName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="newUserEmail">Email *</Label>
-              <Input
-                id="newUserEmail"
-                type="email"
-                placeholder="email@example.com"
-                value={newUserEmail}
-                onChange={(e) => setNewUserEmail(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowNewUserDialog(false)}
-              disabled={isCreatingUser}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleCreateUser} disabled={isCreatingUser}>
-              {isCreatingUser ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create User"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
     </Form>
   );

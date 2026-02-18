@@ -13,7 +13,7 @@
  */
 
 import { useState } from "react";
-import { Loader2, User, Users } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
@@ -26,15 +26,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { PersonPicker } from "@/components/person/PersonPicker";
 
 interface BulkAssignDialogProps {
   riskIds: string[];
@@ -47,20 +41,8 @@ export function BulkAssignDialog({
   onClose,
   onSuccess,
 }: BulkAssignDialogProps) {
-  const [itOwnerId, setItOwnerId] = useState<string>("");
-  const [businessOwnerId, setBusinessOwnerId] = useState<string>("");
-
-  // Fetch IT Stakeholders with workload
-  const { data: itStakeholders, isLoading: itLoading } = api.user.listUsersWithWorkload.useQuery({
-    role: "IT_STAKEHOLDER",
-  });
-
-  // Fetch Business Stakeholders with workload
-  const { data: businessStakeholders, isLoading: businessLoading } = api.user.listUsersWithWorkload.useQuery({
-    role: "BUSINESS_STAKEHOLDER",
-  });
-
-  const usersLoading = itLoading || businessLoading;
+  const [itOwnerId, setItOwnerId] = useState<string | null>(null);
+  const [businessOwnerId, setBusinessOwnerId] = useState<string | null>(null);
 
   // Bulk assign mutation
   const bulkAssignMutation = api.risk.bulkAssignRisks.useMutation({
@@ -75,23 +57,20 @@ export function BulkAssignDialog({
   });
 
   const handleBulkAssign = () => {
-    const effectiveItOwnerId = itOwnerId && itOwnerId !== "__none__" ? itOwnerId : undefined;
-    const effectiveBusinessOwnerId = businessOwnerId && businessOwnerId !== "__none__" ? businessOwnerId : undefined;
-
-    if (!effectiveItOwnerId && !effectiveBusinessOwnerId) {
+    if (!itOwnerId && !businessOwnerId) {
       toast.error("Please select at least one owner");
       return;
     }
 
     bulkAssignMutation.mutate({
       riskIds,
-      itOwnerId: effectiveItOwnerId,
-      businessOwnerId: effectiveBusinessOwnerId,
+      itOwnerId: itOwnerId ?? undefined,
+      businessOwnerId: businessOwnerId ?? undefined,
     });
   };
 
-  const isLoading = usersLoading || bulkAssignMutation.isPending;
-  const hasValidSelection = (itOwnerId && itOwnerId !== "__none__") || (businessOwnerId && businessOwnerId !== "__none__");
+  const isLoading = bulkAssignMutation.isPending;
+  const hasValidSelection = Boolean(itOwnerId ?? businessOwnerId);
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -117,74 +96,22 @@ export function BulkAssignDialog({
             </div>
           )}
 
-          {/* IT Owner Dropdown */}
+          {/* IT Owner Picker */}
           <div className="space-y-2">
-            <Label htmlFor="bulk-it-owner">IT Owner</Label>
-            <Select
+            <Label>IT Owner</Label>
+            <PersonPicker
               value={itOwnerId}
-              onValueChange={setItOwnerId}
-              disabled={isLoading}
-            >
-              <SelectTrigger id="bulk-it-owner">
-                <SelectValue placeholder="Select IT owner..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">
-                  <span className="text-gray-400">None</span>
-                </SelectItem>
-                {itStakeholders?.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span>{user.name ?? user.email}</span>
-                      <span className="text-gray-400 text-xs">
-                        ({user.assignedRiskCount} risks)
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-                {(!itStakeholders || itStakeholders.length === 0) && (
-                  <div className="py-2 px-2 text-sm text-gray-500">
-                    No IT Stakeholders available
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
+              onChange={setItOwnerId}
+            />
           </div>
 
-          {/* Business Owner Dropdown */}
+          {/* Business Owner Picker */}
           <div className="space-y-2">
-            <Label htmlFor="bulk-business-owner">Business Owner</Label>
-            <Select
+            <Label>Business Owner</Label>
+            <PersonPicker
               value={businessOwnerId}
-              onValueChange={setBusinessOwnerId}
-              disabled={isLoading}
-            >
-              <SelectTrigger id="bulk-business-owner">
-                <SelectValue placeholder="Select Business owner..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">
-                  <span className="text-gray-400">None</span>
-                </SelectItem>
-                {businessStakeholders?.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-gray-400" />
-                      <span>{user.name ?? user.email}</span>
-                      <span className="text-gray-400 text-xs">
-                        ({user.assignedRiskCount} risks)
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-                {(!businessStakeholders || businessStakeholders.length === 0) && (
-                  <div className="py-2 px-2 text-sm text-gray-500">
-                    No Business Stakeholders available
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
+              onChange={setBusinessOwnerId}
+            />
           </div>
 
           {/* Summary */}
@@ -193,10 +120,10 @@ export function BulkAssignDialog({
             <ul className="text-gray-600 space-y-1">
               <li>• {riskIds.length} risk{riskIds.length !== 1 ? "s" : ""} will be assigned</li>
               {itOwnerId && (
-                <li>• IT Owner: {itStakeholders?.find((u) => u.id === itOwnerId)?.name ?? "Selected"}</li>
+                <li>• IT Owner: Selected</li>
               )}
               {businessOwnerId && (
-                <li>• Business Owner: {businessStakeholders?.find((u) => u.id === businessOwnerId)?.name ?? "Selected"}</li>
+                <li>• Business Owner: Selected</li>
               )}
               <li>• Status will change from OPEN to ASSIGNED</li>
             </ul>
