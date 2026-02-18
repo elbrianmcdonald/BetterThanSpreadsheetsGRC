@@ -4,41 +4,58 @@
 
 - Docker Engine 20.10+ and Docker Compose v2
 - At least 2 GB RAM (4 GB recommended with ClamAV)
-- Ports 80 (and 443 for HTTPS) available
+- Port 80 available (and 443 for HTTPS)
 
 ---
 
-## Quick Start (LAN / Internal)
+## Quick Start
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-org/BetterThanSpreadsheetsGRC.git
-   cd BetterThanSpreadsheetsGRC/betterthanspreadsheetsgrc
-   ```
+```bash
+git clone https://github.com/your-org/BetterThanSpreadsheetsGRC.git
+cd BetterThanSpreadsheetsGRC/betterthanspreadsheetsgrc
+./start.sh
+```
 
-2. Create your environment file:
+That's it. The script automatically:
+- Generates secure random passwords and creates `.env`
+- Builds and starts all services
+- Runs database migrations and seeds frameworks + demo data
+- Prints the login credentials when ready
+
+Open **http://localhost** and sign in.
+
+> **Windows:** Run from Git Bash or WSL.
+>
+> **Subsequent starts:** Just use `docker compose up -d`
+
+---
+
+## Manual Setup
+
+If you prefer to configure things yourself instead of using the start script:
+
+1. Create your environment file:
    ```bash
    cp .env.example .env
    ```
 
-3. Set the required values in `.env`:
+2. Set the required values in `.env`:
    ```env
    POSTGRES_PASSWORD=your-strong-password-here
    AUTH_SECRET=your-secret-here          # Generate with: openssl rand -base64 32
    ```
 
-4. Start the application:
+3. Start the application:
    ```bash
    docker compose up -d --build
    ```
 
-5. (First run) Seed the database with frameworks and demo data:
+4. (First run) Seed the database:
    ```bash
    docker exec betterthanspreadsheetsGRC-app prisma db seed
    ```
-   Or set `SEED_ON_STARTUP=true` in `.env` before the first start to seed automatically.
 
-6. Access the application at `http://<server-ip>`
+5. Open `http://<server-ip>`
 
 ---
 
@@ -48,12 +65,7 @@ Uses [Caddy](https://caddyserver.com/) for automatic HTTPS via Let's Encrypt.
 
 1. Point your DNS A record to the server's IP address.
 
-2. Create your environment file:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Configure `.env`:
+2. Configure `.env`:
    ```env
    POSTGRES_PASSWORD=your-strong-password-here
    AUTH_SECRET=your-secret-here
@@ -62,14 +74,14 @@ Uses [Caddy](https://caddyserver.com/) for automatic HTTPS via Let's Encrypt.
    APP_PORT=                              # Empty — Caddy handles external traffic
    ```
 
-4. Ensure ports 80 and 443 are open on your firewall.
+3. Ensure ports 80 and 443 are open on your firewall.
 
-5. Start with the production profile:
+4. Start with the production profile:
    ```bash
    docker compose --profile production up -d --build
    ```
 
-6. Access the application at `https://grc.example.com`
+5. Access the application at `https://grc.example.com`
 
 Caddy automatically provisions and renews TLS certificates from Let's Encrypt.
 
@@ -163,8 +175,6 @@ docker exec -i betterthanspreadsheetsGRC-postgres \
 
 ## Health Check
 
-The application exposes a health endpoint:
-
 ```bash
 curl http://localhost/api/health
 # {"status":"healthy","timestamp":"2025-01-01T00:00:00.000Z"}
@@ -192,5 +202,5 @@ docker compose restart
 **Full reset (destroys data):**
 ```bash
 docker compose down -v
-docker compose up -d --build
+./start.sh
 ```
