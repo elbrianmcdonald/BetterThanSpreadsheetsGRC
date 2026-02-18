@@ -6,12 +6,12 @@
  * Displays:
  * - Summary statistics (frameworks, controls, assessments)
  * - Frameworks section with cards to view or start assessments
- * - Active assessments section showing progress and compliance scores
- * - New Assessment button with framework picker → StartAssessmentDialog flow
+ * - Assessments table with filters for framework, business unit, assessor, and status
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { format } from "date-fns";
 import { AppLayout } from "@/components/layout";
 import { api } from "@/trpc/react";
 import {
@@ -22,30 +22,56 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FrameworkCard } from "@/components/coverage/FrameworkCard";
-import { AssessmentCard } from "@/components/compliance/AssessmentCard";
-import { StartAssessmentDialog } from "@/components/compliance/StartAssessmentDialog";
 import {
   RefreshCw,
   Loader2,
   Shield,
-  CheckCircle2,
   FileText,
   ClipboardCheck,
   AlertTriangle,
   TrendingUp,
-  Plus,
+  X,
 } from "lucide-react";
+
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: "Draft",
+  IN_PROGRESS: "In Progress",
+  IN_REVIEW: "In Review",
+  COMPLETED: "Completed",
+  ARCHIVED: "Archived",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  DRAFT: "bg-gray-100 text-gray-700",
+  IN_PROGRESS: "bg-blue-100 text-blue-700",
+  IN_REVIEW: "bg-amber-100 text-amber-700",
+  COMPLETED: "bg-green-100 text-green-700",
+  ARCHIVED: "bg-slate-100 text-slate-600",
+};
 
 export function CoverageDashboardClient() {
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Filter state
+  const [filterFramework, setFilterFramework] = useState<string>("__all__");
+  const [filterBU, setFilterBU] = useState<string>("__all__");
+  const [filterAssessor, setFilterAssessor] = useState<string>("__all__");
+  const [filterStatus, setFilterStatus] = useState<string>("__all__");
 
   const utils = api.useUtils();
 
@@ -55,7 +81,7 @@ export function CoverageDashboardClient() {
     isLoading: isLoadingCoverage,
     refetch: refetchCoverage,
   } = api.coverage.calculateAllFrameworkCoverage.useQuery(undefined, {
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch coverage summary
@@ -70,12 +96,9 @@ export function CoverageDashboardClient() {
     isLoading: isLoadingAssessments,
     refetch: refetchAssessments,
   } = api.complianceAssessment.list.useQuery(
-    { pageSize: 50 },
+    { pageSize: 100 },
     { staleTime: 2 * 60 * 1000 }
   );
-
-  // Fetch frameworks for new assessment picker
-  const { data: frameworksData } = api.framework.list.useQuery({});
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -96,8 +119,65 @@ export function CoverageDashboardClient() {
 
   const isLoading = isLoadingCoverage || isLoadingSummary || isLoadingAssessments;
 
-  // Count assessments by status
   const assessments = assessmentsData?.assessments ?? [];
+
+  // Derive unique filter options from the data
+  const filterOptions = useMemo(() => {
+    const frameworks = new Map<string, string>();
+    const businessUnits = new Map<string, string>();
+    const assessors = new Map<string, string>();
+    const statuses = new Set<string>();
+
+    assessments.forEach((a) => {
+      frameworks.set(a.framework.id, `${a.framework.code} - ${a.framework.name}`);
+      if (a.businessUnit) {
+        businessUnits.set(a.businessUnit.id, a.businessUnit.name);
+      }
+      if (a.assessor) {
+        assessors.set(a.assessor.id, a.assessor.name ?? a.assessor.email ?? a.assessor.id);
+      }
+      statuses.add(a.status);
+    });
+
+    return {
+      frameworks: Array.from(frameworks.entries()).sort((a, b) => a[1].localeCompare(b[1])),
+      businessUnits: Array.from(businessUnits.entries()).sort((a, b) => a[1].localeCompare(b[1])),
+      assessors: Array.from(assessors.entries()).sort((a, b) => a[1].localeCompare(b[1])),
+      statuses: Array.from(statuses).sort(),
+    };
+  }, [assessments]);
+
+  // Apply client-side filters
+  const filteredAssessments = useMemo(() => {
+    return assessments.filter((a) => {
+      if (filterFramework !== "__all__" && a.framework.id !== filterFramework) return false;
+      if (filterBU !== "__all__") {
+        if (filterBU === "__none__" && a.businessUnit) return false;
+        if (filterBU !== "__none__" && a.businessUnit?.id !== filterBU) return false;
+      }
+      if (filterAssessor !== "__all__") {
+        if (filterAssessor === "__none__" && a.assessor) return false;
+        if (filterAssessor !== "__none__" && a.assessor?.id !== filterAssessor) return false;
+      }
+      if (filterStatus !== "__all__" && a.status !== filterStatus) return false;
+      return true;
+    });
+  }, [assessments, filterFramework, filterBU, filterAssessor, filterStatus]);
+
+  const hasActiveFilters =
+    filterFramework !== "__all__" ||
+    filterBU !== "__all__" ||
+    filterAssessor !== "__all__" ||
+    filterStatus !== "__all__";
+
+  const clearFilters = () => {
+    setFilterFramework("__all__");
+    setFilterBU("__all__");
+    setFilterAssessor("__all__");
+    setFilterStatus("__all__");
+  };
+
+  // Stats from all assessments (unfiltered)
   const activeAssessments = assessments.filter(
     (a) => a.status === "IN_PROGRESS" || a.status === "IN_REVIEW"
   );
@@ -140,29 +220,23 @@ export function CoverageDashboardClient() {
               Manage frameworks and track compliance assessments
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <NewAssessmentButton
-              frameworks={frameworksData}
-              onCreated={handleAssessmentCreated}
-            />
-            <Button
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              {isRefreshing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Refreshing...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Summary Statistics */}
@@ -213,7 +287,7 @@ export function CoverageDashboardClient() {
                 return (
                   <>
                     <div className="text-2xl font-bold">
-                      {avgScore !== null ? `${avgScore.toFixed(0)}%` : "—"}
+                      {avgScore !== null ? `${avgScore.toFixed(0)}%` : "\u2014"}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Across {scoredAssessments.length} scored assessments
@@ -258,158 +332,189 @@ export function CoverageDashboardClient() {
             <TabsTrigger value="assessments" className="gap-2">
               <FileText className="h-4 w-4" />
               Assessments
-              {activeAssessments.length > 0 && (
+              {assessments.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
-                  {activeAssessments.length}
+                  {assessments.length}
                 </Badge>
               )}
             </TabsTrigger>
           </TabsList>
 
           {/* Assessments Tab */}
-          <TabsContent value="assessments" className="space-y-6">
-            {/* Active Assessments */}
-            {activeAssessments.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Active Assessments
-                  <Badge variant="secondary">{activeAssessments.length}</Badge>
-                </h2>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {activeAssessments.map((assessment) => (
-                    <AssessmentCard
-                      key={assessment.id}
-                      id={assessment.id}
-                      identifier={assessment.identifier}
-                      name={assessment.name}
-                      status={assessment.status}
-                      frameworkName={assessment.framework.name}
-                      frameworkCode={assessment.framework.code}
-                      businessUnitName={assessment.businessUnit?.name}
-                      businessUnitCode={assessment.businessUnit?.code}
-                      totalControls={assessment.totalControls}
-                      notAssessedCount={assessment.notAssessedCount}
-                      compliantCount={assessment.compliantCount}
-                      nonCompliantCount={assessment.nonCompliantCount}
-                      partialCount={assessment.partialCount}
-                      complianceScore={
-                        assessment.complianceScore
-                          ? Number(assessment.complianceScore)
-                          : null
-                      }
-                      ownerName={assessment.owner?.name}
-                      createdAt={assessment.createdAt}
-                      dueDate={assessment.dueDate}
-                    />
+          <TabsContent value="assessments" className="space-y-4">
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Select value={filterFramework} onValueChange={setFilterFramework}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Framework" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Frameworks</SelectItem>
+                  {filterOptions.frameworks.map(([id, label]) => (
+                    <SelectItem key={id} value={id}>{label}</SelectItem>
                   ))}
-                </div>
-              </div>
-            )}
+                </SelectContent>
+              </Select>
 
-            {/* Draft Assessments */}
-            {draftAssessments.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  Draft Assessments
-                  <Badge variant="outline">{draftAssessments.length}</Badge>
-                </h2>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {draftAssessments.map((assessment) => (
-                    <AssessmentCard
-                      key={assessment.id}
-                      id={assessment.id}
-                      identifier={assessment.identifier}
-                      name={assessment.name}
-                      status={assessment.status}
-                      frameworkName={assessment.framework.name}
-                      frameworkCode={assessment.framework.code}
-                      businessUnitName={assessment.businessUnit?.name}
-                      businessUnitCode={assessment.businessUnit?.code}
-                      totalControls={assessment.totalControls}
-                      notAssessedCount={assessment.notAssessedCount}
-                      compliantCount={assessment.compliantCount}
-                      nonCompliantCount={assessment.nonCompliantCount}
-                      partialCount={assessment.partialCount}
-                      complianceScore={
-                        assessment.complianceScore
-                          ? Number(assessment.complianceScore)
-                          : null
-                      }
-                      ownerName={assessment.owner?.name}
-                      createdAt={assessment.createdAt}
-                      dueDate={assessment.dueDate}
-                    />
+              <Select value={filterBU} onValueChange={setFilterBU}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Business Unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Business Units</SelectItem>
+                  <SelectItem value="__none__">Unassigned</SelectItem>
+                  {filterOptions.businessUnits.map(([id, label]) => (
+                    <SelectItem key={id} value={id}>{label}</SelectItem>
                   ))}
-                </div>
-              </div>
-            )}
+                </SelectContent>
+              </Select>
 
-            {/* Completed Assessments */}
-            {completedAssessments.length > 0 && (
-              <div>
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  Completed Assessments
-                  <Badge variant="outline" className="bg-green-50 text-green-700">
-                    {completedAssessments.length}
-                  </Badge>
-                </h2>
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {completedAssessments.map((assessment) => (
-                    <AssessmentCard
-                      key={assessment.id}
-                      id={assessment.id}
-                      identifier={assessment.identifier}
-                      name={assessment.name}
-                      status={assessment.status}
-                      frameworkName={assessment.framework.name}
-                      frameworkCode={assessment.framework.code}
-                      businessUnitName={assessment.businessUnit?.name}
-                      businessUnitCode={assessment.businessUnit?.code}
-                      totalControls={assessment.totalControls}
-                      notAssessedCount={assessment.notAssessedCount}
-                      compliantCount={assessment.compliantCount}
-                      nonCompliantCount={assessment.nonCompliantCount}
-                      partialCount={assessment.partialCount}
-                      complianceScore={
-                        assessment.complianceScore
-                          ? Number(assessment.complianceScore)
-                          : null
-                      }
-                      ownerName={assessment.owner?.name}
-                      createdAt={assessment.createdAt}
-                      dueDate={assessment.dueDate}
-                    />
+              <Select value={filterAssessor} onValueChange={setFilterAssessor}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Assessor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Assessors</SelectItem>
+                  <SelectItem value="__none__">Unassigned</SelectItem>
+                  {filterOptions.assessors.map(([id, label]) => (
+                    <SelectItem key={id} value={id}>{label}</SelectItem>
                   ))}
-                </div>
-              </div>
-            )}
+                </SelectContent>
+              </Select>
 
-            {/* Empty State */}
-            {assessments.length === 0 && (
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All Statuses</SelectItem>
+                  {filterOptions.statuses.map((s) => (
+                    <SelectItem key={s} value={s}>{STATUS_LABELS[s] ?? s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1">
+                  <X className="h-3 w-3" />
+                  Clear
+                </Button>
+              )}
+
+              <span className="text-sm text-muted-foreground ml-auto">
+                {filteredAssessments.length} of {assessments.length} assessments
+              </span>
+            </div>
+
+            {/* Table */}
+            {filteredAssessments.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <ClipboardCheck className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-4 text-lg font-medium">No Assessments Yet</h3>
+                  <h3 className="mt-4 text-lg font-medium">
+                    {assessments.length === 0 ? "No Assessments Yet" : "No Matching Assessments"}
+                  </h3>
                   <p className="mt-2 text-gray-500">
-                    Start a compliance assessment from one of your active frameworks.
+                    {assessments.length === 0
+                      ? "Start a compliance assessment from one of your active frameworks."
+                      : "Try adjusting your filters."}
                   </p>
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => {
-                      const frameworksTab = document.querySelector('[value="frameworks"]');
-                      if (frameworksTab instanceof HTMLElement) {
-                        frameworksTab.click();
-                      }
-                    }}
-                  >
-                    <Shield className="mr-2 h-4 w-4" />
-                    View Frameworks
-                  </Button>
+                  {assessments.length === 0 && (
+                    <Button
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => {
+                        const frameworksTab = document.querySelector('[value="frameworks"]');
+                        if (frameworksTab instanceof HTMLElement) frameworksTab.click();
+                      }}
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+                      View Frameworks
+                    </Button>
+                  )}
+                  {hasActiveFilters && assessments.length > 0 && (
+                    <Button variant="outline" className="mt-4" onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Assessment</TableHead>
+                      <TableHead>Framework</TableHead>
+                      <TableHead>Business Unit</TableHead>
+                      <TableHead>Assessor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Compliance</TableHead>
+                      <TableHead className="text-right">Progress</TableHead>
+                      <TableHead>Due Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAssessments.map((a) => {
+                      const assessed = a.totalControls - a.notAssessedCount;
+                      const progressPct = a.totalControls > 0
+                        ? Math.round((assessed / a.totalControls) * 100)
+                        : 0;
+
+                      return (
+                        <TableRow key={a.id}>
+                          <TableCell>
+                            <Link
+                              href={`/compliance/assessments/${a.id}`}
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {a.name}
+                            </Link>
+                            <div className="text-xs text-muted-foreground">{a.identifier}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{a.framework.code}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {a.businessUnit?.name ?? <span className="text-muted-foreground">&mdash;</span>}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {a.assessor?.name ?? a.assessor?.email ?? <span className="text-muted-foreground">&mdash;</span>}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={STATUS_COLORS[a.status] ?? ""} variant="secondary">
+                              {STATUS_LABELS[a.status] ?? a.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {a.complianceScore !== null
+                              ? `${Number(a.complianceScore).toFixed(0)}%`
+                              : "\u2014"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <div className="w-16 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className="bg-blue-500 h-2 rounded-full"
+                                  style={{ width: `${progressPct}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground w-8 text-right">
+                                {progressPct}%
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {a.dueDate
+                              ? format(new Date(a.dueDate), "MMM d, yyyy")
+                              : <span className="text-muted-foreground">&mdash;</span>}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </TabsContent>
 
@@ -456,96 +561,5 @@ export function CoverageDashboardClient() {
         </Tabs>
       </div>
     </AppLayout>
-  );
-}
-
-/**
- * New Assessment Button with framework picker dialog
- *
- * Lets user select a framework, then opens StartAssessmentDialog to create the assessment.
- */
-function NewAssessmentButton({
-  frameworks,
-  onCreated,
-}: {
-  frameworks?: Array<{ id: string; name: string; code: string }>;
-  onCreated?: () => void;
-}) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [selectedFramework, setSelectedFramework] = useState<{
-    id: string;
-    name: string;
-    code: string;
-  } | null>(null);
-
-  // If a framework is selected, render the StartAssessmentDialog
-  if (selectedFramework) {
-    return (
-      <StartAssessmentDialog
-        frameworkId={selectedFramework.id}
-        frameworkName={selectedFramework.name}
-        frameworkCode={selectedFramework.code}
-        defaultOpen
-        trigger={
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Assessment
-          </Button>
-        }
-        onSuccess={() => {
-          setSelectedFramework(null);
-          onCreated?.();
-        }}
-        onCancel={() => setSelectedFramework(null)}
-      />
-    );
-  }
-
-  return (
-    <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Assessment
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Select Framework</DialogTitle>
-          <DialogDescription>
-            Choose a framework to assess. You&apos;ll configure assessment details in the next step.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2 py-4">
-          {!frameworks || frameworks.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No frameworks available. Activate a framework first in{" "}
-              <Link href="/admin/frameworks" className="underline">
-                Administration
-              </Link>
-              .
-            </p>
-          ) : (
-            frameworks.map((fw) => (
-              <Button
-                key={fw.id}
-                variant="outline"
-                className="w-full justify-start gap-3"
-                onClick={() => {
-                  setPickerOpen(false);
-                  setSelectedFramework(fw);
-                }}
-              >
-                <Shield className="h-4 w-4 text-primary" />
-                <div className="text-left">
-                  <div className="font-medium">{fw.code}</div>
-                  <div className="text-xs text-muted-foreground">{fw.name}</div>
-                </div>
-              </Button>
-            ))
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
