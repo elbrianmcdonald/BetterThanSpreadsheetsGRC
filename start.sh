@@ -11,7 +11,7 @@ set -euo pipefail
 
 APP_CONTAINER="betterthanspreadsheetsGRC-app"
 HEALTH_URL="http://localhost/api/health"
-TIMEOUT=180  # seconds
+TIMEOUT=300  # seconds (seeding frameworks takes time on first run)
 
 # ------------------------------------------------------------------
 # Already running?
@@ -68,6 +68,16 @@ if [ -z "$_auth_sec" ]; then
     echo "  Generated random AUTH_SECRET."
 else
     echo "  AUTH_SECRET already set."
+fi
+
+# ------------------------------------------------------------------
+# Clean up stale volumes on first run
+# ------------------------------------------------------------------
+# If this is first run, remove any leftover postgres volume from a
+# previous failed install (the volume would have a different password
+# baked in, causing P1000 auth errors).
+if [ "$FIRST_RUN" = true ]; then
+    docker compose down -v 2>/dev/null || true
 fi
 
 # ------------------------------------------------------------------
