@@ -63,9 +63,9 @@ COPY --from=builder /app/public ./public
 # Copy Prisma schema (needed for runtime db push)
 COPY --from=builder /app/prisma ./prisma
 
-# Copy entrypoint
+# Copy entrypoint (sed strips Windows \r line endings for cross-platform safety)
 COPY docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh
+RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
 
 # Create uploads directory with proper permissions
 RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads

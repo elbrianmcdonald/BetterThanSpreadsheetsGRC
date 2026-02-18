@@ -11,8 +11,8 @@
 ## Quick Start
 
 ```bash
-git clone https://github.com/your-org/BetterThanSpreadsheetsGRC.git
-cd BetterThanSpreadsheetsGRC/betterthanspreadsheetsgrc
+git clone https://github.com/elbrianmcdonald/BetterThanSpreadsheetsGRC.git
+cd BetterThanSpreadsheetsGRC
 ./start.sh
 ```
 
