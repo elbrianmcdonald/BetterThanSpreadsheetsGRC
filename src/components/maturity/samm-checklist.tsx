@@ -18,6 +18,7 @@ import {
   Info,
   Loader2,
   HelpCircle,
+  User,
 } from "lucide-react";
 
 import { api } from "@/trpc/react";
@@ -47,6 +48,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 
 // =============================================================================
@@ -137,6 +139,8 @@ function PracticeSection({
   const [expandedStream, setExpandedStream] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesValue, setNotesValue] = useState("");
+  const [editingInterviewee, setEditingInterviewee] = useState<string | null>(null);
+  const [intervieweeValue, setIntervieweeValue] = useState("");
   const utils = api.useUtils();
 
   const { data, isLoading } = api.maturity.getSammQuestionsForPractice.useQuery(
@@ -158,8 +162,8 @@ function PracticeSection({
     },
   });
 
-  const handleAnswer = (questionId: string, answerIndex: number, notes?: string | null) => {
-    saveMutation.mutate({ assessmentId, questionId, answerIndex, notes });
+  const handleAnswer = (questionId: string, answerIndex: number, notes?: string | null, interviewee?: string | null) => {
+    saveMutation.mutate({ assessmentId, questionId, answerIndex, notes, interviewee });
   };
 
   return (
@@ -279,7 +283,7 @@ function PracticeSection({
                           }
                           onValueChange={(val) => {
                             const idx = parseInt(val, 10);
-                            handleAnswer(question.id, idx, question.notes);
+                            handleAnswer(question.id, idx, question.notes, question.interviewee);
                           }}
                         >
                           <SelectTrigger className="h-8 text-xs">
@@ -308,42 +312,93 @@ function PracticeSection({
                         )}
                       </div>
 
-                      {/* Notes toggle */}
-                      <div className="ml-8">
-                        {editingNotes === question.id ? (
-                          <div className="space-y-1">
-                            <Textarea
-                              className="text-xs min-h-[60px]"
-                              placeholder="Interview notes..."
-                              value={notesValue}
-                              onChange={(e) => setNotesValue(e.target.value)}
-                              onBlur={() => {
-                                if (question.answerIndex !== null) {
-                                  handleAnswer(
-                                    question.id,
-                                    question.answerIndex,
-                                    notesValue || null
-                                  );
-                                }
-                                setEditingNotes(null);
+                      {/* Interviewee + Notes row */}
+                      <div className="ml-8 flex items-start gap-4">
+                        {/* Interviewee */}
+                        <div className="shrink-0">
+                          {editingInterviewee === question.id ? (
+                            <div className="flex items-center gap-1.5">
+                              <User className="h-3.5 w-3.5 text-muted-foreground" />
+                              <Input
+                                className="h-7 text-xs w-[200px]"
+                                placeholder="Who was interviewed?"
+                                value={intervieweeValue}
+                                onChange={(e) => setIntervieweeValue(e.target.value)}
+                                onBlur={() => {
+                                  if (question.answerIndex !== null) {
+                                    handleAnswer(
+                                      question.id,
+                                      question.answerIndex,
+                                      question.notes,
+                                      intervieweeValue || null
+                                    );
+                                  }
+                                  setEditingInterviewee(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    (e.target as HTMLInputElement).blur();
+                                  }
+                                }}
+                                autoFocus
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => {
+                                setEditingInterviewee(question.id);
+                                setIntervieweeValue(question.interviewee ?? "");
                               }}
-                            />
-                          </div>
-                        ) : (
-                          <button
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => {
-                              setEditingNotes(question.id);
-                              setNotesValue(question.notes ?? "");
-                            }}
-                          >
-                            {question.notes ? (
-                              <span className="italic">Notes: {question.notes.slice(0, 80)}...</span>
-                            ) : (
-                              "+ Add notes"
-                            )}
-                          </button>
-                        )}
+                            >
+                              <User className="h-3.5 w-3.5" />
+                              {question.interviewee ? (
+                                <span>{question.interviewee}</span>
+                              ) : (
+                                <span>+ Interviewee</span>
+                              )}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Notes */}
+                        <div className="flex-1">
+                          {editingNotes === question.id ? (
+                            <div className="space-y-1">
+                              <Textarea
+                                className="text-xs min-h-[60px]"
+                                placeholder="Interview notes..."
+                                value={notesValue}
+                                onChange={(e) => setNotesValue(e.target.value)}
+                                onBlur={() => {
+                                  if (question.answerIndex !== null) {
+                                    handleAnswer(
+                                      question.id,
+                                      question.answerIndex,
+                                      notesValue || null,
+                                      question.interviewee
+                                    );
+                                  }
+                                  setEditingNotes(null);
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => {
+                                setEditingNotes(question.id);
+                                setNotesValue(question.notes ?? "");
+                              }}
+                            >
+                              {question.notes ? (
+                                <span className="italic">Notes: {question.notes.slice(0, 80)}...</span>
+                              ) : (
+                                "+ Add notes"
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

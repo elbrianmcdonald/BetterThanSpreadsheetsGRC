@@ -3175,6 +3175,7 @@ model MaturityQuestionResponse {
   isPerformed     Boolean?          // For C2M2 practices: true = performed, false = not performed
   evidenceIds     String[]          @default([])
   notes           String?           @db.Text
+  interviewee     String?           @db.Text  // Name/role of person interviewed
 
   answeredBy      String
   answeredAt      DateTime          @default(now())

@@ -2154,6 +2154,7 @@ export const maturityRouter = createTRPCRouter({
               answerIndex: resp?.scaleValue ?? null,
               answerWeight: resp?.scaleValue != null ? sammAnswerWeight(resp.scaleValue) : null,
               notes: resp?.notes ?? null,
+              interviewee: resp?.interviewee ?? null,
             };
           });
 
@@ -2207,6 +2208,7 @@ export const maturityRouter = createTRPCRouter({
         questionId: z.string(),
         answerIndex: z.number().int().min(0).max(3),
         notes: z.string().max(5000).optional().nullable(),
+        interviewee: z.string().max(500).optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -2251,6 +2253,7 @@ export const maturityRouter = createTRPCRouter({
           scaleValue: input.answerIndex,
           answer: answerLabel,
           notes: input.notes,
+          interviewee: input.interviewee,
           answeredBy: session.user.id,
           answeredAt: new Date(),
         },
@@ -2260,6 +2263,7 @@ export const maturityRouter = createTRPCRouter({
           scaleValue: input.answerIndex,
           answer: answerLabel,
           notes: input.notes,
+          interviewee: input.interviewee,
           answeredBy: session.user.id,
         },
       });

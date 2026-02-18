@@ -1727,7 +1727,9 @@ export function MaturityAssessmentDetailClient({
 
   // Filter domains based on assessment depth
   // C2M2 always uses FUNCTION-level domains (practices are stored as MaturityQuestion)
-  const domainLevel = assessment.framework.type === "C2M2" ? "FUNCTION" : assessment.assessmentDepth;
+  const domainLevel = (assessment.framework.type === "C2M2" || assessment.framework.type === "OWASP_SAMM")
+    ? "FUNCTION"
+    : assessment.assessmentDepth;
   const domains = framework.domains.filter(
     (d) => d.level === domainLevel
   );
