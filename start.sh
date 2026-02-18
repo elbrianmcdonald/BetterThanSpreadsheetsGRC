@@ -9,19 +9,43 @@
 # ============================================================================
 set -euo pipefail
 
+# Prevent MINGW/Git Bash from mangling paths passed to commands
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL="*"
+
 APP_CONTAINER="betterthanspreadsheetsGRC-app"
 HEALTH_URL="http://localhost/api/health"
 TIMEOUT=300  # seconds (seeding frameworks takes time on first run)
 
 # ------------------------------------------------------------------
-# Already running?
+# Prerequisites
 # ------------------------------------------------------------------
-if docker compose ps --status running 2>/dev/null | grep -q "$APP_CONTAINER"; then
-    echo "BetterThanSpreadsheetsGRC is already running."
-    echo "  Open:    http://localhost"
-    echo "  Stop:    docker compose down"
-    echo "  Rebuild: docker compose up -d --build"
-    exit 0
+missing=()
+command -v docker   >/dev/null 2>&1 || missing+=("docker")
+command -v openssl  >/dev/null 2>&1 || missing+=("openssl")
+command -v curl     >/dev/null 2>&1 || missing+=("curl")
+
+if [ ${#missing[@]} -gt 0 ]; then
+    echo "ERROR: Missing required tools: ${missing[*]}"
+    echo ""
+    echo "Please install them and try again."
+    echo "  Docker:  https://docs.docker.com/get-docker/"
+    echo "  openssl/curl are included with Git Bash on Windows."
+    exit 1
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+    echo "ERROR: 'docker compose' (v2) is required but not found."
+    echo ""
+    echo "If you have docker-compose (v1), please upgrade Docker Desktop."
+    exit 1
+fi
+
+if ! docker info >/dev/null 2>&1; then
+    echo "ERROR: Docker is not running!"
+    echo ""
+    echo "Please start Docker Desktop and try again."
+    exit 1
 fi
 
 # ------------------------------------------------------------------
@@ -37,26 +61,38 @@ else
 fi
 
 # ------------------------------------------------------------------
-# Helper: cross-platform sed -i
+# Helper: read a value from .env (handles comments, quotes, blanks)
 # ------------------------------------------------------------------
-sedi() {
-    if sed --version >/dev/null 2>&1; then
-        sed -i "$@"
-    else
-        sed -i '' "$@"
-    fi
+env_val() {
+    local key="$1"
+    local val=""
+    val=$(grep "^${key}=" .env 2>/dev/null | head -1 | cut -d= -f2-) || true
+    # Strip inline comments, surrounding whitespace, and quotes
+    val=$(echo "$val" | sed 's/[[:space:]]*#.*//' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed "s/^['\"]//;s/['\"]$//")
+    echo "$val"
+}
+
+# ------------------------------------------------------------------
+# Helper: set a value in .env (safe replacement via temp file)
+# ------------------------------------------------------------------
+env_set() {
+    local key="$1"
+    local val="$2"
+    local tmpfile=".env.tmp.$$"
+    # Replace the line matching ^key=... with key=val
+    awk -v k="$key" -v v="$val" 'BEGIN{FS=OFS=""} /^#/ {print; next} index($0,k"=")==1 {print k"="v; next} {print}' .env > "$tmpfile"
+    mv "$tmpfile" .env
 }
 
 # ------------------------------------------------------------------
 # Auto-generate any required secrets that are still blank
 # ------------------------------------------------------------------
-# Source .env to read current values (strip comments/quotes)
-_pg_pass=$(grep '^POSTGRES_PASSWORD=' .env | cut -d= -f2- | sed 's/#.*//' | xargs)
-_auth_sec=$(grep '^AUTH_SECRET=' .env | cut -d= -f2- | sed 's/#.*//' | xargs)
+_pg_pass=$(env_val POSTGRES_PASSWORD)
+_auth_sec=$(env_val AUTH_SECRET)
 
 if [ -z "$_pg_pass" ]; then
     PG_PASS=$(openssl rand -hex 16)
-    sedi "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${PG_PASS}|" .env
+    env_set POSTGRES_PASSWORD "$PG_PASS"
     echo "  Generated random POSTGRES_PASSWORD."
 else
     echo "  POSTGRES_PASSWORD already set."
@@ -64,10 +100,21 @@ fi
 
 if [ -z "$_auth_sec" ]; then
     AUTH_SEC=$(openssl rand -base64 32 | tr -d '\n')
-    sedi "s|^AUTH_SECRET=.*|AUTH_SECRET=${AUTH_SEC}|" .env
+    env_set AUTH_SECRET "$AUTH_SEC"
     echo "  Generated random AUTH_SECRET."
 else
     echo "  AUTH_SECRET already set."
+fi
+
+# ------------------------------------------------------------------
+# Already running? (check after .env + secrets so compose can parse)
+# ------------------------------------------------------------------
+if docker compose ps --status running 2>/dev/null | grep -q "$APP_CONTAINER"; then
+    echo "BetterThanSpreadsheetsGRC is already running."
+    echo "  Open:    http://localhost"
+    echo "  Stop:    docker compose down"
+    echo "  Rebuild: docker compose up -d --build"
+    exit 0
 fi
 
 # ------------------------------------------------------------------
@@ -84,7 +131,14 @@ fi
 # Enable seeding on first run
 # ------------------------------------------------------------------
 if [ "$FIRST_RUN" = true ]; then
-    sedi "s|^# SEED_ON_STARTUP=.*|SEED_ON_STARTUP=true|" .env
+    # Uncomment and enable SEED_ON_STARTUP
+    _tmpfile=".env.tmp.$$"
+    sed 's/^# *SEED_ON_STARTUP=.*/SEED_ON_STARTUP=true/' .env > "$_tmpfile"
+    mv "$_tmpfile" .env
+    # If the key didn't exist at all, append it
+    if ! grep -q '^SEED_ON_STARTUP=' .env; then
+        echo "SEED_ON_STARTUP=true" >> .env
+    fi
 fi
 
 # ------------------------------------------------------------------
@@ -116,7 +170,9 @@ done
 # Disable seed flag after first run (so restarts don't re-seed)
 # ------------------------------------------------------------------
 if [ "$FIRST_RUN" = true ]; then
-    sedi "s|^SEED_ON_STARTUP=true|# SEED_ON_STARTUP=false|" .env
+    _tmpfile=".env.tmp.$$"
+    sed 's/^SEED_ON_STARTUP=.*/# SEED_ON_STARTUP=false/' .env > "$_tmpfile"
+    mv "$_tmpfile" .env
 fi
 
 # ------------------------------------------------------------------
