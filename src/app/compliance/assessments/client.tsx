@@ -414,6 +414,7 @@ function NewAssessmentButton({
         frameworkId={selectedFramework.id}
         frameworkName={selectedFramework.name}
         frameworkCode={selectedFramework.code}
+        defaultOpen
         trigger={
           <Button>
             <Plus className="mr-2 h-4 w-4" />
@@ -421,6 +422,7 @@ function NewAssessmentButton({
           </Button>
         }
         onSuccess={() => setSelectedFramework(null)}
+        onCancel={() => setSelectedFramework(null)}
       />
     );
   }

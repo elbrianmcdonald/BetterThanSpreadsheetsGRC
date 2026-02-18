@@ -91,6 +91,10 @@ interface StartAssessmentDialogProps {
   trigger?: React.ReactNode;
   /** Callback after successful creation */
   onSuccess?: () => void;
+  /** If true, dialog opens immediately on mount */
+  defaultOpen?: boolean;
+  /** Callback when dialog is closed without creating */
+  onCancel?: () => void;
 }
 
 export function StartAssessmentDialog({
@@ -99,9 +103,11 @@ export function StartAssessmentDialog({
   frameworkCode,
   trigger,
   onSuccess,
+  defaultOpen = false,
+  onCancel,
 }: StartAssessmentDialogProps) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   // Fetch users for assessor selection
   const { data: usersData } = api.user.listUsers.useQuery(
@@ -156,7 +162,7 @@ export function StartAssessmentDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v && onCancel) onCancel(); }}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button size="sm" className="gap-1">
