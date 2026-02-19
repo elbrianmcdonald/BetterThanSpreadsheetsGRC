@@ -27,7 +27,6 @@ Open **http://localhost** and sign in.
 > **Windows:** Run from Git Bash or WSL.
 >
 > **Subsequent starts:** Just use `docker compose up -d`
-
 ---
 
 ## Manual Setup
@@ -43,19 +42,18 @@ If you prefer to configure things yourself instead of using the start script:
    ```env
    POSTGRES_PASSWORD=your-strong-password-here
    AUTH_SECRET=your-secret-here          # Generate with: openssl rand -base64 32
+   SEED_ON_STARTUP=true                  # Remove after first run
    ```
 
 3. Start the application:
    ```bash
    docker compose up -d --build
    ```
+   > The first build takes 3–5 minutes. Seeding adds another 1–2 minutes on first run.
 
-4. (First run) Seed the database:
-   ```bash
-   docker exec betterthanspreadsheetsGRC-app prisma db seed
-   ```
+4. Open `http://<server-ip>`
 
-5. Open `http://<server-ip>`
+5. After the first successful start, remove `SEED_ON_STARTUP=true` from `.env` so restarts don't re-seed.
 
 ---
 
@@ -72,6 +70,7 @@ Uses [Caddy](https://caddyserver.com/) for automatic HTTPS via Let's Encrypt.
    NEXTAUTH_URL=https://grc.example.com
    DOMAIN=grc.example.com
    APP_PORT=                              # Empty — Caddy handles external traffic
+   SEED_ON_STARTUP=true                   # Remove after first run
    ```
 
 3. Ensure ports 80 and 443 are open on your firewall.
@@ -80,10 +79,15 @@ Uses [Caddy](https://caddyserver.com/) for automatic HTTPS via Let's Encrypt.
    ```bash
    docker compose --profile production up -d --build
    ```
+   > The first build takes 3–5 minutes. Seeding adds another 1–2 minutes on first run.
 
 5. Access the application at `https://grc.example.com`
 
+6. After the first successful start, remove `SEED_ON_STARTUP=true` from `.env` so restarts don't re-seed.
+
 Caddy automatically provisions and renews TLS certificates from Let's Encrypt.
+
+> **Subsequent starts:** `docker compose --profile production up -d`
 
 ---
 
@@ -176,7 +180,12 @@ docker exec -i betterthanspreadsheetsGRC-postgres \
 ## Health Check
 
 ```bash
+# HTTP (Quick Start / Manual Setup)
 curl http://localhost/api/health
+
+# HTTPS (Production profile)
+curl https://grc.example.com/api/health
+
 # {"status":"healthy","timestamp":"2025-01-01T00:00:00.000Z"}
 ```
 

@@ -32,6 +32,9 @@ export function EditUserDialog({
   const [role, setRole] = useState<UserRole>(UserRole.AUDITOR);
   // Story 7.0.4: Business Unit state (AC6)
   const [businessUnitId, setBusinessUnitId] = useState<string | null>(null);
+  // Admin password change
+  const [newPassword, setNewPassword] = useState("");
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch user data
@@ -90,6 +93,8 @@ export function EditUserDialog({
     },
     onSuccess: (data) => {
       toast.success(`User "${data.name}" updated successfully!`);
+      setNewPassword("");
+      setShowPasswordSection(false);
       onSuccess();
     },
     onSettled: () => {
@@ -109,6 +114,7 @@ export function EditUserDialog({
       email,
       role,
       businessUnitId,
+      ...(newPassword ? { newPassword } : {}),
     });
   };
 
@@ -249,6 +255,44 @@ export function EditUserDialog({
               <p className="mt-1 text-xs text-gray-500">
                 Assign user to a business unit for department-based routing.
               </p>
+            </div>
+
+            {/* Change Password (collapsible) */}
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordSection(!showPasswordSection);
+                  if (showPasswordSection) setNewPassword("");
+                }}
+                className="flex items-center text-sm font-medium text-blue-600 hover:text-blue-500"
+              >
+                <svg
+                  className={`mr-1 h-4 w-4 transition-transform ${showPasswordSection ? "rotate-90" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+                Change Password
+              </button>
+              {showPasswordSection && (
+                <div className="mt-2">
+                  <input
+                    type="password"
+                    id="edit-new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Must be at least 12 characters with uppercase, lowercase, number, and special character.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Actions */}

@@ -368,6 +368,11 @@ export const userRouter = createTRPCRouter({
         businessUnitId: existingUser.businessUnitId,
       };
 
+      // Hash new password if provided (admin password change)
+      const hashedPw = input.newPassword
+        ? await hashPassword(input.newPassword)
+        : undefined;
+
       // Story 3.8: Update user with optional assignedFrameworks
       // Story 7.0.4: Update user with optional businessUnitId (AC10, AC19)
       const updatedUser = await ctx.db.user.update({
@@ -382,6 +387,7 @@ export const userRouter = createTRPCRouter({
           ...(input.businessUnitId !== undefined
             ? { businessUnitId: input.businessUnitId }
             : {}),
+          ...(hashedPw ? { hashedPassword: hashedPw } : {}),
         },
         select: {
           id: true,
@@ -419,6 +425,7 @@ export const userRouter = createTRPCRouter({
               role: updatedUser.role,
               assignedFrameworks: updatedUser.assignedFrameworks,
               businessUnitId: updatedUser.businessUnitId,
+              ...(input.newPassword ? { passwordChanged: true } : {}),
             },
           },
         },

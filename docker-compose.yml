@@ -6,9 +6,10 @@ services:
       dockerfile: Dockerfile
     container_name: betterthanspreadsheetsGRC-app
     ports:
-      - "${APP_PORT:-80}:3000"
+      - "${APP_PORT-80}:3000"
     environment:
       - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-betterthanspreadsheetsGRC}
       - AUTH_SECRET=${AUTH_SECRET:?required}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost}
@@ -35,11 +36,11 @@ services:
       - grc_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 120s
 
   # PostgreSQL Database
   postgres:
