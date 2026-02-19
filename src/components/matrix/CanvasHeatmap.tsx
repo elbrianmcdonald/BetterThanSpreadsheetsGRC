@@ -57,6 +57,7 @@ interface HoveredCell {
 
 // Layout constants
 const MIN_CELL_SIZE = 40;
+const MAX_CELL_SIZE = 80;
 const AXIS_LABEL_WIDTH = 80;
 const AXIS_LABEL_HEIGHT = 40;
 const HEADER_HEIGHT = 30;
@@ -188,7 +189,7 @@ export function CanvasHeatmap({
 
     // Calculate cell size based on container width
     const availableWidth = Math.max(containerWidth - AXIS_LABEL_WIDTH - PADDING * 2, cols * MIN_CELL_SIZE);
-    const cellSize = Math.max(MIN_CELL_SIZE, Math.floor(availableWidth / cols));
+    const cellSize = Math.min(MAX_CELL_SIZE, Math.max(MIN_CELL_SIZE, Math.floor(availableWidth / cols)));
 
     const width = AXIS_LABEL_WIDTH + cols * cellSize + PADDING;
     const height = HEADER_HEIGHT + AXIS_LABEL_HEIGHT + rows * cellSize + PADDING;

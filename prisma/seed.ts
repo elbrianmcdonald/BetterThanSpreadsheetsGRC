@@ -5,6 +5,7 @@ import { seedNist800171R3Controls } from './seeds/nist-800-171-r3';
 import { seedNist80053Controls } from './seeds/nist-800-53-r5';
 import { seedC2m2Framework } from './seeds/c2m2';
 import { seedOwaspSammFramework } from './seeds/owasp-samm';
+import { seedDemoData } from './seeds/demo-data';
 
 const prisma = new PrismaClient();
 
@@ -120,8 +121,10 @@ async function main() {
 
   // Create Evidence records for Organization A
   console.log('Creating evidence records for Organization A...');
-  const evidenceA1 = await prisma.evidence.create({
-    data: {
+  const evidenceA1 = await prisma.evidence.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440031' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440031',
       organizationId: orgA.id,
       title: 'SOC 2 Audit Report 2024',
@@ -135,8 +138,10 @@ async function main() {
     },
   });
 
-  const evidenceA2 = await prisma.evidence.create({
-    data: {
+  const evidenceA2 = await prisma.evidence.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440032' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440032',
       organizationId: orgA.id,
       title: 'Penetration Test Results',
@@ -153,8 +158,10 @@ async function main() {
 
   // Create Evidence records for Organization B
   console.log('Creating evidence records for Organization B...');
-  const evidenceB1 = await prisma.evidence.create({
-    data: {
+  const evidenceB1 = await prisma.evidence.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440041' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440041',
       organizationId: orgB.id,
       title: 'ISO 27001 Certificate',
@@ -168,8 +175,10 @@ async function main() {
     },
   });
 
-  const evidenceB2 = await prisma.evidence.create({
-    data: {
+  const evidenceB2 = await prisma.evidence.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440042' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440042',
       organizationId: orgB.id,
       title: 'Incident Response Plan',
@@ -186,8 +195,10 @@ async function main() {
 
   // Create Risk records for Organization A
   console.log('Creating risk records for Organization A...');
-  const riskA1 = await prisma.risk.create({
-    data: {
+  const riskA1 = await prisma.risk.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440051' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440051',
       identifier: 'RISK-2026-0001',
       organizationId: orgA.id,
@@ -199,8 +210,10 @@ async function main() {
     },
   });
 
-  const riskA2 = await prisma.risk.create({
-    data: {
+  const riskA2 = await prisma.risk.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440052' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440052',
       identifier: 'RISK-2026-0002',
       organizationId: orgA.id,
@@ -215,8 +228,10 @@ async function main() {
 
   // Create Risk records for Organization B
   console.log('Creating risk records for Organization B...');
-  const riskB1 = await prisma.risk.create({
-    data: {
+  const riskB1 = await prisma.risk.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440061' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440061',
       identifier: 'RISK-2026-0001',
       organizationId: orgB.id,
@@ -228,8 +243,10 @@ async function main() {
     },
   });
 
-  const riskB2 = await prisma.risk.create({
-    data: {
+  const riskB2 = await prisma.risk.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440062' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440062',
       identifier: 'RISK-2026-0002',
       organizationId: orgB.id,
@@ -245,8 +262,10 @@ async function main() {
   // Create Framework records - Four frameworks for Org A: NIST CSF, NIST 800-53r5, NIST 800-171, ISO 27001:2022
   console.log('Creating framework records...');
 
-  const frameworkNISTCSF = await prisma.framework.create({
-    data: {
+  const frameworkNISTCSF = await prisma.framework.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440071' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440071',
       organizationId: orgA.id,
       name: 'NIST Cybersecurity Framework',
@@ -258,8 +277,10 @@ async function main() {
     },
   });
 
-  const frameworkNIST80053 = await prisma.framework.create({
-    data: {
+  const frameworkNIST80053 = await prisma.framework.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440072' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440072',
       organizationId: orgA.id,
       name: 'NIST SP 800-53',
@@ -271,8 +292,10 @@ async function main() {
     },
   });
 
-  const frameworkNIST800171 = await prisma.framework.create({
-    data: {
+  const frameworkNIST800171 = await prisma.framework.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440073' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440073',
       organizationId: orgA.id,
       name: 'NIST SP 800-171',
@@ -284,8 +307,10 @@ async function main() {
     },
   });
 
-  const frameworkISO = await prisma.framework.create({
-    data: {
+  const frameworkISO = await prisma.framework.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440074' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440074',
       organizationId: orgA.id,
       name: 'ISO/IEC 27001',
@@ -298,8 +323,10 @@ async function main() {
   });
 
   // Org B gets ISO 27001 and NIST 800-171
-  const frameworkB1 = await prisma.framework.create({
-    data: {
+  const frameworkB1 = await prisma.framework.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440081' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440081',
       organizationId: orgB.id,
       name: 'ISO/IEC 27001',
@@ -311,8 +338,10 @@ async function main() {
     },
   });
 
-  const frameworkB2 = await prisma.framework.create({
-    data: {
+  const frameworkB2 = await prisma.framework.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440082' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440082',
       organizationId: orgB.id,
       name: 'NIST SP 800-171',
@@ -330,15 +359,27 @@ async function main() {
   console.log('Creating control records...');
 
   // NIST 800-53 Rev 5.2.0 Controls (all 1,196 controls with baselines from CPRT Excel)
-  const nist80053Result = await seedNist80053Controls(prisma, frameworkNIST80053.id, orgA.id);
+  const existing80053 = await prisma.control.count({ where: { frameworkId: frameworkNIST80053.id } });
+  let nist80053Result = { familyCount: 20, controlCount: existing80053 };
+  if (existing80053 === 0) {
+    nist80053Result = await seedNist80053Controls(prisma, frameworkNIST80053.id, orgA.id);
+  }
   console.log(`  ✅ NIST 800-53 Rev 5.2.0: ${nist80053Result.familyCount} families, ${nist80053Result.controlCount} controls`);
 
   // NIST 800-171 Rev 3 Controls (CUI Protection) - seeded from modular file
-  const nist800171Result = await seedNist800171R3Controls(prisma, frameworkNIST800171.id, orgA.id);
+  const existing800171 = await prisma.control.count({ where: { frameworkId: frameworkNIST800171.id } });
+  let nist800171Result = { familyCount: 17, controlCount: existing800171 };
+  if (existing800171 === 0) {
+    nist800171Result = await seedNist800171R3Controls(prisma, frameworkNIST800171.id, orgA.id);
+  }
   console.log(`  ✅ NIST 800-171 Rev 3: ${nist800171Result.familyCount} families, ${nist800171Result.controlCount} controls`);
 
   // Also seed NIST 800-171 Rev 3 for Org B
-  const nist800171ResultB = await seedNist800171R3Controls(prisma, frameworkB2.id, orgB.id);
+  const existing800171B = await prisma.control.count({ where: { frameworkId: frameworkB2.id } });
+  let nist800171ResultB = { familyCount: 17, controlCount: existing800171B };
+  if (existing800171B === 0) {
+    nist800171ResultB = await seedNist800171R3Controls(prisma, frameworkB2.id, orgB.id);
+  }
   console.log(`  ✅ NIST 800-171 Rev 3 (Org B): ${nist800171ResultB.familyCount} families, ${nist800171ResultB.controlCount} controls`);
 
   // ISO 27001 Controls
@@ -391,18 +432,23 @@ async function main() {
   ];
 
   for (const control of iso27001Controls) {
-    await prisma.control.create({
-      data: {
-        id: randomUUID(),
-        organizationId: orgA.id,
-        frameworkId: frameworkISO.id,
-        controlId: control.controlId,
-        title: control.title,
-        description: control.description,
-        isActive: true,
-        updatedAt: new Date(),
-      },
+    const existing = await prisma.control.findFirst({
+      where: { frameworkId: frameworkISO.id, controlId: control.controlId },
     });
+    if (!existing) {
+      await prisma.control.create({
+        data: {
+          id: randomUUID(),
+          organizationId: orgA.id,
+          frameworkId: frameworkISO.id,
+          controlId: control.controlId,
+          title: control.title,
+          description: control.description,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      });
+    }
   }
 
   // NIST CSF Controls
@@ -449,18 +495,23 @@ async function main() {
   ];
 
   for (const control of nistcsfControls) {
-    await prisma.control.create({
-      data: {
-        id: randomUUID(),
-        organizationId: orgA.id,
-        frameworkId: frameworkNISTCSF.id,
-        controlId: control.controlId,
-        title: control.title,
-        description: control.description,
-        isActive: true,
-        updatedAt: new Date(),
-      },
+    const existing = await prisma.control.findFirst({
+      where: { frameworkId: frameworkNISTCSF.id, controlId: control.controlId },
     });
+    if (!existing) {
+      await prisma.control.create({
+        data: {
+          id: randomUUID(),
+          organizationId: orgA.id,
+          frameworkId: frameworkNISTCSF.id,
+          controlId: control.controlId,
+          title: control.title,
+          description: control.description,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      });
+    }
   }
 
   console.log(`✅ Created ${nist80053Result.familyCount + nist80053Result.controlCount + nist800171Result.familyCount + nist800171Result.controlCount + iso27001Controls.length + nistcsfControls.length} control records\n`);
@@ -967,8 +1018,10 @@ async function main() {
 
   // Create Audit Logs
   console.log('Creating audit log entries...');
-  await prisma.auditLog.create({
-    data: {
+  await prisma.auditLog.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440091' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440091',
       organizationId: orgA.id,
       action: 'UPLOAD_EVIDENCE',
@@ -982,8 +1035,10 @@ async function main() {
     },
   });
 
-  await prisma.auditLog.create({
-    data: {
+  await prisma.auditLog.upsert({
+    where: { id: '550e8400-e29b-41d4-a716-446655440092' },
+    update: {},
+    create: {
       id: '550e8400-e29b-41d4-a716-446655440092',
       organizationId: orgB.id,
       action: 'UPDATE_RISK_STATUS',
@@ -1008,6 +1063,9 @@ async function main() {
 
   const owaspSammFrameworkId = await seedOwaspSammFramework(prisma);
   console.log(`  ✅ OWASP SAMM Maturity Framework (${owaspSammFrameworkId})\n`);
+
+  // Seed demo data for all features (BUs, People, Strategy, Findings, etc.)
+  await seedDemoData(prisma);
 
   console.log('🎉 Database seed completed successfully!\n');
   console.log('Summary:');
