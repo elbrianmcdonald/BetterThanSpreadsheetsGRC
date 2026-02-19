@@ -827,6 +827,9 @@ model BusinessUnit {
   // Epic 14: Asset Registry - Assets in this BU
   assets          Asset[]
 
+  // Maturity assessments for this BU
+  maturityAssessments MaturityAssessment[]
+
   @@unique([organizationId, name])          // AC6: Unique name per org
   @@index([organizationId, parentId])       // AC7: Index for hierarchy queries
   @@index([organizationId, isActive])       // Index for active BU queries
@@ -3035,6 +3038,7 @@ model MaturityAssessment {
 
   // Ownership
   ownerId         String
+  businessUnitId  String?
 
   // Approval workflow
   submittedAt     DateTime?
@@ -3048,6 +3052,7 @@ model MaturityAssessment {
   organization    Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   framework       MaturityFramework         @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
   owner           User                      @relation("MaturityAssessmentOwner", fields: [ownerId], references: [id])
+  businessUnit    BusinessUnit?             @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
   submitter       User?                     @relation("MaturityAssessmentSubmitter", fields: [submittedBy], references: [id])
   approver        User?                     @relation("MaturityAssessmentApprover", fields: [approvedBy], references: [id])
 
@@ -3059,6 +3064,7 @@ model MaturityAssessment {
   @@unique([organizationId, identifier])
   @@index([organizationId, status])
   @@index([organizationId, frameworkId])
+  @@index([organizationId, businessUnitId])
 }
 
 // MaturityDomainScore - Score for a specific domain within an assessment

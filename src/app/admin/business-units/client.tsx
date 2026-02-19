@@ -490,16 +490,16 @@ export function BusinessUnitsClient() {
             <div className="space-y-2">
               <Label htmlFor="parent">Parent Unit</Label>
               <Select
-                value={formData.parentId}
+                value={formData.parentId || "none"}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, parentId: value })
+                  setFormData({ ...formData, parentId: value === "none" ? "" : value })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="None (Top Level)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Top Level)</SelectItem>
+                  <SelectItem value="none">None (Top Level)</SelectItem>
                   {parentOptions?.map((opt) => (
                     <SelectItem key={opt.id} value={opt.id}>
                       {opt.label}

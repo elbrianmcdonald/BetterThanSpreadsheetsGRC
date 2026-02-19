@@ -90,6 +90,7 @@ const createAssessmentSchema = z.object({
   assessmentMode: z.nativeEnum(AssessmentMode).default(AssessmentMode.SELF),
   targetLevel: z.number().int().min(0).max(5).optional().nullable(),
   targetDate: z.date().optional().nullable(),
+  businessUnitId: z.string().optional().nullable(),
 });
 
 /**
@@ -110,6 +111,7 @@ const updateAssessmentSchema = z.object({
 const listAssessmentsSchema = z.object({
   frameworkType: z.nativeEnum(MaturityFrameworkType).optional(),
   status: z.nativeEnum(MaturityAssessmentStatus).optional(),
+  businessUnitId: z.string().optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(20),
 });
@@ -736,6 +738,7 @@ export const maturityRouter = createTRPCRouter({
           targetLevel: input.targetLevel,
           targetDate: input.targetDate,
           ownerId: session.user.id,
+          businessUnitId: input.businessUnitId ?? null,
           domainScores: {
             create: framework.domains.map((domain) => ({
               domainId: domain.id,
@@ -777,6 +780,7 @@ export const maturityRouter = createTRPCRouter({
           framework: { type: input.frameworkType },
         }),
         ...(input.status && { status: input.status }),
+        ...(input.businessUnitId && { businessUnitId: input.businessUnitId }),
       };
 
       const [assessments, total] = await Promise.all([
@@ -785,6 +789,7 @@ export const maturityRouter = createTRPCRouter({
           include: {
             framework: true,
             owner: { select: { id: true, name: true, email: true } },
+            businessUnit: { select: { id: true, name: true, code: true } },
             _count: {
               select: {
                 domainScores: true,
@@ -2394,7 +2399,8 @@ export const maturityRouter = createTRPCRouter({
    */
   getDashboardSummary: organizationProcedure
     .use(requireRole(MATURITY_VIEW_ROLES))
-    .query(async ({ ctx }) => {
+    .input(z.object({ businessUnitId: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
       const { db, organizationId } = ctx;
 
       if (!organizationId) {
@@ -2409,6 +2415,7 @@ export const maturityRouter = createTRPCRouter({
         where: {
           organizationId,
           status: { not: MaturityAssessmentStatus.ARCHIVED },
+          ...(input?.businessUnitId && { businessUnitId: input.businessUnitId }),
         },
         include: {
           framework: true,
@@ -2508,6 +2515,7 @@ export const maturityRouter = createTRPCRouter({
       z.object({
         assessmentId: z.string().optional(),
         frameworkType: z.nativeEnum(MaturityFrameworkType).optional(),
+        businessUnitId: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -2537,6 +2545,7 @@ export const maturityRouter = createTRPCRouter({
                 MaturityAssessmentStatus.DRAFT,
               ]
             },
+            ...(input.businessUnitId && { businessUnitId: input.businessUnitId }),
           },
           orderBy: { updatedAt: "desc" },
         });
@@ -2666,7 +2675,8 @@ export const maturityRouter = createTRPCRouter({
    */
   getFrameworkComparison: organizationProcedure
     .use(requireRole(MATURITY_VIEW_ROLES))
-    .query(async ({ ctx }) => {
+    .input(z.object({ businessUnitId: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
       const { db, organizationId } = ctx;
 
       if (!organizationId) {
@@ -2699,6 +2709,7 @@ export const maturityRouter = createTRPCRouter({
             organizationId,
             framework: { type },
             status: { not: MaturityAssessmentStatus.ARCHIVED },
+            ...(input?.businessUnitId && { businessUnitId: input.businessUnitId }),
           },
           include: { framework: true },
           orderBy: { updatedAt: "desc" },

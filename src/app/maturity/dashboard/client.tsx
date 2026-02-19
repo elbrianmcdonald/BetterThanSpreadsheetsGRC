@@ -26,6 +26,8 @@ import {
   Shield,
   ClipboardList,
   ChevronRight,
+  Building2,
+  BarChart3,
 } from "lucide-react";
 import {
   MaturityFrameworkType,
@@ -73,6 +75,24 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { BusinessUnitSelector } from "@/components/compliance/BusinessUnitSelector";
+import {
+  ResponsiveContainer,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  Cell,
+  ReferenceLine,
+} from "recharts";
 
 // ---------- Constants ----------
 
@@ -156,6 +176,7 @@ type AssessmentWithRelations = {
   updatedAt: Date;
   framework: { type: string; name: string; maxLevel: number; minLevel: number };
   owner: { id: string; name: string | null; email: string };
+  businessUnit?: { id: string; name: string; code: string } | null;
   _count: { domainScores: number; assignees: number; snapshots: number };
 };
 
@@ -184,6 +205,12 @@ function MaturityAssessmentCard({ assessment }: { assessment: AssessmentWithRela
                 <StatusIcon className="h-3 w-3 mr-1" />
                 {config.label}
               </Badge>
+              {assessment.businessUnit && (
+                <Badge variant="secondary" className="text-xs">
+                  <Building2 className="h-3 w-3 mr-1" />
+                  {assessment.businessUnit.code || assessment.businessUnit.name}
+                </Badge>
+              )}
             </div>
             <CardTitle className="text-base">{assessment.name}</CardTitle>
             <CardDescription className="font-mono text-xs">
@@ -278,6 +305,9 @@ export function MaturityDashboardClient() {
   // Overview framework selector
   const [selectedFrameworkType, setSelectedFrameworkType] = useState<MaturityFrameworkType | null>(null);
 
+  // Business unit filter
+  const [selectedBusinessUnitId, setSelectedBusinessUnitId] = useState<string | null>(null);
+
   // Assessment tab filter
   const [assessmentFilter, setAssessmentFilter] = useState<string>("all");
 
@@ -295,6 +325,7 @@ export function MaturityDashboardClient() {
     assessmentMode: AssessmentMode;
     targetLevel: number | null;
     targetDate: string;
+    businessUnitId: string | null;
   }>({
     frameworkId: "",
     name: "",
@@ -303,25 +334,32 @@ export function MaturityDashboardClient() {
     assessmentMode: AssessmentMode.SELF,
     targetLevel: null,
     targetDate: "",
+    businessUnitId: null,
   });
 
   const utils = api.useUtils();
 
   // ---- Queries ----
 
+  const buFilter = selectedBusinessUnitId ? { businessUnitId: selectedBusinessUnitId } : {};
+
   const { data: dashboardData, isLoading: dashboardLoading } =
-    api.maturity.getDashboardSummary.useQuery();
+    api.maturity.getDashboardSummary.useQuery(
+      selectedBusinessUnitId ? { businessUnitId: selectedBusinessUnitId } : undefined
+    );
 
   const { data: comparisonData, isLoading: comparisonLoading } =
-    api.maturity.getFrameworkComparison.useQuery();
+    api.maturity.getFrameworkComparison.useQuery(
+      selectedBusinessUnitId ? { businessUnitId: selectedBusinessUnitId } : undefined
+    );
 
   const { data: domainData } = api.maturity.getDomainScoresForChart.useQuery(
-    { frameworkType: selectedFrameworkType! },
+    { frameworkType: selectedFrameworkType!, ...buFilter },
     { enabled: !!selectedFrameworkType }
   );
 
   const { data: allAssessmentsData, isLoading: assessmentsLoading } =
-    api.maturity.list.useQuery({ pageSize: 50 });
+    api.maturity.list.useQuery({ pageSize: 50, ...buFilter });
 
   const { data: frameworks } = api.maturity.listFrameworks.useQuery();
 
@@ -339,6 +377,7 @@ export function MaturityDashboardClient() {
         assessmentMode: AssessmentMode.SELF,
         targetLevel: null,
         targetDate: "",
+        businessUnitId: null,
       });
       void utils.maturity.list.invalidate();
       void utils.maturity.getDashboardSummary.invalidate();
@@ -362,6 +401,7 @@ export function MaturityDashboardClient() {
       assessmentMode: formData.assessmentMode,
       targetLevel: formData.targetLevel,
       targetDate: formData.targetDate ? new Date(formData.targetDate) : undefined,
+      businessUnitId: formData.businessUnitId,
     });
   };
 
@@ -463,6 +503,12 @@ export function MaturityDashboardClient() {
                     ))}
                   </SelectContent>
                 </Select>
+
+                <BusinessUnitSelector
+                  value={selectedBusinessUnitId}
+                  onChange={setSelectedBusinessUnitId}
+                  className="w-[200px]"
+                />
 
                 <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -581,6 +627,178 @@ export function MaturityDashboardClient() {
                 <p>Select a framework to view maturity details</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Domain Scores Chart */}
+      {selectedFrameworkType && domains.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <CardTitle>Domain Scores</CardTitle>
+            </div>
+            <CardDescription>
+              {domainData?.assessmentName
+                ? `Showing scores from: ${domainData.assessmentName}`
+                : "Current vs target levels by domain"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const scoredCount = domains.filter((d) => d.currentLevel > 0).length;
+              if (scoredCount === 0) {
+                return (
+                  <div className="h-[350px] flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <Gauge className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>No scores yet</p>
+                      <p className="text-sm mt-1">Score domains to see the chart</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              const maxLevel = domainData?.maxLevel ?? 4;
+
+              // C2M2 uses bar chart
+              if (selectedFrameworkType === "C2M2") {
+                const barData = domains.map((d) => {
+                  const pct = d.targetLevel > 0 ? d.currentLevel / d.targetLevel : 0;
+                  let fill = "hsl(0, 84%, 60%)"; // red
+                  if (d.currentLevel >= d.targetLevel) fill = "hsl(142, 76%, 36%)"; // green
+                  else if (pct >= 0.5) fill = "hsl(45, 93%, 47%)"; // amber
+                  return { ...d, fill };
+                });
+
+                return (
+                  <div className="h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={barData}
+                        margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="code"
+                          tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+                          interval={0}
+                          angle={-30}
+                          textAnchor="end"
+                          height={60}
+                        />
+                        <YAxis
+                          domain={[0, maxLevel]}
+                          tick={{ fontSize: 11 }}
+                          tickCount={maxLevel + 1}
+                          label={{ value: "MIL Level", angle: -90, position: "insideLeft", fontSize: 11 }}
+                        />
+                        {barData.length > 0 && barData[0]!.targetLevel > 0 && (
+                          <ReferenceLine
+                            y={barData[0]!.targetLevel}
+                            stroke="#22c55e"
+                            strokeDasharray="3 3"
+                            label={{ value: "Target", fontSize: 10, fill: "#22c55e", position: "right" }}
+                          />
+                        )}
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            const data = payload[0]?.payload as { name: string; code: string; currentLevel: number; targetLevel: number; fill: string };
+                            return (
+                              <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
+                                <p className="font-medium mb-1">{data.name}</p>
+                                <p className="text-xs text-muted-foreground mb-2">{data.code}</p>
+                                <div className="space-y-1 text-xs">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill }} />
+                                    <span>Current: MIL {data.currentLevel}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                                    <span>Target: MIL {data.targetLevel}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }}
+                        />
+                        <Bar dataKey="currentLevel" radius={[4, 4, 0, 0]}>
+                          {barData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              }
+
+              // NIST CSF 2.0 and OWASP SAMM use radar chart
+              return (
+                <div className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart data={domains} cx="50%" cy="50%" outerRadius="80%">
+                      <PolarGrid strokeDasharray="3 3" />
+                      <PolarAngleAxis
+                        dataKey="code"
+                        tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+                        tickLine={false}
+                      />
+                      <PolarRadiusAxis
+                        angle={90}
+                        domain={[0, maxLevel]}
+                        tick={{ fontSize: 9 }}
+                        tickCount={maxLevel + 1}
+                      />
+                      <Radar
+                        name="Target"
+                        dataKey="targetLevel"
+                        stroke="hsl(142, 76%, 36%)"
+                        fill="hsl(142, 76%, 36%)"
+                        fillOpacity={0.15}
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                      />
+                      <Radar
+                        name="Current"
+                        dataKey="currentLevel"
+                        stroke="hsl(221, 83%, 53%)"
+                        fill="hsl(221, 83%, 53%)"
+                        fillOpacity={0.4}
+                        strokeWidth={2}
+                      />
+                      <Legend
+                        wrapperStyle={{ paddingTop: "10px" }}
+                        formatter={(value) => <span className="text-xs">{value}</span>}
+                      />
+                      <RechartsTooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const data = payload[0]?.payload as { name: string; code: string; currentLevel: number; targetLevel: number };
+                          return (
+                            <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
+                              <p className="font-medium mb-2">{data.name}</p>
+                              <div className="space-y-1 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                  <span>Current: {data.currentLevel}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                                  <span>Target: {data.targetLevel}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
@@ -761,6 +979,16 @@ export function MaturityDashboardClient() {
                   setFormData((prev) => ({ ...prev, description: e.target.value }))
                 }
                 rows={2}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Business Unit</Label>
+              <BusinessUnitSelector
+                value={formData.businessUnitId}
+                onChange={(value) =>
+                  setFormData((prev) => ({ ...prev, businessUnitId: value }))
+                }
               />
             </div>
 
