@@ -1614,6 +1614,8 @@ export function MaturityAssessmentDetailClient({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [snapshotDialogOpen, setSnapshotDialogOpen] = useState(false);
   const [snapshotReason, setSnapshotReason] = useState("");
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>("");
 
   useEffect(() => {
     setIsMounted(true);
@@ -1669,6 +1671,24 @@ export function MaturityAssessmentDetailClient({
     },
     onError: (error) => {
       toast.error(`Failed to update status: ${error.message}`);
+    },
+  });
+
+  // Assignee picker: only fetches users when the dialog opens
+  const { data: usersData } = api.user.listUsers.useQuery(
+    { skip: 0, take: 100 },
+    { enabled: assignDialogOpen }
+  );
+
+  const assignAssessorsMutation = api.maturity.assignAssessors.useMutation({
+    onSuccess: () => {
+      void utils.maturity.getById.invalidate({ id: assessmentId });
+      toast.success("Assessor assigned");
+      setAssignDialogOpen(false);
+      setSelectedAssigneeId("");
+    },
+    onError: (error) => {
+      toast.error(`Failed to assign: ${error.message}`);
     },
   });
 
@@ -1778,6 +1798,15 @@ export function MaturityAssessmentDetailClient({
     });
   };
 
+  const handleAssignAssessor = () => {
+    if (!selectedAssigneeId) return;
+    const domainCodes = domains.map((d) => d.code);
+    assignAssessorsMutation.mutate({
+      assessmentId,
+      assignments: [{ userId: selectedAssigneeId, domainCodes }],
+    });
+  };
+
   const handleStartAssessment = () => {
     if (assessment.status === "DRAFT") {
       updateStatusMutation.mutate({
@@ -1840,6 +1869,14 @@ export function MaturityAssessmentDetailClient({
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setAssignDialogOpen(true)}
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Assign
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setDeleteDialogOpen(true)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -1864,6 +1901,24 @@ export function MaturityAssessmentDetailClient({
                 <span>Created {format(new Date(assessment.createdAt), "MMM d, yyyy")}</span>
               </div>
             </div>
+            {assessment.assignees && assessment.assignees.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Assigned to:</span>
+                {assessment.assignees.map((a) => (
+                  <Badge key={a.id} variant="outline" className="gap-1.5 pl-1">
+                    <Avatar className="h-4 w-4">
+                      <AvatarFallback className="text-[8px]">
+                        {getInitials(a.user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{a.user.name || a.user.email}</span>
+                    <span className="text-xs text-muted-foreground">
+                      · {a.status.toLowerCase()}
+                    </span>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -2329,6 +2384,58 @@ export function MaturityAssessmentDetailClient({
                 <Camera className="h-4 w-4 mr-2" />
               )}
               Create Snapshot
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Assessor Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign assessor</DialogTitle>
+            <DialogDescription>
+              Choose a user to complete this maturity assessment. They'll see it
+              on their My Assignments page. Assigning replaces any existing
+              assignments on this assessment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Assignee</Label>
+            <Select
+              value={selectedAssigneeId}
+              onValueChange={setSelectedAssigneeId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a user..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(usersData?.users || []).map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name || u.email}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {u.role}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAssignDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignAssessor}
+              disabled={!selectedAssigneeId || assignAssessorsMutation.isPending}
+            >
+              {assignAssessorsMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Assign
             </Button>
           </DialogFooter>
         </DialogContent>
