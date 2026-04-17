@@ -118,36 +118,7 @@ See **[INSTALL.md](./INSTALL.md)** for the full deployment guide (Caddy + Let's 
 
 See **[DOCKER.md](./DOCKER.md)** for Docker internals, volumes, and Windows notes.
 
-## NPM Scripts
 
-Reference for contributors working inside the container (e.g. `docker exec -it betterthanspreadsheetsGRC-app sh`). The supported deploy path is `./start.sh` / `docker compose up -d` — you should not need to run these directly.
-
-### Development
-
-```bash
-npm run dev          # Start development server with Turbopack
-npm run build        # Create production build
-npm run start        # Start production server
-npm run typecheck    # Run TypeScript compiler (no emit)
-```
-
-### Database
-
-```bash
-npm run db:generate         # Generate Prisma Client (runs on postinstall)
-npm run db:migrate          # Run database migrations (development)
-npm run db:push             # Push schema changes without migration
-npm run db:studio           # Open Prisma Studio (database GUI)
-npm run db:cleanup-sessions # Delete expired sessions (run via cron every 6 hours)
-```
-
-### Build Process
-
-The build command runs:
-1. TypeScript compilation check
-2. Next.js optimization
-3. Static page generation
-4. Asset bundling
 
 ## Project Structure
 
