@@ -138,7 +138,7 @@ export const riskAssessmentRouter = createTRPCRouter({
       ]);
 
       return {
-        items: items.map((item: any) => ({
+        items: items.map((item) => ({
           ...item,
           inherentScore: item.inherentScore ? Number(item.inherentScore) : null,
           childRiskCount: item._count.childRisks,
@@ -755,7 +755,7 @@ export const riskAssessmentRouter = createTRPCRouter({
       const riskIdentifier = await generateIdentifier(organizationId, "RR");
 
       // AC18: Transactional operation
-      const result = await ctx.db.$transaction(async (tx: any) => {
+      const result = await ctx.db.$transaction(async (tx) => {
         // AC15-AC16: Update assessment status
         const approvedAssessment = await tx.riskAssessment.update({
           where: { id: input.assessmentId },
@@ -1083,7 +1083,7 @@ export const riskAssessmentRouter = createTRPCRouter({
         },
         totalRisks: childRisks.length,
         severityBreakdown,
-        childRisks: childRisks.map((r: any) => ({
+        childRisks: childRisks.map((r) => ({
           id: r.id,
           title: r.title,
           effectiveSeverity: r.residualScoreLabel ?? r.inherentScoreLabel ?? r.severity,

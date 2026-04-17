@@ -255,7 +255,6 @@ model Framework {
   organizationId                     String
   code                               String
   name                               String
-  identifier                         String?
   version                            String
   description                        String?
   publicationDate                    DateTime?

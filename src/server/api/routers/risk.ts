@@ -755,8 +755,8 @@ export const riskRouter = createTRPCRouter({
 
       // Group by link type (AC8)
       const findingEvidence = links
-        .filter((l: any) => l.linkType === RiskEvidenceLinkType.FINDING)
-        .map((l: any) => ({
+        .filter((l) => l.linkType === RiskEvidenceLinkType.FINDING)
+        .map((l) => ({
           id: l.Evidence.id,
           title: l.Evidence.title,
           originalFileName: l.Evidence.originalFileName,
@@ -770,8 +770,8 @@ export const riskRouter = createTRPCRouter({
         }));
 
       const remediationEvidence = links
-        .filter((l: any) => l.linkType === RiskEvidenceLinkType.REMEDIATION)
-        .map((l: any) => ({
+        .filter((l) => l.linkType === RiskEvidenceLinkType.REMEDIATION)
+        .map((l) => ({
           id: l.Evidence.id,
           title: l.Evidence.title,
           originalFileName: l.Evidence.originalFileName,
@@ -1010,7 +1010,7 @@ export const riskRouter = createTRPCRouter({
       ]);
 
       // Transform to include counts
-      const transformedRisks = risks.map((risk: any) => ({
+      const transformedRisks = risks.map((risk) => ({
         ...risk,
         remediationOptionsCount: risk.RemediationOptions.length,
         RemediationOptions: undefined, // Remove the raw array
@@ -1062,25 +1062,25 @@ export const riskRouter = createTRPCRouter({
 
     return {
       byStatus: {
-        DRAFT: statusCounts.find((s: any) => s.status === "DRAFT")?._count.status ?? 0,
-        PENDING_REVIEW: statusCounts.find((s: any) => s.status === "PENDING_REVIEW")?._count.status ?? 0,
-        OPEN: statusCounts.find((s: any) => s.status === "OPEN")?._count.status ?? 0,
-        ASSIGNED: statusCounts.find((s: any) => s.status === "ASSIGNED")?._count.status ?? 0,
-        REMEDIATED: statusCounts.find((s: any) => s.status === "REMEDIATED")?._count.status ?? 0,
-        CLOSED: statusCounts.find((s: any) => s.status === "CLOSED")?._count.status ?? 0,
+        DRAFT: statusCounts.find((s) => s.status === "DRAFT")?._count.status ?? 0,
+        PENDING_REVIEW: statusCounts.find((s) => s.status === "PENDING_REVIEW")?._count.status ?? 0,
+        OPEN: statusCounts.find((s) => s.status === "OPEN")?._count.status ?? 0,
+        ASSIGNED: statusCounts.find((s) => s.status === "ASSIGNED")?._count.status ?? 0,
+        REMEDIATED: statusCounts.find((s) => s.status === "REMEDIATED")?._count.status ?? 0,
+        CLOSED: statusCounts.find((s) => s.status === "CLOSED")?._count.status ?? 0,
       },
       bySeverity: {
-        HIGH: severityCounts.find((s: any) => s.severity === "HIGH")?._count.severity ?? 0,
-        MEDIUM: severityCounts.find((s: any) => s.severity === "MEDIUM")?._count.severity ?? 0,
-        LOW: severityCounts.find((s: any) => s.severity === "LOW")?._count.severity ?? 0,
+        HIGH: severityCounts.find((s) => s.severity === "HIGH")?._count.severity ?? 0,
+        MEDIUM: severityCounts.find((s) => s.severity === "MEDIUM")?._count.severity ?? 0,
+        LOW: severityCounts.find((s) => s.severity === "LOW")?._count.severity ?? 0,
       },
       byFindingSource: {
-        VULNERABILITY_SCAN: findingSourceCounts.find((s: any) => s.findingSource === "VULNERABILITY_SCAN")?._count.findingSource ?? 0,
-        PENETRATION_TEST: findingSourceCounts.find((s: any) => s.findingSource === "PENETRATION_TEST")?._count.findingSource ?? 0,
-        AUDIT_FINDING: findingSourceCounts.find((s: any) => s.findingSource === "AUDIT_FINDING")?._count.findingSource ?? 0,
-        SECURITY_REVIEW: findingSourceCounts.find((s: any) => s.findingSource === "SECURITY_REVIEW")?._count.findingSource ?? 0,
-        COMPLIANCE_ASSESSMENT: findingSourceCounts.find((s: any) => s.findingSource === "COMPLIANCE_ASSESSMENT")?._count.findingSource ?? 0,
-        OTHER: findingSourceCounts.find((s: any) => s.findingSource === "OTHER")?._count.findingSource ?? 0,
+        VULNERABILITY_SCAN: findingSourceCounts.find((s) => s.findingSource === "VULNERABILITY_SCAN")?._count.findingSource ?? 0,
+        PENETRATION_TEST: findingSourceCounts.find((s) => s.findingSource === "PENETRATION_TEST")?._count.findingSource ?? 0,
+        AUDIT_FINDING: findingSourceCounts.find((s) => s.findingSource === "AUDIT_FINDING")?._count.findingSource ?? 0,
+        SECURITY_REVIEW: findingSourceCounts.find((s) => s.findingSource === "SECURITY_REVIEW")?._count.findingSource ?? 0,
+        COMPLIANCE_ASSESSMENT: findingSourceCounts.find((s) => s.findingSource === "COMPLIANCE_ASSESSMENT")?._count.findingSource ?? 0,
+        OTHER: findingSourceCounts.find((s) => s.findingSource === "OTHER")?._count.findingSource ?? 0,
       },
     };
   }),
@@ -1210,9 +1210,9 @@ export const riskRouter = createTRPCRouter({
 
       // Story 4.17 AC55: Extract unique framework codes and fetch framework names
       const frameworkCodes = new Set<string>();
-      risk.RiskEvidence?.forEach((re: any) => {
-        re.Evidence?.EvidenceControlDomain?.forEach((ecd: any) => {
-          ecd.ControlDomain?.ControlDomainMapping?.forEach((cdm: any) => {
+      risk.RiskEvidence?.forEach((re) => {
+        re.Evidence?.EvidenceControlDomain?.forEach((ecd) => {
+          ecd.ControlDomain?.ControlDomainMapping?.forEach((cdm) => {
             if (cdm.frameworkCode) {
               frameworkCodes.add(cdm.frameworkCode);
             }
@@ -2889,7 +2889,7 @@ export const riskRouter = createTRPCRouter({
           : 0;
 
       // Find oldest risk by assignment date
-      const sortedByDate = [...risks].sort((a: any, b: any) => {
+      const sortedByDate = [...risks].sort((a, b) => {
         if (!a.assignedAt) return 1;
         if (!b.assignedAt) return -1;
         return a.assignedAt.getTime() - b.assignedAt.getTime();
@@ -2950,7 +2950,7 @@ export const riskRouter = createTRPCRouter({
       // Count overdue (assigned more than 7 days ago)
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
       const overdueCount = risks.filter(
-        (r: any) => r.assignedAt && r.assignedAt < sevenDaysAgo
+        (r) => r.assignedAt && r.assignedAt < sevenDaysAgo
       ).length;
 
       // Count risks with remediation options ready for decision
@@ -3816,7 +3816,7 @@ export const riskRouter = createTRPCRouter({
 
       // AC29: Return audit logs with actor details
       return {
-        auditLogs: auditLogs.map((log: any) => ({
+        auditLogs: auditLogs.map((log) => ({
           id: log.id,
           action: log.action,
           timestamp: log.timestamp,
@@ -3890,7 +3890,7 @@ export const riskRouter = createTRPCRouter({
 
       // AC24: Build CSV with columns: Timestamp, Action, Actor, Role, Change Details
       const headers = ["Timestamp", "Action", "Actor", "Role", "Change Details"];
-      const rows = auditLogs.map((log: any) => {
+      const rows = auditLogs.map((log) => {
         // AC25: UTC timestamp for Excel
         const timestamp = log.timestamp.toISOString();
         const action = log.action;
@@ -4121,12 +4121,12 @@ export const riskRouter = createTRPCRouter({
 
     // Calculate highest impact score
     const highestImpact = risks.length > 0
-      ? Math.max(...risks.map((r: any) => r.impactScore ?? 0))
+      ? Math.max(...risks.map((r) => r.impactScore ?? 0))
       : 0;
 
     // Find the highest impact risk for preview
     const highestImpactRisk = risks.length > 0
-      ? risks.reduce((prev: any, curr: any) =>
+      ? risks.reduce((prev, curr) =>
           (curr.impactScore ?? 0) > (prev.impactScore ?? 0) ? curr : prev
         )
       : null;
@@ -4597,10 +4597,10 @@ export const riskRouter = createTRPCRouter({
 
       // Collect all unique framework codes from risks
       const allFrameworkCodes = new Set<string>();
-      risks.forEach((risk: { RiskEvidence: any[] }) => {
-        risk.RiskEvidence.forEach((re: { Evidence: { EvidenceControlDomain: any[] } }) => {
-          re.Evidence.EvidenceControlDomain.forEach((ecd: { ControlDomain: { ControlDomainMapping: any[] } }) => {
-            ecd.ControlDomain.ControlDomainMapping.forEach((m: { frameworkCode: string }) => {
+      risks.forEach((risk) => {
+        risk.RiskEvidence.forEach((re) => {
+          re.Evidence.EvidenceControlDomain.forEach((ecd) => {
+            ecd.ControlDomain.ControlDomainMapping.forEach((m) => {
               allFrameworkCodes.add(m.frameworkCode);
             });
           });
@@ -4614,10 +4614,10 @@ export const riskRouter = createTRPCRouter({
             select: { code: true, name: true },
           })
         : [];
-      const frameworkNameMap = new Map(frameworks.map((f: any) => [f.code, f.name]));
+      const frameworkNameMap = new Map(frameworks.map((f) => [f.code, f.name]));
 
       // Transform risks to export data format
-      const exportData: RiskExportData[] = risks.map((risk: any) => ({
+      const exportData: RiskExportData[] = risks.map((risk) => ({
         id: risk.id,
         title: risk.title,
         description: risk.description,
@@ -4636,11 +4636,11 @@ export const riskRouter = createTRPCRouter({
         businessOwner: risk.BusinessOwner ? { name: risk.BusinessOwner.name, email: risk.BusinessOwner.email } : null,
         assignedAt: risk.assignedAt,
         assignedBy: risk.AssignedBy,
-        linkedEvidence: risk.RiskEvidence.map((re: any) => ({
+        linkedEvidence: risk.RiskEvidence.map((re) => ({
           evidence: {
-            controlDomains: re.Evidence.EvidenceControlDomain.map((cd: any) => ({
+            controlDomains: re.Evidence.EvidenceControlDomain.map((cd) => ({
               controlDomain: {
-                ControlDomainMappings: cd.ControlDomain.ControlDomainMapping.map((m: any) => ({
+                ControlDomainMappings: cd.ControlDomain.ControlDomainMapping.map((m) => ({
                   Control: {
                     Framework: {
                       name: frameworkNameMap.get(m.frameworkCode) ?? m.frameworkCode,
@@ -5819,7 +5819,7 @@ export const riskRouter = createTRPCRouter({
       const outputScaleMax = matrixVersion.template.gridSize ** (is3D ? 3 : 2);
 
       // Create all risks in a transaction
-      const createdRisks = await ctx.db.$transaction(async (tx: any) => {
+      const createdRisks = await ctx.db.$transaction(async (tx) => {
         const risks = [];
 
         for (const riskInput of input.risks) {
