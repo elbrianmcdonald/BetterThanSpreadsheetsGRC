@@ -1962,17 +1962,25 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // Only reject when the specific slot being set is already filled.
-      // A risk created via the assessment form often has businessOwnerId set
-      // already; callers should still be able to use assignRisk to fill the
-      // IT owner slot without needing reassignRisk.
-      if (input.itOwnerId && risk.itOwnerId) {
+      // Only reject when the caller is trying to *change* a slot that's
+      // already filled. If the dialog echoes back the existing owner (to
+      // preserve it while assigning the other slot), treat that as a no-op
+      // and let the mutation proceed.
+      if (
+        input.itOwnerId &&
+        risk.itOwnerId &&
+        input.itOwnerId !== risk.itOwnerId
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "IT owner is already assigned. Use reassignRisk to change owners.",
         });
       }
-      if (input.businessOwnerId && risk.businessOwnerId) {
+      if (
+        input.businessOwnerId &&
+        risk.businessOwnerId &&
+        input.businessOwnerId !== risk.businessOwnerId
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Business owner is already assigned. Use reassignRisk to change owners.",
