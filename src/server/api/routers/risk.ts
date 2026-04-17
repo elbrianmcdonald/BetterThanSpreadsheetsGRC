@@ -2587,9 +2587,7 @@ export const riskRouter = createTRPCRouter({
       if (matrixVersion && newLikelihood !== null && newImpact !== null) {
         const scales = matrixVersion.scales as unknown as MatrixScales;
         const thresholds = matrixVersion.thresholds as unknown as Threshold[];
-        const outputScaleMax = matrixVersion.template.gridSize ** (
-          matrixVersion.template.dimensionCount === 3 ? 3 : 2
-        );
+        const outputScaleMax = Number(matrixVersion.template.outputScaleMax);
 
         const scoreResult = calculateInherentScore(
           scales,
@@ -5057,9 +5055,7 @@ export const riskRouter = createTRPCRouter({
         if (matrixVersion) {
           const scales = matrixVersion.scales as unknown as MatrixScales;
           const thresholds = matrixVersion.thresholds as unknown as Threshold[];
-          const outputScaleMax = matrixVersion.template.gridSize ** (
-            matrixVersion.template.dimensionCount === 3 ? 3 : 2
-          );
+          const outputScaleMax = Number(matrixVersion.template.outputScaleMax);
 
           const scoreResult = calculateInherentScore(
             scales,
@@ -5812,11 +5808,14 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // Get matrix scales and thresholds for scoring
+      // Get matrix scales and thresholds for scoring. Use the template's
+      // configured outputScaleMax — computing it as gridSize^dim ignores the
+      // actual scale values, which inflates scores when any scale uses
+      // non-integer steps (e.g. exposure {0.2, 0.6, 1}).
       const scales = matrixVersion.scales as unknown as MatrixScales;
       const thresholds = matrixVersion.thresholds as unknown as Threshold[];
       const is3D = matrixVersion.template.dimensionCount === 3;
-      const outputScaleMax = matrixVersion.template.gridSize ** (is3D ? 3 : 2);
+      const outputScaleMax = Number(matrixVersion.template.outputScaleMax);
 
       // Create all risks in a transaction
       const createdRisks = await ctx.db.$transaction(async (tx) => {

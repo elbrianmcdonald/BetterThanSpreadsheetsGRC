@@ -127,11 +127,26 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
     { enabled: !!risk } // Only fetch when risk is loaded
   );
 
-  // Story 16.4: Fetch org's published matrix for residual severity calculations
-  const { data: matrixData } = api.riskMatrix.getOrgPublishedMatrix.useQuery(
-    undefined,
-    { enabled: !!risk }
+  // Story 16.4: Fetch the matrix version the risk was scored against. Falls
+  // back to the org's published matrix for older risks without a locked
+  // version. Using the locked version is the correct long-term source of
+  // truth; getOrgPublishedMatrix also returns null when no template is
+  // flagged isDefault, which previously made this section display nothing.
+  const { data: lockedMatrix } = api.riskMatrix.getVersionForAssessment.useQuery(
+    { id: risk?.matrixVersionId ?? "" },
+    { enabled: !!risk?.matrixVersionId }
   );
+  const { data: fallbackMatrix } = api.riskMatrix.getOrgPublishedMatrix.useQuery(
+    undefined,
+    { enabled: !!risk && !risk.matrixVersionId }
+  );
+  const matrixData = lockedMatrix
+    ? {
+        scales: lockedMatrix.scales,
+        thresholds: lockedMatrix.thresholds,
+        outputScaleMax: lockedMatrix.template.outputScaleMax,
+      }
+    : fallbackMatrix;
 
   // Story 16.9: Fetch threat modeling data for attack chain visualization
   const { data: threatModelingData } = api.risk.getThreatModeling.useQuery(
