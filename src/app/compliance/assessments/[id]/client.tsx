@@ -1026,18 +1026,16 @@ export function ComplianceAssessmentDetailClient({
                   {assessment.identifier} | {assessment.framework.code} v{assessment.framework.version}
                 </CardDescription>
               </div>
-              {assessment.status === ComplianceAssessmentStatus.DRAFT && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDeleteDialogOpen(true)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

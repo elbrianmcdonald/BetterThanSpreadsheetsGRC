@@ -505,7 +505,8 @@ export const complianceAssessmentRouter = createTRPCRouter({
     }),
 
   /**
-   * Delete a compliance assessment (draft only)
+   * Delete a compliance assessment (admin roles only, any status).
+   * Cascades to ControlAssessmentScore rows via the schema relation.
    */
   delete: organizationProcedure
     .use(requireRole(COMPLIANCE_MANAGE_ROLES))
@@ -528,13 +529,6 @@ export const complianceAssessmentRouter = createTRPCRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Assessment not found",
-        });
-      }
-
-      if (assessment.status !== ComplianceAssessmentStatus.DRAFT) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Only draft assessments can be deleted",
         });
       }
 
