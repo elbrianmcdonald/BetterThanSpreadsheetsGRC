@@ -373,9 +373,9 @@ The seed script (`prisma/seed.ts`) is idempotent and creates:
 4. **12 Control Domains:** Standard taxonomy
 5. **118 Control Domain Mappings:** Pre-configured mappings
 
-**Run seed:**
+**Run seed (inside the app container):**
 ```bash
-npx prisma db seed
+docker exec betterthanspreadsheetsGRC-app tsx prisma/seed.ts
 ```
 
 ## Performance Considerations

@@ -43,7 +43,9 @@ When testing with Playwright MCP, the app runs at `http://localhost` via Docker 
 
 ```bash
 # Push schema changes (inside container)
-docker exec betterthanspreadsheetsGRC-app npx prisma db push --accept-data-loss
+# Prisma 7 reads the datasource URL from prisma.config.ts by default; pass --url
+# explicitly so the command also works in the runner (which doesn't ship the config file).
+docker exec betterthanspreadsheetsGRC-app sh -c 'prisma db push --accept-data-loss --schema ./prisma/schema.prisma --url "$DATABASE_URL"'
 
 # Generate Prisma client (requires rebuild for standalone image)
 docker compose up -d --build
