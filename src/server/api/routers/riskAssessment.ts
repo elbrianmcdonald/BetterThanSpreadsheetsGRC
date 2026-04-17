@@ -18,7 +18,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { UserRole, TreatmentType, AssessmentStatus, AuditAction, Prisma } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 
 import {
   createTRPCRouter,
@@ -139,7 +138,7 @@ export const riskAssessmentRouter = createTRPCRouter({
       ]);
 
       return {
-        items: items.map((item) => ({
+        items: items.map((item: any) => ({
           ...item,
           inherentScore: item.inherentScore ? Number(item.inherentScore) : null,
           childRiskCount: item._count.childRisks,
@@ -432,17 +431,17 @@ export const riskAssessmentRouter = createTRPCRouter({
       if (updateFields.likelihoodValue !== undefined) {
         updateData.likelihoodValue = updateFields.likelihoodValue === null
           ? null
-          : new Decimal(updateFields.likelihoodValue);
+          : new Prisma.Decimal(updateFields.likelihoodValue);
       }
       if (updateFields.impactValue !== undefined) {
         updateData.impactValue = updateFields.impactValue === null
           ? null
-          : new Decimal(updateFields.impactValue);
+          : new Prisma.Decimal(updateFields.impactValue);
       }
       if (updateFields.exposureValue !== undefined) {
         updateData.exposureValue = updateFields.exposureValue === null
           ? null
-          : new Decimal(updateFields.exposureValue);
+          : new Prisma.Decimal(updateFields.exposureValue);
       }
 
       // Story 7.8.9: Calculate score using matrix-based algorithm (AC18-AC22)
@@ -482,14 +481,14 @@ export const riskAssessmentRouter = createTRPCRouter({
           );
 
           if (isScoreResult(scoreResult)) {
-            updateData.inherentScore = new Decimal(scoreResult.normalizedScore);
+            updateData.inherentScore = new Prisma.Decimal(scoreResult.normalizedScore);
             updateData.inherentScoreLabel = scoreResult.label;
           }
         }
       } else if (newLikelihood !== null && newImpact !== null) {
         // Fallback to legacy 4x4 scoring if no matrix version
         const score = calculateScore(newLikelihood, newImpact);
-        updateData.inherentScore = new Decimal(score);
+        updateData.inherentScore = new Prisma.Decimal(score);
         updateData.inherentScoreLabel = getScoreLabel(score);
       }
 
@@ -756,7 +755,7 @@ export const riskAssessmentRouter = createTRPCRouter({
       const riskIdentifier = await generateIdentifier(organizationId, "RR");
 
       // AC18: Transactional operation
-      const result = await ctx.db.$transaction(async (tx) => {
+      const result = await ctx.db.$transaction(async (tx: any) => {
         // AC15-AC16: Update assessment status
         const approvedAssessment = await tx.riskAssessment.update({
           where: { id: input.assessmentId },
@@ -1084,7 +1083,7 @@ export const riskAssessmentRouter = createTRPCRouter({
         },
         totalRisks: childRisks.length,
         severityBreakdown,
-        childRisks: childRisks.map((r) => ({
+        childRisks: childRisks.map((r: any) => ({
           id: r.id,
           title: r.title,
           effectiveSeverity: r.residualScoreLabel ?? r.inherentScoreLabel ?? r.severity,

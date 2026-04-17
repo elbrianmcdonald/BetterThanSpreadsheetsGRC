@@ -21,14 +21,13 @@
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { z } from "zod";
-import { Decimal } from "@prisma/client/runtime/library";
 
 import {
   createTRPCRouter,
   adminProcedure,
   organizationProcedure,
 } from "@/server/api/trpc";
-import { AuditAction } from "@prisma/client";
+import { AuditAction, Prisma } from "@prisma/client";
 import {
   matrixScalesSchema,
   thresholdArraySchema,
@@ -138,7 +137,7 @@ export const riskMatrixRouter = createTRPCRouter({
             description: input.description ?? null,
             dimensionCount: input.dimensionCount,
             gridSize: input.gridSize, // Story 11.1: Save gridSize
-            outputScaleMax: new Decimal(input.outputScaleMax),
+            outputScaleMax: new Prisma.Decimal(input.outputScaleMax),
             isActive: true,
           },
         }),
@@ -318,7 +317,7 @@ export const riskMatrixRouter = createTRPCRouter({
         ],
       });
 
-      return templates.map((template) => ({
+      return templates.map((template: any) => ({
         ...template,
         outputScaleMax: Number(template.outputScaleMax),
         gridSize: template.gridSize, // Explicitly include for TypeScript inference
@@ -365,7 +364,7 @@ export const riskMatrixRouter = createTRPCRouter({
         ...template,
         outputScaleMax: Number(template.outputScaleMax),
         gridSize: template.gridSize, // Explicitly include for TypeScript inference
-        versions: template.versions.map((v) => ({
+        versions: template.versions.map((v: any) => ({
           ...v,
           scales: v.scales as unknown as MatrixScales,
           thresholds: v.thresholds as unknown as Threshold[],
@@ -402,7 +401,7 @@ export const riskMatrixRouter = createTRPCRouter({
         orderBy: { name: "asc" },
       });
 
-      return templates.map((t) => ({
+      return templates.map((t: any) => ({
         ...t,
         outputScaleMax: Number(t.outputScaleMax),
       }));
@@ -479,8 +478,8 @@ export const riskMatrixRouter = createTRPCRouter({
       });
 
       return templates
-        .filter((t) => t.currentVersion !== null)
-        .map((t) => ({
+        .filter((t: any) => t.currentVersion !== null)
+        .map((t: any) => ({
           templateId: t.id,
           versionId: t.currentVersion!.id,
           name: t.name,
@@ -888,7 +887,7 @@ export const riskMatrixRouter = createTRPCRouter({
         orderBy: { versionNumber: "desc" },
       });
 
-      return versions.map((v) => ({
+      return versions.map((v: any) => ({
         ...v,
         scales: v.scales as unknown as MatrixScales,
         thresholds: v.thresholds as unknown as Threshold[],
@@ -1202,7 +1201,7 @@ export const riskMatrixRouter = createTRPCRouter({
 
       // AC11: Check for active assessments using this template's versions
       // Note: AssessmentStatus only has DRAFT, APPROVED, REJECTED - check for DRAFT (active) assessments
-      const versionIds = template.versions.map((v) => v.id);
+      const versionIds = template.versions.map((v: any) => v.id);
       if (versionIds.length > 0 && !input.force) {
         const activeAssessmentCount = await ctx.db.riskAssessment.count({
           where: {
@@ -1272,7 +1271,7 @@ export const riskMatrixRouter = createTRPCRouter({
         });
       }
 
-      const versionIds = template.versions.map((v) => v.id);
+      const versionIds = template.versions.map((v: any) => v.id);
       let activeAssessmentCount = 0;
 
       if (versionIds.length > 0) {

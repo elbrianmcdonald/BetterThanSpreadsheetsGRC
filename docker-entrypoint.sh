@@ -8,7 +8,9 @@ prisma db push --skip-generate --accept-data-loss
 # Also seeds when explicitly requested via SEED_ON_STARTUP=true
 USER_COUNT=$(node -e "
   const { PrismaClient } = require('@prisma/client');
-  const p = new PrismaClient();
+  const { PrismaPg } = require('@prisma/adapter-pg');
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+  const p = new PrismaClient({ adapter });
   p.user.count().then(c => { console.log(c); p.\$disconnect(); }).catch(() => { console.log('0'); p.\$disconnect(); });
 " 2>/dev/null || echo "0")
 

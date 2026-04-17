@@ -6,11 +6,13 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { seedNistCsf2Framework } from './seeds/nist-csf-2';
 import { seedC2m2Framework } from './seeds/c2m2';
 import { seedOwaspSammFramework } from './seeds/owasp-samm';
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log('🌱 Seeding Maturity Frameworks...\n');

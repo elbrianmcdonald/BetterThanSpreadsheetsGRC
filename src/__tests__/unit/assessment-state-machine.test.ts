@@ -12,8 +12,7 @@
  * @see Story 7.5: Risk Assessment Schema & State Machine
  */
 
-import { AssessmentStatus, TreatmentType } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
+import { AssessmentStatus, TreatmentType, Prisma } from "@prisma/client";
 import {
   canTransitionAssessment,
   assertAssessmentTransition,
@@ -45,8 +44,8 @@ function createMockAssessment(
     context: "Test context",
     riskCategory: null,
     affectedSystems: [],
-    likelihoodValue: new Decimal(3),
-    impactValue: new Decimal(4),
+    likelihoodValue: new Prisma.Decimal(3),
+    impactValue: new Prisma.Decimal(4),
     exposureValue: null,
     inherentScore: null,
     inherentScoreLabel: null,

@@ -18,12 +18,12 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert Evidence records
-INSERT INTO "Evidence" (id, "organizationId", title, description, "filePath", "fileSize", "fileType", "uploadedBy", "createdAt", "updatedAt")
+INSERT INTO "Evidence" (id, "organizationId", title, "originalFileName", description, "filePath", "fileSize", "fileType", "uploadedBy", "createdAt", "updatedAt")
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440031', '550e8400-e29b-41d4-a716-446655440001', 'SOC 2 Audit Report 2024', 'Annual SOC 2 Type II audit report', '/uploads/acme-corp/soc2-2024.pdf', 2548736, 'application/pdf', '550e8400-e29b-41d4-a716-446655440012', NOW(), NOW()),
-  ('550e8400-e29b-41d4-a716-446655440032', '550e8400-e29b-41d4-a716-446655440001', 'Penetration Test Results', 'Q4 2024 penetration testing report', '/uploads/acme-corp/pentest-q4.pdf', 1024000, 'application/pdf', '550e8400-e29b-41d4-a716-446655440012', NOW(), NOW()),
-  ('550e8400-e29b-41d4-a716-446655440041', '550e8400-e29b-41d4-a716-446655440002', 'ISO 27001 Certificate', 'Current ISO 27001:2013 certification', '/uploads/globex-inc/iso27001-cert.pdf', 512000, 'application/pdf', '550e8400-e29b-41d4-a716-446655440022', NOW(), NOW()),
-  ('550e8400-e29b-41d4-a716-446655440042', '550e8400-e29b-41d4-a716-446655440002', 'Incident Response Plan', 'Updated incident response procedures', '/uploads/globex-inc/ir-plan.docx', 256000, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '550e8400-e29b-41d4-a716-446655440022', NOW(), NOW())
+  ('550e8400-e29b-41d4-a716-446655440031', '550e8400-e29b-41d4-a716-446655440001', 'SOC 2 Audit Report 2024', '', 'Annual SOC 2 Type II audit report', '/uploads/acme-corp/soc2-2024.pdf', 2548736, 'application/pdf', '550e8400-e29b-41d4-a716-446655440012', NOW(), NOW()),
+  ('550e8400-e29b-41d4-a716-446655440032', '550e8400-e29b-41d4-a716-446655440001', 'Penetration Test Results', '', 'Q4 2024 penetration testing report', '/uploads/acme-corp/pentest-q4.pdf', 1024000, 'application/pdf', '550e8400-e29b-41d4-a716-446655440012', NOW(), NOW()),
+  ('550e8400-e29b-41d4-a716-446655440041', '550e8400-e29b-41d4-a716-446655440002', 'ISO 27001 Certificate', '', 'Current ISO 27001:2013 certification', '/uploads/globex-inc/iso27001-cert.pdf', 512000, 'application/pdf', '550e8400-e29b-41d4-a716-446655440022', NOW(), NOW()),
+  ('550e8400-e29b-41d4-a716-446655440042', '550e8400-e29b-41d4-a716-446655440002', 'Incident Response Plan', '', 'Updated incident response procedures', '/uploads/globex-inc/ir-plan.docx', 256000, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '550e8400-e29b-41d4-a716-446655440022', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert Risk records
@@ -36,7 +36,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Insert Framework records
-INSERT INTO "Framework" (id, "organizationId", name, identifier, version, "isActive", "activatedAt", "createdAt", "updatedAt")
+INSERT INTO "Framework" (id, "organizationId", name, code, version, "isActive", "activatedAt", "createdAt", "updatedAt")
 VALUES
   ('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440001', 'SOC 2 Type II', 'SOC2', '2017', true, '2024-01-01', NOW(), NOW()),
   ('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440002', 'ISO/IEC 27001', 'ISO27001', '2013', true, '2024-03-15', NOW(), NOW())

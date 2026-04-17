@@ -21,8 +21,8 @@ import {
   type Severity,
   type AssessmentStatus,
   type TreatmentType,
+  Prisma,
 } from "@prisma/client";
-import type { Decimal } from "@prisma/client/runtime/library";
 import { FileSearch } from "lucide-react";
 
 import { api } from "@/trpc/react";
@@ -73,8 +73,8 @@ interface FindingData {
     riskCategory: string | null;
     status: AssessmentStatus;
     affectedSystems: string[];
-    likelihoodValue: Decimal | null;
-    impactValue: Decimal | null;
+    likelihoodValue: Prisma.Decimal | null;
+    impactValue: Prisma.Decimal | null;
     treatment: TreatmentType | null;
     ownerId: string | null;
     createdAt: Date;
@@ -83,10 +83,10 @@ interface FindingData {
     // Additional fields required by Prisma type
     organizationId: string;
     updatedAt: Date;
-    exposureValue: Decimal | null;
-    inherentScore: Decimal | null;
+    exposureValue: Prisma.Decimal | null;
+    inherentScore: Prisma.Decimal | null;
     inherentScoreLabel: string | null;
-    residualScore: Decimal | null;
+    residualScore: Prisma.Decimal | null;
     residualScoreLabel: string | null;
     findingId: string | null;
     approverId: string | null;
