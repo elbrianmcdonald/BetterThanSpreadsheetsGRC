@@ -839,29 +839,41 @@ export async function seedDemoData(prisma: PrismaClient) {
   // Layer 9: Identifier Sequences
   // ========================================================================
   console.log('  Updating identifier sequences...');
-  const sequences = [
-    { prefix: 'FND',  year: 2026, lastSequence: 6 },
-    { prefix: 'RSK',  year: 2026, lastSequence: 2 },
-    { prefix: 'COMP', year: 2026, lastSequence: 2 },
-    { prefix: 'VND',  year: 2026, lastSequence: 4 },
-    { prefix: 'VA',   year: 2026, lastSequence: 2 },
-    { prefix: 'AST',  year: 2026, lastSequence: 6 },
-    { prefix: 'BP',   year: 2026, lastSequence: 4 },
-    { prefix: 'BF',   year: 2026, lastSequence: 2 },
+  // Hardcoded seed identifiers need their IdentifierSequence counters set
+  // or the generator produces a colliding value on first real create.
+  const ORG_B_ID = '550e8400-e29b-41d4-a716-446655440002';
+  const sequences: Array<{
+    organizationId: string;
+    prefix: string;
+    year: number;
+    lastSequence: number;
+  }> = [
+    // Org A (Acme Corp) — demo-data.ts + seed.ts seeded identifiers
+    { organizationId: ORG_A,    prefix: 'FND',  year: 2026, lastSequence: 6 },
+    { organizationId: ORG_A,    prefix: 'RSK',  year: 2026, lastSequence: 2 },
+    { organizationId: ORG_A,    prefix: 'COMP', year: 2026, lastSequence: 2 },
+    { organizationId: ORG_A,    prefix: 'VND',  year: 2026, lastSequence: 4 },
+    { organizationId: ORG_A,    prefix: 'VA',   year: 2026, lastSequence: 2 },
+    { organizationId: ORG_A,    prefix: 'AST',  year: 2026, lastSequence: 6 },
+    { organizationId: ORG_A,    prefix: 'BP',   year: 2026, lastSequence: 4 },
+    { organizationId: ORG_A,    prefix: 'BF',   year: 2026, lastSequence: 2 },
+    { organizationId: ORG_A,    prefix: 'RISK', year: 2026, lastSequence: 2 },
+    // Org B (Globex) — seed.ts seeds RISK-2026-0001/-0002
+    { organizationId: ORG_B_ID, prefix: 'RISK', year: 2026, lastSequence: 2 },
   ];
 
   for (const seq of sequences) {
     await prisma.identifierSequence.upsert({
       where: {
         organizationId_prefix_year: {
-          organizationId: ORG_A,
+          organizationId: seq.organizationId,
           prefix: seq.prefix,
           year: seq.year,
         },
       },
       update: { lastSequence: seq.lastSequence },
       create: {
-        organizationId: ORG_A,
+        organizationId: seq.organizationId,
         prefix: seq.prefix,
         year: seq.year,
         lastSequence: seq.lastSequence,
