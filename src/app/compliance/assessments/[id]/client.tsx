@@ -766,6 +766,9 @@ export function ComplianceAssessmentDetailClient({
 
   const [isMounted, setIsMounted] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<ComplianceStatus | "ALL">(
+    "ALL"
+  );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -880,6 +883,18 @@ export function ComplianceAssessmentDetailClient({
       a.parent.controlId.localeCompare(b.parent.controlId)
     );
   }, [assessment?.controlScores]);
+
+  // Status filter: show only groups where at least one child matches the
+  // selected status, and within each group show only matching children.
+  const filteredControlGroups = useMemo(() => {
+    if (statusFilter === "ALL") return controlGroups;
+    return controlGroups
+      .map((group) => ({
+        ...group,
+        children: group.children.filter((c) => c.status === statusFilter),
+      }))
+      .filter((group) => group.children.length > 0);
+  }, [controlGroups, statusFilter]);
 
   // Calculate bar chart data
   const barData = useMemo(() => {
@@ -1056,7 +1071,9 @@ export function ComplianceAssessmentDetailClient({
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Control Assessments ({controlGroups.length} groups)
+                Control Assessments ({filteredControlGroups.length}
+                {statusFilter !== "ALL" && ` of ${controlGroups.length}`}{" "}
+                groups)
               </h2>
               {assessment.status === ComplianceAssessmentStatus.DRAFT && (
                 <Button onClick={handleStart} disabled={startMutation.isPending}>
@@ -1070,23 +1087,55 @@ export function ComplianceAssessmentDetailClient({
               )}
             </div>
 
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-muted-foreground shrink-0">
+                Filter by status:
+              </Label>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) =>
+                  setStatusFilter(v as ComplianceStatus | "ALL")
+                }
+              >
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All ({controlGroups.length})</SelectItem>
+                  {COMPLIANCE_LEVELS.map((level) => (
+                    <SelectItem key={level.value} value={level.value}>
+                      {level.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-3">
-              {controlGroups.map((group) => (
-                <ControlGroupCard
-                  key={group.parent.id}
-                  group={group}
-                  assessmentId={assessmentId}
-                  isExpanded={expandedGroup === group.parent.id}
-                  onToggle={() =>
-                    setExpandedGroup(
-                      expandedGroup === group.parent.id ? null : group.parent.id
-                    )
-                  }
-                  onUpdate={handleUpdateControl}
-                  isSaving={updateControlMutation.isPending}
-                  isEditable={isEditable}
-                />
-              ))}
+              {filteredControlGroups.length === 0 ? (
+                <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+                  No controls match the selected status.
+                </div>
+              ) : (
+                filteredControlGroups.map((group) => (
+                  <ControlGroupCard
+                    key={group.parent.id}
+                    group={group}
+                    assessmentId={assessmentId}
+                    isExpanded={expandedGroup === group.parent.id}
+                    onToggle={() =>
+                      setExpandedGroup(
+                        expandedGroup === group.parent.id
+                          ? null
+                          : group.parent.id
+                      )
+                    }
+                    onUpdate={handleUpdateControl}
+                    isSaving={updateControlMutation.isPending}
+                    isEditable={isEditable}
+                  />
+                ))
+              )}
             </div>
           </div>
 

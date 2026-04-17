@@ -296,7 +296,7 @@ export function FrameworkCoverageCard({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Play className="h-4 w-4" />
-                    Start Assessment
+                    Create Assessment
                   </Button>
                 }
               />

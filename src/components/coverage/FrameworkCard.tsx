@@ -107,7 +107,7 @@ export function FrameworkCard({
             trigger={
               <Button size="sm" className="flex-1">
                 <Play className="mr-1 h-4 w-4" />
-                Start Assessment
+                Create Assessment
               </Button>
             }
           />

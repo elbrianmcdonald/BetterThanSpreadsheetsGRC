@@ -381,10 +381,11 @@ export async function seedDemoData(prisma: PrismaClient) {
     {
       id: 'demo-ca-002',
       identifier: 'COMP-2026-0002',
-      name: 'NIST 800-53 Baseline Assessment',
+      name: 'NIST 800-53 Moderate Baseline Assessment',
       frameworkId: FRAMEWORK_NIST80053,
       status: 'DRAFT' as const,
       businessUnitId: businessUnits['ITO'],
+      baseline: 'MODERATE',
     },
   ];
 
@@ -402,6 +403,7 @@ export async function seedDemoData(prisma: PrismaClient) {
         status: ca.status,
         ownerId: ALICE,
         assessorId: BOB,
+        baseline: 'baseline' in ca ? ca.baseline : null,
       },
     });
   }
@@ -469,7 +471,43 @@ export async function seedDemoData(prisma: PrismaClient) {
       },
     });
   }
-  console.log(`  ✅ ${compAssessmentsData.length} compliance assessments, ${isoControls.length} control scores\n`);
+
+  // Control Assessment Scores for CA-2 (NIST 800-53 Moderate baseline) — all NOT_ASSESSED
+  const nistModerateControls = await prisma.control.findMany({
+    where: {
+      frameworkId: FRAMEWORK_NIST80053,
+      organizationId: ORG_A,
+      baselines: { contains: 'MODERATE' },
+    },
+    select: { id: true },
+  });
+
+  const existingNistScoreCount = await prisma.controlAssessmentScore.count({
+    where: { assessmentId: 'demo-ca-002' },
+  });
+
+  if (existingNistScoreCount === 0 && nistModerateControls.length > 0) {
+    await prisma.controlAssessmentScore.createMany({
+      data: nistModerateControls.map((c) => ({
+        assessmentId: 'demo-ca-002',
+        controlId: c.id,
+        status: 'NOT_ASSESSED' as const,
+      })),
+    });
+
+    await prisma.complianceAssessment.update({
+      where: { id: 'demo-ca-002' },
+      data: {
+        totalControls: nistModerateControls.length,
+        compliantCount: 0,
+        nonCompliantCount: 0,
+        partialCount: 0,
+        notAssessedCount: nistModerateControls.length,
+        complianceScore: 0,
+      },
+    });
+  }
+  console.log(`  ✅ ${compAssessmentsData.length} compliance assessments, ${isoControls.length + nistModerateControls.length} control scores\n`);
 
   // ========================================================================
   // Layer 5B: Standards + Controls

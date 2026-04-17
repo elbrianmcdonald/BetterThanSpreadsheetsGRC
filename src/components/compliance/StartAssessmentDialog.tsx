@@ -167,7 +167,7 @@ export function StartAssessmentDialog({
         {trigger ?? (
           <Button size="sm" className="gap-1">
             <Play className="h-4 w-4" />
-            Start Assessment
+            Create Assessment
           </Button>
         )}
       </DialogTrigger>
@@ -175,7 +175,7 @@ export function StartAssessmentDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Start Compliance Assessment
+            Create Compliance Assessment
           </DialogTitle>
           <DialogDescription>
             Create a new compliance assessment for{" "}
