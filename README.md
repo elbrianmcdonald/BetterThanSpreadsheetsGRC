@@ -65,176 +65,62 @@ Planned features
 - Taxonomy — Manage the control domain taxonomy used to categorize and cross-reference controls.
 ## Getting Started
 
-### 1. Clone the Repository
+BetterThanSpreadsheetsGRC runs entirely in Docker. You do **not** need Node.js, npm, or PostgreSQL installed on your host — only Docker.
+
+### Prerequisites
+
+- Docker Engine 20.10+ and Docker Compose v2
+- `openssl` and `curl` (bundled with Git Bash on Windows)
+- Port 80 free on the host
+
+### Quick Start
 
 ```bash
 git clone <repository-url>
 cd betterthanspreadsheetsgrc
+./start.sh
 ```
 
-### 2. Install Dependencies
+`start.sh` creates `.env` from `.env.example`, generates a random `POSTGRES_PASSWORD` and `AUTH_SECRET`, builds the images, starts PostgreSQL and the app, runs `prisma db push` to create the schema, and seeds frameworks + demo data on first run. Expect 3–5 minutes for the first build plus ~1 minute for seeding.
 
-```bash
-npm install
-```
+When it finishes, open **http://localhost** and sign in:
 
-### 3. Set Up Environment Variables
+- Email: `admin@acme-corp.com`
+- Password: `Admin123!@#`
 
-Copy the example environment file and fill in your values:
+> **Windows:** run `./start.sh` from Git Bash or WSL (not PowerShell/CMD).
+>
+> **Subsequent starts:** `docker compose up -d`
+
+### Manual Setup (if you want to configure `.env` yourself)
 
 ```bash
 cp .env.example .env
+# Edit .env and set POSTGRES_PASSWORD and AUTH_SECRET
+# Generate AUTH_SECRET with: openssl rand -base64 32
+# Set SEED_ON_STARTUP=true for the first run, then remove it
+
+docker compose up -d --build
 ```
 
-**Required Environment Variables:**
+The app container runs `prisma db push --accept-data-loss` on every start and seeds the database when it is empty or when `SEED_ON_STARTUP=true`. There is no separate `prisma migrate` step to run by hand.
 
-```env
-# Database
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/grc"
-
-# NextAuth.js
-AUTH_SECRET="<generate-with-openssl-rand-base64-32>"
-NEXTAUTH_URL="http://localhost:3000"
-
-```
-
-Generate AUTH_SECRET:
-```bash
-openssl rand -base64 32
-```
-
-### 4. Start Database (Using Docker)
-
-If using Docker for local development:
+### Verify
 
 ```bash
-# Start PostgreSQL container
-docker-compose up -d postgres
-
-# Verify it's running
-docker-compose ps
+curl http://localhost/api/health
+# {"status":"healthy","timestamp":"..."}
 ```
 
-### 5. Run Database Migrations
+### Production, HTTPS, reverse proxy, ClamAV, email, backups
 
-```bash
-# Generate Prisma Client
-npx prisma generate
+See **[INSTALL.md](./INSTALL.md)** for the full deployment guide (Caddy + Let's Encrypt, existing reverse proxy, ClamAV malware scanning, SendGrid / SES email, backup & restore, and troubleshooting).
 
-# Run migrations to create database schema
-npx prisma migrate dev --name init
-
-# (Optional) Open Prisma Studio to view database
-npx prisma studio
-```
-
-### 6. Start Development Server
-
-```bash
-npm run dev
-```
-
-Visit [http://localhost:3000](http://localhost:3000) to see your application running.
-
-## Docker Deployment (Recommended for Windows)
-
-For Windows deployments or containerized environments, use Docker Compose to run the entire stack:
-
-### Quick Start with Docker
-
-```bash
-# 1. Create .env file from example
-cp .env.example .env
-
-# 2. Edit .env and set AUTH_SECRET
-#    Generate with: openssl rand -base64 32
-
-# 3. Start all services (Windows)
-docker-start.bat
-
-# OR for Linux/Mac
-./docker-start.sh
-```
-
-This will start:
-- **Next.js Application** on `http://localhost:3000`
-- **PostgreSQL Database** on `localhost:5432`
-- **ClamAV Malware Scanner** on `localhost:3310`
-
-### Docker Services
-
-The Docker Compose stack includes:
-
-- **app**: Next.js application with automatic database migrations
-- **postgres**: PostgreSQL 15 database with persistent storage
-- **clamav**: ClamAV malware scanner for file uploads
-
-All services run on an isolated Docker network with health checks and automatic restart policies.
-
-### Docker Commands
-
-```bash
-# Start services
-docker-start.bat          # Windows
-./docker-start.sh         # Linux/Mac
-
-# Stop services
-docker-stop.bat           # Windows
-./docker-stop.sh          # Linux/Mac
-
-# View logs
-docker-logs.bat           # Windows
-./docker-logs.sh          # Linux/Mac
-
-# View logs for specific service
-docker-logs.bat app       # Windows
-./docker-logs.sh app      # Linux/Mac
-```
-
-### Manual Docker Commands
-
-```bash
-# Build images
-docker-compose build
-
-# Start all services in background
-docker-compose up -d
-
-# View running services
-docker-compose ps
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
-
-# Stop and remove volumes (WARNING: deletes all data)
-docker-compose down -v
-```
-
-### Data Persistence
-
-Data is persisted in Docker volumes:
-- `postgres_data` - Database storage
-- `app_uploads` - Uploaded files
-- `clamav_data` - Virus definitions
-
-See [DOCKER.md](./DOCKER.md) for complete Docker deployment documentation including:
-- Windows prerequisites
-- Volume backup/restore procedures
-- Troubleshooting guide
-- Production deployment notes
-
-### 7. Test the Setup
-
-Visit [http://localhost:3000/test](http://localhost:3000/test) to verify:
-- ✅ tRPC queries work
-- ✅ shadcn/ui components render
-- ✅ Tailwind CSS styling applies
-- ✅ TypeScript type safety end-to-end
+See **[DOCKER.md](./DOCKER.md)** for Docker internals, volumes, and Windows notes.
 
 ## NPM Scripts
+
+Reference for contributors working inside the container (e.g. `docker exec -it betterthanspreadsheetsGRC-app sh`). The supported deploy path is `./start.sh` / `docker compose up -d` — you should not need to run these directly.
 
 ### Development
 

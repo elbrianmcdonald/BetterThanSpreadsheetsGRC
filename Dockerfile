@@ -47,20 +47,29 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Upgrade npm to fix node-tar CVEs (CVE-2026-23745/23950/24842) bundled in npm 10.x
-# Then install Prisma CLI + tsx globally for runtime migrations and seeding
-# Prisma pinned to v6 to match project schema format
-RUN npm install -g npm@latest prisma@6 tsx
+# Then install Prisma CLI + tsx globally for runtime migrations and seeding.
+# Prisma pinned to v7 to match the project's schema format (datasource without url).
+RUN npm install -g npm@latest prisma@7 tsx
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy standalone output (includes server + minimal node_modules)
+# Copy standalone output (server + traced node_modules)
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Copy Prisma schema (needed for runtime db push)
+# Overlay the builder's full node_modules on top of the trimmed standalone set.
+# Next.js tracing covers the server (src/**) but not prisma/seed.ts, which
+# imports @prisma/adapter-pg and its transitive deps. Rather than play
+# whack-a-mole with individual COPY lines, ship the full dependency tree so
+# `tsx prisma/seed.ts` and any other out-of-band scripts resolve cleanly.
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy Prisma schema (needed for runtime db push).
+# prisma.config.ts is intentionally NOT copied: the entrypoint passes --url
+# directly to `prisma db push`, bypassing the config file.
 COPY --from=builder /app/prisma ./prisma
 
 # Copy entrypoint (sed strips Windows \r line endings for cross-platform safety)
