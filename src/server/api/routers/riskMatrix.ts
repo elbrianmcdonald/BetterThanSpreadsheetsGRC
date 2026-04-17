@@ -317,7 +317,7 @@ export const riskMatrixRouter = createTRPCRouter({
         ],
       });
 
-      return templates.map((template: any) => ({
+      return templates.map((template) => ({
         ...template,
         outputScaleMax: Number(template.outputScaleMax),
         gridSize: template.gridSize, // Explicitly include for TypeScript inference
@@ -364,7 +364,7 @@ export const riskMatrixRouter = createTRPCRouter({
         ...template,
         outputScaleMax: Number(template.outputScaleMax),
         gridSize: template.gridSize, // Explicitly include for TypeScript inference
-        versions: template.versions.map((v: any) => ({
+        versions: template.versions.map((v) => ({
           ...v,
           scales: v.scales as unknown as MatrixScales,
           thresholds: v.thresholds as unknown as Threshold[],
@@ -401,7 +401,7 @@ export const riskMatrixRouter = createTRPCRouter({
         orderBy: { name: "asc" },
       });
 
-      return templates.map((t: any) => ({
+      return templates.map((t) => ({
         ...t,
         outputScaleMax: Number(t.outputScaleMax),
       }));
@@ -478,8 +478,8 @@ export const riskMatrixRouter = createTRPCRouter({
       });
 
       return templates
-        .filter((t: any) => t.currentVersion !== null)
-        .map((t: any) => ({
+        .filter((t) => t.currentVersion !== null)
+        .map((t) => ({
           templateId: t.id,
           versionId: t.currentVersion!.id,
           name: t.name,
@@ -887,7 +887,7 @@ export const riskMatrixRouter = createTRPCRouter({
         orderBy: { versionNumber: "desc" },
       });
 
-      return versions.map((v: any) => ({
+      return versions.map((v) => ({
         ...v,
         scales: v.scales as unknown as MatrixScales,
         thresholds: v.thresholds as unknown as Threshold[],
@@ -1201,7 +1201,7 @@ export const riskMatrixRouter = createTRPCRouter({
 
       // AC11: Check for active assessments using this template's versions
       // Note: AssessmentStatus only has DRAFT, APPROVED, REJECTED - check for DRAFT (active) assessments
-      const versionIds = template.versions.map((v: any) => v.id);
+      const versionIds = template.versions.map((v) => v.id);
       if (versionIds.length > 0 && !input.force) {
         const activeAssessmentCount = await ctx.db.riskAssessment.count({
           where: {
@@ -1271,7 +1271,7 @@ export const riskMatrixRouter = createTRPCRouter({
         });
       }
 
-      const versionIds = template.versions.map((v: any) => v.id);
+      const versionIds = template.versions.map((v) => v.id);
       let activeAssessmentCount = 0;
 
       if (versionIds.length > 0) {
