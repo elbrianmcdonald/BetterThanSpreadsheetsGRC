@@ -585,7 +585,11 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                   </TableHeader>
                   <TableBody>
                     {filteredControls.map((control) => (
-                      <TableRow key={control.id} className="cursor-pointer hover:bg-gray-50">
+                      <TableRow
+                        key={control.id}
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => setSelectedControlId(control.id)}
+                      >
                         <TableCell className="font-mono text-sm">
                           {control.controlId}
                         </TableCell>
@@ -671,7 +675,11 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                           {/* Story 12.4: Control actions dropdown */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 Actions
                               </Button>
                             </DropdownMenuTrigger>

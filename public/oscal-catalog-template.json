@@ -1,0 +1,64 @@
+{
+  "catalog": {
+    "uuid": "REPLACE-WITH-NEW-UUID-E.G.-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "metadata": {
+      "title": "My Framework Name",
+      "version": "1.0.0",
+      "oscal-version": "1.1.2",
+      "last-modified": "2026-01-01T00:00:00Z",
+      "published": "2026-01-01T00:00:00Z"
+    },
+    "groups": [
+      {
+        "id": "example-family",
+        "class": "family",
+        "title": "Example Control Family",
+        "controls": [
+          {
+            "id": "ex-1",
+            "class": "example",
+            "title": "Example Control",
+            "parts": [
+              {
+                "id": "ex-1_smt",
+                "name": "statement",
+                "prose": "This is the control statement describing what is required."
+              },
+              {
+                "id": "ex-1_gdn",
+                "name": "guidance",
+                "prose": "This is implementation guidance describing how to satisfy the control."
+              }
+            ],
+            "controls": [
+              {
+                "id": "ex-1.1",
+                "class": "example",
+                "title": "Example Sub-control (Enhancement)",
+                "parts": [
+                  {
+                    "id": "ex-1.1_smt",
+                    "name": "statement",
+                    "prose": "A more specific requirement that builds on ex-1."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "ex-2",
+            "class": "example",
+            "title": "Another Example Control",
+            "parts": [
+              {
+                "id": "ex-2_smt",
+                "name": "statement",
+                "prose": "Description of the second example control."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -350,6 +350,19 @@ export function FrameworkManagementClient() {
 
             {importStep === "upload" && (
               <div className="space-y-4 py-4">
+                <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-sm">
+                  <p className="font-medium text-blue-900">New to OSCAL?</p>
+                  <p className="mt-1 text-blue-800">
+                    Download a starter template to see the expected structure, then edit it for your framework.
+                  </p>
+                  <a
+                    href="/oscal-catalog-template.json"
+                    download="oscal-catalog-template.json"
+                    className="mt-2 inline-block text-sm font-medium text-blue-700 underline hover:text-blue-900"
+                  >
+                    Download OSCAL template (JSON)
+                  </a>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="file">OSCAL Catalog File</Label>
                   <Input
