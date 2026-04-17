@@ -112,6 +112,142 @@ If you already run nginx, Traefik, or another reverse proxy:
 
 ---
 
+## Using an Existing PostgreSQL Server (Alternate)
+
+If you already run PostgreSQL on the host (or on another reachable server), you can point the app at it and skip the bundled Postgres container.
+
+> **Note:** The containerized flow (`./start.sh`) is the primary and recommended path. Use this only if you have a specific reason — an existing managed Postgres, consolidated backups/monitoring, or a required data directory location. Setup is harder, not easier.
+
+### Prerequisites
+
+- PostgreSQL 13+ reachable from the Docker host (the bundled image uses 15).
+- Docker Engine 20.10+ and Docker Compose v2.20+ (for `host-gateway` and `depends_on.required`).
+- Ability to edit `postgresql.conf` and `pg_hba.conf` on your Postgres server.
+
+### Step 1 — Prepare a dedicated database
+
+**Do not reuse a database that contains data you can't afford to lose.** The app runs `prisma db push --accept-data-loss` on every start and will reconcile the schema aggressively.
+
+```sql
+CREATE DATABASE btsgrc;
+CREATE USER btsgrc_app WITH ENCRYPTED PASSWORD 'CHANGE-ME';
+GRANT ALL PRIVILEGES ON DATABASE btsgrc TO btsgrc_app;
+\c btsgrc
+GRANT ALL ON SCHEMA public TO btsgrc_app;
+```
+
+### Step 2 — Allow connections from Docker
+
+Docker bridge networks use the `172.16.0.0/12` range by default.
+
+In `postgresql.conf`:
+```
+listen_addresses = '*'
+```
+
+In `pg_hba.conf`:
+```
+host  btsgrc  btsgrc_app  172.16.0.0/12  scram-sha-256
+```
+
+Reload or restart PostgreSQL.
+
+### Step 3 — Edit `docker-compose.yml`
+
+Four changes — three in the `app` service, one in `postgres`.
+
+**a.** Replace the `DATABASE_URL` line in the `app` service `environment` block:
+```yaml
+    environment:
+      - DATABASE_URL=${DATABASE_URL:?required}
+      # ... leave all other environment entries unchanged ...
+```
+
+**b.** Add an `extra_hosts` entry to the `app` service (no-op on Docker Desktop, required on Linux):
+```yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+**c.** Make the postgres dependency non-fatal in the `app` service:
+```yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+```
+
+**d.** Gate the bundled `postgres` service behind a profile so it never starts:
+```yaml
+  postgres:
+    # ... existing fields unchanged ...
+    profiles: ["bundled-db"]
+```
+
+### Step 4 — Configure `.env`
+
+```env
+DATABASE_URL=postgresql://btsgrc_app:CHANGE-ME@host.docker.internal:5432/btsgrc
+AUTH_SECRET=                   # Generate with: openssl rand -base64 32
+NEXTAUTH_URL=http://localhost
+SEED_ON_STARTUP=true           # First run only; remove after the app is up
+```
+
+Use `host.docker.internal` when Postgres runs on the same host as Docker. Use the actual hostname or IP for a remote Postgres. Do **not** set `POSTGRES_PASSWORD` or `POSTGRES_DB` — they only applied to the bundled container.
+
+### Step 5 — Start the app
+
+```bash
+docker compose up -d --build app
+```
+
+> `./start.sh` is **not** supported on this path — it expects the bundled Postgres. Use plain `docker compose` commands instead.
+
+### Step 6 — Verify
+
+```bash
+curl http://localhost/api/health
+# {"status":"healthy","timestamp":"..."}
+```
+
+Log in at `http://localhost` with `admin@acme-corp.com` / `Admin123!@#`. After the first successful start, remove `SEED_ON_STARTUP=true` from `.env` so restarts don't re-seed.
+
+### Updating
+
+```bash
+git pull
+docker compose up -d --build app
+```
+
+Prisma `db push --accept-data-loss` runs against your external DB on every start. Keep this DB dedicated to the app.
+
+### Backup & restore
+
+The `docker exec betterthanspreadsheetsGRC-postgres pg_dump …` examples elsewhere in this guide do not apply. Use your native tooling against the external DB:
+
+```bash
+pg_dump -h localhost -U btsgrc_app btsgrc > backup-$(date +%Y%m%d).sql
+psql    -h localhost -U btsgrc_app btsgrc < backup.sql
+```
+
+### Reverting to the bundled Postgres
+
+1. Remove the `profiles: ["bundled-db"]` line from the `postgres` service.
+2. Restore the original `DATABASE_URL` entry in the `app` service `environment` block.
+3. Unset `DATABASE_URL` in `.env`, set `POSTGRES_PASSWORD` to a value.
+4. `docker compose down` and then `./start.sh` (or `docker compose up -d --build`).
+
+Your external DB is untouched; the containerized DB starts fresh.
+
+### Gotchas
+
+- **Firewalls** — host-based firewalls (UFW, firewalld, Windows Defender) often block the Docker bridge range. Whitelist the Postgres port for `172.16.0.0/12`.
+- **`host-gateway`** requires Docker Engine 20.10+ on Linux. Older engines need the literal host IP in `extra_hosts`.
+- **Schema drift** — `prisma db push --accept-data-loss` reconciles the schema every boot. Don't share the DB with other apps.
+- **Prisma client engine compatibility** — PostgreSQL 13–16 all work. Versions outside that range are untested.
+
+---
+
 ## Optional Features
 
 ### ClamAV Malware Scanning
