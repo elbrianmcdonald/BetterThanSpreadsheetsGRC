@@ -21,8 +21,7 @@
  */
 
 import { useState, useCallback, useMemo } from "react";
-import { type AssessmentStatus, type TreatmentType } from "@prisma/client";
-import type { Decimal } from "@prisma/client/runtime/library";
+import { type AssessmentStatus, type TreatmentType, Prisma } from "@prisma/client";
 import { ChevronDown, ChevronUp, FileCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -68,8 +67,8 @@ interface AssessmentInput {
   riskCategory?: string | null;
   status: AssessmentStatus;
   affectedSystems: string[];
-  likelihoodValue?: number | Decimal | null;
-  impactValue?: number | Decimal | null;
+  likelihoodValue?: number | Prisma.Decimal | null;
+  impactValue?: number | Prisma.Decimal | null;
   treatment?: TreatmentType | null;
   ownerId?: string | null;
   createdAt: Date | string;
@@ -124,9 +123,9 @@ interface InlineAssessmentSectionProps {
 }
 
 /**
- * Helper to convert Decimal to number
+ * Helper to convert Prisma.Decimal to number
  */
-function toNumber(value: number | Decimal | null | undefined): number | null {
+function toNumber(value: number | Prisma.Decimal | null | undefined): number | null {
   if (value === null || value === undefined) return null;
   return typeof value === "number" ? value : Number(value);
 }

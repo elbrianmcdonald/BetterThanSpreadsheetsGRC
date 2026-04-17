@@ -15,9 +15,11 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg';
 import { seedDefaultsForOrganizations, seedOrganizationDefaults } from "../../src/lib/matrix/seedDefaults";
 
-const db = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const db = new PrismaClient({ adapter });
 
 interface Args {
   orgId?: string;
@@ -82,10 +84,10 @@ async function dryRun(): Promise<void> {
     select: { organizationId: true },
   });
 
-  const orgIdsWithDefaults = new Set(orgsWithDefaults.map((a) => a.organizationId));
+  const orgIdsWithDefaults = new Set(orgsWithDefaults.map((a: { organizationId: any; }) => a.organizationId));
 
   // Filter to orgs without defaults
-  const orgsWithoutDefaults = allOrgs.filter((org) => !orgIdsWithDefaults.has(org.id));
+  const orgsWithoutDefaults = allOrgs.filter((org: { id: unknown; }) => !orgIdsWithDefaults.has(org.id));
 
   if (orgsWithoutDefaults.length === 0) {
     console.log("✅ All organizations already have defaults seeded.");

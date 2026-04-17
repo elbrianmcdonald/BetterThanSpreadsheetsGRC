@@ -15,12 +15,12 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import type { PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import {
   UserRole,
   ComplianceStatus,
   ComplianceAssessmentStatus,
 } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 
 import {
   createTRPCRouter,
@@ -160,7 +160,7 @@ async function calculateAssessmentMetrics(
   partialCount: number;
   notApplicableCount: number;
   notAssessedCount: number;
-  complianceScore: Decimal | null;
+  complianceScore: Prisma.Decimal | null;
 }> {
   const scores = await db.controlAssessmentScore.findMany({
     where: { assessmentId },
@@ -176,12 +176,12 @@ async function calculateAssessmentMetrics(
 
   // Calculate compliance score (exclude N/A controls)
   const assessedControls = totalControls - notApplicableCount - notAssessedCount;
-  let complianceScore: Decimal | null = null;
+  let complianceScore: Prisma.Decimal | null = null;
 
   if (assessedControls > 0) {
     // Full compliance = 100%, Partial = 50%, Non-compliant = 0%
     const score = ((compliantCount * 100) + (partialCount * 50)) / assessedControls;
-    complianceScore = new Decimal(score.toFixed(2));
+    complianceScore = new Prisma.Decimal(score.toFixed(2));
   }
 
   return {

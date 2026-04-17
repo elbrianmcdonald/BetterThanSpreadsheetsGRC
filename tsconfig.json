@@ -3,7 +3,7 @@
     /* Base Options: */
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "target": "es2022",
+    "target": "ES2023",
     "allowJs": true,
     "resolveJsonModule": true,
     "moduleDetection": "force",
@@ -24,8 +24,7 @@
     "plugins": [{ "name": "next" }],
     "incremental": true,
 
-    /* Path Aliases */
-    "baseUrl": ".",
+    /* Path Aliases */    
     "paths": {
       "@/*": ["./src/*"],
       "@/components/*": ["./src/components/*"],

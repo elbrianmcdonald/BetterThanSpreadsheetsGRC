@@ -8,6 +8,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "@jest/globals";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg';
 import { randomUUID } from "crypto";
 import {
   seedOrganizationDefaults,
@@ -22,7 +23,8 @@ import {
 } from "@/lib/matrix/defaults";
 import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 
-const db = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const db = new PrismaClient({ adapter });
 
 describe("Organization Defaults Integration Tests", () => {
   let testOrg: { id: string; name: string; slug: string };
@@ -104,8 +106,8 @@ describe("Organization Defaults Integration Tests", () => {
       const scales = version?.scales as unknown as MatrixScales;
       expect(scales.likelihood).toHaveLength(5);
       expect(scales.impact).toHaveLength(5);
-      expect(scales.likelihood[0].label).toBe("Rare");
-      expect(scales.impact[4].label).toBe("Catastrophic");
+      expect(scales.likelihood[0]!.label).toBe("Rare");
+      expect(scales.impact[4]!.label).toBe("Catastrophic");
     });
 
     it("should create version with correct thresholds (AC15-AC18)", async () => {
