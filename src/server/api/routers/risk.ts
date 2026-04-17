@@ -1962,11 +1962,20 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // Check if risk is already assigned (use reassignRisk instead)
-      if (risk.itOwnerId || risk.businessOwnerId) {
+      // Only reject when the specific slot being set is already filled.
+      // A risk created via the assessment form often has businessOwnerId set
+      // already; callers should still be able to use assignRisk to fill the
+      // IT owner slot without needing reassignRisk.
+      if (input.itOwnerId && risk.itOwnerId) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Risk is already assigned. Use reassignRisk to change owners.",
+          message: "IT owner is already assigned. Use reassignRisk to change owners.",
+        });
+      }
+      if (input.businessOwnerId && risk.businessOwnerId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Business owner is already assigned. Use reassignRisk to change owners.",
         });
       }
 
@@ -2006,12 +2015,16 @@ export const riskRouter = createTRPCRouter({
         }
       }
 
-      // AC12 & AC13: Update risk with owner IDs and change status to ASSIGNED
+      // AC12 & AC13: Update risk with owner IDs and change status to ASSIGNED.
+      // Only write fields the caller provided so an existing business owner
+      // isn't wiped when only an IT owner is being set (and vice versa).
       const updatedRisk = await ctx.db.risk.update({
         where: { id: input.riskId },
         data: {
-          itOwnerId: input.itOwnerId ?? null,
-          businessOwnerId: input.businessOwnerId ?? null,
+          ...(input.itOwnerId ? { itOwnerId: input.itOwnerId } : {}),
+          ...(input.businessOwnerId
+            ? { businessOwnerId: input.businessOwnerId }
+            : {}),
           assignedAt: new Date(),
           assignedById: ctx.session!.user.id,
           status: "ASSIGNED", // AC13
@@ -2040,13 +2053,13 @@ export const riskRouter = createTRPCRouter({
         changes: {
           before: {
             status: risk.status,
-            itOwnerId: null,
-            businessOwnerId: null,
+            itOwnerId: risk.itOwnerId,
+            businessOwnerId: risk.businessOwnerId,
           },
           after: {
             status: "ASSIGNED",
-            itOwnerId: input.itOwnerId ?? null,
-            businessOwnerId: input.businessOwnerId ?? null,
+            itOwnerId: updatedRisk.itOwnerId,
+            businessOwnerId: updatedRisk.businessOwnerId,
             assignedAt: updatedRisk.assignedAt,
             assignedById: ctx.session!.user.id,
           },
