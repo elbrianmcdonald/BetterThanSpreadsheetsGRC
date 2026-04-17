@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Account {
@@ -256,6 +255,7 @@ model Framework {
   organizationId                     String
   code                               String
   name                               String
+  identifier                         String?
   version                            String
   description                        String?
   publicationDate                    DateTime?

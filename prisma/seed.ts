@@ -1,4 +1,5 @@
 import { PrismaClient, RiskTemplateCategory } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { randomUUID } from 'crypto';
 import { seedNistCsf2Framework } from './seeds/nist-csf-2';
 import { seedNist800171R3Controls } from './seeds/nist-800-171-r3';
@@ -7,7 +8,8 @@ import { seedC2m2Framework } from './seeds/c2m2';
 import { seedOwaspSammFramework } from './seeds/owasp-samm';
 import { seedDemoData } from './seeds/demo-data';
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 // Default password for all test users: Admin123!@#
 const DEFAULT_PASSWORD_HASH = '$2b$10$jDC2qxxxP6CLnU9xz.eMNuQIIR68cDhkyRa5S6GW..TrLbPSiA6Oa';

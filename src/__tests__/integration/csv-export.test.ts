@@ -5,6 +5,7 @@
  */
 
 import { PrismaClient, Severity, RiskStatus, RiskFindingSource, UserRole, AuditAction } from "@prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg';
 import {
   formatRisksForCSV,
   formatDateForCSV,
@@ -17,7 +18,8 @@ import {
   type RiskExportData,
 } from "@/lib/csvFormatter";
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 describe("Story 5.6: CSV Risk Export", () => {
   let testOrgId: string;

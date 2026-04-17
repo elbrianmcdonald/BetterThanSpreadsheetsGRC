@@ -1,5 +1,7 @@
 import { env } from "@/env";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg';
+
 import { organizationFilterMiddleware } from "@/server/db/middleware/organization-filter";
 
 /**
@@ -13,7 +15,10 @@ import { organizationFilterMiddleware } from "@/server/db/middleware/organizatio
  * Never use rawPrisma for regular business logic - always use `db` instead
  * to ensure multi-tenant isolation.
  */
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+
 export const rawPrisma = new PrismaClient({
+  adapter: adapter,
   log: env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
 });
 
@@ -59,8 +64,8 @@ const createPrismaClient = () => {
    * @see docs/MULTI_TENANCY.md - Complete multi-tenancy strategy
    */
   const baseClient = new PrismaClient({
-    log:
-      env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    adapter: adapter,
+    log: env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 
   // Extend client with organization filtering (Prisma 6 Client Extensions)

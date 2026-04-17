@@ -14,6 +14,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from '@prisma/adapter-pg';
 import {
   migrateAllOrganizationsToBUScoped,
   getMigrationSummary,
@@ -23,7 +24,8 @@ async function main() {
   console.log("=== BU-Scoped Compliance Migration ===\n");
   console.log("Starting migration...\n");
 
-  const db = new PrismaClient();
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+  const db = new PrismaClient({ adapter });
 
   try {
     const results = await migrateAllOrganizationsToBUScoped(db);
