@@ -162,6 +162,16 @@ const ALLOWLIST_TABLES = new Set([
   "MaturitySnapshot", // Gets isolation through MaturityAssessment relation
   "MaturityQuestionResponse", // Gets isolation through MaturityAssessment relation
   "AssessorAssignment", // Gets isolation through MaturityAssessment relation (verified by caller)
+  // Risk threat chain tables — isolation via Risk relation (which has organizationId)
+  "RiskThreatStep",
+  "RiskThreatObjective",
+  // Vendor assessment comments — isolation via VendorAssessment relation
+  "VendorAssessmentComment",
+  // Questionnaire template tree — isolation via QuestionnaireTemplate
+  // (nullable organizationId; system templates have null)
+  "QuestionnaireSection",
+  "QuestionnaireQuestion",
+  "QuestionChoice",
   // Compliance Assessment module - child tables get isolation through parent relations
   "ControlAssessmentScore", // Gets isolation through ComplianceAssessment relation
   // Epic 4: Questionnaire System - child tables get isolation through parent relations
