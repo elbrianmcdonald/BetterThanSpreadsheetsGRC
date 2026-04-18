@@ -1681,7 +1681,7 @@ export const frameworkRouter = createTRPCRouter({
   bulkDeprecateControls: adminProcedure
     .input(
       z.object({
-        controlIds: z.array(z.string()).min(1).max(50),
+        controlIds: z.array(z.string()).min(1).max(2000),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1736,7 +1736,7 @@ export const frameworkRouter = createTRPCRouter({
   bulkRestoreControls: adminProcedure
     .input(
       z.object({
-        controlIds: z.array(z.string()).min(1).max(50),
+        controlIds: z.array(z.string()).min(1).max(2000),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1791,7 +1791,7 @@ export const frameworkRouter = createTRPCRouter({
   bulkDeleteControls: adminProcedure
     .input(
       z.object({
-        controlIds: z.array(z.string()).min(1).max(50),
+        controlIds: z.array(z.string()).min(1).max(2000),
       }),
     )
     .mutation(async ({ ctx, input }) => {

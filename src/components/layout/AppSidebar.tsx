@@ -4,9 +4,10 @@
  * Application Sidebar Navigation
  *
  * Sidebar navigation with collapsible sections organized by function:
- * - Governance: Strategy, Maturity, Frameworks, Controls
+ * - Governance: Strategy, Frameworks, Controls
+ * - Assessments: Overview + Compliance, Vendor, Risk, Maturity sub-items
  * - Risk: Risk Register, Findings Register, Assignments
- * - Compliance: Dashboard, Standards, Compliance Management, Evidence, Velocity
+ * - Compliance: Dashboard, Standards, Evidence, Velocity
  * - Administration: User Management, Business Units, Assessment Types, Risk Matrices
  *                   Data: Mappings, Taxonomy, MITRE ATT&CK
  */
@@ -90,11 +91,6 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <Target className="h-4 w-4" />,
       },
       {
-        href: "/maturity/dashboard",
-        label: "Maturity",
-        icon: <Gauge className="h-4 w-4" />,
-      },
-      {
         href: "/admin/frameworks",
         label: "Frameworks",
         icon: <ClipboardList className="h-4 w-4" />,
@@ -105,6 +101,38 @@ const NAV_SECTIONS: NavSection[] = [
         label: "Control Library",
         icon: <Shield className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST],
+      },
+    ],
+  },
+  {
+    id: "assessments",
+    label: "Assessments",
+    icon: <ClipboardList className="h-5 w-5" />,
+    items: [
+      {
+        href: "/assessments",
+        label: "Overview",
+        icon: <BarChart3 className="h-4 w-4" />,
+      },
+      {
+        href: "/compliance/assessments",
+        label: "Compliance",
+        icon: <BookCheck className="h-4 w-4" />,
+      },
+      {
+        href: "/tprm/assessments",
+        label: "Vendor",
+        icon: <Building2 className="h-4 w-4" />,
+      },
+      {
+        href: "/risk-assessments",
+        label: "Risk",
+        icon: <ShieldAlert className="h-4 w-4" />,
+      },
+      {
+        href: "/maturity/dashboard",
+        label: "Maturity",
+        icon: <Gauge className="h-4 w-4" />,
       },
     ],
   },
@@ -128,11 +156,6 @@ const NAV_SECTIONS: NavSection[] = [
         label: "Findings Register",
         icon: <AlertTriangle className="h-4 w-4" />,
       },
-      {
-        href: "/risk-assessments",
-        label: "Risk Assessments",
-        icon: <FileText className="h-4 w-4" />,
-      },
     ],
   },
   {
@@ -144,11 +167,6 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/compliance/dashboard",
         label: "Dashboard",
         icon: <BarChart3 className="h-4 w-4" />,
-      },
-      {
-        href: "/compliance/assessments",
-        label: "Assessments",
-        icon: <ClipboardList className="h-4 w-4" />,
       },
       {
         href: "/standards",
@@ -183,11 +201,6 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/vendors",
         label: "Vendor Registry",
         icon: <Building2 className="h-4 w-4" />,
-      },
-      {
-        href: "/tprm/assessments",
-        label: "Assessments",
-        icon: <ClipboardList className="h-4 w-4" />,
       },
       {
         href: "/tprm/questionnaires",
