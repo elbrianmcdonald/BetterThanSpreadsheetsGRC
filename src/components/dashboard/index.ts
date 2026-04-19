@@ -10,3 +10,4 @@ export { DecisionsPendingWidget } from "./DecisionsPendingWidget";
 export { StaleDraftsWidget } from "./StaleDraftsWidget";
 export { StaleDraftItem } from "./StaleDraftItem";
 export { HomeMetricsCards } from "./HomeMetricsCards";
+export { OverdueControlsWidget } from "./OverdueControlsWidget";

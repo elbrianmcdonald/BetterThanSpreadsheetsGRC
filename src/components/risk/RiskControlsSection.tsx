@@ -27,7 +27,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { OrgControlType, RiskOrgControlRole } from "@prisma/client";
+import { ControlType, RiskOrgControlRole } from "@prisma/client";
 
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
@@ -44,16 +44,9 @@ interface ControlLink {
   OrganizationalControl: {
     id: string;
     name: string;
-    controlType: OrgControlType;
-    FrameworkControl?: {
-      id: string;
-      controlId: string;
-      title: string;
-      Framework: {
-        id: string;
-        code: string;
-      };
-    } | null;
+    controlType: ControlType;
+    // NOTE: framework mapping is a many-to-many junction
+    // (OrgControlFrameworkMapping); UI rendering deferred to next sprint.
   };
 }
 
@@ -87,6 +80,20 @@ function ControlChip({
   isRemoving?: boolean;
   isReadOnly?: boolean;
 }) {
+  // Display-friendly label for the new ControlType enum values.
+  const controlTypeLabel: Record<ControlType, string> = {
+    PREVENTIVE: "Preventive",
+    DETECTIVE: "Detective",
+    CORRECTIVE: "Corrective",
+    COMPENSATING: "Compensating",
+  };
+  const controlTypeColor: Record<ControlType, string> = {
+    PREVENTIVE: "bg-blue-100 text-blue-700",
+    DETECTIVE: "bg-amber-100 text-amber-700",
+    CORRECTIVE: "bg-purple-100 text-purple-700",
+    COMPENSATING: "bg-teal-100 text-teal-700",
+  };
+
   return (
     <div className="flex items-center gap-2 bg-background border rounded-md px-3 py-2 group">
       <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -94,21 +101,10 @@ function ControlChip({
       <div className="flex items-center gap-1.5 shrink-0">
         <Badge
           variant="secondary"
-          className={cn(
-            "text-xs",
-            control.controlType === OrgControlType.PREVENTATIVE
-              ? "bg-blue-100 text-blue-700"
-              : "bg-purple-100 text-purple-700"
-          )}
+          className={cn("text-xs", controlTypeColor[control.controlType])}
         >
-          {control.controlType === OrgControlType.PREVENTATIVE ? "Preventative" : "Mitigating"}
+          {controlTypeLabel[control.controlType]}
         </Badge>
-        {control.FrameworkControl && (
-          <Badge variant="outline" className="text-xs">
-            {control.FrameworkControl.Framework.code}:{" "}
-            {control.FrameworkControl.controlId}
-          </Badge>
-        )}
         {!isReadOnly && onRemove && (
           <Button
             type="button"
@@ -160,7 +156,7 @@ function ControlRoleSection({
   removingControlId: string | null;
   excludeIds: string[];
   isReadOnly?: boolean;
-  defaultControlType: OrgControlType;
+  defaultControlType: ControlType;
 }) {
   const [pickerValue, setPickerValue] = useState<string | null>(null);
 
@@ -334,7 +330,6 @@ export function RiskControlsSection({
               id: control.id,
               name: control.name,
               controlType: control.controlType,
-              FrameworkControl: control.FrameworkControl,
             },
           };
           if (role === RiskOrgControlRole.IN_PLACE) {
@@ -417,7 +412,7 @@ export function RiskControlsSection({
             removingControlId={removingControlId}
             excludeIds={allExcludeIds}
             isReadOnly={isReadOnly}
-            defaultControlType={OrgControlType.MITIGATING}
+            defaultControlType={ControlType.PREVENTIVE}
           />
 
           {/* Controls Needed */}
@@ -434,7 +429,7 @@ export function RiskControlsSection({
             removingControlId={removingControlId}
             excludeIds={allExcludeIds}
             isReadOnly={isReadOnly}
-            defaultControlType={OrgControlType.PREVENTATIVE}
+            defaultControlType={ControlType.PREVENTIVE}
           />
         </div>
       )}

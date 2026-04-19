@@ -87,10 +87,13 @@ const uploadEvidenceInput = z.object({
   title: z.string().min(1, "Title is required").max(200),
   /** Optional description */
   description: z.string().max(5000).optional(),
-  /** Control domain IDs for tagging (1-5 required) - Story 3.3 */
+  /**
+   * Control domain IDs for tagging (0-5) - Story 3.3.
+   * Required in the generic evidence flow; empty is allowed for control-scoped
+   * uploads that live entirely under an OrganizationalControl.
+   */
   controlDomainIds: z
     .array(z.string())
-    .min(1, "At least one control domain is required")
     .max(5, "Maximum 5 control domains allowed"),
   /** Business Unit ID for BU-scoped compliance (optional during migration) */
   businessUnitId: z.string().optional(),

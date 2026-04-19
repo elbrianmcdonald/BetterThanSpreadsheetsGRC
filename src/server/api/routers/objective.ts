@@ -447,7 +447,7 @@ async function calculateAutoKpiValue(
       if (linkedControls.length === 0) return 0;
 
       const implementedCount = linkedControls.filter(
-        (c) => c.status === OrgControlStatus.ACTIVE
+        (c) => c.status === OrgControlStatus.IMPLEMENTED
       ).length;
 
       return Math.round((implementedCount / linkedControls.length) * 100);
@@ -779,16 +779,6 @@ export const objectiveRouter = createTRPCRouter({
               id: true,
               name: true,
               status: true,
-              FrameworkControl: {
-                select: {
-                  controlId: true,
-                  Framework: {
-                    select: {
-                      name: true,
-                    },
-                  },
-                },
-              },
             },
           },
           linkedEvidence: {
@@ -1998,36 +1988,19 @@ export const objectiveRouter = createTRPCRouter({
           id: true,
           name: true,
           status: true,
-          FrameworkControl: {
-            select: {
-              id: true,
-              controlId: true,
-              title: true,
-              Framework: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
         },
         take: input.limit,
         orderBy: { updatedAt: "desc" },
       });
 
-      // AC5: Mark already-linked entities and format response
+      // AC5: Mark already-linked entities and format response.
+      // Note: framework mapping is now a many-to-many junction
+      // (OrgControlFrameworkMapping). Omitted here until next sprint.
       return controls.map((control) => ({
         id: control.id,
         name: control.name,
         status: control.status,
-        framework: control.FrameworkControl
-          ? {
-              id: control.FrameworkControl.Framework.id,
-              name: control.FrameworkControl.Framework.name,
-              controlId: control.FrameworkControl.controlId,
-            }
-          : null,
+        framework: null,
         isLinked: linkedControlIds.has(control.id),
       }));
     }),

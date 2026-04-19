@@ -11,7 +11,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Check, ChevronsUpDown, Plus, Shield, Loader2, Link2 } from "lucide-react";
 import { toast } from "sonner";
-import { OrgControlType } from "@prisma/client";
+import { ControlType } from "@prisma/client";
 
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
@@ -48,21 +48,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-
 interface ControlOption {
   id: string;
   name: string;
-  controlType: OrgControlType;
-  FrameworkControl?: {
-    id: string;
-    controlId: string;
-    title: string;
-    Framework: {
-      id: string;
-      code: string;
-    };
-  } | null;
+  controlType: ControlType;
+  // NOTE: framework mapping is a many-to-many junction
+  // (OrgControlFrameworkMapping); UI rendering deferred to next sprint.
 }
 
 export interface CreatableControlPickerProps {
@@ -79,7 +70,7 @@ export interface CreatableControlPickerProps {
   /** IDs to exclude from the list (e.g., already selected controls) */
   excludeIds?: string[];
   /** Default control type for new controls */
-  defaultControlType?: OrgControlType;
+  defaultControlType?: ControlType;
 }
 
 export function CreatableControlPicker({
@@ -89,14 +80,14 @@ export function CreatableControlPicker({
   disabled = false,
   className,
   excludeIds = [],
-  defaultControlType = OrgControlType.MITIGATING,
+  defaultControlType = ControlType.PREVENTIVE,
 }: CreatableControlPickerProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogName, setDialogName] = useState("");
   const [dialogDescription, setDialogDescription] = useState("");
-  const [dialogControlType, setDialogControlType] = useState<OrgControlType>(defaultControlType);
+  const [dialogControlType, setDialogControlType] = useState<ControlType>(defaultControlType);
   const [dialogFrameworkId, setDialogFrameworkId] = useState<string | null>(null);
   const [dialogFrameworkControlId, setDialogFrameworkControlId] = useState<string | null>(null);
 
@@ -132,7 +123,6 @@ export function CreatableControlPicker({
         id: data.id,
         name: data.name,
         controlType: data.controlType,
-        FrameworkControl: data.FrameworkControl,
       });
       void utils.organizationalControl.list.invalidate();
       void utils.organizationalControl.search.invalidate();
@@ -152,7 +142,6 @@ export function CreatableControlPicker({
         id: data.id,
         name: data.name,
         controlType: data.controlType,
-        FrameworkControl: data.FrameworkControl,
       });
       void utils.organizationalControl.list.invalidate();
       void utils.organizationalControl.search.invalidate();
@@ -221,7 +210,9 @@ export function CreatableControlPicker({
       name: dialogName.trim(),
       description: dialogDescription.trim() || undefined,
       controlType: dialogControlType,
-      frameworkControlId: dialogFrameworkControlId || undefined,
+      ...(dialogFrameworkControlId && {
+        frameworkMappings: [{ frameworkControlId: dialogFrameworkControlId, mappingType: "COVERS" as const }],
+      }),
     });
   }, [dialogName, dialogDescription, dialogControlType, dialogFrameworkControlId, createMutation]);
 
@@ -259,11 +250,6 @@ export function CreatableControlPicker({
               <span className="flex items-center gap-2 truncate">
                 <Shield className="h-4 w-4 shrink-0" />
                 <span className="truncate">{selectedControl.name}</span>
-                {selectedControl.FrameworkControl && (
-                  <Badge variant="outline" className="text-xs shrink-0">
-                    {selectedControl.FrameworkControl.Framework.code}
-                  </Badge>
-                )}
               </span>
             ) : (
               placeholder
@@ -333,11 +319,6 @@ export function CreatableControlPicker({
                             )}
                           />
                           <span className="flex-1 truncate">{control.name}</span>
-                          {control.FrameworkControl && (
-                            <Badge variant="outline" className="text-xs ml-2 shrink-0">
-                              {control.FrameworkControl.Framework.code}: {control.FrameworkControl.controlId}
-                            </Badge>
-                          )}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -386,17 +367,23 @@ export function CreatableControlPicker({
               <Label htmlFor="control-type">Control Type</Label>
               <Select
                 value={dialogControlType}
-                onValueChange={(v) => setDialogControlType(v as OrgControlType)}
+                onValueChange={(v) => setDialogControlType(v as ControlType)}
               >
                 <SelectTrigger id="control-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={OrgControlType.MITIGATING}>
-                    Mitigating - Reduces impact of risks
+                  <SelectItem value={ControlType.PREVENTIVE}>
+                    Preventive - Stops a threat before it occurs
                   </SelectItem>
-                  <SelectItem value={OrgControlType.PREVENTATIVE}>
-                    Preventative - Prevents risk occurrence
+                  <SelectItem value={ControlType.DETECTIVE}>
+                    Detective - Identifies when something has occurred
+                  </SelectItem>
+                  <SelectItem value={ControlType.CORRECTIVE}>
+                    Corrective - Fixes damage after an event
+                  </SelectItem>
+                  <SelectItem value={ControlType.COMPENSATING}>
+                    Compensating - Alternative when primary control isn&apos;t feasible
                   </SelectItem>
                 </SelectContent>
               </Select>

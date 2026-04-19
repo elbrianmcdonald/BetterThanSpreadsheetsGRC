@@ -83,7 +83,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: "governance",
     label: "Governance",
     icon: <Shield className="h-5 w-5" />,
-    roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST],
+    roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER],
     items: [
       {
         href: "/strategy",
@@ -97,8 +97,14 @@ const NAV_SECTIONS: NavSection[] = [
         roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST],
       },
       {
-        href: "/admin/controls",
-        label: "Control Library",
+        href: "/controls",
+        label: "Controls",
+        icon: <Shield className="h-4 w-4" />,
+        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER],
+      },
+      {
+        href: "/framework-controls",
+        label: "Framework/Standard Control Library",
         icon: <Shield className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST],
       },

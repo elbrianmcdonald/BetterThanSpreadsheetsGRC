@@ -74,8 +74,8 @@ model Control {
   // Story 12.1: Control linkage relations
   RiskLinks       RiskControlLink[]
   FindingLinks    FindingControlLink[]
-  // Organizational Controls mapped to this framework control
-  OrganizationalControls OrganizationalControl[] @relation("OrgControlToFrameworkControl")
+  // Organizational Control Redesign: Many-to-many mapping via junction
+  OrgControlFrameworkMappings OrgControlFrameworkMapping[] @relation("OrgControlFrameworkMapping")
   // Standards module: Standard controls mapped to this framework control
   StandardControlMappings StandardControlMapping[]
   // Compliance Assessment Module: Individual control scores
@@ -163,6 +163,9 @@ model Evidence {
 
   // Story 3.1: Strategy module - Objectives linked to this evidence
   linkedObjectives      Objective[]       @relation("ObjectiveLinkedEvidence")
+
+  // Organizational Control Redesign: Evidence linked to OrgControls
+  OrgControlLinks       OrgControlEvidence[] @relation("OrgControlEvidenceLink")
 
   @@index([organizationId])
   @@index([organizationId, isActive])
@@ -358,6 +361,15 @@ model Organization {
   // Organizational Controls: User-defined controls
   OrganizationalControl     OrganizationalControl[]
   RiskOrganizationalControl RiskOrganizationalControl[]
+  // Organizational Control Redesign: New related models
+  OrgControlFrameworkMappings   OrgControlFrameworkMapping[]
+  OrgControlAssignments         OrgControlAssignment[]
+  OrgControlEvidenceRequirements OrgControlEvidenceRequirement[]
+  OrgControlEvidenceLinks       OrgControlEvidence[]
+  OrgControlTestRecords         OrgControlTestRecord[]
+  OrgControlDeficiencies        OrgControlDeficiency[]
+  OrgControlExceptions          OrgControlException[]
+  OrgControlDependencies        OrgControlDependency[]
   // Story 1.1: Security Strategy Module - Strategies for organization
   Strategy                  Strategy[]
   // Standards Module: Standards and exceptions for organization
@@ -863,6 +875,12 @@ model Person {
   risksAsITOwner             Risk[]            @relation("RiskITOwner")
   risksAsBusinessOwner       Risk[]            @relation("RiskBusinessOwner")
   assessmentsAsBusinessOwner RiskAssessment[]  @relation("AssessmentBusinessOwner")
+  // Org Controls (RACI): owner / operator / reviewer
+  orgControlAssignments      OrgControlAssignment[] @relation("OrgControlAssignee")
+  // Org Controls: deficiency remediation ownership
+  orgControlDeficienciesOwned OrgControlDeficiency[] @relation("DeficiencyOwner")
+  // Org Controls: evidence-requirement ownership
+  evidenceRequirementsOwned   OrgControlEvidenceRequirement[] @relation("EvidenceRequirementOwner")
 
   @@unique([organizationId, email])         // Unique email per org (when email provided)
   @@index([organizationId, isActive])
@@ -1307,6 +1325,14 @@ model User {
   // Organizational Controls: Controls created by this user
   OrganizationalControlsCreated           OrganizationalControl[] @relation("OrgControlCreator")
   RiskOrganizationalControlsCreated       RiskOrganizationalControl[] @relation("RiskOrgControlCreator")
+  // Organizational Control Redesign: Assignment, testing, evidence, exceptions
+  // (OrgControlAssignment.personId now FKs to Person; User only tracks who made the assignment)
+  OrgControlAssignmentsMade               OrgControlAssignment[]   @relation("OrgControlAssigner")
+  OrgControlMappingsCreated               OrgControlFrameworkMapping[] @relation("OrgControlMappingCreator")
+  OrgControlEvidenceCreated               OrgControlEvidence[]     @relation("OrgControlEvidenceCreator")
+  OrgControlTestsConducted                OrgControlTestRecord[]   @relation("OrgControlTester")
+  OrgControlExceptionsRequested           OrgControlException[]    @relation("OrgControlExceptionRequester")
+  OrgControlExceptionsApproved            OrgControlException[]    @relation("OrgControlExceptionApprover")
   // Story 1.1: Security Strategy Module - User relations for Strategy & Goal ownership
   StrategiesOwned                         Strategy[]  @relation("StrategyOwner")
   StrategiesCreated                       Strategy[]  @relation("StrategyCreator")
@@ -2574,15 +2600,84 @@ enum MitreSyncStatus {
 // and optionally mapped to framework controls
 // ============================================================================
 
-enum OrgControlType {
-  MITIGATING    // Controls that reduce risk impact
-  PREVENTATIVE  // Controls that prevent risk occurrence
+// ============================================================================
+// Organizational Control Redesign (Path 2 — Extended)
+// Tech-spec: docs/sprint-artifacts/tech-spec-org-controls-redesign.md
+// ============================================================================
+
+enum ControlType {
+  PREVENTIVE     // Stops a threat from occurring (MFA, firewalls)
+  DETECTIVE      // Identifies when something has occurred (SIEM, logs)
+  CORRECTIVE     // Fixes damage after an event (backups, DR procedures)
+  COMPENSATING   // Alternative when primary control isn't feasible
+}
+
+enum ControlNature {
+  TECHNICAL         // Implemented via technology
+  ADMINISTRATIVE    // Implemented via policy/process
+  PHYSICAL          // Implemented via physical barriers
+}
+
+enum AutomationLevel {
+  MANUAL            // Human performs
+  SEMI_AUTOMATED    // Human + automation
+  AUTOMATED         // Fully automated
 }
 
 enum OrgControlStatus {
-  ACTIVE        // Control is actively implemented
-  PLANNED       // Control is planned for implementation
-  DEPRECATED    // Control is no longer in use
+  NOT_IMPLEMENTED       // Designed but not operational
+  PLANNED               // Committed for implementation
+  PARTIALLY_IMPLEMENTED // In progress
+  IMPLEMENTED           // Operational
+  DEPRECATED            // Retired (kept for historical record)
+}
+
+enum ControlFrequency {
+  CONTINUOUS        // Always-on (e.g., SIEM)
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+  EVENT_TRIGGERED   // Fires on specific events
+}
+
+enum TestResult {
+  PASS
+  FAIL
+  PARTIAL
+  NOT_APPLICABLE
+}
+
+enum DeficiencySeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum RemediationStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  ACCEPTED_RISK
+  DEFERRED
+}
+
+enum AssignmentRole {
+  OWNER       // Accountable
+  OPERATOR    // Responsible — who performs
+  REVIEWER    // Consulted/Informed — who approves/audits
+}
+
+enum EvidenceArtifactType {
+  LOG
+  TICKET
+  SCREENSHOT
+  APPROVAL
+  POLICY_DOCUMENT
+  CONFIGURATION
+  OTHER
 }
 
 enum RiskOrgControlRole {
@@ -2591,33 +2686,253 @@ enum RiskOrgControlRole {
 }
 
 model OrganizationalControl {
-  id              String           @id @default(cuid())
-  organizationId  String
-  name            String           // e.g., "MFA on Admin Accounts"
-  description     String?          @db.Text
-  controlType     OrgControlType   @default(MITIGATING)
-  status          OrgControlStatus @default(ACTIVE)
+  id                      String            @id @default(cuid())
+  organizationId          String
 
-  // Optional mapping to a framework control
-  frameworkControlId String?
+  // Identification
+  localControlId          String            // e.g., "OC-0001" — unique per org
+  name                    String
+  description             String?           @db.Text
+  objective               String?           @db.Text
 
-  createdById     String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  // Classification
+  family                  String?
+  controlType             ControlType       @default(PREVENTIVE)
+  nature                  ControlNature?
+  automationLevel         AutomationLevel?
+
+  // Implementation
+  status                  OrgControlStatus  @default(NOT_IMPLEMENTED)
+  implementationNarrative String?           @db.Text
+  scope                   String?           @db.Text
+
+  // Operational cadence
+  frequency               ControlFrequency?
+  procedureRunbookLink    String?
+
+  // Testing convenience columns (latest TestRecord)
+  lastTestedDate          DateTime?
+  lastTestResult          TestResult?
+  nextTestDueDate         DateTime?
+
+  // Lifecycle
+  version                 Int               @default(1)
+  reviewCycleMonths       Int?
+  retirementDate          DateTime?
+
+  // Audit
+  createdById             String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
 
   // Relationships
-  Organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  FrameworkControl Control?          @relation("OrgControlToFrameworkControl", fields: [frameworkControlId], references: [id], onDelete: SetNull)
-  CreatedBy        User?             @relation("OrgControlCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  RiskLinks        RiskOrganizationalControl[]
-
-  // Story 3.1: Strategy module - Objectives linked to this control
-  linkedObjectives Objective[]       @relation("ObjectiveLinkedControls")
+  Organization            Organization                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  CreatedBy               User?                           @relation("OrgControlCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  RiskLinks               RiskOrganizationalControl[]
+  linkedObjectives        Objective[]                     @relation("ObjectiveLinkedControls")
+  FrameworkMappings       OrgControlFrameworkMapping[]
+  Assignments             OrgControlAssignment[]
+  EvidenceRequirements    OrgControlEvidenceRequirement[]
+  EvidenceLinks           OrgControlEvidence[]
+  TestRecords             OrgControlTestRecord[]
+  Deficiencies            OrgControlDeficiency[]
+  Exceptions              OrgControlException[]           @relation("OrgControlExceptionTarget")
+  CompensatingForExceptions OrgControlException[]         @relation("OrgControlExceptionCompensator")
+  DependenciesFrom        OrgControlDependency[]          @relation("DependencyParent")
+  DependenciesTo          OrgControlDependency[]          @relation("DependencyChild")
 
   @@unique([organizationId, name])
+  @@unique([organizationId, localControlId])
   @@index([organizationId])
   @@index([organizationId, status])
-  @@index([frameworkControlId])
+  @@index([organizationId, nextTestDueDate])
+  @@index([organizationId, retirementDate])
+}
+
+// Many-to-many: OrgControl ↔ framework library Control
+model OrgControlFrameworkMapping {
+  id                  String              @id @default(cuid())
+  organizationId      String
+  orgControlId        String
+  frameworkControlId  String
+  mappingType         StandardMappingType @default(COVERS)
+  notes               String?             @db.VarChar(500)
+  createdAt           DateTime            @default(now())
+  createdById         String?
+
+  Organization        Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  OrgControl          OrganizationalControl @relation(fields: [orgControlId], references: [id], onDelete: Cascade)
+  FrameworkControl    Control               @relation("OrgControlFrameworkMapping", fields: [frameworkControlId], references: [id], onDelete: Cascade)
+  CreatedBy           User?                 @relation("OrgControlMappingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([orgControlId, frameworkControlId])
+  @@index([organizationId, orgControlId])
+  @@index([organizationId, frameworkControlId])
+}
+
+// Multi-person-per-role RACI assignments. Assignees draw from the Person pool
+// (same pool as business/IT/risk owners) so non-system stakeholders can own
+// controls. `assignedById` still FKs to User — that's the system actor who
+// performed the assignment action.
+model OrgControlAssignment {
+  id              String         @id @default(cuid())
+  organizationId  String
+  orgControlId    String
+  personId        String
+  role            AssignmentRole
+  assignedAt      DateTime       @default(now())
+  assignedById    String?
+
+  Organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  OrgControl      OrganizationalControl @relation(fields: [orgControlId], references: [id], onDelete: Cascade)
+  Person          Person                @relation("OrgControlAssignee", fields: [personId], references: [id], onDelete: Cascade)
+  AssignedBy      User?                 @relation("OrgControlAssigner", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@unique([orgControlId, personId, role])
+  @@index([organizationId, orgControlId])
+  @@index([personId])
+}
+
+// What evidence is required to prove control operation
+model OrgControlEvidenceRequirement {
+  id              String               @id @default(cuid())
+  organizationId  String
+  orgControlId    String
+  description     String               @db.Text
+  artifactType    EvidenceArtifactType
+  required        Boolean              @default(true)
+  ownerId         String?              // Person accountable for providing this evidence
+  createdAt       DateTime             @default(now())
+
+  Organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  OrgControl      OrganizationalControl @relation(fields: [orgControlId], references: [id], onDelete: Cascade)
+  Owner           Person?               @relation("EvidenceRequirementOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  Evidence        OrgControlEvidence[]
+
+  @@index([organizationId, orgControlId])
+}
+
+// Junction linking existing Evidence files to OrgControls
+model OrgControlEvidence {
+  id                      String   @id @default(cuid())
+  organizationId          String
+  orgControlId            String
+  evidenceId              String
+  evidenceRequirementId   String?
+  testRecordId            String?
+  periodCovered           String?
+  createdAt               DateTime @default(now())
+  createdById             String?
+
+  Organization            Organization                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  OrgControl              OrganizationalControl           @relation(fields: [orgControlId], references: [id], onDelete: Cascade)
+  Evidence                Evidence                        @relation("OrgControlEvidenceLink", fields: [evidenceId], references: [id], onDelete: Cascade)
+  EvidenceRequirement     OrgControlEvidenceRequirement?  @relation(fields: [evidenceRequirementId], references: [id], onDelete: SetNull)
+  TestRecord              OrgControlTestRecord?           @relation(fields: [testRecordId], references: [id], onDelete: SetNull)
+  CreatedBy               User?                           @relation("OrgControlEvidenceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([orgControlId, evidenceId])
+  @@index([organizationId, orgControlId])
+  @@index([evidenceId])
+}
+
+// Test run history
+model OrgControlTestRecord {
+  id              String      @id @default(cuid())
+  organizationId  String
+  orgControlId    String
+  testedById      String
+  testedAt        DateTime    @default(now())
+  result          TestResult
+  findings        String?     @db.Text
+  nextDueDate     DateTime?
+
+  Organization    Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  OrgControl      OrganizationalControl @relation(fields: [orgControlId], references: [id], onDelete: Cascade)
+  TestedBy        User                  @relation("OrgControlTester", fields: [testedById], references: [id])
+  Deficiencies    OrgControlDeficiency[]
+  EvidenceLinks   OrgControlEvidence[]
+
+  @@index([organizationId, orgControlId])
+  @@index([orgControlId, testedAt])
+}
+
+// Gaps found during testing
+model OrgControlDeficiency {
+  id                      String             @id @default(cuid())
+  organizationId          String
+  testRecordId            String
+  orgControlId            String             // Denormalized for faster queries
+  description             String             @db.Text
+  severity                DeficiencySeverity
+  remediationStatus       RemediationStatus  @default(OPEN)
+  remediationOwnerId      String?
+  remediationDueDate      DateTime?
+  remediationNotes        String?            @db.Text
+  resolvedAt              DateTime?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  Organization            Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  TestRecord              OrgControlTestRecord  @relation(fields: [testRecordId], references: [id], onDelete: Cascade)
+  OrgControl              OrganizationalControl @relation(fields: [orgControlId], references: [id], onDelete: Cascade)
+  RemediationOwner        Person?               @relation("DeficiencyOwner", fields: [remediationOwnerId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, remediationStatus])
+  @@index([orgControlId])
+  @@index([remediationOwnerId])
+}
+
+// Time-bound exceptions from operating this control
+model OrgControlException {
+  id                        String                 @id @default(cuid())
+  organizationId            String
+  orgControlId              String
+  status                    ControlExceptionStatus @default(PENDING)
+  justification             String                 @db.Text
+  compensatingControls      String?                @db.Text
+  compensatingOrgControlId  String?
+
+  requestedById             String
+  requestedAt               DateTime               @default(now())
+  approvedById              String?
+  approvedAt                DateTime?
+  approvalNotes             String?                @db.Text
+
+  expiresAt                 DateTime
+  renewalCount              Int                    @default(0)
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
+
+  Organization              Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  OrgControl                OrganizationalControl @relation("OrgControlExceptionTarget", fields: [orgControlId], references: [id], onDelete: Cascade)
+  CompensatingOrgControl    OrganizationalControl? @relation("OrgControlExceptionCompensator", fields: [compensatingOrgControlId], references: [id], onDelete: SetNull)
+  RequestedBy               User                  @relation("OrgControlExceptionRequester", fields: [requestedById], references: [id])
+  ApprovedBy                User?                 @relation("OrgControlExceptionApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, status])
+  @@index([orgControlId])
+  @@index([expiresAt])
+  @@index([status, expiresAt])
+}
+
+// Control-to-control and control-to-external-resource dependencies
+model OrgControlDependency {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  parentOrgControlId    String
+  childOrgControlId     String?
+  externalDependency    String?
+  externalType          String?
+  notes                 String?  @db.Text
+  createdAt             DateTime @default(now())
+
+  Organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Parent                OrganizationalControl  @relation("DependencyParent", fields: [parentOrgControlId], references: [id], onDelete: Cascade)
+  Child                 OrganizationalControl? @relation("DependencyChild", fields: [childOrgControlId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, parentOrgControlId])
+  @@index([childOrgControlId])
 }
 
 model RiskOrganizationalControl {

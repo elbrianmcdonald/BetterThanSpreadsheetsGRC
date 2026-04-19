@@ -13,7 +13,11 @@ import { redirect } from "next/navigation";
 import { BarChart3, Plus } from "lucide-react";
 
 import { auth } from "@/server/auth";
-import { StaleDraftsWidget, HomeMetricsCards } from "@/components/dashboard";
+import {
+  StaleDraftsWidget,
+  HomeMetricsCards,
+  OverdueControlsWidget,
+} from "@/components/dashboard";
 import { AppLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 
@@ -82,6 +86,7 @@ export default async function Home() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Attention Required</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <StaleDraftsWidget />
+            <OverdueControlsWidget />
           </div>
         </div>
       )}

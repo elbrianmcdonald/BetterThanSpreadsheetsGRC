@@ -277,7 +277,10 @@ export const PERMISSION_MATRIX: Record<UserRole, Permission[]> = {
     Permission.USER_DELETE,
     Permission.FRAMEWORK_MANAGE,
     Permission.FRAMEWORK_READ,
+    Permission.EVIDENCE_CREATE,
     Permission.EVIDENCE_READ,
+    Permission.EVIDENCE_UPDATE,
+    Permission.EVIDENCE_DELETE,
     Permission.EVIDENCE_REQUEST_CREATE, // Story 3.12
     Permission.EVIDENCE_REQUEST_READ, // Story 3.12
     Permission.EVIDENCE_REQUEST_FULFILL, // Story 3.12

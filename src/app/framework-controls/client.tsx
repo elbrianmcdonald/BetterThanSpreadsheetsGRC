@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Control Library Client Component
+ * Framework/Standard Control Library Client Component
  *
  * Story 12.8: Control Search & Browse UI
  *
@@ -384,16 +384,16 @@ export function ControlLibraryClient() {
   };
 
   return (
-    <AppLayout breadcrumbs={[{ label: "Governance" }, { label: "Control Library" }]}>
+    <AppLayout breadcrumbs={[{ label: "Governance" }, { label: "Framework/Standard Control Library" }]}>
       <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Page Header (AC4) */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Shield className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-2xl font-semibold">Control Library</h1>
+            <h1 className="text-2xl font-semibold">Framework/Standard Control Library</h1>
             <p className="text-sm text-muted-foreground">
-              {summary ? `${summary.totalControls} controls across all frameworks` : "Browse controls across all frameworks"}
+              {summary ? `${summary.totalControls} controls across all frameworks and standards` : "Browse controls across all frameworks and standards"}
             </p>
           </div>
         </div>

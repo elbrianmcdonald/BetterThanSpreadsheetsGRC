@@ -1,5 +1,5 @@
 /**
- * Control Library Page
+ * Framework/Standard Control Library Page
  *
  * Story 12.8: Control Search & Browse UI (AC1-AC4)
  *
@@ -11,11 +11,11 @@ import { getServerAuthSession } from "@/server/auth";
 import { ControlLibraryClient } from "./client";
 
 export const metadata = {
-  title: "Control Library | BetterThanSpreadsheets GRC",
-  description: "Browse and search controls across all frameworks",
+  title: "Framework/Standard Control Library | BetterThanSpreadsheets GRC",
+  description: "Browse and search controls across all frameworks and standards",
 };
 
-export default async function ControlLibraryPage() {
+export default async function FrameworkControlLibraryPage() {
   const session = await getServerAuthSession();
 
   if (!session) {

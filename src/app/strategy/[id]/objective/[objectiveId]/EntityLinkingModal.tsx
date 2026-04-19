@@ -68,8 +68,10 @@ const severityConfig: Record<Severity, { color: string; label: string }> = {
 
 /** Control status badge configuration */
 const controlStatusConfig: Record<OrgControlStatus, { color: string; label: string }> = {
-  ACTIVE: { color: "bg-green-100 text-green-700", label: "Active" },
+  NOT_IMPLEMENTED: { color: "bg-gray-100 text-gray-700", label: "Not Implemented" },
   PLANNED: { color: "bg-blue-100 text-blue-700", label: "Planned" },
+  PARTIALLY_IMPLEMENTED: { color: "bg-amber-100 text-amber-700", label: "Partially Implemented" },
+  IMPLEMENTED: { color: "bg-green-100 text-green-700", label: "Implemented" },
   DEPRECATED: { color: "bg-gray-100 text-gray-700", label: "Deprecated" },
 };
 
@@ -359,11 +361,8 @@ export function EntityLinkingModal({
                           <Badge variant="outline" className={controlStatusConfig[control.status].color}>
                             {controlStatusConfig[control.status].label}
                           </Badge>
-                          {control.framework && (
-                            <Badge variant="secondary" className="text-xs">
-                              {control.framework.name}
-                            </Badge>
-                          )}
+                          {/* Framework badge removed: mapping migrated to
+                              OrgControlFrameworkMapping junction; next sprint. */}
                         </div>
                       </div>
                       {control.isLinked && (

@@ -23,6 +23,12 @@ import { riskRegisterRouter } from "@/server/api/routers/riskRegister";
 import { controlLinkRouter } from "@/server/api/routers/controlLink";
 import { mitreRouter } from "@/server/api/routers/mitre";
 import { organizationalControlRouter } from "@/server/api/routers/organizationalControl";
+import { orgControlTestRecordRouter } from "@/server/api/routers/orgControlTestRecord";
+import { orgControlDeficiencyRouter } from "@/server/api/routers/orgControlDeficiency";
+import { orgControlEvidenceRequirementRouter } from "@/server/api/routers/orgControlEvidenceRequirement";
+import { orgControlEvidenceRouter } from "@/server/api/routers/orgControlEvidence";
+import { orgControlExceptionRouter } from "@/server/api/routers/orgControlException";
+import { orgControlDependencyRouter } from "@/server/api/routers/orgControlDependency";
 import { strategyRouter } from "@/server/api/routers/strategy";
 import { goalRouter } from "@/server/api/routers/goal";
 import { objectiveRouter } from "@/server/api/routers/objective";
@@ -79,6 +85,12 @@ export const appRouter = createTRPCRouter({
   controlLink: controlLinkRouter, // Story 12.1: Control Linkage Data Models & tRPC Router
   mitre: mitreRouter, // Story 13.1: MITRE ATT&CK Data Model & tRPC Router
   organizationalControl: organizationalControlRouter, // Organizational Controls for risks
+  orgControlTestRecord: orgControlTestRecordRouter, // Sub-Epic C.1: Control test runs
+  orgControlDeficiency: orgControlDeficiencyRouter, // Sub-Epic C.2: Deficiency tracking
+  orgControlEvidenceRequirement: orgControlEvidenceRequirementRouter, // Sub-Epic D.1
+  orgControlEvidence: orgControlEvidenceRouter, // Sub-Epic D.2: Evidence junction
+  orgControlException: orgControlExceptionRouter, // Sub-Epic E.1: Exception lifecycle
+  orgControlDependency: orgControlDependencyRouter, // Sub-Epic E.2: Dependencies
   strategy: strategyRouter, // Story 1.2: Strategy CRUD API
   goal: goalRouter, // Story 1.3: Goal CRUD API
   objective: objectiveRouter, // Story 2.2: Objective CRUD API

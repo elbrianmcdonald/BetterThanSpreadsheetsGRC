@@ -16,8 +16,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Generate Prisma Client (DATABASE_URL is required by Prisma 7 at generate time
+# even though no DB connection is made; runtime URL is injected by docker-compose)
+RUN DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder" npx prisma generate
 
 # Default command (overridden by docker-compose)
 CMD ["npm", "test"]

@@ -1,67 +1,159 @@
 /**
  * Organizational Control tRPC Router
  *
- * Manages user-defined controls that can be:
- * - Created on-the-fly while editing risks
- * - Optionally mapped to framework controls
- * - Linked to risks as "in place" or "needed"
+ * Manages organization-owned controls operated by the GRC program. Supports:
+ * - Full-field CRUD (identification, classification, implementation, cadence, lifecycle)
+ * - Many-to-many crosswalk to framework library controls via OrgControlFrameworkMapping
+ * - RACI ownership (owner/operator/reviewer) via OrgControlAssignment
+ * - Linkage to risks via RiskOrganizationalControl
+ *
+ * Sub-Epic B.1 + B.2 (tech-spec: docs/sprint-artifacts/tech-spec-org-controls-redesign.md)
  */
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
-import { AuditAction, OrgControlType, OrgControlStatus, RiskOrgControlRole } from "@prisma/client";
+import {
+  AuditAction,
+  ControlType,
+  ControlNature,
+  AutomationLevel,
+  ControlFrequency,
+  OrgControlStatus,
+  AssignmentRole,
+  RiskOrgControlRole,
+  StandardMappingType,
+  EvidenceArtifactType,
+  Prisma,
+} from "@prisma/client";
 import { createTRPCRouter, organizationProcedure } from "@/server/api/trpc";
+
+const ALLOWED_MUTATION_ROLES = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
+
+function assertMutationAllowed(role: string | undefined, action: string): void {
+  if (!role || !ALLOWED_MUTATION_ROLES.includes(role)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: `You don't have permission to ${action} controls`,
+    });
+  }
+}
+
+function generateLocalControlId(): string {
+  return "OC-" + Date.now().toString(36).toUpperCase();
+}
+
+const frameworkMappingInput = z.object({
+  frameworkControlId: z.string(),
+  mappingType: z.nativeEnum(StandardMappingType).default(StandardMappingType.COVERS),
+  notes: z.string().max(500).optional(),
+});
+
+const assignmentInput = z.object({
+  personId: z.string(),
+  role: z.nativeEnum(AssignmentRole),
+});
+
+const evidenceRequirementInput = z.object({
+  description: z.string().min(1).max(5000),
+  artifactType: z.nativeEnum(EvidenceArtifactType),
+  required: z.boolean().default(true),
+  ownerId: z.string().optional().nullable(),
+});
+
+// Full-field input used by create and update
+const controlFieldsInput = z.object({
+  localControlId: z.string().min(1).max(50).optional(),
+  name: z.string().min(1, "Name is required").max(200),
+  description: z.string().max(5000).optional().nullable(),
+  objective: z.string().max(5000).optional().nullable(),
+  family: z.string().max(100).optional().nullable(),
+  controlType: z.nativeEnum(ControlType).default(ControlType.PREVENTIVE),
+  nature: z.nativeEnum(ControlNature).optional().nullable(),
+  automationLevel: z.nativeEnum(AutomationLevel).optional().nullable(),
+  status: z.nativeEnum(OrgControlStatus).default(OrgControlStatus.NOT_IMPLEMENTED),
+  implementationNarrative: z.string().max(10000).optional().nullable(),
+  scope: z.string().max(5000).optional().nullable(),
+  frequency: z.nativeEnum(ControlFrequency).optional().nullable(),
+  procedureRunbookLink: z.string().url().max(500).optional().nullable(),
+  reviewCycleMonths: z.number().int().min(1).max(120).optional().nullable(),
+  retirementDate: z.date().optional().nullable(),
+  frameworkMappings: z.array(frameworkMappingInput).optional(),
+  assignments: z.array(assignmentInput).optional(),
+  evidenceRequirements: z.array(evidenceRequirementInput).optional(),
+});
 
 export const organizationalControlRouter = createTRPCRouter({
   /**
-   * List all organizational controls for the organization
+   * List organizational controls with filters and junction counts
    */
   list: organizationProcedure
     .input(
       z.object({
         search: z.string().optional(),
         status: z.nativeEnum(OrgControlStatus).optional(),
-        controlType: z.nativeEnum(OrgControlType).optional(),
+        controlType: z.nativeEnum(ControlType).optional(),
+        nature: z.nativeEnum(ControlNature).optional(),
+        automationLevel: z.nativeEnum(AutomationLevel).optional(),
+        family: z.string().optional(),
+        ownerId: z.string().optional(),
+        overdueTestsOnly: z.boolean().optional(),
+        hideDeprecated: z.boolean().optional(),
         limit: z.number().min(1).max(100).default(50),
         cursor: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
+      const now = new Date();
       const controls = await ctx.db.organizationalControl.findMany({
         where: {
           organizationId: ctx.organizationId!,
-          ...(input.status && { status: input.status }),
+          ...(input.status
+            ? { status: input.status }
+            : input.hideDeprecated
+              ? { status: { not: OrgControlStatus.DEPRECATED } }
+              : {}),
           ...(input.controlType && { controlType: input.controlType }),
+          ...(input.nature && { nature: input.nature }),
+          ...(input.automationLevel && { automationLevel: input.automationLevel }),
+          ...(input.family && { family: { equals: input.family, mode: "insensitive" } }),
+          ...(input.ownerId && {
+            Assignments: {
+              some: { personId: input.ownerId, role: AssignmentRole.OWNER },
+            },
+          }),
+          ...(input.overdueTestsOnly && {
+            nextTestDueDate: { lt: now },
+            status: { not: OrgControlStatus.DEPRECATED },
+          }),
           ...(input.search && {
             OR: [
               { name: { contains: input.search, mode: "insensitive" } },
+              { localControlId: { contains: input.search, mode: "insensitive" } },
               { description: { contains: input.search, mode: "insensitive" } },
             ],
           }),
         },
         include: {
-          FrameworkControl: {
+          Assignments: {
+            where: { role: AssignmentRole.OWNER },
             select: {
               id: true,
-              controlId: true,
-              title: true,
-              Framework: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                },
-              },
+              role: true,
+              Person: { select: { id: true, name: true, email: true, jobTitle: true } },
             },
           },
           _count: {
             select: {
               RiskLinks: true,
+              FrameworkMappings: true,
+              Assignments: true,
+              Deficiencies: true,
+              Exceptions: true,
             },
           },
         },
-        orderBy: { name: "asc" },
+        orderBy: [{ localControlId: "asc" }, { name: "asc" }],
         take: input.limit + 1,
         ...(input.cursor && { cursor: { id: input.cursor }, skip: 1 }),
       });
@@ -72,14 +164,11 @@ export const organizationalControlRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
-      return {
-        controls,
-        nextCursor,
-      };
+      return { controls, nextCursor };
     }),
 
   /**
-   * Search controls by name for autocomplete
+   * Search controls by name for autocomplete (inline risk linking)
    */
   search: organizationProcedure
     .input(
@@ -90,78 +179,158 @@ export const organizationalControlRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
-      const controls = await ctx.db.organizationalControl.findMany({
+      return ctx.db.organizationalControl.findMany({
         where: {
           organizationId: ctx.organizationId!,
-          status: OrgControlStatus.ACTIVE,
-          name: { contains: input.query, mode: "insensitive" },
-          ...(input.excludeIds?.length && {
-            id: { notIn: input.excludeIds },
-          }),
-        },
-        include: {
-          FrameworkControl: {
-            select: {
-              id: true,
-              controlId: true,
-              title: true,
-              Framework: {
-                select: {
-                  id: true,
-                  code: true,
-                },
-              },
-            },
-          },
+          status: { not: OrgControlStatus.DEPRECATED },
+          OR: [
+            { name: { contains: input.query, mode: "insensitive" } },
+            { localControlId: { contains: input.query, mode: "insensitive" } },
+          ],
+          ...(input.excludeIds?.length && { id: { notIn: input.excludeIds } }),
         },
         orderBy: { name: "asc" },
         take: input.limit,
       });
-
-      return controls;
     }),
 
   /**
-   * Quick create - Create a control with just a name (or return existing)
-   * Similar to business unit quick create pattern
+   * List controls whose next test is overdue. Used by dashboard widget.
+   */
+  overdueTests: organizationProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(10),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const now = new Date();
+      const controls = await ctx.db.organizationalControl.findMany({
+        where: {
+          organizationId: ctx.organizationId!,
+          nextTestDueDate: { lt: now },
+          status: { not: OrgControlStatus.DEPRECATED },
+        },
+        orderBy: { nextTestDueDate: "asc" },
+        take: input.limit,
+        select: {
+          id: true,
+          localControlId: true,
+          name: true,
+          status: true,
+          controlType: true,
+          lastTestedDate: true,
+          nextTestDueDate: true,
+          lastTestResult: true,
+        },
+      });
+
+      const total = await ctx.db.organizationalControl.count({
+        where: {
+          organizationId: ctx.organizationId!,
+          nextTestDueDate: { lt: now },
+          status: { not: OrgControlStatus.DEPRECATED },
+        },
+      });
+
+      return { controls, total };
+    }),
+
+  /**
+   * Get distinct family values (for autocomplete in forms)
+   */
+  distinctFamilies: organizationProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.db.organizationalControl.findMany({
+      where: {
+        organizationId: ctx.organizationId!,
+        family: { not: null },
+      },
+      select: { family: true },
+      distinct: ["family"],
+      orderBy: { family: "asc" },
+    });
+    return rows.map((r) => r.family).filter((f): f is string => f !== null);
+  }),
+
+  /**
+   * Get one control with all relations (detail view)
+   */
+  getById: organizationProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const control = await ctx.db.organizationalControl.findFirst({
+        where: {
+          id: input.id,
+          organizationId: ctx.organizationId!,
+        },
+        include: {
+          CreatedBy: { select: { id: true, name: true, email: true } },
+          FrameworkMappings: {
+            include: {
+              FrameworkControl: {
+                select: {
+                  id: true,
+                  controlId: true,
+                  title: true,
+                  Framework: { select: { id: true, code: true, name: true } },
+                },
+              },
+            },
+          },
+          Assignments: {
+            include: {
+              Person: { select: { id: true, name: true, email: true, jobTitle: true } },
+            },
+            orderBy: [{ role: "asc" }, { assignedAt: "desc" }],
+          },
+          EvidenceRequirements: true,
+          TestRecords: {
+            take: 5,
+            orderBy: { testedAt: "desc" },
+            include: { TestedBy: { select: { id: true, name: true } } },
+          },
+          _count: {
+            select: {
+              RiskLinks: true,
+              FrameworkMappings: true,
+              Assignments: true,
+              EvidenceRequirements: true,
+              EvidenceLinks: true,
+              TestRecords: true,
+              Deficiencies: true,
+              Exceptions: true,
+              DependenciesFrom: true,
+              DependenciesTo: true,
+              linkedObjectives: true,
+            },
+          },
+        },
+      });
+
+      if (!control) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
+      }
+
+      return control;
+    }),
+
+  /**
+   * Quick create - minimal fields, used inline from risk editor
    */
   quickCreate: organizationProcedure
     .input(
       z.object({
         name: z.string().min(1, "Name is required").max(200),
-        controlType: z.nativeEnum(OrgControlType).optional(),
+        controlType: z.nativeEnum(ControlType).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check permissions
-      const allowedRoles = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
-      if (!allowedRoles.includes(ctx.session!.user.role)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You don't have permission to create controls",
-        });
-      }
+      assertMutationAllowed(ctx.session?.user.role, "create");
 
-      // Check for existing control with same name (case-insensitive)
       const existing = await ctx.db.organizationalControl.findFirst({
         where: {
           organizationId: ctx.organizationId!,
           name: { equals: input.name, mode: "insensitive" },
-        },
-        include: {
-          FrameworkControl: {
-            select: {
-              id: true,
-              controlId: true,
-              title: true,
-              Framework: {
-                select: {
-                  id: true,
-                  code: true,
-                },
-              },
-            },
-          },
         },
       });
 
@@ -169,34 +338,18 @@ export const organizationalControlRouter = createTRPCRouter({
         return { ...existing, created: false };
       }
 
-      // Create new control
       const newControl = await ctx.db.organizationalControl.create({
         data: {
           id: randomUUID(),
           organizationId: ctx.organizationId!,
+          localControlId: generateLocalControlId(),
           name: input.name,
-          controlType: input.controlType ?? OrgControlType.MITIGATING,
-          status: OrgControlStatus.ACTIVE,
+          controlType: input.controlType ?? ControlType.PREVENTIVE,
+          status: OrgControlStatus.NOT_IMPLEMENTED,
           createdById: ctx.session!.user.id,
-        },
-        include: {
-          FrameworkControl: {
-            select: {
-              id: true,
-              controlId: true,
-              title: true,
-              Framework: {
-                select: {
-                  id: true,
-                  code: true,
-                },
-              },
-            },
-          },
         },
       });
 
-      // Audit log
       await ctx.db.auditLog.create({
         data: {
           id: randomUUID(),
@@ -205,11 +358,7 @@ export const organizationalControlRouter = createTRPCRouter({
           action: AuditAction.CREATE_CONTROL,
           entityType: "OrganizationalControl",
           entityId: newControl.id,
-          changes: {
-            action: "QUICK_CREATE",
-            name: input.name,
-            controlType: input.controlType,
-          },
+          changes: { action: "QUICK_CREATE", name: input.name, controlType: input.controlType },
           actorName: ctx.session!.user.name,
           actorRole: ctx.session!.user.role,
         },
@@ -219,100 +368,136 @@ export const organizationalControlRouter = createTRPCRouter({
     }),
 
   /**
-   * Create a control with full details including optional framework mapping
+   * Full create with all fields + framework mappings + assignments
    */
   create: organizationProcedure
-    .input(
-      z.object({
-        name: z.string().min(1, "Name is required").max(200),
-        description: z.string().max(5000).optional(),
-        controlType: z.nativeEnum(OrgControlType).default(OrgControlType.MITIGATING),
-        frameworkControlId: z.string().optional(),
-      })
-    )
+    .input(controlFieldsInput)
     .mutation(async ({ ctx, input }) => {
-      // Check permissions
-      const allowedRoles = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
-      if (!allowedRoles.includes(ctx.session!.user.role)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You don't have permission to create controls",
-        });
-      }
+      assertMutationAllowed(ctx.session?.user.role, "create");
 
-      // Check for duplicate name
-      const existing = await ctx.db.organizationalControl.findFirst({
+      const localControlId = input.localControlId ?? generateLocalControlId();
+
+      // Duplicate checks
+      const nameConflict = await ctx.db.organizationalControl.findFirst({
         where: {
           organizationId: ctx.organizationId!,
           name: { equals: input.name, mode: "insensitive" },
         },
       });
-
-      if (existing) {
+      if (nameConflict) {
         throw new TRPCError({
           code: "CONFLICT",
           message: "A control with this name already exists",
         });
       }
 
-      // Validate framework control if provided
-      if (input.frameworkControlId) {
-        const frameworkControl = await ctx.db.control.findFirst({
-          where: {
-            id: input.frameworkControlId,
-            organizationId: ctx.organizationId!,
+      const localIdConflict = await ctx.db.organizationalControl.findFirst({
+        where: {
+          organizationId: ctx.organizationId!,
+          localControlId: { equals: localControlId, mode: "insensitive" },
+        },
+      });
+      if (localIdConflict) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `A control with ID "${localControlId}" already exists`,
+        });
+      }
+
+      const userId = ctx.session!.user.id;
+      const organizationId = ctx.organizationId!;
+
+      // Transactional create: control + junctions
+      const newControl = await ctx.db.$transaction(async (tx) => {
+        const created = await tx.organizationalControl.create({
+          data: {
+            id: randomUUID(),
+            organizationId,
+            localControlId,
+            name: input.name,
+            description: input.description ?? null,
+            objective: input.objective ?? null,
+            family: input.family ?? null,
+            controlType: input.controlType,
+            nature: input.nature ?? null,
+            automationLevel: input.automationLevel ?? null,
+            status: input.status,
+            implementationNarrative: input.implementationNarrative ?? null,
+            scope: input.scope ?? null,
+            frequency: input.frequency ?? null,
+            procedureRunbookLink: input.procedureRunbookLink ?? null,
+            reviewCycleMonths: input.reviewCycleMonths ?? null,
+            retirementDate: input.retirementDate ?? null,
+            createdById: userId,
           },
         });
 
-        if (!frameworkControl) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Framework control not found",
+        if (input.frameworkMappings?.length) {
+          await tx.orgControlFrameworkMapping.createMany({
+            data: input.frameworkMappings.map((m) => ({
+              id: randomUUID(),
+              organizationId,
+              orgControlId: created.id,
+              frameworkControlId: m.frameworkControlId,
+              mappingType: m.mappingType,
+              notes: m.notes ?? null,
+              createdById: userId,
+            })),
+            skipDuplicates: true,
           });
         }
-      }
 
-      const newControl = await ctx.db.organizationalControl.create({
-        data: {
-          id: randomUUID(),
-          organizationId: ctx.organizationId!,
-          name: input.name,
-          description: input.description,
-          controlType: input.controlType,
-          status: OrgControlStatus.ACTIVE,
-          frameworkControlId: input.frameworkControlId,
-          createdById: ctx.session!.user.id,
-        },
-        include: {
-          FrameworkControl: {
-            select: {
-              id: true,
-              controlId: true,
-              title: true,
-              Framework: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
+        if (input.assignments?.length) {
+          await tx.orgControlAssignment.createMany({
+            data: input.assignments.map((a) => ({
+              id: randomUUID(),
+              organizationId,
+              orgControlId: created.id,
+              personId: a.personId,
+              role: a.role,
+              assignedById: userId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        if (input.evidenceRequirements?.length) {
+          await tx.orgControlEvidenceRequirement.createMany({
+            data: input.evidenceRequirements.map((r) => ({
+              id: randomUUID(),
+              organizationId,
+              orgControlId: created.id,
+              description: r.description,
+              artifactType: r.artifactType,
+              required: r.required,
+              ownerId: r.ownerId ?? null,
+            })),
+          });
+        }
+
+        return created;
       });
 
-      // Audit log
       await ctx.db.auditLog.create({
         data: {
           id: randomUUID(),
-          organizationId: ctx.organizationId!,
-          userId: ctx.session!.user.id,
+          organizationId,
+          userId,
           action: AuditAction.CREATE_CONTROL,
           entityType: "OrganizationalControl",
           entityId: newControl.id,
           changes: {
             action: "CREATE",
-            ...input,
+            after: {
+              localControlId: newControl.localControlId,
+              name: newControl.name,
+              controlType: newControl.controlType,
+              status: newControl.status,
+              nature: newControl.nature,
+              automationLevel: newControl.automationLevel,
+              frameworkMappingCount: input.frameworkMappings?.length ?? 0,
+              assignmentCount: input.assignments?.length ?? 0,
+            },
           },
           actorName: ctx.session!.user.name,
           actorRole: ctx.session!.user.role,
@@ -323,53 +508,40 @@ export const organizationalControlRouter = createTRPCRouter({
     }),
 
   /**
-   * Update an organizational control
+   * Full update with all fields + junction replacement
    */
   update: organizationProcedure
     .input(
       z.object({
         id: z.string(),
-        name: z.string().min(1).max(200).optional(),
-        description: z.string().max(5000).optional().nullable(),
-        controlType: z.nativeEnum(OrgControlType).optional(),
-        status: z.nativeEnum(OrgControlStatus).optional(),
-        frameworkControlId: z.string().optional().nullable(),
+        data: controlFieldsInput.partial().extend({
+          // Keep name non-optional inside partial quirks only when provided
+        }),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const allowedRoles = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
-      if (!allowedRoles.includes(ctx.session!.user.role)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You don't have permission to update controls",
-        });
-      }
+      assertMutationAllowed(ctx.session?.user.role, "update");
 
       const existing = await ctx.db.organizationalControl.findFirst({
-        where: {
-          id: input.id,
-          organizationId: ctx.organizationId!,
-        },
+        where: { id: input.id, organizationId: ctx.organizationId! },
       });
 
       if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Control not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
       }
 
-      // Check for name conflict if updating name
-      if (input.name && input.name !== existing.name) {
-        const duplicate = await ctx.db.organizationalControl.findFirst({
+      const data = input.data;
+
+      // Duplicate name check
+      if (data.name && data.name !== existing.name) {
+        const dup = await ctx.db.organizationalControl.findFirst({
           where: {
             organizationId: ctx.organizationId!,
-            name: { equals: input.name, mode: "insensitive" },
+            name: { equals: data.name, mode: "insensitive" },
             id: { not: input.id },
           },
         });
-
-        if (duplicate) {
+        if (dup) {
           throw new TRPCError({
             code: "CONFLICT",
             message: "A control with this name already exists",
@@ -377,30 +549,123 @@ export const organizationalControlRouter = createTRPCRouter({
         }
       }
 
-      const updated = await ctx.db.organizationalControl.update({
-        where: { id: input.id },
-        data: {
-          ...(input.name && { name: input.name }),
-          ...(input.description !== undefined && { description: input.description }),
-          ...(input.controlType && { controlType: input.controlType }),
-          ...(input.status && { status: input.status }),
-          ...(input.frameworkControlId !== undefined && { frameworkControlId: input.frameworkControlId }),
-        },
-        include: {
-          FrameworkControl: {
-            select: {
-              id: true,
-              controlId: true,
-              title: true,
-              Framework: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                },
-              },
-            },
+      // Duplicate localControlId check
+      if (data.localControlId && data.localControlId !== existing.localControlId) {
+        const dup = await ctx.db.organizationalControl.findFirst({
+          where: {
+            organizationId: ctx.organizationId!,
+            localControlId: { equals: data.localControlId, mode: "insensitive" },
+            id: { not: input.id },
           },
+        });
+        if (dup) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `A control with ID "${data.localControlId}" already exists`,
+          });
+        }
+      }
+
+      const userId = ctx.session!.user.id;
+      const organizationId = ctx.organizationId!;
+
+      const updated = await ctx.db.$transaction(async (tx) => {
+        const updateData: Prisma.OrganizationalControlUpdateInput = {};
+        if (data.localControlId !== undefined) updateData.localControlId = data.localControlId;
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.description !== undefined) updateData.description = data.description;
+        if (data.objective !== undefined) updateData.objective = data.objective;
+        if (data.family !== undefined) updateData.family = data.family;
+        if (data.controlType !== undefined) updateData.controlType = data.controlType;
+        if (data.nature !== undefined) updateData.nature = data.nature;
+        if (data.automationLevel !== undefined) updateData.automationLevel = data.automationLevel;
+        if (data.status !== undefined) updateData.status = data.status;
+        if (data.implementationNarrative !== undefined)
+          updateData.implementationNarrative = data.implementationNarrative;
+        if (data.scope !== undefined) updateData.scope = data.scope;
+        if (data.frequency !== undefined) updateData.frequency = data.frequency;
+        if (data.procedureRunbookLink !== undefined)
+          updateData.procedureRunbookLink = data.procedureRunbookLink;
+        if (data.reviewCycleMonths !== undefined)
+          updateData.reviewCycleMonths = data.reviewCycleMonths;
+        if (data.retirementDate !== undefined) updateData.retirementDate = data.retirementDate;
+
+        const result = await tx.organizationalControl.update({
+          where: { id: input.id },
+          data: updateData,
+        });
+
+        // Replace framework mappings if provided (full set replacement)
+        if (data.frameworkMappings) {
+          await tx.orgControlFrameworkMapping.deleteMany({
+            where: { orgControlId: input.id },
+          });
+          if (data.frameworkMappings.length) {
+            await tx.orgControlFrameworkMapping.createMany({
+              data: data.frameworkMappings.map((m) => ({
+                id: randomUUID(),
+                organizationId,
+                orgControlId: input.id,
+                frameworkControlId: m.frameworkControlId,
+                mappingType: m.mappingType,
+                notes: m.notes ?? null,
+                createdById: userId,
+              })),
+              skipDuplicates: true,
+            });
+          }
+        }
+
+        // Replace assignments if provided (full set replacement)
+        if (data.assignments) {
+          await tx.orgControlAssignment.deleteMany({
+            where: { orgControlId: input.id },
+          });
+          if (data.assignments.length) {
+            await tx.orgControlAssignment.createMany({
+              data: data.assignments.map((a) => ({
+                id: randomUUID(),
+                organizationId,
+                orgControlId: input.id,
+                personId: a.personId,
+                role: a.role,
+                assignedById: userId,
+              })),
+              skipDuplicates: true,
+            });
+          }
+        }
+
+        return result;
+      });
+
+      await ctx.db.auditLog.create({
+        data: {
+          id: randomUUID(),
+          organizationId,
+          userId,
+          action: AuditAction.UPDATE_CONTROL,
+          entityType: "OrganizationalControl",
+          entityId: updated.id,
+          changes: {
+            action: "UPDATE",
+            before: {
+              name: existing.name,
+              controlType: existing.controlType,
+              status: existing.status,
+              nature: existing.nature,
+            },
+            after: {
+              name: updated.name,
+              controlType: updated.controlType,
+              status: updated.status,
+              nature: updated.nature,
+            },
+            frameworkMappingsReplaced: data.frameworkMappings !== undefined,
+            assignmentsReplaced: data.assignments !== undefined,
+          },
+          actorName: ctx.session!.user.name,
+          actorRole: ctx.session!.user.role,
         },
       });
 
@@ -408,8 +673,402 @@ export const organizationalControlRouter = createTRPCRouter({
     }),
 
   /**
-   * Get controls linked to a specific risk
+   * Publish a new version. Increments `version` and writes a full-state snapshot
+   * to the audit log for later diffing.
    */
+  publish: organizationProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        notes: z.string().max(2000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // ORG_ADMIN only for publishing (scope policy, separate from author/edit role)
+      if (ctx.session?.user.role !== "ORG_ADMIN") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only organization admins can publish control versions",
+        });
+      }
+
+      const organizationId = ctx.organizationId!;
+
+      const existing = await ctx.db.organizationalControl.findFirst({
+        where: { id: input.id, organizationId },
+        include: {
+          FrameworkMappings: {
+            include: {
+              FrameworkControl: {
+                select: {
+                  controlId: true,
+                  Framework: { select: { code: true } },
+                },
+              },
+            },
+          },
+          Assignments: {
+            include: { Person: { select: { id: true, name: true, email: true } } },
+          },
+        },
+      });
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
+      }
+
+      const newVersion = existing.version + 1;
+      const updated = await ctx.db.organizationalControl.update({
+        where: { id: input.id },
+        data: { version: newVersion },
+      });
+
+      // Snapshot full control state for later version diffing
+      const snapshot = {
+        version: newVersion,
+        localControlId: existing.localControlId,
+        name: existing.name,
+        description: existing.description,
+        objective: existing.objective,
+        family: existing.family,
+        controlType: existing.controlType,
+        nature: existing.nature,
+        automationLevel: existing.automationLevel,
+        status: existing.status,
+        implementationNarrative: existing.implementationNarrative,
+        scope: existing.scope,
+        frequency: existing.frequency,
+        procedureRunbookLink: existing.procedureRunbookLink,
+        reviewCycleMonths: existing.reviewCycleMonths,
+        retirementDate: existing.retirementDate,
+        frameworkMappings: existing.FrameworkMappings.map((m) => ({
+          frameworkCode: m.FrameworkControl.Framework.code,
+          frameworkControlId: m.FrameworkControl.controlId,
+          mappingType: m.mappingType,
+          notes: m.notes,
+        })),
+        assignments: existing.Assignments.map((a) => ({
+          personId: a.personId,
+          personName: a.Person.name,
+          role: a.role,
+        })),
+      };
+
+      await ctx.db.auditLog.create({
+        data: {
+          id: randomUUID(),
+          organizationId,
+          userId: ctx.session!.user.id,
+          action: AuditAction.UPDATE_CONTROL,
+          entityType: "OrganizationalControl",
+          entityId: existing.id,
+          changes: {
+            action: "VERSION_PUBLISHED",
+            publishedVersion: newVersion,
+            previousVersion: existing.version,
+            notes: input.notes ?? null,
+            snapshot,
+          },
+          actorName: ctx.session!.user.name,
+          actorRole: ctx.session!.user.role,
+        },
+      });
+
+      return updated;
+    }),
+
+  /**
+   * Most recent VERSION_PUBLISHED snapshot from the audit log (used to show the
+   * previous published state when confirming a new publish).
+   */
+  getLatestPublishedSnapshot: organizationProcedure
+    .input(z.object({ controlId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      // AuditLog `changes.action` isn't indexable without a raw query; scan the
+      // most recent 100 entries for this entity (bounded and fast).
+      const entries = await ctx.db.auditLog.findMany({
+        where: {
+          organizationId: ctx.organizationId!,
+          entityType: "OrganizationalControl",
+          entityId: input.controlId,
+        },
+        orderBy: { timestamp: "desc" },
+        take: 100,
+      });
+
+      const published = entries.find((e) => {
+        const c = e.changes as { action?: string } | null;
+        return c?.action === "VERSION_PUBLISHED";
+      });
+
+      return { latest: published ?? null };
+    }),
+
+  /**
+   * Controls due for review: either never tested, or last tested more than
+   * `reviewCycleMonths` ago (when a cycle is set). Excludes DEPRECATED.
+   */
+  dueForReview: organizationProcedure
+    .input(z.object({ limit: z.number().min(1).max(50).default(10) }))
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db.organizationalControl.findMany({
+        where: {
+          organizationId: ctx.organizationId!,
+          status: { not: OrgControlStatus.DEPRECATED },
+          OR: [
+            { lastTestedDate: null },
+            // Caller filters cycle-elapsed entries client-side below
+          ],
+        },
+        select: {
+          id: true,
+          localControlId: true,
+          name: true,
+          status: true,
+          lastTestedDate: true,
+          reviewCycleMonths: true,
+          nextTestDueDate: true,
+        },
+        orderBy: [{ lastTestedDate: "asc" }, { localControlId: "asc" }],
+      });
+
+      // Cycle-elapsed path: pull controls with a cycle and a lastTestedDate older
+      // than cycle months. Prisma can't express the arithmetic comparison cleanly,
+      // so fetch candidates and filter in memory. Bounded by org size.
+      const withCycle = await ctx.db.organizationalControl.findMany({
+        where: {
+          organizationId: ctx.organizationId!,
+          status: { not: OrgControlStatus.DEPRECATED },
+          reviewCycleMonths: { not: null },
+          lastTestedDate: { not: null },
+        },
+        select: {
+          id: true,
+          localControlId: true,
+          name: true,
+          status: true,
+          lastTestedDate: true,
+          reviewCycleMonths: true,
+          nextTestDueDate: true,
+        },
+      });
+
+      const now = Date.now();
+      const elapsed = withCycle.filter((c) => {
+        if (!c.lastTestedDate || !c.reviewCycleMonths) return false;
+        const d = new Date(c.lastTestedDate);
+        d.setMonth(d.getMonth() + c.reviewCycleMonths);
+        return d.getTime() < now;
+      });
+
+      // Dedupe (never-tested controls are already in `rows`)
+      const byId = new Map<string, (typeof rows)[number]>();
+      for (const r of rows) byId.set(r.id, r);
+      for (const r of elapsed) if (!byId.has(r.id)) byId.set(r.id, r);
+
+      const combined = Array.from(byId.values());
+      const total = combined.length;
+      return { controls: combined.slice(0, input.limit), total };
+    }),
+
+  /**
+   * Archive - soft-retire a control (status=DEPRECATED, retirementDate=now)
+   * Preserves all linkages and history for audit.
+   */
+  archive: organizationProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      assertMutationAllowed(ctx.session?.user.role, "archive");
+
+      const existing = await ctx.db.organizationalControl.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId! },
+        include: {
+          _count: { select: { Exceptions: true } },
+        },
+      });
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
+      }
+
+      if (existing.status === OrgControlStatus.DEPRECATED) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Control is already archived",
+        });
+      }
+
+      // Guardrail: block archive if pending exceptions exist
+      const pendingExceptions = await ctx.db.orgControlException.count({
+        where: { orgControlId: input.id, status: "PENDING" },
+      });
+      if (pendingExceptions > 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Cannot archive: ${pendingExceptions} pending exception(s). Resolve them first.`,
+        });
+      }
+
+      const archived = await ctx.db.organizationalControl.update({
+        where: { id: input.id },
+        data: {
+          status: OrgControlStatus.DEPRECATED,
+          retirementDate: new Date(),
+        },
+      });
+
+      await ctx.db.auditLog.create({
+        data: {
+          id: randomUUID(),
+          organizationId: ctx.organizationId!,
+          userId: ctx.session!.user.id,
+          action: AuditAction.UPDATE_CONTROL,
+          entityType: "OrganizationalControl",
+          entityId: archived.id,
+          changes: {
+            action: "ARCHIVE",
+            before: { status: existing.status, retirementDate: existing.retirementDate },
+            after: { status: archived.status, retirementDate: archived.retirementDate },
+          },
+          actorName: ctx.session!.user.name,
+          actorRole: ctx.session!.user.role,
+        },
+      });
+
+      return archived;
+    }),
+
+  /**
+   * Hard-delete a control. Only allowed if no linkages exist.
+   * Returns an impact summary if linkages prevent deletion.
+   */
+  delete: organizationProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      assertMutationAllowed(ctx.session?.user.role, "delete");
+
+      const existing = await ctx.db.organizationalControl.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId! },
+        include: {
+          _count: {
+            select: {
+              RiskLinks: true,
+              TestRecords: true,
+              Deficiencies: true,
+              Exceptions: true,
+              linkedObjectives: true,
+              DependenciesTo: true,
+            },
+          },
+        },
+      });
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
+      }
+
+      const impact = existing._count;
+      const blockingCount =
+        impact.RiskLinks +
+        impact.TestRecords +
+        impact.Deficiencies +
+        impact.Exceptions +
+        impact.linkedObjectives +
+        impact.DependenciesTo;
+
+      if (blockingCount > 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message:
+            `Cannot delete: control has active linkages ` +
+            `(${impact.RiskLinks} risks, ${impact.linkedObjectives} objectives, ` +
+            `${impact.TestRecords} test records, ${impact.Deficiencies} deficiencies, ` +
+            `${impact.Exceptions} exceptions, ${impact.DependenciesTo} dependent controls). ` +
+            `Archive the control instead.`,
+        });
+      }
+
+      // Cascading deletes handle FrameworkMappings, Assignments, EvidenceRequirements, DependenciesFrom
+      await ctx.db.organizationalControl.delete({ where: { id: input.id } });
+
+      await ctx.db.auditLog.create({
+        data: {
+          id: randomUUID(),
+          organizationId: ctx.organizationId!,
+          userId: ctx.session!.user.id,
+          action: AuditAction.DELETE_CONTROL,
+          entityType: "OrganizationalControl",
+          entityId: input.id,
+          changes: {
+            action: "DELETE",
+            before: {
+              localControlId: existing.localControlId,
+              name: existing.name,
+              status: existing.status,
+            },
+          },
+          actorName: ctx.session!.user.name,
+          actorRole: ctx.session!.user.role,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Get all risks linked to this control (inverse of getForRisk).
+   */
+  getLinkedRisks: organizationProcedure
+    .input(z.object({ controlId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const links = await ctx.db.riskOrganizationalControl.findMany({
+        where: {
+          organizationalControlId: input.controlId,
+          organizationId: ctx.organizationId!,
+        },
+        include: {
+          Risk: {
+            select: {
+              id: true,
+              identifier: true,
+              title: true,
+              severity: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return links.map((l) => ({
+        linkId: l.id,
+        role: l.role,
+        notes: l.notes,
+        risk: l.Risk,
+      }));
+    }),
+
+  /**
+   * Audit log history for this control (most recent first).
+   */
+  getHistory: organizationProcedure
+    .input(z.object({ controlId: z.string(), limit: z.number().min(1).max(200).default(50) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.auditLog.findMany({
+        where: {
+          organizationId: ctx.organizationId!,
+          entityType: "OrganizationalControl",
+          entityId: input.controlId,
+        },
+        orderBy: { timestamp: "desc" },
+        take: input.limit,
+      });
+    }),
+
+  // --------------------------------------------------------------------
+  // Risk linkage endpoints (unchanged from prior implementation — preserve behavior)
+  // --------------------------------------------------------------------
+
   getForRisk: organizationProcedure
     .input(z.object({ riskId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -419,40 +1078,19 @@ export const organizationalControlRouter = createTRPCRouter({
           organizationId: ctx.organizationId!,
         },
         include: {
-          OrganizationalControl: {
-            include: {
-              FrameworkControl: {
-                select: {
-                  id: true,
-                  controlId: true,
-                  title: true,
-                  Framework: {
-                    select: {
-                      id: true,
-                      code: true,
-                      name: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
+          OrganizationalControl: true,
         },
         orderBy: {
           OrganizationalControl: { name: "asc" },
         },
       });
 
-      // Group by role
       const inPlace = links.filter((l) => l.role === RiskOrgControlRole.IN_PLACE);
       const needed = links.filter((l) => l.role === RiskOrgControlRole.NEEDED);
 
       return { inPlace, needed };
     }),
 
-  /**
-   * Link a control to a risk
-   */
   linkToRisk: organizationProcedure
     .input(
       z.object({
@@ -463,45 +1101,22 @@ export const organizationalControlRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const allowedRoles = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
-      if (!allowedRoles.includes(ctx.session!.user.role)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You don't have permission to link controls",
-        });
-      }
+      assertMutationAllowed(ctx.session?.user.role, "link");
 
-      // Verify risk exists
       const risk = await ctx.db.risk.findFirst({
-        where: {
-          id: input.riskId,
-          organizationId: ctx.organizationId!,
-        },
+        where: { id: input.riskId, organizationId: ctx.organizationId! },
       });
-
       if (!risk) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Risk not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
       }
 
-      // Verify control exists
       const control = await ctx.db.organizationalControl.findFirst({
-        where: {
-          id: input.controlId,
-          organizationId: ctx.organizationId!,
-        },
+        where: { id: input.controlId, organizationId: ctx.organizationId! },
       });
-
       if (!control) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Control not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
       }
 
-      // Check if already linked
       const existingLink = await ctx.db.riskOrganizationalControl.findUnique({
         where: {
           riskId_organizationalControlId: {
@@ -512,38 +1127,14 @@ export const organizationalControlRouter = createTRPCRouter({
       });
 
       if (existingLink) {
-        // Update existing link's role
-        const updated = await ctx.db.riskOrganizationalControl.update({
+        return ctx.db.riskOrganizationalControl.update({
           where: { id: existingLink.id },
-          data: {
-            role: input.role,
-            notes: input.notes,
-          },
-          include: {
-            OrganizationalControl: {
-              include: {
-                FrameworkControl: {
-                  select: {
-                    id: true,
-                    controlId: true,
-                    title: true,
-                    Framework: {
-                      select: {
-                        id: true,
-                        code: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          data: { role: input.role, notes: input.notes },
+          include: { OrganizationalControl: true },
         });
-        return updated;
       }
 
-      // Create new link
-      const link = await ctx.db.riskOrganizationalControl.create({
+      return ctx.db.riskOrganizationalControl.create({
         data: {
           id: randomUUID(),
           organizationId: ctx.organizationId!,
@@ -553,48 +1144,14 @@ export const organizationalControlRouter = createTRPCRouter({
           notes: input.notes,
           createdById: ctx.session!.user.id,
         },
-        include: {
-          OrganizationalControl: {
-            include: {
-              FrameworkControl: {
-                select: {
-                  id: true,
-                  controlId: true,
-                  title: true,
-                  Framework: {
-                    select: {
-                      id: true,
-                      code: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+        include: { OrganizationalControl: true },
       });
-
-      return link;
     }),
 
-  /**
-   * Unlink a control from a risk
-   */
   unlinkFromRisk: organizationProcedure
-    .input(
-      z.object({
-        riskId: z.string(),
-        controlId: z.string(),
-      })
-    )
+    .input(z.object({ riskId: z.string(), controlId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const allowedRoles = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
-      if (!allowedRoles.includes(ctx.session!.user.role)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You don't have permission to unlink controls",
-        });
-      }
+      assertMutationAllowed(ctx.session?.user.role, "unlink");
 
       const link = await ctx.db.riskOrganizationalControl.findUnique({
         where: {
@@ -606,22 +1163,13 @@ export const organizationalControlRouter = createTRPCRouter({
       });
 
       if (!link) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Link not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Link not found" });
       }
 
-      await ctx.db.riskOrganizationalControl.delete({
-        where: { id: link.id },
-      });
-
+      await ctx.db.riskOrganizationalControl.delete({ where: { id: link.id } });
       return { success: true };
     }),
 
-  /**
-   * Bulk link controls to a risk
-   */
   bulkLinkToRisk: organizationProcedure
     .input(
       z.object({
@@ -631,30 +1179,15 @@ export const organizationalControlRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const allowedRoles = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
-      if (!allowedRoles.includes(ctx.session!.user.role)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You don't have permission to link controls",
-        });
-      }
+      assertMutationAllowed(ctx.session?.user.role, "link");
 
-      // Verify risk exists
       const risk = await ctx.db.risk.findFirst({
-        where: {
-          id: input.riskId,
-          organizationId: ctx.organizationId!,
-        },
+        where: { id: input.riskId, organizationId: ctx.organizationId! },
       });
-
       if (!risk) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Risk not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
       }
 
-      // Get existing links
       const existingLinks = await ctx.db.riskOrganizationalControl.findMany({
         where: {
           riskId: input.riskId,
@@ -665,7 +1198,6 @@ export const organizationalControlRouter = createTRPCRouter({
       const existingControlIds = new Set(existingLinks.map((l) => l.organizationalControlId));
       const newControlIds = input.controlIds.filter((id) => !existingControlIds.has(id));
 
-      // Create new links
       if (newControlIds.length > 0) {
         await ctx.db.riskOrganizationalControl.createMany({
           data: newControlIds.map((controlId) => ({
@@ -679,12 +1211,9 @@ export const organizationalControlRouter = createTRPCRouter({
         });
       }
 
-      // Update existing links to new role
       if (existingLinks.length > 0) {
         await ctx.db.riskOrganizationalControl.updateMany({
-          where: {
-            id: { in: existingLinks.map((l) => l.id) },
-          },
+          where: { id: { in: existingLinks.map((l) => l.id) } },
           data: { role: input.role },
         });
       }
