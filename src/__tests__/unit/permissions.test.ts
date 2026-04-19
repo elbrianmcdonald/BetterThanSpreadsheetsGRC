@@ -196,8 +196,16 @@ describe("Permission Matrix", () => {
         expect(hasPermission(UserRole.ORG_ADMIN, Permission.DASHBOARD_RISK)).toBe(true);
       });
 
-      it("should NOT have evidence/risk mutation permissions", () => {
-        expect(hasPermission(UserRole.ORG_ADMIN, Permission.EVIDENCE_CREATE)).toBe(false);
+      it("should have full CRUD on evidence", () => {
+        // Admins operate the whole app — previously this was reserved to
+        // GRC_ANALYST/GRC_MANAGER, but that tripped admins trying to upload
+        // evidence from control detail pages.
+        expect(hasPermission(UserRole.ORG_ADMIN, Permission.EVIDENCE_CREATE)).toBe(true);
+        expect(hasPermission(UserRole.ORG_ADMIN, Permission.EVIDENCE_UPDATE)).toBe(true);
+        expect(hasPermission(UserRole.ORG_ADMIN, Permission.EVIDENCE_DELETE)).toBe(true);
+      });
+
+      it("should NOT have risk mutation permissions (still scoped to GRC/Security roles)", () => {
         expect(hasPermission(UserRole.ORG_ADMIN, Permission.RISK_CREATE)).toBe(false);
       });
     });
