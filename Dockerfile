@@ -40,6 +40,7 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
+    postgresql17-client \
     && apk upgrade --no-cache
 
 # Tell Puppeteer to use the installed Chromium instead of downloading its own

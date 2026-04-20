@@ -297,14 +297,37 @@ The entrypoint script automatically runs database migrations on startup.
 
 ## Backup & Restore
 
-### Backup
+### From the UI (recommended)
+
+Sign in as an organization admin and go to **Administration → Backups** (`/admin/backups`).
+
+- **Download backup** — produces a `.tar.gz` on demand containing a plain-text
+  Postgres dump (`db.sql`) plus all uploaded evidence files (`uploads/`). Saved
+  directly to your browser; nothing is persisted on the server.
+- **Restore from backup** — upload a previously downloaded archive. The app
+  drops and recreates the `public` schema before applying the dump and replaces
+  the uploads volume with the archive's contents.
+
+> **Restore is destructive.** It replaces the entire database and the uploads
+> volume. Active sessions are invalidated — you'll be bounced to `/login` and
+> must sign in using credentials that exist in the backup. Always download a
+> fresh backup before restoring an older one if you want an escape hatch.
+
+### From the command line
+
+For CI or scheduled backups, use `pg_dump` against the postgres container:
 
 ```bash
+# Database only
 docker exec betterthanspreadsheetsGRC-postgres \
   pg_dump -U postgres betterthanspreadsheetsGRC > backup-$(date +%Y%m%d).sql
+
+# Uploads volume (optional)
+docker run --rm -v betterthanspreadsheetsgrc_app_uploads:/data -v $(pwd):/out alpine \
+  tar -czf /out/uploads-$(date +%Y%m%d).tar.gz -C / data
 ```
 
-### Restore
+To restore the database:
 
 ```bash
 docker exec -i betterthanspreadsheetsGRC-postgres \

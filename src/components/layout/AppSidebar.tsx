@@ -273,6 +273,12 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <BarChart3 className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN],
       },
+      {
+        href: "/admin/backups",
+        label: "Backups",
+        icon: <Database className="h-4 w-4" />,
+        roles: [UserRole.ORG_ADMIN],
+      },
       // Data group
       {
         href: "/admin/mappings",
