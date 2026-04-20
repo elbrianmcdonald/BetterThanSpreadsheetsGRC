@@ -14,7 +14,14 @@
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { TRPCError } from "@trpc/server";
-import { UserRole } from "@prisma/client";
+import {
+  UserRole,
+  ControlType,
+  ControlNature,
+  OrgControlStatus,
+  ControlFrequency,
+  AssignmentRole,
+} from "@prisma/client";
 import {
   createTRPCRouter,
   organizationProcedure,
@@ -411,6 +418,227 @@ export const frameworkRouter = createTRPCRouter({
             version: framework.version,
             controlCount: orgControls.length,
             source: "custom-from-org-controls",
+          },
+        },
+      });
+
+      return framework;
+    }),
+
+  /**
+   * Create a custom framework AND a fresh set of OrgControls from an Excel
+   * import. All-or-nothing: any duplicate (name or local ID) within the batch
+   * or against existing org data blocks the whole import.
+   */
+  createCustomFromExcel: organizationProcedure
+    .use(requirePermission(Permission.FRAMEWORK_MANAGE))
+    .input(
+      z.object({
+        name: z.string().min(3, "Name is required").max(200),
+        code: z.string().min(2, "Code is required").max(50),
+        version: z.string().min(1, "Version is required").max(50).default("1.0"),
+        description: z.string().max(5000).optional(),
+        defaultOwnerId: z.string().optional().nullable(),
+        controls: z
+          .array(
+            z.object({
+              localControlId: z.string().min(1).max(50).optional(),
+              name: z.string().min(1).max(200),
+              description: z.string().max(5000).optional().nullable(),
+              objective: z.string().max(5000).optional().nullable(),
+              family: z.string().max(100).optional().nullable(),
+              controlType: z.nativeEnum(ControlType),
+              nature: z.nativeEnum(ControlNature).optional().nullable(),
+              status: z.nativeEnum(OrgControlStatus),
+              implementationNarrative: z.string().max(10000).optional().nullable(),
+              scope: z.string().max(5000).optional().nullable(),
+              frequency: z.nativeEnum(ControlFrequency).optional().nullable(),
+            })
+          )
+          .min(1, "At least one control is required")
+          .max(1000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      // Framework code uniqueness
+      const codeConflict = await ctx.db.framework.findFirst({
+        where: {
+          organizationId,
+          code: { equals: input.code, mode: "insensitive" },
+          version: input.version,
+        },
+      });
+      if (codeConflict) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Framework with code "${input.code}" v${input.version} already exists`,
+        });
+      }
+
+      const prepared = input.controls.map((c) => ({
+        ...c,
+        localControlId:
+          c.localControlId ?? "OC-" + randomUUID().slice(0, 8).toUpperCase(),
+      }));
+
+      const conflicts: string[] = [];
+
+      const existingByName = await ctx.db.organizationalControl.findMany({
+        where: {
+          organizationId,
+          name: { in: prepared.map((c) => c.name), mode: "insensitive" },
+        },
+        select: { name: true },
+      });
+      const existingNames = new Set(existingByName.map((r) => r.name.toLowerCase()));
+      for (const c of prepared) {
+        if (existingNames.has(c.name.toLowerCase())) {
+          conflicts.push(`Name "${c.name}" already exists in the organization`);
+        }
+      }
+
+      const existingByLocalId = await ctx.db.organizationalControl.findMany({
+        where: {
+          organizationId,
+          localControlId: {
+            in: prepared.map((c) => c.localControlId),
+            mode: "insensitive",
+          },
+        },
+        select: { localControlId: true },
+      });
+      const existingLocalIds = new Set(
+        existingByLocalId.map((r) => r.localControlId.toLowerCase())
+      );
+      for (const c of prepared) {
+        if (existingLocalIds.has(c.localControlId.toLowerCase())) {
+          conflicts.push(
+            `Local control ID "${c.localControlId}" already exists in the organization`
+          );
+        }
+      }
+
+      if (input.defaultOwnerId) {
+        const owner = await ctx.db.person.findFirst({
+          where: { id: input.defaultOwnerId, organizationId },
+          select: { id: true },
+        });
+        if (!owner) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Default owner not found in this organization",
+          });
+        }
+      }
+
+      if (conflicts.length > 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Import blocked — ${conflicts.length} conflict${conflicts.length === 1 ? "" : "s"}:\n${conflicts.slice(0, 10).join("\n")}${conflicts.length > 10 ? `\n…and ${conflicts.length - 10} more` : ""}`,
+        });
+      }
+
+      const now = new Date();
+
+      const framework = await ctx.db.$transaction(async (tx) => {
+        // 1. Create the framework shell
+        const fw = await tx.framework.create({
+          data: {
+            id: randomUUID(),
+            organizationId,
+            code: input.code,
+            name: input.name,
+            version: input.version,
+            description: input.description ?? null,
+            isActive: true,
+            activatedAt: now,
+            activatedBy: userId,
+            updatedAt: now,
+          },
+        });
+
+        // 2. Create the OrgControls (source of truth in /controls library)
+        const orgControlRows = prepared.map((c) => ({
+          id: randomUUID(),
+          organizationId,
+          localControlId: c.localControlId,
+          name: c.name,
+          description: c.description ?? null,
+          objective: c.objective ?? null,
+          family: c.family ?? null,
+          controlType: c.controlType,
+          nature: c.nature ?? null,
+          status: c.status,
+          implementationNarrative: c.implementationNarrative ?? null,
+          scope: c.scope ?? null,
+          frequency: c.frequency ?? null,
+          createdById: userId,
+        }));
+        await tx.organizationalControl.createMany({ data: orgControlRows });
+
+        // 3. Mirror into Control rows under the new framework (isCustom=true)
+        const controlRows = orgControlRows.map((oc) => ({
+          id: randomUUID(),
+          organizationId,
+          frameworkId: fw.id,
+          controlId: oc.localControlId,
+          title: oc.name,
+          description: oc.description ?? oc.name,
+          isActive: true,
+          isOscalImported: false,
+          isCustom: true,
+          updatedAt: now,
+        }));
+        await tx.control.createMany({ data: controlRows });
+
+        // 4. Back-reference each OrgControl to the mirrored Control
+        await tx.orgControlFrameworkMapping.createMany({
+          data: orgControlRows.map((oc, idx) => ({
+            id: randomUUID(),
+            organizationId,
+            orgControlId: oc.id,
+            frameworkControlId: controlRows[idx]!.id,
+            mappingType: "COVERS" as const,
+            createdById: userId,
+          })),
+          skipDuplicates: true,
+        });
+
+        // 5. Optional: default owner assignment on every OrgControl
+        if (input.defaultOwnerId) {
+          await tx.orgControlAssignment.createMany({
+            data: orgControlRows.map((oc) => ({
+              id: randomUUID(),
+              organizationId,
+              orgControlId: oc.id,
+              personId: input.defaultOwnerId!,
+              role: AssignmentRole.OWNER,
+              assignedById: userId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        return fw;
+      });
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: "ACTIVATE_FRAMEWORK",
+        entityType: "Framework",
+        entityId: framework.id,
+        changes: {
+          after: {
+            code: framework.code,
+            name: framework.name,
+            version: framework.version,
+            controlCount: prepared.length,
+            source: "excel-import",
+            defaultOwnerId: input.defaultOwnerId ?? null,
           },
         },
       });

@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   AlertCircle,
   X,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   ControlType,
@@ -53,6 +54,17 @@ import {
   AvatarFallback,
 } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { BulkImportPanel } from "@/components/organizational-control/BulkImportPanel";
+import type { OrgControlImportRow } from "@/lib/excel-org-control-import";
 import {
   CONTROL_TYPE_OPTIONS,
   CONTROL_NATURE_OPTIONS,
@@ -117,6 +129,25 @@ export function ControlsListClient() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [cursorStack, setCursorStack] = useState<(string | undefined)[]>([undefined]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<OrgControlImportRow[]>([]);
+  const [importOwnerId, setImportOwnerId] = useState<string | null>(null);
+
+  const utils = api.useUtils();
+
+  const bulkCreateMutation = api.organizationalControl.bulkCreate.useMutation({
+    onSuccess: (result) => {
+      toast.success(
+        `Imported ${result.count} control${result.count === 1 ? "" : "s"}`
+      );
+      void utils.organizationalControl.list.invalidate();
+      void utils.organizationalControl.distinctFamilies.invalidate();
+      setImportOpen(false);
+      setImportRows([]);
+      setImportOwnerId(null);
+    },
+    onError: (e) => toast.error(e.message || "Import failed"),
+  });
 
   const { data: familiesData } = api.organizationalControl.distinctFamilies.useQuery();
 
@@ -201,15 +232,71 @@ export function ControlsListClient() {
           </div>
           <div className="mt-4 sm:mt-0 flex gap-2">
             {canCreate && (
-              <Button asChild>
-                <Link href="/controls/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Control
-                </Link>
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => setImportOpen(true)}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Import from Excel
+                </Button>
+                <Button asChild>
+                  <Link href="/controls/new">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Control
+                  </Link>
+                </Button>
+              </>
             )}
           </div>
         </div>
+
+        {canCreate && (
+          <Dialog open={importOpen} onOpenChange={setImportOpen}>
+            <DialogContent className="max-w-3xl">
+              <DialogHeader>
+                <DialogTitle>Import controls from Excel</DialogTitle>
+                <DialogDescription>
+                  Upload an .xlsx file to create multiple organizational
+                  controls at once. Any row error blocks the entire import.
+                </DialogDescription>
+              </DialogHeader>
+
+              <BulkImportPanel
+                onRowsChange={setImportRows}
+                onDefaultOwnerChange={setImportOwnerId}
+                defaultOwnerId={importOwnerId}
+              />
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setImportOpen(false)}
+                  disabled={bulkCreateMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={
+                    importRows.length === 0 || bulkCreateMutation.isPending
+                  }
+                  onClick={() =>
+                    bulkCreateMutation.mutate({
+                      controls: importRows,
+                      defaultOwnerId: importOwnerId ?? undefined,
+                    })
+                  }
+                >
+                  {bulkCreateMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    `Import ${importRows.length || ""} control${importRows.length === 1 ? "" : "s"}`
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Search + filter toggle */}
         <div className="space-y-4">

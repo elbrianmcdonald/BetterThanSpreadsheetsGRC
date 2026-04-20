@@ -508,6 +508,165 @@ export const organizationalControlRouter = createTRPCRouter({
     }),
 
   /**
+   * Bulk create from Excel. All-or-nothing: any duplicate (within batch or
+   * against existing org data) aborts the entire import.
+   */
+  bulkCreate: organizationProcedure
+    .input(
+      z.object({
+        controls: z
+          .array(
+            z.object({
+              localControlId: z.string().min(1).max(50).optional(),
+              name: z.string().min(1).max(200),
+              description: z.string().max(5000).optional().nullable(),
+              objective: z.string().max(5000).optional().nullable(),
+              family: z.string().max(100).optional().nullable(),
+              controlType: z.nativeEnum(ControlType),
+              nature: z.nativeEnum(ControlNature).optional().nullable(),
+              status: z.nativeEnum(OrgControlStatus),
+              implementationNarrative: z.string().max(10000).optional().nullable(),
+              scope: z.string().max(5000).optional().nullable(),
+              frequency: z.nativeEnum(ControlFrequency).optional().nullable(),
+            })
+          )
+          .min(1)
+          .max(1000),
+        defaultOwnerId: z.string().optional().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertMutationAllowed(ctx.session?.user.role, "create");
+
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      // Assign local IDs up front (used both for conflict checks and insert)
+      const prepared = input.controls.map((c) => ({
+        ...c,
+        localControlId: c.localControlId ?? generateLocalControlId(),
+      }));
+
+      const conflicts: string[] = [];
+
+      // Conflict check: names against existing org data
+      const existingByName = await ctx.db.organizationalControl.findMany({
+        where: {
+          organizationId,
+          name: { in: prepared.map((c) => c.name), mode: "insensitive" },
+        },
+        select: { name: true },
+      });
+      const existingNames = new Set(existingByName.map((r) => r.name.toLowerCase()));
+      for (const c of prepared) {
+        if (existingNames.has(c.name.toLowerCase())) {
+          conflicts.push(`Name "${c.name}" already exists in the organization`);
+        }
+      }
+
+      // Conflict check: local IDs against existing org data
+      const existingByLocalId = await ctx.db.organizationalControl.findMany({
+        where: {
+          organizationId,
+          localControlId: {
+            in: prepared.map((c) => c.localControlId),
+            mode: "insensitive",
+          },
+        },
+        select: { localControlId: true },
+      });
+      const existingLocalIds = new Set(
+        existingByLocalId.map((r) => r.localControlId.toLowerCase())
+      );
+      for (const c of prepared) {
+        if (existingLocalIds.has(c.localControlId.toLowerCase())) {
+          conflicts.push(
+            `Local control ID "${c.localControlId}" already exists in the organization`
+          );
+        }
+      }
+
+      // Verify default owner exists in this org (if provided)
+      if (input.defaultOwnerId) {
+        const owner = await ctx.db.person.findFirst({
+          where: { id: input.defaultOwnerId, organizationId },
+          select: { id: true },
+        });
+        if (!owner) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Default owner not found in this organization",
+          });
+        }
+      }
+
+      if (conflicts.length > 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Import blocked — ${conflicts.length} conflict${conflicts.length === 1 ? "" : "s"}:\n${conflicts.slice(0, 10).join("\n")}${conflicts.length > 10 ? `\n…and ${conflicts.length - 10} more` : ""}`,
+        });
+      }
+
+      const created = await ctx.db.$transaction(async (tx) => {
+        const rows = prepared.map((c) => ({
+          id: randomUUID(),
+          organizationId,
+          localControlId: c.localControlId,
+          name: c.name,
+          description: c.description ?? null,
+          objective: c.objective ?? null,
+          family: c.family ?? null,
+          controlType: c.controlType,
+          nature: c.nature ?? null,
+          status: c.status,
+          implementationNarrative: c.implementationNarrative ?? null,
+          scope: c.scope ?? null,
+          frequency: c.frequency ?? null,
+          createdById: userId,
+        }));
+
+        await tx.organizationalControl.createMany({ data: rows });
+
+        if (input.defaultOwnerId) {
+          await tx.orgControlAssignment.createMany({
+            data: rows.map((r) => ({
+              id: randomUUID(),
+              organizationId,
+              orgControlId: r.id,
+              personId: input.defaultOwnerId!,
+              role: AssignmentRole.OWNER,
+              assignedById: userId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
+        return rows;
+      });
+
+      await ctx.db.auditLog.create({
+        data: {
+          id: randomUUID(),
+          organizationId,
+          userId,
+          action: AuditAction.CREATE_CONTROL,
+          entityType: "OrganizationalControl",
+          entityId: created[0]?.id ?? "bulk",
+          changes: {
+            action: "BULK_IMPORT",
+            count: created.length,
+            defaultOwnerId: input.defaultOwnerId ?? null,
+            localControlIds: created.map((c) => c.localControlId),
+          },
+          actorName: ctx.session!.user.name,
+          actorRole: ctx.session!.user.role,
+        },
+      });
+
+      return { count: created.length, ids: created.map((c) => c.id) };
+    }),
+
+  /**
    * Full update with all fields + junction replacement
    */
   update: organizationProcedure

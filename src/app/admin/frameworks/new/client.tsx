@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * Create a custom framework from scratch — pulling members from the /controls
- * organizational control library. The compliance assessment machinery keys
- * off Framework+Control, so each selected OrgControl is mirrored into a
- * Control row under the new framework (isCustom=true).
+ * Create a custom framework — two paths:
+ *   1. Pick from existing /controls organizational control library.
+ *   2. Import a fresh batch of controls from Excel alongside the framework.
+ *
+ * Both paths land in the same /admin/frameworks/<id> detail view on success.
  */
 
 import { useMemo, useState } from "react";
@@ -26,19 +27,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BulkImportPanel } from "@/components/organizational-control/BulkImportPanel";
+import type { OrgControlImportRow } from "@/lib/excel-org-control-import";
+
+type Mode = "library" | "excel";
 
 export function NewFrameworkClient() {
   const router = useRouter();
 
+  // Framework meta (shared)
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [version, setVersion] = useState("1.0");
   const [description, setDescription] = useState("");
+  const [mode, setMode] = useState<Mode>("library");
+
+  // Library tab state
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Load the organization's full control library (capped at 100). Searching
-  // hits the server-side search endpoint with a narrow match.
+  // Excel tab state
+  const [importRows, setImportRows] = useState<OrgControlImportRow[]>([]);
+  const [importOwnerId, setImportOwnerId] = useState<string | null>(null);
+
   const { data: listData } = api.organizationalControl.list.useQuery({
     limit: 100,
     hideDeprecated: true,
@@ -74,7 +86,7 @@ export function NewFrameworkClient() {
     setSelectedIds((prev) => prev.filter((x) => x !== id));
   };
 
-  const createMutation = api.framework.createCustom.useMutation({
+  const createFromLibrary = api.framework.createCustom.useMutation({
     onSuccess: (fw) => {
       toast.success(`Framework "${fw.name}" created with ${selectedIds.length} controls`);
       router.push(`/admin/frameworks/${fw.id}`);
@@ -82,20 +94,35 @@ export function NewFrameworkClient() {
     onError: (e) => toast.error(e.message || "Failed to create framework"),
   });
 
-  const handleSubmit = () => {
+  const createFromExcel = api.framework.createCustomFromExcel.useMutation({
+    onSuccess: (fw) => {
+      toast.success(`Framework "${fw.name}" created with ${importRows.length} controls`);
+      router.push(`/admin/frameworks/${fw.id}`);
+    },
+    onError: (e) => toast.error(e.message || "Failed to create framework"),
+  });
+
+  const isPending = createFromLibrary.isPending || createFromExcel.isPending;
+
+  const validateMeta = (): boolean => {
     if (name.trim().length < 3) {
       toast.error("Name must be at least 3 characters");
-      return;
+      return false;
     }
     if (code.trim().length < 2) {
       toast.error("Code must be at least 2 characters");
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const handleSubmitLibrary = () => {
+    if (!validateMeta()) return;
     if (selectedIds.length === 0) {
       toast.error("Select at least one control");
       return;
     }
-    createMutation.mutate({
+    createFromLibrary.mutate({
       name: name.trim(),
       code: code.trim(),
       version: version.trim() || "1.0",
@@ -103,6 +130,24 @@ export function NewFrameworkClient() {
       orgControlIds: selectedIds,
     });
   };
+
+  const handleSubmitExcel = () => {
+    if (!validateMeta()) return;
+    if (importRows.length === 0) {
+      toast.error("Upload a valid Excel file with at least one row");
+      return;
+    }
+    createFromExcel.mutate({
+      name: name.trim(),
+      code: code.trim(),
+      version: version.trim() || "1.0",
+      description: description.trim() || undefined,
+      controls: importRows,
+      defaultOwnerId: importOwnerId ?? undefined,
+    });
+  };
+
+  const controlCount = mode === "library" ? selectedIds.length : importRows.length;
 
   return (
     <AppLayout
@@ -117,8 +162,9 @@ export function NewFrameworkClient() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Create framework</h1>
             <p className="text-muted-foreground mt-1">
-              Author a custom framework from your /controls library. Once created you can
-              run a compliance assessment against it just like any imported framework.
+              Author a custom framework from your /controls library, or bulk-import
+              controls from an Excel file. Once created you can run a compliance
+              assessment against it just like any imported framework.
             </p>
           </div>
           <Button variant="outline" asChild>
@@ -185,98 +231,116 @@ export function NewFrameworkClient() {
         <Card>
           <CardHeader>
             <CardTitle>
-              Pick controls <span className="text-muted-foreground text-base font-normal">
-                ({selectedIds.length} selected)
+              Controls{" "}
+              <span className="text-muted-foreground text-base font-normal">
+                ({controlCount} {mode === "library" ? "selected" : "parsed"})
               </span>
             </CardTitle>
             <CardDescription>
-              Each selected control is mirrored into the new framework. The source control
-              in /controls is preserved and linked back via framework mapping.
+              Pick existing controls from your library, or bulk-create new ones from Excel.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedControls.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-xs uppercase">Selected</Label>
-                <ul className="space-y-1">
-                  {selectedControls.map((c) => (
-                    <li
-                      key={c.id}
-                      className="flex items-center gap-2 p-2 rounded-md border bg-muted/30"
-                    >
-                      <span className="font-mono text-xs text-blue-700 shrink-0">
-                        {c.localControlId}
-                      </span>
-                      <span className="text-sm truncate flex-1">{c.name}</span>
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {c.controlType}
-                      </Badge>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 shrink-0"
-                        onClick={() => removeControl(c.id)}
-                        aria-label="Remove control"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+          <CardContent>
+            <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
+              <TabsList>
+                <TabsTrigger value="library">Pick from library</TabsTrigger>
+                <TabsTrigger value="excel">Import from Excel</TabsTrigger>
+              </TabsList>
 
-            <div>
-              <Label htmlFor="ctrl-search" className="text-xs uppercase">
-                Add from /controls
-              </Label>
-              <div className="relative">
-                <Input
-                  id="ctrl-search"
-                  placeholder="Search by ID or name..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                {isSearching && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                )}
-              </div>
-              {availableForDisplay.length === 0 ? (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {search.trim()
-                    ? `No controls match "${search.trim()}". Create one at /controls first.`
-                    : "No controls in the library yet. Go to /controls to add some."}
-                </p>
-              ) : (
-                <ul className="mt-2 max-h-72 overflow-y-auto rounded-md border divide-y">
-                  {availableForDisplay.map((c) => {
-                    const alreadySelected = selectedIds.includes(c.id);
-                    return (
-                      <li key={c.id}>
-                        <button
-                          type="button"
-                          disabled={alreadySelected}
-                          onClick={() => addControl(c.id)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted/60 disabled:opacity-50 flex items-center gap-2"
+              <TabsContent value="library" className="space-y-4 pt-4">
+                {selectedControls.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs uppercase">Selected</Label>
+                    <ul className="space-y-1">
+                      {selectedControls.map((c) => (
+                        <li
+                          key={c.id}
+                          className="flex items-center gap-2 p-2 rounded-md border bg-muted/30"
                         >
-                          <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="font-mono text-xs text-blue-700 shrink-0">
                             {c.localControlId}
                           </span>
-                          <span className="truncate flex-1">{c.name}</span>
-                          {alreadySelected && (
-                            <Badge variant="outline" className="text-xs shrink-0">
-                              Selected
-                            </Badge>
-                          )}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+                          <span className="text-sm truncate flex-1">{c.name}</span>
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {c.controlType}
+                          </Badge>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={() => removeControl(c.id)}
+                            aria-label="Remove control"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="ctrl-search" className="text-xs uppercase">
+                    Add from /controls
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="ctrl-search"
+                      placeholder="Search by ID or name..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    {isSearching && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                  {availableForDisplay.length === 0 ? (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {search.trim()
+                        ? `No controls match "${search.trim()}". Create one at /controls first.`
+                        : "No controls in the library yet. Use the Excel tab or go to /controls."}
+                    </p>
+                  ) : (
+                    <ul className="mt-2 max-h-72 overflow-y-auto rounded-md border divide-y">
+                      {availableForDisplay.map((c) => {
+                        const alreadySelected = selectedIds.includes(c.id);
+                        return (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              disabled={alreadySelected}
+                              onClick={() => addControl(c.id)}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted/60 disabled:opacity-50 flex items-center gap-2"
+                            >
+                              <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <span className="font-mono text-xs text-blue-700 shrink-0">
+                                {c.localControlId}
+                              </span>
+                              <span className="truncate flex-1">{c.name}</span>
+                              {alreadySelected && (
+                                <Badge variant="outline" className="text-xs shrink-0">
+                                  Selected
+                                </Badge>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="excel" className="pt-4">
+                <BulkImportPanel
+                  helperText="Each row creates a new organizational control AND attaches it to this framework. Fix all errors before importing — any row error blocks the whole import."
+                  onRowsChange={setImportRows}
+                  onDefaultOwnerChange={setImportOwnerId}
+                  defaultOwnerId={importOwnerId}
+                />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -284,18 +348,21 @@ export function NewFrameworkClient() {
           <Button
             variant="outline"
             onClick={() => router.push("/admin/frameworks")}
-            disabled={createMutation.isPending}
+            disabled={isPending}
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={createMutation.isPending}>
-            {createMutation.isPending ? (
+          <Button
+            onClick={mode === "library" ? handleSubmitLibrary : handleSubmitExcel}
+            disabled={isPending || controlCount === 0}
+          >
+            {isPending ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Creating...
               </>
             ) : (
-              `Create framework${selectedIds.length > 0 ? ` (${selectedIds.length} controls)` : ""}`
+              `Create framework${controlCount > 0 ? ` (${controlCount} controls)` : ""}`
             )}
           </Button>
         </div>
