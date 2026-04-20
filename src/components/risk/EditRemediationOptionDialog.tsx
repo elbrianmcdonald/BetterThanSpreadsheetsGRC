@@ -23,6 +23,7 @@ import { EffortLevel, RemediationPriority } from "@prisma/client";
 import type { RemediationOption, User } from "@prisma/client";
 
 import { api } from "@/trpc/react";
+import { PersonPicker } from "@/components/person/PersonPicker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -82,6 +83,7 @@ const editRemediationOptionSchema = z.object({
   priority: z.nativeEnum(RemediationPriority, {
     required_error: "Please select a priority",
   }),
+  ownerId: z.string().nullable(),
 });
 
 type EditRemediationOptionFormValues = z.infer<typeof editRemediationOptionSchema>;
@@ -168,6 +170,7 @@ export function EditRemediationOptionDialog({
       timelineEstimate: option.timelineEstimate,
       effortLevel: option.effortLevel,
       priority: option.priority,
+      ownerId: option.ownerId ?? null,
     },
   });
 
@@ -186,6 +189,7 @@ export function EditRemediationOptionDialog({
       timelineEstimate: option.timelineEstimate,
       effortLevel: option.effortLevel,
       priority: option.priority,
+      ownerId: option.ownerId ?? null,
     });
     setCostDisplay(formatCurrency(Number(option.costEstimate)));
   }, [option, form]);
@@ -208,6 +212,7 @@ export function EditRemediationOptionDialog({
       timelineEstimate: values.timelineEstimate,
       effortLevel: values.effortLevel,
       priority: values.priority,
+      ownerId: values.ownerId ?? null,
     });
   };
 
@@ -359,6 +364,29 @@ export function EditRemediationOptionDialog({
                 )}
               />
             </div>
+
+            {/* Owner Field */}
+            <FormField
+              control={form.control}
+              name="ownerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Owner</FormLabel>
+                  <FormControl>
+                    <PersonPicker
+                      value={field.value ?? null}
+                      onChange={(id) => field.onChange(id ?? null)}
+                      placeholder="Unassigned"
+                      clearable
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Person accountable for executing this remediation option.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Description Field */}
             <FormField

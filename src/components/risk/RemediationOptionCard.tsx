@@ -61,6 +61,12 @@ const formatCurrency = (amount: number | string): string => {
 type RemediationOptionWithRelations = RemediationOption & {
   CreatedBy: Pick<UserType, "id" | "name" | "email"> | null;
   SelectedBy?: Pick<UserType, "id" | "name" | "email"> | null;
+  Owner?: {
+    id: string;
+    name: string;
+    email: string | null;
+    jobTitle: string | null;
+  } | null;
 };
 
 interface RemediationOptionCardProps {
@@ -215,6 +221,18 @@ export function RemediationOptionCard({
             {option.approach}
           </p>
         </div>
+
+        {/* Owner */}
+        {option.Owner && (
+          <div className="border-t pt-3">
+            <h5 className="text-sm font-medium mb-1">Owner</h5>
+            <p className="text-sm text-muted-foreground">
+              {option.Owner.name}
+              {option.Owner.jobTitle ? ` · ${option.Owner.jobTitle}` : ""}
+              {option.Owner.email ? ` · ${option.Owner.email}` : ""}
+            </p>
+          </div>
+        )}
 
         {/* Footer with metadata */}
         <div className="border-t pt-3 text-xs text-muted-foreground">

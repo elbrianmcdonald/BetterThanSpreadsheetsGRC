@@ -112,6 +112,8 @@ model ControlDomain {
   Controls              ControlDomainControl[]
   StandardControls      ControlDomainStandardControl[]
   MaturityDomains       ControlDomainMaturityDomain[]
+  // Risk category alignment
+  Risks                 Risk[]                        @relation("RiskControlDomain")
 
   @@index([isActive, sortOrder])
   @@index([sortOrder])
@@ -881,6 +883,8 @@ model Person {
   orgControlDeficienciesOwned OrgControlDeficiency[] @relation("DeficiencyOwner")
   // Org Controls: evidence-requirement ownership
   evidenceRequirementsOwned   OrgControlEvidenceRequirement[] @relation("EvidenceRequirementOwner")
+  // Risk: remediation option ownership
+  remediationOptionsOwned     RemediationOption[]             @relation("RemediationOptionOwner")
 
   @@unique([organizationId, email])         // Unique email per org (when email provided)
   @@index([organizationId, isActive])
@@ -1017,6 +1021,10 @@ model Risk {
   // ============================================================================
   businessUnitId        String?  // Business unit this risk belongs to
 
+  // Risk category — aligned to the taxonomy managed at /admin/taxonomy
+  // (the ControlDomain table). Nullable for backfill / legacy risks.
+  controlDomainId       String?
+
   // ============================================================================
   // Story 16.10: Risk Assessment Association
   // ============================================================================
@@ -1054,6 +1062,7 @@ model Risk {
   // Story 4.6: Risk ownership relationships (AC1)
   ITOwner      Person?         @relation("RiskITOwner", fields: [itOwnerId], references: [id], onDelete: SetNull)
   BusinessOwner Person?        @relation("RiskBusinessOwner", fields: [businessOwnerId], references: [id], onDelete: SetNull)
+  ControlDomain ControlDomain? @relation("RiskControlDomain", fields: [controlDomainId], references: [id], onDelete: SetNull)
   AssignedBy   User?           @relation("RiskAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
   // Risk Assessment Assignment Workflow relationships
   Assessor               User?  @relation("RiskAssessor", fields: [assessorId], references: [id], onDelete: SetNull)
@@ -1217,6 +1226,7 @@ model RemediationOption {
   selectedStatus   SelectionStatus?    // null = not yet reviewed (AC7)
   selectedAt       DateTime?
   selectedById     String?
+  ownerId          String?             // Person accountable for executing this option
   createdById      String              // AC5
   organizationId   String              // AC5
   createdAt        DateTime            @default(now()) // AC6
@@ -1226,11 +1236,13 @@ model RemediationOption {
   Risk         Risk          @relation(fields: [riskId], references: [id], onDelete: Cascade)
   CreatedBy    User          @relation("RemediationOptionCreator", fields: [createdById], references: [id])
   SelectedBy   User?         @relation("RemediationOptionApprover", fields: [selectedById], references: [id])
+  Owner        Person?       @relation("RemediationOptionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   Organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([riskId])                     // AC4: Multiple options per risk
   @@index([organizationId, riskId])     // Multi-tenant query optimization
   @@index([organizationId])
+  @@index([ownerId])
 }
 
 model Session {

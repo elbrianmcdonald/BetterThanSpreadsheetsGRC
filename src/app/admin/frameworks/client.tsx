@@ -34,6 +34,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Upload,
+  Plus,
   FileJson,
   Loader2,
   ChevronRight,
@@ -328,8 +329,14 @@ export function FrameworkManagementClient() {
         )}
       </div>
 
-      {/* Import Button */}
-      <div className="flex justify-end">
+      {/* Create / Import */}
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" asChild>
+          <Link href="/admin/frameworks/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Create framework
+          </Link>
+        </Button>
         <Dialog open={isImportDialogOpen} onOpenChange={(open) => {
           setIsImportDialogOpen(open);
           if (!open) resetImport();

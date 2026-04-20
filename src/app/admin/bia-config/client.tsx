@@ -1275,9 +1275,21 @@ function TierThresholdsTab() {
   });
 
   const tiers = config?.tierDefinitions ?? [];
-  const savedThresholds = config?.tierThresholds
-    ? (JSON.parse(config.tierThresholds as string) as TierThreshold[])
-    : [];
+  // tierThresholds is a Json column. Prisma default "[]" comes back as an
+  // array on fresh installs; the update mutation stringifies before writing,
+  // so post-save it comes back as a string. Handle both.
+  const savedThresholds: TierThreshold[] = (() => {
+    const raw = config?.tierThresholds;
+    if (!raw) return [];
+    if (typeof raw === "string") {
+      try {
+        return JSON.parse(raw) as TierThreshold[];
+      } catch {
+        return [];
+      }
+    }
+    return raw as unknown as TierThreshold[];
+  })();
 
   const startEditing = () => {
     // Initialize thresholds from saved data or defaults

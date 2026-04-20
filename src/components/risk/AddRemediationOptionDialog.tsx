@@ -27,11 +27,28 @@ import {
   DollarSign,
   Clock,
   Info,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { EffortLevel, RemediationPriority } from "@prisma/client";
 
 import { api } from "@/trpc/react";
+import { cn } from "@/lib/utils";
+import { PersonPicker } from "@/components/person/PersonPicker";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +83,7 @@ import { priorityConfig } from "./RemediationPriorityBadge";
  * Form schema with Zod validation (AC28)
  */
 const addRemediationOptionSchema = z.object({
+  riskId: z.string().min(1, "A risk must be selected"),
   title: z
     .string()
     .min(3, "Title must be at least 3 characters")
@@ -91,6 +109,7 @@ const addRemediationOptionSchema = z.object({
   priority: z.nativeEnum(RemediationPriority, {
     required_error: "Please select a priority",
   }),
+  ownerId: z.string().nullable(),
 });
 
 type AddRemediationOptionFormValues = z.infer<typeof addRemediationOptionSchema>;
@@ -149,14 +168,24 @@ export function AddRemediationOptionDialog({
 
   // Add mutation
   const addMutation = api.risk.addRemediationOption.useMutation({
-    onSuccess: () => {
-      toast.success("Remediation option added successfully");
+    onSuccess: (_data, variables) => {
+      const targetRiskId = variables.riskId;
+      toast.success(
+        targetRiskId === riskId
+          ? "Remediation option added successfully"
+          : "Remediation option added to the selected risk"
+      );
       setOpen(false);
       form.reset();
       setCostDisplay("");
-      // Invalidate queries to refresh the options list
-      void utils.risk.listRemediationOptions.invalidate({ riskId });
-      void utils.risk.getById.invalidate({ id: riskId });
+      // Invalidate queries for BOTH the current page's risk and the target
+      // risk in case the user reassigned to a different risk.
+      void utils.risk.listRemediationOptions.invalidate({ riskId: targetRiskId });
+      void utils.risk.getById.invalidate({ id: targetRiskId });
+      if (targetRiskId !== riskId) {
+        void utils.risk.listRemediationOptions.invalidate({ riskId });
+        void utils.risk.getById.invalidate({ id: riskId });
+      }
       onSuccess?.();
     },
     onError: (error) => {
@@ -168,6 +197,7 @@ export function AddRemediationOptionDialog({
   const form = useForm<AddRemediationOptionFormValues>({
     resolver: zodResolver(addRemediationOptionSchema),
     defaultValues: {
+      riskId,
       title: "",
       description: "",
       approach: "",
@@ -175,6 +205,7 @@ export function AddRemediationOptionDialog({
       timelineEstimate: "",
       effortLevel: undefined,
       priority: undefined,
+      ownerId: null,
     },
   });
 
@@ -185,10 +216,10 @@ export function AddRemediationOptionDialog({
     form.setValue("costEstimate", formatted);
   };
 
-  // Handle form submission
+  // Handle form submission — use the form's riskId so the user can reassign.
   const onSubmit = (values: AddRemediationOptionFormValues) => {
     addMutation.mutate({
-      riskId,
+      riskId: values.riskId,
       title: values.title,
       description: values.description,
       approach: values.approach,
@@ -196,6 +227,7 @@ export function AddRemediationOptionDialog({
       timelineEstimate: values.timelineEstimate,
       effortLevel: values.effortLevel,
       priority: values.priority,
+      ownerId: values.ownerId ?? null,
     });
   };
 
@@ -229,6 +261,27 @@ export function AddRemediationOptionDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Link to a specific Risk (defaults to the current page's risk) */}
+            <FormField
+              control={form.control}
+              name="riskId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link to Risk *</FormLabel>
+                  <FormControl>
+                    <RiskPickerCombobox
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    The remediation option will be attached to the selected risk.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Title Field */}
             <FormField
               control={form.control}
@@ -368,6 +421,29 @@ export function AddRemediationOptionDialog({
               />
             </div>
 
+            {/* Owner Field */}
+            <FormField
+              control={form.control}
+              name="ownerId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Owner</FormLabel>
+                  <FormControl>
+                    <PersonPicker
+                      value={field.value ?? null}
+                      onChange={(id) => field.onChange(id ?? null)}
+                      placeholder="Unassigned"
+                      clearable
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Person accountable for executing this remediation option.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Description Field */}
             <FormField
               control={form.control}
@@ -445,5 +521,107 @@ export function AddRemediationOptionDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Searchable risk picker. Runs `risk.list` with a search term; renders results
+ * (identifier + title) with the currently selected value shown on the trigger.
+ * Always opens on first interaction and fetches a default page so the current
+ * risk's label is available for display even before the user types.
+ */
+function RiskPickerCombobox({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  // Pull a working page of risks to resolve the current selection's label.
+  // Searching narrows the same endpoint.
+  const { data, isLoading } = api.risk.list.useQuery({
+    page: 1,
+    pageSize: 25,
+    search: search.trim() || undefined,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
+
+  const risks = data?.risks ?? [];
+  const selected = risks.find((r) => r.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "w-full justify-between font-normal",
+            !value && "text-muted-foreground"
+          )}
+        >
+          <span className="truncate">
+            {selected
+              ? `${selected.identifier ?? selected.id.slice(0, 8)} — ${selected.title}`
+              : value
+                ? "Selected risk"
+                : "Select a risk..."}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[480px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search by risk title, ID, or description..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : risks.length === 0 ? (
+              <CommandEmpty>No risks match that search.</CommandEmpty>
+            ) : (
+              <CommandGroup heading={`${risks.length} result${risks.length === 1 ? "" : "s"}`}>
+                {risks.map((r) => (
+                  <CommandItem
+                    key={r.id}
+                    value={r.id}
+                    onSelect={() => {
+                      onChange(r.id);
+                      setSearch("");
+                      setOpen(false);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <Check
+                      className={cn(
+                        "h-4 w-4 mr-2",
+                        value === r.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-mono text-xs truncate">
+                        {r.identifier ?? r.id.slice(0, 8)}
+                      </span>
+                      <span className="text-sm truncate">{r.title}</span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

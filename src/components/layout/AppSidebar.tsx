@@ -8,7 +8,7 @@
  * - Assessments: Overview + Compliance, Vendor, Risk, Maturity sub-items
  * - Risk: Risk Register, Findings Register, Assignments
  * - Compliance: Dashboard, Standards, Evidence, Velocity
- * - Administration: User Management, Business Units, Assessment Types, Risk Matrices
+ * - Administration: User Management, Business Units, Risk Matrices
  *                   Data: Mappings, Taxonomy, MITRE ATT&CK
  */
 
@@ -265,12 +265,6 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin/business-units",
         label: "Business Units",
         icon: <ClipboardList className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
-      },
-      {
-        href: "/admin/assessment-types",
-        label: "Assessment Types",
-        icon: <FileText className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN],
       },
       {

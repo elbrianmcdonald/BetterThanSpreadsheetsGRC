@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { CreatableControlPicker, type CreatableControlPickerProps } from "@/components/control/CreatableControlPicker";
 
 interface ControlLink {
@@ -194,16 +195,14 @@ function ControlRoleSection({
           </div>
         )}
 
-        {/* Add control picker */}
+        {/* Inline searchable picker — reads directly from /controls */}
         {!isReadOnly && (
           <div className="pt-2">
-            <CreatableControlPicker
-              value={pickerValue}
-              onChange={handlePickerChange}
-              placeholder={`Add ${role === RiskOrgControlRole.IN_PLACE ? "existing" : "needed"} control...`}
+            <InlineOrgControlSearch
               excludeIds={excludeIds}
-              defaultControlType={defaultControlType}
-              disabled={isAddingControl}
+              onSelect={(controlId, control) => onAddControl(controlId, control)}
+              isAddingControl={isAddingControl}
+              roleLabel={role === RiskOrgControlRole.IN_PLACE ? "in-place" : "needed"}
             />
           </div>
         )}
@@ -458,4 +457,94 @@ export function useRiskControlsState() {
     controlsNeeded,
     handleControlsChange,
   };
+}
+
+/**
+ * Inline searchable picker that sources controls from the /controls library
+ * (OrganizationalControl). Always-visible search input + result list, no
+ * popover — avoids the opaque combobox UX the generic CreatableControlPicker
+ * uses elsewhere. Clicking a row calls onSelect(controlId, control) to link.
+ */
+function InlineOrgControlSearch({
+  excludeIds,
+  onSelect,
+  isAddingControl,
+  roleLabel,
+}: {
+  excludeIds: string[];
+  onSelect: (
+    controlId: string,
+    control: NonNullable<Parameters<CreatableControlPickerProps["onChange"]>[1]>
+  ) => void;
+  isAddingControl: boolean;
+  roleLabel: string;
+}) {
+  const [query, setQuery] = useState("");
+  const trimmed = query.trim();
+
+  // Baseline list (first 25) so the user sees options before typing.
+  const { data: listData } = api.organizationalControl.list.useQuery({
+    limit: 25,
+    hideDeprecated: true,
+  });
+  const { data: searchData, isFetching } = api.organizationalControl.search.useQuery(
+    { query: trimmed, limit: 15, excludeIds },
+    { enabled: trimmed.length > 0 }
+  );
+
+  const results =
+    trimmed.length > 0
+      ? searchData ?? []
+      : (listData?.controls ?? []).filter((c) => !excludeIds.includes(c.id));
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Input
+          placeholder={`Search ${roleLabel === "in-place" ? "existing" : "needed"} control from /controls...`}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          disabled={isAddingControl}
+        />
+        {isFetching && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        )}
+      </div>
+
+      {results.length === 0 ? (
+        <p className="text-xs text-muted-foreground px-1">
+          {trimmed
+            ? `No controls match "${trimmed}". Create one at /controls first.`
+            : "No controls in the library yet."}
+        </p>
+      ) : (
+        <ul className="max-h-64 overflow-y-auto rounded-md border divide-y">
+          {results.map((ctrl) => (
+            <li key={ctrl.id}>
+              <button
+                type="button"
+                disabled={isAddingControl}
+                onClick={() =>
+                  onSelect(ctrl.id, {
+                    id: ctrl.id,
+                    name: ctrl.name,
+                    controlType: ctrl.controlType,
+                  })
+                }
+                className="w-full text-left px-3 py-2 text-sm hover:bg-muted/60 disabled:opacity-50 flex items-center gap-2"
+              >
+                <span className="font-mono text-xs text-blue-700 shrink-0">
+                  {ctrl.localControlId}
+                </span>
+                <span className="truncate">{ctrl.name}</span>
+                <Badge variant="outline" className="ml-auto shrink-0 text-xs">
+                  {ctrl.controlType}
+                </Badge>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }

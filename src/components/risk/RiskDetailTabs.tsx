@@ -47,7 +47,7 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: "findings", label: "Findings", icon: FileText },
+  { id: "findings", label: "Risk Details", icon: FileText },
   // Story 12.6: Controls tab for risk-to-control linkage
   { id: "controls", label: "Controls", icon: Shield, countKey: "controlsCount" },
   { id: "evidence", label: "Evidence", icon: FolderOpen, countKey: "evidenceCount" },

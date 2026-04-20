@@ -1557,6 +1557,7 @@ export const riskRouter = createTRPCRouter({
         timelineEstimate: z.string().min(1, "Timeline estimate is required").max(100, "Timeline estimate must be at most 100 characters"),
         effortLevel: z.nativeEnum(EffortLevel),
         priority: z.nativeEnum(RemediationPriority),
+        ownerId: z.string().optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1591,6 +1592,7 @@ export const riskRouter = createTRPCRouter({
           timelineEstimate: input.timelineEstimate,
           effortLevel: input.effortLevel,
           priority: input.priority,
+          ownerId: input.ownerId ?? null,
           createdById: ctx.session!.user.id,
           organizationId: ctx.organizationId!,
         },
@@ -1657,6 +1659,7 @@ export const riskRouter = createTRPCRouter({
         timelineEstimate: z.string().min(1).max(100).optional(),
         effortLevel: z.nativeEnum(EffortLevel).optional(),
         priority: z.nativeEnum(RemediationPriority).optional(),
+        ownerId: z.string().optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1727,6 +1730,11 @@ export const riskRouter = createTRPCRouter({
       if (updateFields.priority !== undefined && updateFields.priority !== existingOption.priority) {
         updateData.priority = updateFields.priority;
         changes.priority = { old: existingOption.priority, new: updateFields.priority };
+      }
+
+      if (updateFields.ownerId !== undefined && updateFields.ownerId !== existingOption.ownerId) {
+        updateData.ownerId = updateFields.ownerId;
+        changes.ownerId = { old: existingOption.ownerId, new: updateFields.ownerId };
       }
 
       // Only update if there are actual changes
@@ -1892,6 +1900,14 @@ export const riskRouter = createTRPCRouter({
               id: true,
               name: true,
               email: true,
+            },
+          },
+          Owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              jobTitle: true,
             },
           },
         },
@@ -5783,7 +5799,9 @@ export const riskRouter = createTRPCRouter({
         overallSeverity: z.string().optional().nullable(),
         risks: z.array(
           z.object({
+            title: z.string().min(5, "Risk title must be at least 5 characters").max(200),
             riskStatement: z.string().min(10, "Risk statement must be at least 10 characters"),
+            controlDomainId: z.string().optional().nullable(),
             initialAccessVectorId: z.string().optional().nullable(),
             threatStepIds: z.array(z.string()).default([]),
             threatObjectiveIds: z.array(z.string()).default([]),
@@ -5792,12 +5810,29 @@ export const riskRouter = createTRPCRouter({
             mitigatingControlsNeeded: z.string().optional().nullable(),
             preventativeControlsNeeded: z.string().optional().nullable(),
             controlLinkIds: z.array(z.string()).default([]),
+            mitigatingControlIds: z.array(z.string()).default([]),
+            controlGapIds: z.array(z.string()).default([]),
+            remediationOptions: z
+              .array(
+                z.object({
+                  title: z.string().min(1).max(200),
+                  description: z.string().min(1),
+                  approach: z.string().min(1),
+                  costEstimate: z.number().min(0),
+                  timelineEstimate: z.string().min(1).max(100),
+                  effortLevel: z.enum(["LOW", "MEDIUM", "HIGH", "VERY_HIGH"]),
+                  priority: z.enum(["RECOMMENDED", "ALTERNATIVE", "NOT_RECOMMENDED"]),
+                  ownerId: z.string().optional().nullable(),
+                })
+              )
+              .default([]),
             inherentLikelihood: z.number().optional().nullable(),
             inherentImpact: z.number().optional().nullable(),
             inherentExposure: z.number().optional().nullable(),
             residualLikelihood: z.number().optional().nullable(),
             residualImpact: z.number().optional().nullable(),
             residualExposure: z.number().optional().nullable(),
+            residualEliminated: z.boolean().optional().default(false),
             treatment: z.enum(["ACCEPT", "REMEDIATE"]).optional().nullable(),
             treatmentDueDate: z.date().optional().nullable(),
             evidenceIds: z.array(z.string()).default([]),
@@ -5838,8 +5873,25 @@ export const riskRouter = createTRPCRouter({
       const is3D = matrixVersion.template.dimensionCount === 3;
       const outputScaleMax = Number(matrixVersion.template.outputScaleMax);
 
-      // Create all risks in a transaction
+      // Create all risks in a transaction, wrapped in a RiskAssessmentProject
+      // so the assessment shows up on /risk-assessments. Each child Risk is
+      // linked to the project via discoveryProjectId.
       const createdRisks = await ctx.db.$transaction(async (tx) => {
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30);
+
+        const project = await tx.riskAssessmentProject.create({
+          data: {
+            organizationId,
+            subject: input.title,
+            description: input.description ?? null,
+            matrixVersionId: input.matrixVersionId,
+            assigneeId: input.performedById ?? userId,
+            createdById: userId,
+            dueDate,
+          },
+        });
+
         const risks = [];
 
         for (const riskInput of input.risks) {
@@ -5861,10 +5913,14 @@ export const riskRouter = createTRPCRouter({
             }
           }
 
-          // Calculate residual score
+          // Calculate residual score. "Eliminated" skips the numeric path and
+          // short-circuits the label so the UI can render an explicit badge
+          // without any likelihood/impact inputs.
           let residualScore: number | null = null;
           let residualScoreLabel: string | null = null;
-          if (riskInput.residualLikelihood && riskInput.residualImpact) {
+          if (riskInput.residualEliminated) {
+            residualScoreLabel = "ELIMINATED";
+          } else if (riskInput.residualLikelihood && riskInput.residualImpact) {
             const scoreResult = calculateInherentScore(
               scales,
               thresholds,
@@ -5898,7 +5954,7 @@ export const riskRouter = createTRPCRouter({
             data: {
               identifier,
               organizationId,
-              title: riskInput.riskStatement.substring(0, 200), // Use statement as title
+              title: riskInput.title,
               description: riskInput.riskStatement,
               severity,
               status: RiskStatus.OPEN,
@@ -5906,6 +5962,8 @@ export const riskRouter = createTRPCRouter({
               // Business context
               businessOwnerId: input.businessOwnerId,
               businessUnitId: input.businessUnitId,
+              controlDomainId: riskInput.controlDomainId ?? null,
+              discoveryProjectId: project.id,
               assessorId: input.performedById,
               assessmentCreatedAt: new Date(),
               assessmentCreatedById: userId,
@@ -5932,14 +5990,14 @@ export const riskRouter = createTRPCRouter({
                 ? new Prisma.Decimal(inherentScore)
                 : null,
               inherentScoreLabel,
-              // Residual scoring
-              residualLikelihood: riskInput.residualLikelihood
+              // Residual scoring — eliminated risks carry a label only
+              residualLikelihood: !riskInput.residualEliminated && riskInput.residualLikelihood
                 ? new Prisma.Decimal(riskInput.residualLikelihood)
                 : null,
-              residualImpact: riskInput.residualImpact
+              residualImpact: !riskInput.residualEliminated && riskInput.residualImpact
                 ? new Prisma.Decimal(riskInput.residualImpact)
                 : null,
-              residualExposure: riskInput.residualExposure
+              residualExposure: !riskInput.residualEliminated && riskInput.residualExposure
                 ? new Prisma.Decimal(riskInput.residualExposure)
                 : null,
               residualScore: residualScore !== null
@@ -5969,14 +6027,53 @@ export const riskRouter = createTRPCRouter({
             });
           }
 
-          // Create control linkages
-          if (riskInput.controlLinkIds.length > 0) {
+          // Create control linkages. `controlLinkIds` is legacy (all IN_PLACE).
+          // `mitigatingControlIds` and `controlGapIds` are the split-role picks
+          // coming from the risk assessment form's /controls-backed pickers.
+          const controlLinks: Array<{
+            organizationalControlId: string;
+            role: RiskOrgControlRole;
+          }> = [];
+          for (const id of riskInput.controlLinkIds) {
+            controlLinks.push({ organizationalControlId: id, role: RiskOrgControlRole.IN_PLACE });
+          }
+          for (const id of riskInput.mitigatingControlIds) {
+            if (!controlLinks.some((l) => l.organizationalControlId === id)) {
+              controlLinks.push({ organizationalControlId: id, role: RiskOrgControlRole.IN_PLACE });
+            }
+          }
+          for (const id of riskInput.controlGapIds) {
+            if (!controlLinks.some((l) => l.organizationalControlId === id)) {
+              controlLinks.push({ organizationalControlId: id, role: RiskOrgControlRole.NEEDED });
+            }
+          }
+          if (controlLinks.length > 0) {
             await tx.riskOrganizationalControl.createMany({
-              data: riskInput.controlLinkIds.map((controlId) => ({
+              data: controlLinks.map((link) => ({
                 riskId: risk.id,
-                organizationalControlId: controlId,
+                organizationalControlId: link.organizationalControlId,
                 organizationId,
-                role: RiskOrgControlRole.IN_PLACE,
+                role: link.role,
+                createdById: userId,
+              })),
+              skipDuplicates: true,
+            });
+          }
+
+          // Per-risk remediation options (from the assessment form editor)
+          if (riskInput.remediationOptions.length > 0) {
+            await tx.remediationOption.createMany({
+              data: riskInput.remediationOptions.map((opt) => ({
+                riskId: risk.id,
+                organizationId,
+                title: opt.title,
+                description: opt.description,
+                approach: opt.approach,
+                costEstimate: new Prisma.Decimal(opt.costEstimate),
+                timelineEstimate: opt.timelineEstimate,
+                effortLevel: opt.effortLevel,
+                priority: opt.priority,
+                ownerId: opt.ownerId ?? null,
                 createdById: userId,
               })),
             });

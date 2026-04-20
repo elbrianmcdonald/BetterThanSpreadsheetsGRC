@@ -40,7 +40,7 @@ import { RiskAuditTrail } from "@/components/risk/RiskAuditTrail";
 import { StatusHistory } from "@/components/risk/StatusHistory";
 import { BusinessImpactStatement } from "@/components/risk/BusinessImpactStatement";
 // Story 12.6: Risk-to-Control Linkage
-import { RiskLinkedControls } from "@/components/risk/RiskLinkedControls";
+import { RiskControlsSection } from "@/components/risk/RiskControlsSection";
 // Story 16.4: Residual Severity Section
 import { ResidualSeveritySection } from "@/components/risk/ResidualSeveritySection";
 // Story 16.2: MITRE Threat Modeling
@@ -121,10 +121,11 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
     refetch,
   } = api.risk.getById.useQuery({ id: riskId });
 
-  // Story 12.6: Fetch control links count (must be before conditional returns)
-  const { data: controlLinks } = api.controlLink.getRiskControls.useQuery(
+  // Controls tab count — sources from organizational controls (the /controls
+  // library) via RiskOrganizationalControl, matching the UI in the tab.
+  const { data: orgControlLinks } = api.organizationalControl.getForRisk.useQuery(
     { riskId },
-    { enabled: !!risk } // Only fetch when risk is loaded
+    { enabled: !!risk }
   );
 
   // Story 16.4: Fetch the matrix version the risk was scored against. Falls
@@ -262,7 +263,8 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
 
   // Get counts for tabs
   const counts = {
-    controlsCount: controlLinks?.length ?? 0,
+    controlsCount:
+      (orgControlLinks?.inPlace.length ?? 0) + (orgControlLinks?.needed.length ?? 0),
     evidenceCount: risk.RiskEvidence?.length ?? 0,
     remediationCount: risk.RemediationOptions?.length ?? 0,
     commentsCount: risk.Comments?.length ?? 0,
@@ -344,14 +346,10 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
           </div>
         );
 
-      // Story 12.6: Controls tab for risk-to-control linkage
+      // Controls tab — sources controls from the /controls organizational
+      // control library via RiskOrganizationalControl (in-place + needed).
       case "controls":
-        return (
-          <RiskLinkedControls
-            riskId={riskId}
-            riskTitle={risk.title}
-          />
-        );
+        return <RiskControlsSection riskId={riskId} defaultExpanded />;
 
       case "evidence":
         return (

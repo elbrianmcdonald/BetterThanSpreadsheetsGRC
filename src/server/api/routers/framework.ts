@@ -282,6 +282,142 @@ export const frameworkRouter = createTRPCRouter({
    *
    * @requires FRAMEWORK_READ permission (all authenticated users)
    */
+  /**
+   * Create a framework from scratch using a selection of OrgControls from
+   * the /controls library as its members. Mirrors each selected OrgControl
+   * into a Control row under the new framework (isCustom=true) so the
+   * existing compliance-assessment machinery can score against it without
+   * changes. Also writes an OrgControlFrameworkMapping row for each pair so
+   * the link back to the source OrgControl is preserved.
+   */
+  createCustom: organizationProcedure
+    .use(requirePermission(Permission.FRAMEWORK_MANAGE))
+    .input(
+      z.object({
+        name: z.string().min(3, "Name is required").max(200),
+        code: z.string().min(2, "Code is required").max(50),
+        version: z.string().min(1, "Version is required").max(50).default("1.0"),
+        description: z.string().max(5000).optional(),
+        orgControlIds: z
+          .array(z.string())
+          .min(1, "At least one control is required"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      // Code must be unique per org+version
+      const codeConflict = await ctx.db.framework.findFirst({
+        where: {
+          organizationId,
+          code: { equals: input.code, mode: "insensitive" },
+          version: input.version,
+        },
+      });
+      if (codeConflict) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Framework with code "${input.code}" v${input.version} already exists`,
+        });
+      }
+
+      // Fetch the source OrgControls — must all belong to this org
+      const orgControls = await ctx.db.organizationalControl.findMany({
+        where: {
+          id: { in: input.orgControlIds },
+          organizationId,
+        },
+        select: {
+          id: true,
+          localControlId: true,
+          name: true,
+          description: true,
+        },
+      });
+      if (orgControls.length !== input.orgControlIds.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more selected controls were not found in this organization",
+        });
+      }
+
+      const now = new Date();
+      const framework = await ctx.db.$transaction(async (tx) => {
+        const fw = await tx.framework.create({
+          data: {
+            id: randomUUID(),
+            organizationId,
+            code: input.code,
+            name: input.name,
+            version: input.version,
+            description: input.description ?? null,
+            isActive: true,
+            activatedAt: now,
+            activatedBy: userId,
+            updatedAt: now,
+          },
+        });
+
+        // Mirror each OrgControl into a Control row. isCustom=true marks these
+        // as author-created (not OSCAL-imported) so they can be edited if
+        // needed. Source OrgControl info preserved via controlId = localId
+        // and the OrgControlFrameworkMapping junction rows below.
+        const controlsToCreate = orgControls.map((oc) => ({
+          id: randomUUID(),
+          organizationId,
+          frameworkId: fw.id,
+          controlId: oc.localControlId,
+          title: oc.name,
+          description: oc.description ?? oc.name,
+          isActive: true,
+          isOscalImported: false,
+          isCustom: true,
+          updatedAt: now,
+        }));
+        await tx.control.createMany({ data: controlsToCreate });
+
+        // Keep a back-reference from OrgControl → the new Control. Uses the
+        // existing junction so the /controls detail view surfaces the
+        // framework mapping automatically.
+        await tx.orgControlFrameworkMapping.createMany({
+          data: controlsToCreate.map((c) => {
+            const source = orgControls.find((oc) => oc.localControlId === c.controlId);
+            return {
+              id: randomUUID(),
+              organizationId,
+              orgControlId: source!.id,
+              frameworkControlId: c.id,
+              mappingType: "COVERS" as const,
+              createdById: userId,
+            };
+          }),
+          skipDuplicates: true,
+        });
+
+        return fw;
+      });
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: "ACTIVATE_FRAMEWORK",
+        entityType: "Framework",
+        entityId: framework.id,
+        changes: {
+          after: {
+            code: framework.code,
+            name: framework.name,
+            version: framework.version,
+            controlCount: orgControls.length,
+            source: "custom-from-org-controls",
+          },
+        },
+      });
+
+      return framework;
+    }),
+
   list: organizationProcedure
     .use(requirePermission(Permission.FRAMEWORK_READ))
     .input(

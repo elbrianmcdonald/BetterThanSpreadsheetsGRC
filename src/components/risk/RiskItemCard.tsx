@@ -61,7 +61,8 @@ import {
 import { cn } from "@/lib/utils";
 
 import { MitreTechniquePicker, TechniqueCard, type TechniqueOption } from "./MitreTechniquePicker";
-import { ControlPicker, ControlCard, type ControlOption } from "./ControlPicker";
+import { CreatableControlPicker } from "@/components/control/CreatableControlPicker";
+import { RemediationOptionsEditor } from "./RemediationOptionsEditor";
 import { SeverityCalculator } from "./SeverityCalculator";
 import type { MatrixScales, Threshold } from "@/lib/matrix";
 
@@ -102,15 +103,22 @@ export function RiskItemCard({
   const [showObjectivePicker, setShowObjectivePicker] = useState(false);
 
   // Control picker state
-  const [showMitigatingControlPicker, setShowMitigatingControlPicker] = useState(false);
-  const [showControlGapPicker, setShowControlGapPicker] = useState(false);
+  // CreatableControlPicker is always visible inline; reset to null after each
+  // selection so it acts like an "Add" picker.
+  const [mitigatingPickerValue, setMitigatingPickerValue] = useState<string | null>(null);
+  const [gapPickerValue, setGapPickerValue] = useState<string | null>(null);
 
   // Watch form values for display
+  const title = useWatch({ control, name: `risks.${index}.title` });
   const riskStatement = useWatch({ control, name: `risks.${index}.riskStatement` });
   const inherentLikelihood = useWatch({ control, name: `risks.${index}.inherentLikelihood` });
   const inherentImpact = useWatch({ control, name: `risks.${index}.inherentImpact` });
   const inherentExposure = useWatch({ control, name: `risks.${index}.inherentExposure` });
   const treatment = useWatch({ control, name: `risks.${index}.treatment` });
+  const residualEliminated = useWatch({ control, name: `risks.${index}.residualEliminated` });
+
+  // Fetch control domain taxonomy for risk category
+  const { data: controlDomains } = api.controlDomain.listAll.useQuery();
 
   // Calculate inherent score for display
   const inherentScore = useMemo(() => {
@@ -157,14 +165,22 @@ export function RiskItemCard({
                   <ChevronRight className="h-4 w-4" />
                 )}
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Risk {index + 1}</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">
+                      Risk {index + 1}
+                      {title ? `: ${title}` : ""}
+                    </span>
                     {inherentSeverity && (
                       <Badge
                         style={{ backgroundColor: inherentSeverity.color }}
                         className="text-white text-xs"
                       >
                         {inherentSeverity.label}
+                      </Badge>
+                    )}
+                    {residualEliminated && (
+                      <Badge className="bg-emerald-600 text-white text-xs">
+                        Eliminated
                       </Badge>
                     )}
                     {treatment && (
@@ -202,6 +218,61 @@ export function RiskItemCard({
         <CollapsibleContent>
           <CardContent className="space-y-6 pt-0">
             <Separator />
+
+            {/* Title + Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={control}
+                name={`risks.${index}.title`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Risk Title *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Short, specific risk label..."
+                        maxLength={200}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name={`risks.${index}.controlDomainId`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Risk Category</FormLabel>
+                    <Select
+                      value={field.value ?? "__none__"}
+                      onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">Uncategorized</SelectItem>
+                        {(controlDomains ?? [])
+                          .filter((d) => d.isActive)
+                          .map((d) => (
+                            <SelectItem key={d.id} value={d.id}>
+                              {d.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Aligned to the taxonomy managed in Administration → Taxonomy.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Risk Statement */}
             <FormField
@@ -379,102 +450,93 @@ export function RiskItemCard({
                 <h4 className="font-medium">Controls</h4>
               </div>
 
-              {/* Mitigating Controls (controls in place) */}
+              {/* Mitigating Controls (controls in place) — org controls from /controls */}
               <FormField
                 control={control}
                 name={`risks.${index}.mitigatingControlIds`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mitigating Controls</FormLabel>
-                    <FormDescription>
-                      Controls currently in place that reduce the likelihood or impact of this risk
-                    </FormDescription>
-                    <div className="space-y-2">
-                      {field.value?.length > 0 && (
-                        <div className="space-y-2">
-                          {field.value.map((controlId: string) => (
-                            <ControlCard
-                              key={controlId}
-                              controlId={controlId}
-                              onRemove={() =>
-                                field.onChange(field.value.filter((id: string) => id !== controlId))
-                              }
-                            />
-                          ))}
-                        </div>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowMitigatingControlPicker(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Mitigating Control
-                      </Button>
-                      <ControlPicker
-                        open={showMitigatingControlPicker}
-                        onOpenChange={setShowMitigatingControlPicker}
-                        onSelect={(selectedControl) =>
-                          field.onChange([...(field.value || []), selectedControl.id])
-                        }
-                        excludeIds={field.value || []}
-                        title="Select Mitigating Control"
-                        description="Choose a control that helps mitigate this risk"
-                      />
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const ids: string[] = field.value ?? [];
+                  return (
+                    <FormItem>
+                      <FormLabel>Mitigating Controls</FormLabel>
+                      <FormDescription>
+                        Controls currently in place that reduce this risk. Pulls from the
+                        organizational control library at /controls.
+                      </FormDescription>
+                      <div className="space-y-2">
+                        {ids.length > 0 && (
+                          <div className="space-y-2">
+                            {ids.map((controlId) => (
+                              <OrgControlChip
+                                key={controlId}
+                                controlId={controlId}
+                                onRemove={() =>
+                                  field.onChange(ids.filter((id) => id !== controlId))
+                                }
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <CreatableControlPicker
+                          value={mitigatingPickerValue}
+                          onChange={(value) => {
+                            if (value) {
+                              field.onChange([...ids, value]);
+                              setMitigatingPickerValue(null);
+                            }
+                          }}
+                          excludeIds={ids}
+                          placeholder="Add mitigating control..."
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
-              {/* Control Gaps (controls needed) */}
+              {/* Control Gaps (controls needed) — also org controls */}
               <FormField
                 control={control}
                 name={`risks.${index}.controlGapIds`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Control Gaps</FormLabel>
-                    <FormDescription>
-                      Controls that are missing or insufficient and need to be implemented
-                    </FormDescription>
-                    <div className="space-y-2">
-                      {field.value?.length > 0 && (
-                        <div className="space-y-2">
-                          {field.value.map((controlId: string) => (
-                            <ControlCard
-                              key={controlId}
-                              controlId={controlId}
-                              onRemove={() =>
-                                field.onChange(field.value.filter((id: string) => id !== controlId))
-                              }
-                            />
-                          ))}
-                        </div>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowControlGapPicker(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Control Gap
-                      </Button>
-                      <ControlPicker
-                        open={showControlGapPicker}
-                        onOpenChange={setShowControlGapPicker}
-                        onSelect={(selectedControl) =>
-                          field.onChange([...(field.value || []), selectedControl.id])
-                        }
-                        excludeIds={field.value || []}
-                        title="Select Control Gap"
-                        description="Choose a control that is missing or needs improvement"
-                      />
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const ids: string[] = field.value ?? [];
+                  return (
+                    <FormItem>
+                      <FormLabel>Control Gaps</FormLabel>
+                      <FormDescription>
+                        Controls that are missing or insufficient and need to be implemented
+                      </FormDescription>
+                      <div className="space-y-2">
+                        {ids.length > 0 && (
+                          <div className="space-y-2">
+                            {ids.map((controlId) => (
+                              <OrgControlChip
+                                key={controlId}
+                                controlId={controlId}
+                                onRemove={() =>
+                                  field.onChange(ids.filter((id) => id !== controlId))
+                                }
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <CreatableControlPicker
+                          value={gapPickerValue}
+                          onChange={(value) => {
+                            if (value) {
+                              field.onChange([...ids, value]);
+                              setGapPickerValue(null);
+                            }
+                          }}
+                          excludeIds={ids}
+                          placeholder="Add control gap..."
+                        />
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 
@@ -502,18 +564,67 @@ export function RiskItemCard({
                 />
 
                 {/* Residual Severity */}
-                <SeverityCalculator
-                  title="Residual Severity"
-                  description="Risk severity after controls are applied"
-                  control={control}
-                  likelihoodName={`risks.${index}.residualLikelihood`}
-                  impactName={`risks.${index}.residualImpact`}
-                  exposureName={`risks.${index}.residualExposure`}
-                  scales={matrixScales}
-                  thresholds={matrixThresholds}
-                  is3DMatrix={is3DMatrix}
-                />
+                <div className="space-y-3">
+                  <FormField
+                    control={control}
+                    name={`risks.${index}.residualEliminated`}
+                    render={({ field }) => (
+                      <FormItem className="flex items-start gap-2 space-y-0 rounded-md border p-3 bg-muted/30">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 mt-0.5"
+                            checked={field.value ?? false}
+                            onChange={(e) => field.onChange(e.target.checked)}
+                          />
+                        </FormControl>
+                        <div className="space-y-1">
+                          <FormLabel className="cursor-pointer">
+                            Risk eliminated
+                          </FormLabel>
+                          <FormDescription>
+                            Controls fully remove this risk — no residual score required.
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  {residualEliminated ? (
+                    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                      Residual severity is marked <strong>Eliminated</strong>. Likelihood,
+                      impact, and exposure fields are disabled.
+                    </div>
+                  ) : (
+                    <SeverityCalculator
+                      title="Residual Severity"
+                      description="Risk severity after controls are applied"
+                      control={control}
+                      likelihoodName={`risks.${index}.residualLikelihood`}
+                      impactName={`risks.${index}.residualImpact`}
+                      exposureName={`risks.${index}.residualExposure`}
+                      scales={matrixScales}
+                      thresholds={matrixThresholds}
+                      is3DMatrix={is3DMatrix}
+                    />
+                  )}
+                </div>
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Remediation Options Section — per-risk options, stored in
+                RemediationOption and linked by riskId. */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <FileCheck className="h-4 w-4 text-indigo-500" />
+                <h4 className="font-medium">Remediation Options</h4>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Document the treatment alternatives evaluated for this specific risk.
+                Each option is saved against the risk and available on its detail page.
+              </p>
+              <RemediationOptionsEditor control={control} index={index} />
             </div>
 
             <Separator />
@@ -737,5 +848,33 @@ function TechniqueDisplay({
         <X className="h-3 w-3" />
       </Button>
     </Badge>
+  );
+}
+
+/**
+ * Inline chip that resolves an OrganizationalControl id to its local ID + name.
+ * Uses the shared list endpoint (tRPC dedupes the call across siblings).
+ */
+function OrgControlChip({ controlId, onRemove }: { controlId: string; onRemove: () => void }) {
+  const { data } = api.organizationalControl.list.useQuery({ limit: 100 });
+  const ctrl = data?.controls.find((c) => c.id === controlId);
+  return (
+    <div className="flex items-center justify-between gap-2 p-2 rounded-md border bg-card">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="font-mono text-sm font-medium text-blue-700 shrink-0">
+          {ctrl?.localControlId ?? controlId.slice(0, 8)}
+        </span>
+        <span className="text-sm truncate">{ctrl?.name ?? "…"}</span>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={onRemove}
+      >
+        <X className="h-3.5 w-3.5" />
+      </Button>
+    </div>
   );
 }

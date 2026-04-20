@@ -71,9 +71,23 @@ import type { MatrixScales, Threshold } from "@/lib/matrix";
 // Form Schema
 // ============================================================================
 
+const remediationOptionSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  description: z.string().min(1, "Description is required"),
+  approach: z.string().min(1, "Approach is required"),
+  costEstimate: z.number().min(0, "Cost must be >= 0"),
+  timelineEstimate: z.string().min(1, "Timeline is required").max(100),
+  effortLevel: z.enum(["LOW", "MEDIUM", "HIGH", "VERY_HIGH"]),
+  priority: z.enum(["RECOMMENDED", "ALTERNATIVE", "NOT_RECOMMENDED"]),
+  ownerId: z.string().nullable(),
+});
+
 const riskItemSchema = z.object({
   id: z.string(), // Client-side ID for tracking
+  title: z.string().min(5, "Risk title must be at least 5 characters").max(200),
   riskStatement: z.string().min(10, "Risk statement must be at least 10 characters"),
+  controlDomainId: z.string().nullable().optional(),
+  remediationOptions: z.array(remediationOptionSchema),
   // MITRE ATT&CK
   initialAccessVectorId: z.string().nullable().optional(),
   threatStepIds: z.array(z.string()),
@@ -84,6 +98,8 @@ const riskItemSchema = z.object({
   mitigatingControlsNeeded: z.string().nullable().optional(),
   preventativeControlsNeeded: z.string().nullable().optional(),
   controlLinkIds: z.array(z.string()),
+  mitigatingControlIds: z.array(z.string()),
+  controlGapIds: z.array(z.string()),
   // Inherent severity
   inherentLikelihood: z.number().nullable().optional(),
   inherentImpact: z.number().nullable().optional(),
@@ -92,6 +108,7 @@ const riskItemSchema = z.object({
   residualLikelihood: z.number().nullable().optional(),
   residualImpact: z.number().nullable().optional(),
   residualExposure: z.number().nullable().optional(),
+  residualEliminated: z.boolean(),
   // Treatment
   treatment: z.enum(["ACCEPT", "REMEDIATE"]).nullable().optional(),
   treatmentDueDate: z.date().nullable().optional(),
@@ -107,7 +124,6 @@ const riskAssessmentFormSchema = z.object({
   businessOwnerId: z.string().optional().nullable(),
   businessUnitId: z.string().optional().nullable(),
   performedById: z.string().optional().nullable(),
-  overallSeverity: z.string().optional().nullable(),
   // Risk items
   risks: z.array(riskItemSchema).min(1, "At least one risk must be identified"),
 });
@@ -157,7 +173,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
       businessOwnerId: undefined,
       businessUnitId: null,
       performedById: null,
-      overallSeverity: null,
       risks: [createEmptyRiskItem()],
     },
   });
@@ -218,7 +233,10 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
   function createEmptyRiskItem(): RiskItemValues {
     return {
       id: crypto.randomUUID(),
+      title: "",
       riskStatement: "",
+      controlDomainId: null,
+      remediationOptions: [],
       initialAccessVectorId: null,
       threatStepIds: [],
       threatObjectiveIds: [],
@@ -227,12 +245,15 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
       mitigatingControlsNeeded: null,
       preventativeControlsNeeded: null,
       controlLinkIds: [],
+      mitigatingControlIds: [],
+      controlGapIds: [],
       inherentLikelihood: null,
       inherentImpact: null,
       inherentExposure: null,
       residualLikelihood: null,
       residualImpact: null,
       residualExposure: null,
+      residualEliminated: false,
       treatment: null,
       treatmentDueDate: null,
       evidenceIds: [],
@@ -286,9 +307,11 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
         businessOwnerId: values.businessOwnerId,
         businessUnitId: values.businessUnitId,
         performedById: values.performedById,
-        overallSeverity: values.overallSeverity,
         risks: values.risks.map((risk) => ({
+          title: risk.title,
           riskStatement: risk.riskStatement,
+          controlDomainId: risk.controlDomainId,
+          remediationOptions: risk.remediationOptions,
           initialAccessVectorId: risk.initialAccessVectorId,
           threatStepIds: risk.threatStepIds,
           threatObjectiveIds: risk.threatObjectiveIds,
@@ -297,12 +320,15 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
           mitigatingControlsNeeded: risk.mitigatingControlsNeeded,
           preventativeControlsNeeded: risk.preventativeControlsNeeded,
           controlLinkIds: risk.controlLinkIds,
+          mitigatingControlIds: risk.mitigatingControlIds,
+          controlGapIds: risk.controlGapIds,
           inherentLikelihood: risk.inherentLikelihood,
           inherentImpact: risk.inherentImpact,
           inherentExposure: risk.inherentExposure,
           residualLikelihood: risk.residualLikelihood,
           residualImpact: risk.residualImpact,
           residualExposure: risk.residualExposure,
+          residualEliminated: risk.residualEliminated,
           treatment: risk.treatment,
           treatmentDueDate: risk.treatmentDueDate,
           evidenceIds: risk.evidenceIds,
@@ -481,47 +507,6 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
               />
             </div>
 
-            {/* Overall Severity */}
-            <FormField
-              control={form.control}
-              name="overallSeverity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Overall Risk Severity</FormLabel>
-                  <Select
-                    value={field.value ?? ""}
-                    onValueChange={(v) => field.onChange(v || null)}
-                    disabled={!matrixThresholds.length}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select overall severity" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {matrixThresholds.map((threshold) => (
-                        <SelectItem key={threshold.label} value={threshold.label}>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: threshold.color }}
-                            />
-                            <span>{threshold.label}</span>
-                            <span className="text-xs text-muted-foreground">
-                              (SLA: {threshold.slaDays} days)
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Manual selection of the overall assessment severity
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </CardContent>
         </Card>
 
