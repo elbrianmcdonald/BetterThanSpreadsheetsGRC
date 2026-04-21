@@ -12,6 +12,7 @@ import { TRPCError } from "@trpc/server";
 import {
   ContingencyBIAStatus,
   ContingencyImpactLevel,
+  HasBCP,
 } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure } from "@/server/api/trpc";
 
@@ -69,6 +70,7 @@ const coreFieldsInput = z
     assetId: z.string().optional().nullable(),
     businessProcessId: z.string().optional().nullable(),
     status: z.nativeEnum(ContingencyBIAStatus).optional(),
+    hasBCP: z.nativeEnum(HasBCP).optional().nullable(),
     completionDate: z.date().optional().nullable(),
     overview: z.string().max(10_000).optional().nullable(),
     systemDescription: z.string().max(10_000).optional().nullable(),
@@ -99,16 +101,34 @@ export const biaSystemContingencyRouter = createTRPCRouter({
         .object({
           anchor: z.enum(["ASSET", "PROCESS"]).optional(),
           status: z.nativeEnum(ContingencyBIAStatus).optional(),
+          hasBCP: z.enum(["YES", "NO", "NA", "UNSET"]).optional(),
+          search: z.string().max(200).optional(),
         })
         .optional()
     )
     .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const search = input?.search?.trim();
+
       return ctx.db.systemContingencyBIA.findMany({
         where: {
-          organizationId: ctx.organizationId!,
+          organizationId,
           ...(input?.anchor === "ASSET" && { assetId: { not: null } }),
           ...(input?.anchor === "PROCESS" && { businessProcessId: { not: null } }),
           ...(input?.status && { status: input.status }),
+          ...(input?.hasBCP === "UNSET" && { hasBCP: null }),
+          ...(input?.hasBCP &&
+            input.hasBCP !== "UNSET" && { hasBCP: input.hasBCP as HasBCP }),
+          ...(search && {
+            OR: [
+              { asset: { name: { contains: search, mode: "insensitive" } } },
+              { asset: { identifier: { contains: search, mode: "insensitive" } } },
+              { businessProcess: { name: { contains: search, mode: "insensitive" } } },
+              { businessProcess: { identifier: { contains: search, mode: "insensitive" } } },
+              { overview: { contains: search, mode: "insensitive" } },
+              { systemDescription: { contains: search, mode: "insensitive" } },
+            ],
+          }),
         },
         include: {
           asset: { select: { id: true, identifier: true, name: true } },
@@ -126,6 +146,68 @@ export const biaSystemContingencyRouter = createTRPCRouter({
         orderBy: { updatedAt: "desc" },
       });
     }),
+
+  /**
+   * Register summary stats — counts by status / anchor / BCP for the cards.
+   * Stale = last updated more than 90 days ago.
+   */
+  getRegisterStats: organizationProcedure.query(async ({ ctx }) => {
+    const organizationId = ctx.organizationId!;
+    const STALE_DAYS = 90;
+    const staleCutoff = new Date();
+    staleCutoff.setDate(staleCutoff.getDate() - STALE_DAYS);
+
+    const [
+      total,
+      draftCount,
+      finalCount,
+      bcpYes,
+      bcpNo,
+      bcpNA,
+      bcpUnset,
+      assetAnchored,
+      processAnchored,
+      staleCount,
+    ] = await Promise.all([
+      ctx.db.systemContingencyBIA.count({ where: { organizationId } }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, status: ContingencyBIAStatus.DRAFT },
+      }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, status: ContingencyBIAStatus.FINAL },
+      }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, hasBCP: HasBCP.YES },
+      }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, hasBCP: HasBCP.NO },
+      }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, hasBCP: HasBCP.NA },
+      }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, hasBCP: null },
+      }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, assetId: { not: null } },
+      }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, businessProcessId: { not: null } },
+      }),
+      ctx.db.systemContingencyBIA.count({
+        where: { organizationId, updatedAt: { lt: staleCutoff } },
+      }),
+    ]);
+
+    return {
+      total,
+      byStatus: { draft: draftCount, final: finalCount },
+      byBCP: { yes: bcpYes, no: bcpNo, na: bcpNA, unset: bcpUnset },
+      byAnchor: { asset: assetAnchored, process: processAnchored },
+      staleCount,
+      staleCutoffDays: STALE_DAYS,
+    };
+  }),
 
   getById: organizationProcedure
     .input(z.object({ id: z.string() }))
@@ -198,6 +280,7 @@ export const biaSystemContingencyRouter = createTRPCRouter({
           assetId: input.assetId ?? null,
           businessProcessId: input.businessProcessId ?? null,
           status: input.status ?? ContingencyBIAStatus.DRAFT,
+          hasBCP: input.hasBCP ?? null,
           completionDate: input.completionDate ?? null,
           preparedById: ctx.session!.user.id,
           overview: input.overview ?? null,
@@ -270,6 +353,7 @@ export const biaSystemContingencyRouter = createTRPCRouter({
             assetId: data.assetId ?? null,
             businessProcessId: data.businessProcessId ?? null,
             status: data.status,
+            hasBCP: data.hasBCP ?? null,
             completionDate: data.completionDate ?? null,
             overview: data.overview ?? null,
             systemDescription: data.systemDescription ?? null,

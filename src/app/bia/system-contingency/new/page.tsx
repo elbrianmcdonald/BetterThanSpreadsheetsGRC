@@ -4,7 +4,7 @@ import { NewSystemContingencyClient } from "./client";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "New System Contingency BIA | BetterThanSpreadsheetsGRC",
+  title: "New BIA Assessment | BetterThanSpreadsheetsGRC",
 };
 
 export default function NewSystemContingencyPage() {

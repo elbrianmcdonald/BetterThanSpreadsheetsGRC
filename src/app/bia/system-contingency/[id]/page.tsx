@@ -4,7 +4,7 @@ import { SystemContingencyEditClient } from "./client";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "System Contingency BIA | BetterThanSpreadsheetsGRC",
+  title: "BIA Assessment | BetterThanSpreadsheetsGRC",
 };
 
 export default async function SystemContingencyEditPage({

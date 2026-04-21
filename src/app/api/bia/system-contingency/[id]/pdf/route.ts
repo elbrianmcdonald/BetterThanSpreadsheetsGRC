@@ -11,7 +11,11 @@ import puppeteer from "puppeteer";
 import { auth } from "@/server/auth";
 import { db } from "@/server/db";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
-import type { ContingencyImpactLevel, ContingencyBIAStatus } from "@prisma/client";
+import type {
+  ContingencyImpactLevel,
+  ContingencyBIAStatus,
+  HasBCP,
+} from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +48,11 @@ function levelLabel(l: ContingencyImpactLevel): string {
   return (
     { SEVERE: "Severe", MODERATE: "Moderate", MINIMAL: "Minimal" } as const
   )[l];
+}
+
+function bcpLabel(v: HasBCP | null): string {
+  if (!v) return "Not yet evaluated";
+  return ({ YES: "Yes", NO: "No", NA: "N/A" } as const)[v];
 }
 
 export async function GET(
@@ -132,13 +141,14 @@ export async function GET(
 </head>
 <body>
 
-<h1>System Contingency BIA
+<h1>BIA Assessment
   <span class="status ${esc(status)}">${esc(status)}</span>
 </h1>
 <div class="meta">
   ${esc(org?.name ?? "Organization")} · ${bia.asset ? "Asset" : "Process"} · <strong>${esc(anchorTitle)}</strong><br/>
   Completion date: ${esc(formatDate(bia.completionDate))} ·
-  Prepared: ${esc(formatDate(bia.createdAt))}
+  Prepared: ${esc(formatDate(bia.createdAt))} ·
+  BCP in place: <strong>${esc(bcpLabel(bia.hasBCP))}</strong>
 </div>
 
 <h2>1. Overview</h2>
@@ -342,7 +352,7 @@ ${
       margin: { top: "0.75in", bottom: "0.75in", left: "0.75in", right: "0.75in" },
     });
 
-    const filename = `contingency-bia-${bia.asset?.identifier ?? bia.businessProcess?.identifier ?? bia.id}.pdf`;
+    const filename = `bia-assessment-${bia.asset?.identifier ?? bia.businessProcess?.identifier ?? bia.id}.pdf`;
 
     // Copy to a standalone ArrayBuffer to satisfy strict BodyInit typing
     const body = new ArrayBuffer(pdfBytes.byteLength);

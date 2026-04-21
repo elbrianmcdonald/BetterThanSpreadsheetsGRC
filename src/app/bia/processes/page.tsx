@@ -1,17 +1,18 @@
 /**
- * Business Processes Page
+ * BIA Register — list of all BIA Assessments for the organization.
  *
- * Epic 10: BIA Core Module
- * Story 10.4: Process List View with Search & Sort
+ * Historically this URL hosted the Business Processes list. It was retooled
+ * to the BIA register because processes can still be reached by clicking a
+ * process-anchored BIA (which links into /bia/processes/[id] detail).
  */
 
 import { Suspense } from "react";
-import { BusinessProcessesClient } from "./client";
 import { Loader2 } from "lucide-react";
+import { BiaRegisterClient } from "./client";
 
 export const metadata = {
-  title: "Business Processes | BetterThanSpreadsheetsGRC",
-  description: "Manage business processes for BIA",
+  title: "BIA Register | BetterThanSpreadsheetsGRC",
+  description: "Register of all BIA Assessments",
 };
 
 function LoadingFallback() {
@@ -22,10 +23,10 @@ function LoadingFallback() {
   );
 }
 
-export default function BusinessProcessesPage() {
+export default function BiaRegisterPage() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <BusinessProcessesClient />
+      <BiaRegisterClient />
     </Suspense>
   );
 }

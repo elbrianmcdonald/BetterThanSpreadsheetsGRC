@@ -22,6 +22,7 @@ import {
 import {
   ContingencyBIAStatus,
   ContingencyImpactLevel,
+  HasBCP,
 } from "@prisma/client";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { AppLayout } from "@/components/layout";
@@ -132,6 +133,7 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
   const [status, setStatus] = useState<ContingencyBIAStatus>(
     ContingencyBIAStatus.DRAFT
   );
+  const [hasBCP, setHasBCP] = useState<HasBCP | "">("");
   const [completionDate, setCompletionDate] = useState("");
   const [overview, setOverview] = useState("");
   const [systemDescription, setSystemDescription] = useState("");
@@ -147,6 +149,7 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
   useEffect(() => {
     if (!bia) return;
     setStatus(bia.status);
+    setHasBCP(bia.hasBCP ?? "");
     setCompletionDate(toDateInput(bia.completionDate));
     setOverview(bia.overview ?? "");
     setSystemDescription(bia.systemDescription ?? "");
@@ -200,6 +203,7 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
       toast.success("Saved");
       void utils.biaSystemContingency.getById.invalidate({ id });
       void utils.biaSystemContingency.list.invalidate();
+      router.push("/bia/processes");
     },
     onError: (e) => toast.error(e.message || "Save failed"),
   });
@@ -207,7 +211,7 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
   const deleteMutation = api.biaSystemContingency.delete.useMutation({
     onSuccess: () => {
       toast.success("Deleted");
-      router.push("/bia/system-contingency");
+      router.push("/bia/processes");
     },
     onError: (e) => toast.error(e.message || "Delete failed"),
   });
@@ -220,6 +224,7 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
         assetId: bia.assetId,
         businessProcessId: bia.businessProcessId,
         status,
+        hasBCP: hasBCP || null,
         completionDate: completionDate ? new Date(completionDate) : null,
         overview: overview.trim() || null,
         systemDescription: systemDescription.trim() || null,
@@ -299,11 +304,8 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
   return (
     <AppLayout
       breadcrumbs={[
-        { label: "Business Impact" },
-        {
-          label: "System Contingency BIA",
-          href: "/bia/system-contingency",
-        },
+        { label: "Assessments" },
+        { label: "BIA Assessment", href: "/bia/processes" },
         { label: anchorLabel },
       ]}
     >
@@ -311,13 +313,29 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              System Contingency BIA
+              BIA Assessment
             </h1>
             <p className="text-muted-foreground mt-1 flex items-center gap-2">
               <Badge variant="outline" className="text-xs">
                 {bia.asset ? "Asset" : "Process"}
               </Badge>
-              <span className="font-mono text-sm">{anchorLabel}</span>
+              {bia.asset ? (
+                <Link
+                  href={`/assets/${bia.asset.id}`}
+                  className="font-mono text-sm hover:underline"
+                >
+                  {anchorLabel}
+                </Link>
+              ) : bia.businessProcess ? (
+                <Link
+                  href={`/bia/processes/${bia.businessProcess.id}`}
+                  className="font-mono text-sm hover:underline"
+                >
+                  {anchorLabel}
+                </Link>
+              ) : (
+                <span className="font-mono text-sm">{anchorLabel}</span>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -332,7 +350,7 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
               </a>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/bia/system-contingency">
+              <Link href="/bia/processes">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Link>
@@ -391,6 +409,25 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
                   value={completionDate}
                   onChange={(e) => setCompletionDate(e.target.value)}
                 />
+              </div>
+              <div>
+                <Label>Business Continuity Plan in place?</Label>
+                <Select
+                  value={hasBCP || "UNSET"}
+                  onValueChange={(v) =>
+                    setHasBCP(v === "UNSET" ? "" : (v as HasBCP))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UNSET">Not yet evaluated</SelectItem>
+                    <SelectItem value={HasBCP.YES}>Yes</SelectItem>
+                    <SelectItem value={HasBCP.NO}>No</SelectItem>
+                    <SelectItem value={HasBCP.NA}>N/A</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
@@ -742,6 +779,26 @@ export function SystemContingencyEditClient({ id }: { id: string }) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Bottom save bar — mirrors the top Save button for long-scroll forms */}
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/bia/processes">Cancel</Link>
+          </Button>
+          <Button onClick={handleSave} disabled={updateMutation.isPending}>
+            {updateMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </>
+            )}
+          </Button>
+        </div>
 
         {/* Danger zone */}
         <Card className="border-destructive/40">

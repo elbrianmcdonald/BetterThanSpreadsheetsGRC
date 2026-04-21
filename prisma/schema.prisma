@@ -4623,6 +4623,7 @@ model SystemContingencyBIA {
   businessProcessId  String?
 
   status             ContingencyBIAStatus @default(DRAFT)
+  hasBCP             HasBCP?              // Does the anchor have a documented Business Continuity Plan?
   completionDate     DateTime?
   preparedById       String?
 
@@ -4653,6 +4654,12 @@ model SystemContingencyBIA {
 enum ContingencyBIAStatus {
   DRAFT
   FINAL
+}
+
+enum HasBCP {
+  YES
+  NO
+  NA
 }
 
 /// Process row in §3.1 — the mission/business processes that depend on the

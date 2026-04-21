@@ -140,6 +140,11 @@ const NAV_SECTIONS: NavSection[] = [
         label: "Maturity",
         icon: <Gauge className="h-4 w-4" />,
       },
+      {
+        href: "/bia/processes",
+        label: "BIA Assessment",
+        icon: <FileText className="h-4 w-4" />,
+      },
     ],
   },
   {
@@ -228,13 +233,8 @@ const NAV_SECTIONS: NavSection[] = [
       },
       {
         href: "/bia/processes",
-        label: "Business Processes",
+        label: "BIA Register",
         icon: <ClipboardList className="h-4 w-4" />,
-      },
-      {
-        href: "/bia/system-contingency",
-        label: "System Contingency BIA",
-        icon: <FileText className="h-4 w-4" />,
       },
       {
         href: "/bia/functions",
