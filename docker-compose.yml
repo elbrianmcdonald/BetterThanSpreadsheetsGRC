@@ -27,8 +27,11 @@ services:
       - AWS_SES_SECRET_ACCESS_KEY=${AWS_SES_SECRET_ACCESS_KEY:-}
       - WORKER_ENABLED=${WORKER_ENABLED:-true}
       - WORKER_INTERVAL=${WORKER_INTERVAL:-30000}
+      - CADDY_ADMIN_URL=${CADDY_ADMIN_URL:-http://caddy:2019}
+      - HOSTNAME_CONFIG_DIR=/app/hostname-config
     volumes:
       - app_uploads:/app/uploads
+      - hostname_config:/app/hostname-config
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,12 +55,22 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-betterthanspreadsheetsGRC}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Wrapper re-syncs the superuser password with $POSTGRES_PASSWORD on
+      # every start, so .env/volume drift (P1000 auth errors after rebuild)
+      # self-heals without wiping the volume.
+      - ./postgres-wrapper.sh:/usr/local/bin/postgres-wrapper.sh:ro
+    # Invoke via `sh` so the script does not need to be marked executable —
+    # Git on Windows strips the Unix exec bit otherwise.
+    command: ["sh", "/usr/local/bin/postgres-wrapper.sh"]
     # No external port — only accessible within grc_network
     networks:
       - grc_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      # Not healthy until postgres accepts connections AND the wrapper has
+      # ALTERed the superuser password to match the env (sentinel file). This
+      # prevents the app from racing ahead with a stale password.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} && test -f /tmp/password-synced"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -74,6 +87,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # Shared volume with app — app writes cert.pem/key.pem here when BYOC
+      # mode is selected in /admin/settings/hostname; Caddy reads them via
+      # paths baked into the JSON config POSTed to its admin API.
+      - hostname_config:/etc/caddy/dynamic:ro
     environment:
       - DOMAIN=${DOMAIN:-localhost}
     depends_on:
@@ -136,6 +153,8 @@ volumes:
   caddy_data:
     driver: local
   caddy_config:
+    driver: local
+  hostname_config:
     driver: local
 
 # Custom bridge network for service communication

@@ -52,6 +52,8 @@ import { biaDependencyRouter } from "@/server/api/routers/biaDependency";
 import { biaDashboardRouter } from "@/server/api/routers/biaDashboard";
 import { assetRouter } from "@/server/api/routers/asset";
 import { assetOwnerRouter } from "@/server/api/routers/assetOwner";
+import { systemSettingsRouter } from "@/server/api/routers/systemSettings";
+import { biaSystemContingencyRouter } from "@/server/api/routers/biaSystemContingency";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 
 /**
@@ -114,6 +116,8 @@ export const appRouter = createTRPCRouter({
   biaDashboard: biaDashboardRouter, // Epic 13: BIA Reporting & Compliance
   asset: assetRouter, // Epic 14: Asset Registry & BIA Integration
   assetOwner: assetOwnerRouter, // Epic 14: Asset Owners (separate from Users)
+  systemSettings: systemSettingsRouter, // Deployment-level settings: hostname + TLS
+  biaSystemContingency: biaSystemContingencyRouter, // NIST SP 800-34 System Contingency BIA (asset/process-anchored)
 });
 
 // export type definition of API

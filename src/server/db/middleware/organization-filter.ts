@@ -192,6 +192,13 @@ const ALLOWLIST_TABLES = new Set([
   "BusinessProcessRisk", // Gets isolation through BusinessProcess relation
   // Epic 14: Asset Registry - junction table gets isolation through BusinessProcess and Asset relations
   "BusinessProcessAsset", // Gets isolation through BusinessProcess and Asset relations
+  // Deployment-level singleton — not organization-scoped. ORG_ADMIN-gated at the tRPC layer.
+  "HostnameConfig",
+  // NIST SP 800-34 System Contingency BIA children — isolation via parent BIA's organizationId
+  "ContingencyProcess",
+  "ContingencyProcessImpact",
+  "ContingencyResource",
+  "ContingencyRecoveryPriority",
 ]);
 
 /**

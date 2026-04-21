@@ -232,6 +232,11 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <ClipboardList className="h-4 w-4" />,
       },
       {
+        href: "/bia/system-contingency",
+        label: "System Contingency BIA",
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
         href: "/bia/functions",
         label: "Business Functions",
         icon: <Activity className="h-4 w-4" />,

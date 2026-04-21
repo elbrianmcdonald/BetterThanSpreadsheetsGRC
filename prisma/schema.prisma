@@ -1324,6 +1324,7 @@ model User {
   // Story 12.1: Control linkage creator relationships
   RiskControlLinksCreated                 RiskControlLink[]   @relation("RiskControlLinkCreator")
   FindingControlLinksCreated              FindingControlLink[] @relation("FindingControlLinkCreator")
+  HostnameConfigUpdates                   HostnameConfig[]    @relation("HostnameConfigUpdater")
   // Story 14.5: Finding comments authored by this user
   FindingComments                         FindingComment[]    @relation("FindingCommentUser")
   // Story 14.6: Finding evidence attached by this user
@@ -4135,6 +4136,7 @@ model BIAImpactCategory {
   tierCriteria          BIATierCriteria[]
   impactScores          BIAImpactScore[]
   timeImpactScores      BIATimeImpactScore[]
+  contingencyImpacts    ContingencyProcessImpact[] @relation("ContingencyProcessImpactCategory")
 
   @@unique([configurationId, name])
   @@index([configurationId])
@@ -4325,6 +4327,11 @@ model BusinessProcess {
 
   // Assessment Requests (FR26, FR41, FR42, FR43, FR44)
   assessmentRequests    BIAAssessmentRequest[]
+
+  // NIST SP 800-34 System Contingency BIA — process-anchored
+  contingencyBIAs       SystemContingencyBIA[] @relation("BusinessProcessContingencyBIAs")
+  // Cross-reference from process rows inside an asset-anchored contingency BIA
+  contingencyProcessRefs ContingencyProcess[]  @relation("ContingencyProcessLinkedProcess")
 
   @@unique([organizationId, identifier])
   @@index([organizationId])
@@ -4548,6 +4555,9 @@ model Asset {
   // Process links (many-to-many)
   businessProcessLinks BusinessProcessAsset[]
 
+  // NIST SP 800-34 System Contingency BIAs anchored to this asset
+  contingencyBIAs   SystemContingencyBIA[] @relation("AssetContingencyBIAs")
+
   @@unique([organizationId, identifier])
   @@index([organizationId])
   @@index([organizationId, status])
@@ -4574,4 +4584,150 @@ model BusinessProcessAsset {
   @@unique([businessProcessId, assetId])
   @@index([businessProcessId])
   @@index([assetId])
+}
+
+/// Singleton deployment-level hostname + TLS configuration.
+/// One row per deployment (enforced in application code via upsert on a
+/// fixed id). Cert/key bytes live on the shared `hostname_config` volume,
+/// only metadata is persisted here.
+model HostnameConfig {
+  id            String        @id @default(cuid())
+  hostname      String
+  mode          HostnameMode
+  acmeEmail     String?
+  certNotAfter  DateTime?
+  certSANs      String[]      @default([])
+  hasCertFiles  Boolean       @default(false)
+  lastAppliedAt DateTime?
+  lastAppliedOk Boolean       @default(false)
+  lastApplyError String?      @db.Text
+  updatedAt     DateTime      @updatedAt
+  updatedById   String?
+
+  updatedBy     User?         @relation("HostnameConfigUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+enum HostnameMode {
+  AUTO
+  BYOC
+}
+
+/// NIST SP 800-34 style System Contingency BIA — document-level deliverable
+/// that feeds the Information System Contingency Plan (ISCP). One record per
+/// Asset (information system) OR per BusinessProcess; exactly one of
+/// assetId/businessProcessId must be non-null (enforced in the service layer).
+model SystemContingencyBIA {
+  id                 String    @id @default(cuid())
+  organizationId     String
+  assetId            String?
+  businessProcessId  String?
+
+  status             ContingencyBIAStatus @default(DRAFT)
+  completionDate     DateTime?
+  preparedById       String?
+
+  // Narrative sections (italic "guidance" text from the template lives only
+  // in the UI — not persisted — per the user's instruction to delete it).
+  overview           String?   @db.Text
+  systemDescription  String?   @db.Text
+  downtimeDrivers    String?   @db.Text
+  alternateMeans     String?   @db.Text
+  alternateStrategies String?  @db.Text
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  updatedById        String?
+
+  asset              Asset?           @relation("AssetContingencyBIAs", fields: [assetId], references: [id], onDelete: Cascade)
+  businessProcess    BusinessProcess? @relation("BusinessProcessContingencyBIAs", fields: [businessProcessId], references: [id], onDelete: Cascade)
+
+  processes          ContingencyProcess[]
+  resources          ContingencyResource[]
+  recoveryPriorities ContingencyRecoveryPriority[]
+
+  @@index([organizationId])
+  @@index([assetId])
+  @@index([businessProcessId])
+}
+
+enum ContingencyBIAStatus {
+  DRAFT
+  FINAL
+}
+
+/// Process row in §3.1 — the mission/business processes that depend on the
+/// system being assessed. Optionally linkable to an existing BusinessProcess.
+model ContingencyProcess {
+  id                 String    @id @default(cuid())
+  biaId              String
+  businessProcessId  String?
+  name               String
+  description        String?   @db.Text
+  mtdHours           Int?
+  rtoHours           Int?
+  rpoHours           Int?
+  rpoNote            String?   // e.g. "last backup"
+  sortOrder          Int       @default(0)
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  bia                SystemContingencyBIA @relation(fields: [biaId], references: [id], onDelete: Cascade)
+  businessProcess    BusinessProcess?     @relation("ContingencyProcessLinkedProcess", fields: [businessProcessId], references: [id], onDelete: SetNull)
+
+  impacts            ContingencyProcessImpact[]
+
+  @@index([biaId])
+}
+
+/// §3.1.1 Outage Impacts — for each process, set a level per impact category.
+/// Uses existing BIAImpactCategory (from BIAConfiguration) so values are
+/// consistent across the org.
+model ContingencyProcessImpact {
+  id                    String    @id @default(cuid())
+  processId             String
+  biaImpactCategoryId   String
+  level                 ContingencyImpactLevel
+
+  process               ContingencyProcess @relation(fields: [processId], references: [id], onDelete: Cascade)
+  category              BIAImpactCategory  @relation("ContingencyProcessImpactCategory", fields: [biaImpactCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([processId, biaImpactCategoryId])
+  @@index([processId])
+}
+
+enum ContingencyImpactLevel {
+  SEVERE
+  MODERATE
+  MINIMAL
+}
+
+/// §3.2 Resource Requirements — components that compose the system.
+model ContingencyResource {
+  id                 String    @id @default(cuid())
+  biaId              String
+  name               String
+  platformOsVersion  String?
+  description        String?   @db.Text
+  sortOrder          Int       @default(0)
+
+  bia                SystemContingencyBIA @relation(fields: [biaId], references: [id], onDelete: Cascade)
+
+  @@index([biaId])
+}
+
+/// §3.3 Recovery Priorities — order of recovery for system resources.
+model ContingencyRecoveryPriority {
+  id                 String    @id @default(cuid())
+  biaId              String
+  priority           Int
+  resourceName       String
+  component          String?   // Platform/OS/Version
+  rtoDescription     String?   // e.g., "24 hours to rebuild or replace"
+  alternateStrategy  String?   @db.Text
+  sortOrder          Int       @default(0)
+
+  bia                SystemContingencyBIA @relation(fields: [biaId], references: [id], onDelete: Cascade)
+
+  @@index([biaId])
 }

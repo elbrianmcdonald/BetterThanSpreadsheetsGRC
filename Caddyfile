@@ -1,3 +1,14 @@
-{$DOMAIN:localhost} {
+{
+    # Expose Caddy's admin API on the internal grc_network so the app
+    # container can POST /load to hot-swap config from the settings page.
+    # Not exposed to the host — attachable only from inside the Docker network.
+    admin 0.0.0.0:2019
+}
+
+# Bootstrap fallback. Serves plain HTTP on :80 so the app is reachable
+# before a hostname + TLS config has been saved via /admin/settings/hostname.
+# Once the app POSTs a real config to the admin API, this block is replaced
+# entirely in-memory; this file is only re-read on `caddy reload` or restart.
+:80 {
     reverse_proxy app:3000
 }

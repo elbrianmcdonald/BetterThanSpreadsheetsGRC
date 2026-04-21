@@ -53,5 +53,48 @@ export async function register() {
         console.error("[Instrumentation] WARNING: Background workers unavailable");
       }
     }
+
+    // Replay hostname/TLS config to Caddy if one was previously saved.
+    // Caddy's admin-API config is in-memory; a Caddy restart reverts it to
+    // the bootstrap Caddyfile. Re-applying from DB on app start keeps the
+    // two containers in sync without user action.
+    try {
+      const { db } = await import("@/server/db");
+      const { applyConfigToCaddy } = await import(
+        "@/server/services/hostname-config.service"
+      );
+      const cfg = await db.hostnameConfig.findUnique({
+        where: { id: "hostname-config-singleton" },
+      });
+      if (cfg) {
+        const result = await applyConfigToCaddy(cfg);
+        if (result.ok) {
+          console.log(
+            `[Instrumentation] Re-applied hostname config (${cfg.hostname}, ${cfg.mode}) to Caddy`
+          );
+          await db.hostnameConfig.update({
+            where: { id: cfg.id },
+            data: {
+              lastAppliedAt: new Date(),
+              lastAppliedOk: true,
+              lastApplyError: null,
+            },
+          });
+        } else if (!result.caddyReachable) {
+          console.log(
+            "[Instrumentation] Caddy admin API unreachable — config will re-apply on next start"
+          );
+        } else {
+          console.error(
+            `[Instrumentation] Caddy rejected saved config: ${result.error}`
+          );
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[Instrumentation] Hostname config replay failed:",
+        error
+      );
+    }
   }
 }
