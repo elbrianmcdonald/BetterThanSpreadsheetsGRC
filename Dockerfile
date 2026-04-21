@@ -21,7 +21,8 @@ RUN npm ci
 COPY . .
 
 # Build Next.js application (standalone output)
-RUN npm run build
+# Raise Node's heap to 4GB — default ~1.5GB OOMs during type-check on this codebase
+RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
 # Stage 2: Production
 FROM node:20-alpine AS runner
