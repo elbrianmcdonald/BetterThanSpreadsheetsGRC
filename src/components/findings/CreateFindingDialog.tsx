@@ -65,6 +65,7 @@ export interface CreateFindingDialogProps {
   initialSeverity?: Severity;
   /** Linkage — optional, set by caller based on where the dialog was opened. */
   controlId?: string;
+  complianceAssessmentId?: string;
   maturityAssessmentId?: string;
   maturityDomainId?: string;
   /** Small label shown above the title, e.g., "Spawned from GV — Govern". */
@@ -93,6 +94,7 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open, props.initialTitle, props.initialDescription]);
 
+  const utils = api.useUtils();
   const createMutation = api.finding.create.useMutation({
     onSuccess: (finding) => {
       toast.success(
@@ -107,6 +109,20 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
           </Link>
         </span>
       );
+      // Refresh the "Findings from this assessment" list in-place.
+      if (props.complianceAssessmentId) {
+        void utils.finding.listForAssessment.invalidate({
+          assessmentId: props.complianceAssessmentId,
+          assessmentType: "COMPLIANCE",
+        });
+      }
+      if (props.maturityAssessmentId) {
+        void utils.finding.listForAssessment.invalidate({
+          assessmentId: props.maturityAssessmentId,
+          assessmentType: "MATURITY",
+        });
+      }
+      void utils.finding.list.invalidate();
       props.onOpenChange(false);
     },
     onError: (e) => toast.error(e.message || "Failed to create finding"),
@@ -125,6 +141,7 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
       source,
       severity,
       controlId: props.controlId,
+      complianceAssessmentId: props.complianceAssessmentId,
       maturityAssessmentId: props.maturityAssessmentId,
       maturityDomainId: props.maturityDomainId,
     });

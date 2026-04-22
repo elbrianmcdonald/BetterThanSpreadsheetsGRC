@@ -57,6 +57,7 @@ import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
+import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -1058,6 +1059,16 @@ export function ComplianceAssessmentDetailClient({
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={`/api/compliance/assessments/${assessmentId}/pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export PDF
+                  </a>
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1322,6 +1333,13 @@ export function ComplianceAssessmentDetailClient({
             </CardContent>
           </Card>
         )}
+
+        {/* Findings entered from this assessment (linked via
+            Finding.sourceComplianceAssessmentId) */}
+        <AssessmentFindingsList
+          assessmentId={assessmentId}
+          assessmentType="COMPLIANCE"
+        />
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -1364,6 +1382,7 @@ export function ComplianceAssessmentDetailClient({
           }
           contextLabel={`Linked to ${findingContext.controlCode} — ${findingContext.controlTitle}`}
           controlId={findingContext.controlId}
+          complianceAssessmentId={assessment.id}
         />
       )}
     </AppLayout>

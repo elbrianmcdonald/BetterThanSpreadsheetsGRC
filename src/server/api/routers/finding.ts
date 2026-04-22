@@ -77,6 +77,7 @@ const createFindingInput = z.object({
   // specific compliance control or maturity domain card, the UI passes the
   // appropriate IDs so we can link them automatically.
   controlId: z.string().optional(),
+  complianceAssessmentId: z.string().optional(),
   maturityAssessmentId: z.string().optional(),
   maturityDomainId: z.string().optional(),
 });
@@ -177,6 +178,48 @@ export const findingRouter = createTRPCRouter({
    * AC19-AC21: Sorting by multiple columns
    * AC22-AC25: Cursor-based pagination
    */
+  /**
+   * List findings spawned from a specific compliance or maturity assessment.
+   * Used by the bottom-of-page "Findings entered here" section.
+   */
+  listForAssessment: organizationProcedure
+    .input(
+      z.object({
+        assessmentId: z.string(),
+        assessmentType: z.enum(["MATURITY", "COMPLIANCE"]),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const where: Prisma.FindingWhereInput =
+        input.assessmentType === "MATURITY"
+          ? { organizationId, sourceMaturityAssessmentId: input.assessmentId }
+          : { organizationId, sourceComplianceAssessmentId: input.assessmentId };
+      return ctx.db.finding.findMany({
+        where,
+        select: {
+          id: true,
+          identifier: true,
+          title: true,
+          severity: true,
+          status: true,
+          source: true,
+          createdAt: true,
+          creator: { select: { id: true, name: true, email: true } },
+          sourceMaturityDomain: {
+            select: { id: true, code: true, name: true },
+          },
+          ControlLinks: {
+            select: {
+              control: { select: { id: true, controlId: true, title: true } },
+            },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }),
+
   list: organizationProcedure
     .input(listFindingInput)
     .query(async ({ ctx, input }) => {
@@ -286,6 +329,7 @@ export const findingRouter = createTRPCRouter({
         affectedBusinessUnitIds,
         assigneeId,
         controlId,
+        complianceAssessmentId,
         maturityAssessmentId,
         maturityDomainId,
         ...findingData
@@ -344,6 +388,20 @@ export const findingRouter = createTRPCRouter({
         }
       }
 
+      if (complianceAssessmentId) {
+        const ok = await ctx.db.complianceAssessment.findFirst({
+          where: { id: complianceAssessmentId, organizationId },
+          select: { id: true },
+        });
+        if (!ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Invalid compliance assessment — must be in same organization",
+          });
+        }
+      }
+
       // AC22, AC26, AC27: Create finding with status NEW, createdBy and organizationId from session
       const finding = await ctx.db.finding.create({
         data: {
@@ -355,6 +413,7 @@ export const findingRouter = createTRPCRouter({
           assigneeId: assigneeId ?? null,
           sourceMaturityAssessmentId: maturityAssessmentId ?? null,
           sourceMaturityDomainId: maturityDomainId ?? null,
+          sourceComplianceAssessmentId: complianceAssessmentId ?? null,
           affectedBusinessUnits: affectedBusinessUnitIds?.length
             ? { connect: affectedBusinessUnitIds.map((id) => ({ id })) }
             : undefined,

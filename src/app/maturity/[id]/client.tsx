@@ -51,6 +51,7 @@ import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
 import { getScaleDefinition } from "@/lib/maturity-scales";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
+import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1984,6 +1985,16 @@ export function MaturityAssessmentDetailClient({
               </div>
               {canManage && (
                 <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={`/api/maturity/${assessmentId}/pdf`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Export PDF
+                    </a>
+                  </Button>
                   <Button variant="outline" size="sm" disabled>
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
@@ -2476,6 +2487,13 @@ export function MaturityAssessmentDetailClient({
             </CardContent>
           </Card>
         </div>
+
+        {/* Findings entered from this assessment (linked via
+            Finding.sourceMaturityAssessmentId) */}
+        <AssessmentFindingsList
+          assessmentId={assessmentId}
+          assessmentType="MATURITY"
+        />
       </div>
 
       {/* Delete Confirmation Dialog */}

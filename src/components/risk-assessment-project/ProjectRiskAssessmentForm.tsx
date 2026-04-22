@@ -40,6 +40,7 @@ import {
   Save,
   Calendar,
   User,
+  FileText,
 } from "lucide-react";
 import { AssessmentProjectStatus, RiskDiscoveryStatus, UserRole } from "@prisma/client";
 import { toast } from "sonner";
@@ -956,6 +957,16 @@ export function ProjectRiskAssessmentForm({ projectId }: ProjectRiskAssessmentFo
             <div className="flex justify-end gap-3 border-t pt-6">
               <Button type="button" variant="outline" asChild>
                 <Link href="/risk-assessments">Cancel</Link>
+              </Button>
+              <Button type="button" variant="outline" asChild>
+                <a
+                  href={`/api/risk-assessments/${projectId}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export PDF
+                </a>
               </Button>
               <Button
                 type="button"

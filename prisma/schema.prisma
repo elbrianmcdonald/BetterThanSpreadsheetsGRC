@@ -2147,12 +2147,19 @@ model Finding {
   // ============================================================================
   sourceMaturityAssessmentId String?
   sourceMaturityDomainId     String?
+  /// Mirrors the maturity source link — populated when a finding is spawned
+  /// from inside a compliance assessment detail page against one of its
+  /// controls. Lets the assessment page render a "Findings entered here"
+  /// section at the bottom.
+  sourceComplianceAssessmentId String?
 
   sourceMaturityAssessment   MaturityAssessment? @relation("FindingMaturitySource", fields: [sourceMaturityAssessmentId], references: [id], onDelete: SetNull)
   sourceMaturityDomain       MaturityDomain?     @relation("FindingMaturityDomainSource", fields: [sourceMaturityDomainId], references: [id], onDelete: SetNull)
+  sourceComplianceAssessment ComplianceAssessment? @relation("FindingComplianceSource", fields: [sourceComplianceAssessmentId], references: [id], onDelete: SetNull)
 
   @@index([sourceMaturityAssessmentId])
   @@index([sourceMaturityDomainId])
+  @@index([sourceComplianceAssessmentId])
 }
 
 // Story 7.5: Risk Assessment model (AC1-AC15)
@@ -3612,6 +3619,8 @@ model ComplianceAssessment {
   approvedBy      User?                       @relation("ComplianceAssessmentApprover", fields: [approvedById], references: [id])
 
   controlScores   ControlAssessmentScore[]
+  // Findings spawned from inside this compliance assessment
+  findings        Finding[]                   @relation("FindingComplianceSource")
 
   @@unique([organizationId, identifier])
   @@index([organizationId, status])
