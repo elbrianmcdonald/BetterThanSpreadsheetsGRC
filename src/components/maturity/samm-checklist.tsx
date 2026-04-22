@@ -19,6 +19,7 @@ import {
   Loader2,
   HelpCircle,
   User,
+  AlertTriangle,
 } from "lucide-react";
 
 import { api } from "@/trpc/react";
@@ -68,6 +69,14 @@ interface SammChecklistProps {
   targetLevel?: number | null;
   onTargetLevelChange?: (targetLevel: number | null) => void;
   isSavingTarget?: boolean;
+  /// Called when the user clicks the per-activity (stream) Finding button.
+  /// The caller opens the CreateFindingDialog prefilled with the activity.
+  onCreateFinding?: (activity: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+  }) => void;
 }
 
 // =============================================================================
@@ -130,11 +139,18 @@ function PracticeSection({
   practice,
   isExpanded,
   onToggle,
+  onCreateFinding,
 }: {
   assessmentId: string;
   practice: { id: string; code: string; name: string };
   isExpanded: boolean;
   onToggle: () => void;
+  onCreateFinding?: (activity: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+  }) => void;
 }) {
   const [expandedStream, setExpandedStream] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
@@ -200,12 +216,23 @@ function PracticeSection({
 
         {data?.streams.map((stream) => (
           <div key={stream.id} className="border rounded-lg">
-            {/* Stream Header */}
-            <button
-              className="flex w-full items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+            {/* Stream Header — role="button" wrapper so we can nest a real
+                button (Finding) inside without invalid HTML. */}
+            <div
+              role="button"
+              tabIndex={0}
+              className="flex w-full items-center justify-between p-3 hover:bg-muted/30 transition-colors cursor-pointer"
               onClick={() =>
                 setExpandedStream(expandedStream === stream.id ? null : stream.id)
               }
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setExpandedStream(
+                    expandedStream === stream.id ? null : stream.id
+                  );
+                }
+              }}
             >
               <div className="flex items-center gap-2">
                 {expandedStream === stream.id ? (
@@ -223,8 +250,27 @@ function PracticeSection({
                   {stream.answeredCount}/{stream.totalQuestions}
                 </span>
                 <ScoreBadge score={stream.streamScore} />
+                {onCreateFinding && (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-amber-200 bg-white text-xs text-amber-700 hover:bg-amber-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCreateFinding({
+                        id: stream.id,
+                        code: stream.code,
+                        name: stream.name,
+                        description: null,
+                      });
+                    }}
+                    title="Create finding linked to this activity"
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                    Finding
+                  </button>
+                )}
               </div>
-            </button>
+            </div>
 
             {/* Stream Questions */}
             {expandedStream === stream.id && (
@@ -424,6 +470,7 @@ export function SammChecklist({
   targetLevel = null,
   onTargetLevelChange,
   isSavingTarget = false,
+  onCreateFinding,
 }: SammChecklistProps) {
   const [expandedPractice, setExpandedPractice] = useState<string | null>(null);
 
@@ -566,6 +613,7 @@ export function SammChecklist({
                     expandedPractice === practice.id ? null : practice.id
                   )
                 }
+                onCreateFinding={onCreateFinding}
               />
             ))}
           </div>

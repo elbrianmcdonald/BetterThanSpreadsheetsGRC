@@ -2139,6 +2139,20 @@ model Finding {
   @@index([vendorId])
   @@index([vendorAssessmentId])
   @@index([organizationId, vendorId])
+
+  // ============================================================================
+  // Maturity assessment source linkage — recorded when a finding is created
+  // from inside /maturity/[id] against a specific domain/control. Compliance
+  // linkage continues to go through the existing FindingControlLink junction.
+  // ============================================================================
+  sourceMaturityAssessmentId String?
+  sourceMaturityDomainId     String?
+
+  sourceMaturityAssessment   MaturityAssessment? @relation("FindingMaturitySource", fields: [sourceMaturityAssessmentId], references: [id], onDelete: SetNull)
+  sourceMaturityDomain       MaturityDomain?     @relation("FindingMaturityDomainSource", fields: [sourceMaturityDomainId], references: [id], onDelete: SetNull)
+
+  @@index([sourceMaturityAssessmentId])
+  @@index([sourceMaturityDomainId])
 }
 
 // Story 7.5: Risk Assessment model (AC1-AC15)
@@ -3054,6 +3068,16 @@ enum AssessorAssignmentStatus {
   SUBMITTED
 }
 
+/// Scoring scale choice for maturity assessments that offer multiple scales.
+/// Currently only NIST CSF 2.0 uses this — lets the user pick between the
+/// official Implementation Tiers (0=None, 1=Partial, 2=Risk Informed,
+/// 3=Repeatable, 4=Adaptive) or the CMMI Maturity Levels (1=Initial,
+/// 2=Managed, 3=Defined, 4=Quantitatively Managed, 5=Optimizing).
+enum MaturityScoringScale {
+  NIST_TIERS
+  CMMI_MATURITY
+}
+
 // ============================================================================
 // Compliance Assessment Module - Enums
 // ============================================================================
@@ -3334,6 +3358,10 @@ model MaturityDomain {
   // Control Domain tagging
   ControlDomains  ControlDomainMaturityDomain[]
 
+  // NIST SP 800-34 System Contingency BIA — process-anchored cross-ref (unused here)
+  // Findings spawned from this domain during a maturity assessment
+  findingsFromDomain Finding[]      @relation("FindingMaturityDomainSource")
+
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -3353,6 +3381,11 @@ model MaturityAssessment {
 
   assessmentDepth AssessmentDepth           @default(FUNCTION)
   assessmentMode  AssessmentMode            @default(SELF)
+  /// Which label+value set to use when rendering levels. For NIST CSF 2.0
+  /// the user picks between the official Implementation Tiers (0–4) and the
+  /// CMMI Maturity Levels (1–5). Null for frameworks that don't offer a
+  /// choice (C2M2, SAMM use their own built-in scales).
+  scoringScale    MaturityScoringScale?
   status          MaturityAssessmentStatus  @default(DRAFT)
 
   // Current scores (editable)
@@ -3388,6 +3421,9 @@ model MaturityAssessment {
   snapshots       MaturitySnapshot[]
   responses       MaturityQuestionResponse[]
 
+  // Findings spawned from inside this assessment
+  findings        Finding[]                 @relation("FindingMaturitySource")
+
   @@unique([organizationId, identifier])
   @@index([organizationId, status])
   @@index([organizationId, frameworkId])
@@ -3401,6 +3437,9 @@ model MaturityDomainScore {
   domainId        String
 
   currentLevel    Int?
+  /// When true, this item is marked "Not Applicable" — currentLevel MUST be
+  /// null and the item is excluded from overall scoring aggregates.
+  isNotApplicable Boolean           @default(false)
   targetLevel     Int?
   confidence      String?           // LOW, MEDIUM, HIGH
   notes           String?           @db.Text

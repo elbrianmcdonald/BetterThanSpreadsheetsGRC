@@ -22,6 +22,7 @@ import {
   AssessmentMode,
   MaturityAssessmentStatus,
   AssessorAssignmentStatus,
+  MaturityScoringScale,
 } from "@prisma/client";
 
 import {
@@ -88,7 +89,15 @@ const createAssessmentSchema = z.object({
   description: z.string().max(5000).optional().nullable(),
   assessmentDepth: z.nativeEnum(AssessmentDepth).default(AssessmentDepth.FUNCTION),
   assessmentMode: z.nativeEnum(AssessmentMode).default(AssessmentMode.SELF),
+  /// Only set for frameworks that offer multiple scales (currently NIST CSF 2.0).
+  scoringScale: z.nativeEnum(MaturityScoringScale).optional().nullable(),
+  /// Legacy single-target fallback (used when functionTargets isn't provided).
   targetLevel: z.number().int().min(0).max(5).optional().nullable(),
+  /// Map of Function code → target level (e.g., { GV: 3, ID: 2, … }). When
+  /// present, the server writes per-function targets on the Function-level
+  /// MaturityDomainScore rows; non-Function domains inherit their ancestor's
+  /// target at render time.
+  functionTargets: z.record(z.string(), z.number().int().min(0).max(5)).optional(),
   targetDate: z.date().optional().nullable(),
   businessUnitId: z.string().optional().nullable(),
 });
@@ -123,6 +132,8 @@ const updateDomainScoreSchema = z.object({
   assessmentId: z.string().min(1),
   domainId: z.string().min(1),
   currentLevel: z.number().int().min(0).max(5).optional().nullable(),
+  /// When true, the item is marked Not Applicable. currentLevel must be null.
+  isNotApplicable: z.boolean().optional(),
   targetLevel: z.number().int().min(0).max(5).optional().nullable(),
   confidence: z.enum(["LOW", "MEDIUM", "HIGH"]).optional().nullable(),
   notes: z.string().max(5000).optional().nullable(),
@@ -724,6 +735,48 @@ export const maturityRouter = createTRPCRouter({
       // Generate identifier
       const identifier = await generateAssessmentIdentifier(db, organizationId);
 
+      // Per-function targets — applied to the Function-level MaturityDomain
+      // rows (separate from `domains` which is filtered by assessmentDepth).
+      // For non-CSF frameworks or when functionTargets is empty, each
+      // domainScore falls back to input.targetLevel as before.
+      const useFunctionTargets =
+        !!input.functionTargets &&
+        Object.keys(input.functionTargets).length > 0;
+
+      let functionDomainsByCode: Record<string, { id: string }> = {};
+      if (useFunctionTargets) {
+        const functionDomains = await db.maturityDomain.findMany({
+          where: {
+            frameworkId: input.frameworkId,
+            level: AssessmentDepth.FUNCTION,
+          },
+          select: { id: true, code: true },
+        });
+        functionDomainsByCode = Object.fromEntries(
+          functionDomains.map((d) => [d.code, { id: d.id }])
+        );
+      }
+
+      // For each domain that will be scored, figure out the target it
+      // should start with: a per-domain value from functionTargets (keyed by
+      // domain code — works at any level; CSF keys by Function code, C2M2
+      // by Function code, SAMM by Function/Category/Subcategory code based
+      // on assessment depth) or the single assessment-wide targetLevel.
+      const domainScoresToCreate = framework.domains.map((domain) => {
+        let resolvedTarget: number | null = input.targetLevel ?? null;
+        if (
+          useFunctionTargets &&
+          input.functionTargets![domain.code] !== undefined
+        ) {
+          resolvedTarget = input.functionTargets![domain.code]!;
+        }
+        return {
+          domainId: domain.id,
+          currentLevel: null,
+          targetLevel: resolvedTarget,
+        };
+      });
+
       // Create assessment with initial domain scores
       const assessment = await db.maturityAssessment.create({
         data: {
@@ -734,17 +787,14 @@ export const maturityRouter = createTRPCRouter({
           description: input.description,
           assessmentDepth: input.assessmentDepth,
           assessmentMode: input.assessmentMode,
+          scoringScale: input.scoringScale ?? null,
           status: MaturityAssessmentStatus.DRAFT,
           targetLevel: input.targetLevel,
           targetDate: input.targetDate,
           ownerId: session.user.id,
           businessUnitId: input.businessUnitId ?? null,
           domainScores: {
-            create: framework.domains.map((domain) => ({
-              domainId: domain.id,
-              currentLevel: null,
-              targetLevel: input.targetLevel,
-            })),
+            create: domainScoresToCreate,
           },
         },
         include: {
@@ -754,6 +804,35 @@ export const maturityRouter = createTRPCRouter({
           },
         },
       });
+
+      // If user is assessing at FUNCTION depth with functionTargets, those
+      // already landed on the domainScores above. Otherwise (CATEGORY/
+      // SUBCATEGORY depth with functionTargets), we also need to persist the
+      // function-level targets as separate rows so children can inherit
+      // them. Create them if they don't already exist in the scored set.
+      if (useFunctionTargets && input.assessmentDepth !== AssessmentDepth.FUNCTION) {
+        const alreadyCreated = new Set(
+          assessment.domainScores.map((s) => s.domainId)
+        );
+        const extraRows = Object.entries(input.functionTargets!)
+          .map(([code, target]) => {
+            const fnDomain = functionDomainsByCode[code];
+            if (!fnDomain || alreadyCreated.has(fnDomain.id)) return null;
+            return {
+              assessmentId: assessment.id,
+              domainId: fnDomain.id,
+              currentLevel: null,
+              targetLevel: target,
+            };
+          })
+          .filter((x): x is NonNullable<typeof x> => x !== null);
+        if (extraRows.length > 0) {
+          await db.maturityDomainScore.createMany({
+            data: extraRows,
+            skipDuplicates: true,
+          });
+        }
+      }
 
       return assessment;
     }),
@@ -1033,6 +1112,12 @@ export const maturityRouter = createTRPCRouter({
         });
       }
 
+      // Enforce the NA invariant: if marked Not Applicable, currentLevel must
+      // be null so aggregates skip the item cleanly.
+      const normalizedCurrentLevel = input.isNotApplicable
+        ? null
+        : input.currentLevel;
+
       // Upsert domain score
       const score = await db.maturityDomainScore.upsert({
         where: {
@@ -1042,7 +1127,8 @@ export const maturityRouter = createTRPCRouter({
           },
         },
         update: {
-          currentLevel: input.currentLevel,
+          currentLevel: normalizedCurrentLevel,
+          isNotApplicable: input.isNotApplicable ?? false,
           targetLevel: input.targetLevel,
           confidence: input.confidence,
           notes: input.notes,
@@ -1053,7 +1139,8 @@ export const maturityRouter = createTRPCRouter({
         create: {
           assessmentId: input.assessmentId,
           domainId: input.domainId,
-          currentLevel: input.currentLevel,
+          currentLevel: normalizedCurrentLevel,
+          isNotApplicable: input.isNotApplicable ?? false,
           targetLevel: input.targetLevel,
           confidence: input.confidence,
           notes: input.notes,

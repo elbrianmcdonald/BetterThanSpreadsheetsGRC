@@ -73,6 +73,12 @@ const createFindingInput = z.object({
   affectedAssets: z.array(z.string()).optional().default([]),
   affectedBusinessUnitIds: z.array(z.string()).optional().default([]),
   assigneeId: z.string().optional(),
+  // Optional inline-creation context. When the finding is spawned from a
+  // specific compliance control or maturity domain card, the UI passes the
+  // appropriate IDs so we can link them automatically.
+  controlId: z.string().optional(),
+  maturityAssessmentId: z.string().optional(),
+  maturityDomainId: z.string().optional(),
 });
 
 /**
@@ -276,7 +282,14 @@ export const findingRouter = createTRPCRouter({
     .use(requireRole(FINDING_CREATE_ROLES))
     .input(createFindingInput)
     .mutation(async ({ ctx, input }) => {
-      const { affectedBusinessUnitIds, assigneeId, ...findingData } = input;
+      const {
+        affectedBusinessUnitIds,
+        assigneeId,
+        controlId,
+        maturityAssessmentId,
+        maturityDomainId,
+        ...findingData
+      } = input;
 
       // organizationProcedure guarantees session and organizationId are non-null
       const organizationId = ctx.organizationId!;
@@ -317,6 +330,20 @@ export const findingRouter = createTRPCRouter({
         }
       }
 
+      // Validate maturity linkage if provided
+      if (maturityAssessmentId) {
+        const ok = await ctx.db.maturityAssessment.findFirst({
+          where: { id: maturityAssessmentId, organizationId },
+          select: { id: true },
+        });
+        if (!ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid maturity assessment — must be in same organization",
+          });
+        }
+      }
+
       // AC22, AC26, AC27: Create finding with status NEW, createdBy and organizationId from session
       const finding = await ctx.db.finding.create({
         data: {
@@ -326,8 +353,23 @@ export const findingRouter = createTRPCRouter({
           createdBy: userId,
           status: "NEW",
           assigneeId: assigneeId ?? null,
+          sourceMaturityAssessmentId: maturityAssessmentId ?? null,
+          sourceMaturityDomainId: maturityDomainId ?? null,
           affectedBusinessUnits: affectedBusinessUnitIds?.length
             ? { connect: affectedBusinessUnitIds.map((id) => ({ id })) }
+            : undefined,
+          // Auto-link to the compliance control when spawned from an
+          // assessment — mirrors the manual linking flow from the findings
+          // detail page. Default linkType OBSERVATION; users can change it.
+          ControlLinks: controlId
+            ? {
+                create: {
+                  organizationId,
+                  controlId,
+                  linkType: "OBSERVATION",
+                  createdById: userId,
+                },
+              }
             : undefined,
         },
         include: {

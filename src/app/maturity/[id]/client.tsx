@@ -37,6 +37,7 @@ import {
   CheckSquare,
   HelpCircle,
   TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 import {
   MaturityFrameworkType,
@@ -48,6 +49,8 @@ import {
 
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
+import { getScaleDefinition } from "@/lib/maturity-scales";
+import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -427,10 +430,12 @@ function DomainScoreCard({
   isExpanded,
   onToggle,
   frameworkType,
+  onCreateFinding,
 }: {
   domain: { id: string; code: string; name: string; description: string | null };
   score?: {
     currentLevel: number | null;
+    isNotApplicable?: boolean;
     targetLevel: number | null;
     confidence: string | null;
     notes: string | null;
@@ -441,6 +446,7 @@ function DomainScoreCard({
   onSave: (data: {
     domainId: string;
     currentLevel: number | null;
+    isNotApplicable?: boolean;
     targetLevel: number | null;
     confidence: string | null;
     notes: string | null;
@@ -449,8 +455,12 @@ function DomainScoreCard({
   isExpanded: boolean;
   onToggle: () => void;
   frameworkType: MaturityFrameworkType;
+  onCreateFinding?: () => void;
 }) {
   const [currentLevel, setCurrentLevel] = useState<number | null>(score?.currentLevel ?? null);
+  const [isNotApplicable, setIsNotApplicable] = useState<boolean>(
+    score?.isNotApplicable ?? false
+  );
   const [targetLevel, setTargetLevel] = useState<number | null>(score?.targetLevel ?? null);
   const [confidence, setConfidence] = useState<string | null>(score?.confidence ?? null);
   const [notes, setNotes] = useState(score?.notes || "");
@@ -459,6 +469,7 @@ function DomainScoreCard({
   // Update local state when score changes from server
   useEffect(() => {
     setCurrentLevel(score?.currentLevel ?? null);
+    setIsNotApplicable(score?.isNotApplicable ?? false);
     setTargetLevel(score?.targetLevel ?? null);
     setConfidence(score?.confidence ?? null);
     setNotes(score?.notes || "");
@@ -472,7 +483,8 @@ function DomainScoreCard({
   const handleSave = () => {
     onSave({
       domainId: domain.id,
-      currentLevel,
+      currentLevel: isNotApplicable ? null : currentLevel,
+      isNotApplicable,
       targetLevel,
       confidence,
       notes: notes.trim() || null,
@@ -515,6 +527,22 @@ function DomainScoreCard({
               </Badge>
             )}
             <TierBadge level={currentLevel} levels={levels} maxLevel={maxLevel} frameworkType={frameworkType} />
+            {onCreateFinding && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1"
+                onClick={(e) => {
+                  // Don't toggle the card when the button is clicked.
+                  e.stopPropagation();
+                  onCreateFinding();
+                }}
+                title="Create finding linked to this item"
+              >
+                <AlertTriangle className="h-3 w-3" />
+                Finding
+              </Button>
+            )}
           </div>
         </div>
         {!isExpanded && domain.description && (
@@ -535,17 +563,39 @@ function DomainScoreCard({
             </div>
           )}
 
-          <TierSelector
-            label="Current Level"
-            value={currentLevel}
-            onChange={(v) => {
-              setCurrentLevel(v);
-              handleChange();
-            }}
-            levels={levels}
-            disabled={isSaving}
-            frameworkType={frameworkType}
-          />
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300"
+                  checked={isNotApplicable}
+                  onChange={(e) => {
+                    setIsNotApplicable(e.target.checked);
+                    if (e.target.checked) setCurrentLevel(null);
+                    handleChange();
+                  }}
+                  disabled={isSaving}
+                />
+                Not Applicable
+              </label>
+              <span className="text-xs text-muted-foreground">
+                Excludes this item from overall scoring.
+              </span>
+            </div>
+
+            <TierSelector
+              label="Current Level"
+              value={currentLevel}
+              onChange={(v) => {
+                setCurrentLevel(v);
+                handleChange();
+              }}
+              levels={levels}
+              disabled={isSaving || isNotApplicable}
+              frameworkType={frameworkType}
+            />
+          </div>
 
           <TierSelector
             label="Target Level"
@@ -621,6 +671,7 @@ function PracticeChecklist({
   targetLevel = null,
   onTargetLevelChange,
   isSavingTarget = false,
+  onCreateFinding,
 }: {
   assessmentId: string;
   domain: { id: string; code: string; name: string; description: string | null };
@@ -632,6 +683,12 @@ function PracticeChecklist({
   targetLevel?: number | null;
   onTargetLevelChange?: (targetLevel: number | null) => void;
   isSavingTarget?: boolean;
+  onCreateFinding?: (practice: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+  }) => void;
 }) {
   // Get labels based on framework type
   const levelPrefix = "MIL";
@@ -886,6 +943,25 @@ function PracticeChecklist({
                                   </div>
                                   <p className="text-sm">{practice.text}</p>
                                 </div>
+                                {onCreateFinding && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 gap-1 shrink-0 text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50"
+                                    onClick={() =>
+                                      onCreateFinding({
+                                        id: practice.id,
+                                        code: practice.code,
+                                        name: practice.text,
+                                        description: practice.guidance ?? null,
+                                      })
+                                    }
+                                    title="Create finding linked to this practice"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Finding
+                                  </Button>
+                                )}
                               </div>
 
                               {/* Implementation Guidance - Collapsible */}
@@ -1044,6 +1120,7 @@ function SubcategoryChecklist({
   targetLevel = null,
   onTargetLevelChange,
   isSavingTarget = false,
+  onCreateFinding,
 }: {
   assessmentId: string;
   domain: { id: string; code: string; name: string; description: string | null };
@@ -1054,6 +1131,12 @@ function SubcategoryChecklist({
   targetLevel?: number | null;
   onTargetLevelChange?: (targetLevel: number | null) => void;
   isSavingTarget?: boolean;
+  onCreateFinding?: (subcategory: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+  }) => void;
 }) {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const utils = api.useUtils();
@@ -1298,6 +1381,25 @@ function SubcategoryChecklist({
                                   </div>
                                   <p className="text-sm">{subcategory.name}</p>
                                 </div>
+                                {onCreateFinding && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 gap-1 shrink-0 text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50"
+                                    onClick={() =>
+                                      onCreateFinding({
+                                        id: subcategory.id,
+                                        code: subcategory.code,
+                                        name: subcategory.name,
+                                        description: subcategory.description,
+                                      })
+                                    }
+                                    title="Create finding linked to this subcategory"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Finding
+                                  </Button>
+                                )}
                               </div>
 
                               {/* Subcategory Description - Collapsible */}
@@ -1616,6 +1718,14 @@ export function MaturityAssessmentDetailClient({
   const [snapshotReason, setSnapshotReason] = useState("");
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAssigneeId, setSelectedAssigneeId] = useState<string>("");
+  // Inline finding creation — state for the dialog (single instance, reused)
+  const [findingDialogOpen, setFindingDialogOpen] = useState(false);
+  const [findingContext, setFindingContext] = useState<{
+    domainId: string;
+    code: string;
+    name: string;
+    description: string | null;
+  } | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -1742,8 +1852,18 @@ export function MaturityAssessmentDetailClient({
   const framework = assessment.framework as typeof assessment.framework & {
     scoringLevels: ScoringLevel[];
   };
-  const levels: ScoringLevel[] = framework.scoringLevels || [];
-  const maxLevel = framework.maxLevel;
+  // If the user picked a scoring scale at creation (NIST CSF 2.0 only),
+  // override the framework's built-in levels with the scale's levels so the
+  // UI renders the right labels (NIST Tiers or CMMI).
+  const activeScale = getScaleDefinition(assessment.scoringScale ?? null);
+  const levels: ScoringLevel[] = activeScale
+    ? activeScale.levels.map((l) => ({
+        value: l.value,
+        label: l.label,
+        description: l.description,
+      }))
+    : framework.scoringLevels || [];
+  const maxLevel = activeScale ? activeScale.maxLevel : framework.maxLevel;
 
   // Filter domains based on assessment depth
   // C2M2 always uses FUNCTION-level domains (practices are stored as MaturityQuestion)
@@ -1773,6 +1893,7 @@ export function MaturityAssessmentDetailClient({
   const handleSaveScore = (data: {
     domainId: string;
     currentLevel: number | null;
+    isNotApplicable?: boolean;
     targetLevel: number | null;
     confidence: string | null;
     notes: string | null;
@@ -1781,6 +1902,7 @@ export function MaturityAssessmentDetailClient({
       assessmentId,
       domainId: data.domainId,
       currentLevel: data.currentLevel,
+      isNotApplicable: data.isNotApplicable ?? false,
       targetLevel: data.targetLevel,
       confidence: data.confidence as "HIGH" | "MEDIUM" | "LOW" | null | undefined,
       notes: data.notes,
@@ -1928,7 +2050,8 @@ export function MaturityAssessmentDetailClient({
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">
-                Domain Scoring ({domains.length} domains)
+                Assessment ({domains.length}{" "}
+                {domains.length === 1 ? "item" : "items"})
               </h2>
               {assessment.status === "DRAFT" && (
                 <Button onClick={handleStartAssessment}>
@@ -1941,7 +2064,26 @@ export function MaturityAssessmentDetailClient({
               {domains.map((domain) => {
                 const score = scoreMap.get(domain.id);
 
-                // Use PracticeChecklist for C2M2
+                // Helper: open the finding dialog prefilled with a specific
+                // subcategory / practice (the actual scorable control), not
+                // the domain — matches how users think about findings.
+                const openFindingForControl = (control: {
+                  id: string;
+                  code: string;
+                  name: string;
+                  description: string | null;
+                }) => {
+                  setFindingContext({
+                    domainId: control.id,
+                    code: control.code,
+                    name: control.name,
+                    description: control.description,
+                  });
+                  setFindingDialogOpen(true);
+                };
+
+                // Use PracticeChecklist for C2M2 — finding button lives on
+                // each practice row (e.g., SITUATION-1a)
                 if (assessment.framework.type === "C2M2") {
                   return (
                     <PracticeChecklist
@@ -1966,11 +2108,15 @@ export function MaturityAssessmentDetailClient({
                         });
                       }}
                       isSavingTarget={updateScoreMutation.isPending}
+                      onCreateFinding={openFindingForControl}
                     />
                   );
                 }
 
-                // Use SubcategoryChecklist for NIST CSF 2.0
+                // NIST CSF 2.0 — always render the drill-in subcategory
+                // checklist. Even a "Function depth" assessment still scores
+                // each subcategory (per user requirement); the FUNCTION
+                // setting just governs target-tier inheritance at rollup.
                 if (assessment.framework.type === "NIST_CSF_2") {
                   return (
                     <SubcategoryChecklist
@@ -1994,11 +2140,13 @@ export function MaturityAssessmentDetailClient({
                         });
                       }}
                       isSavingTarget={updateScoreMutation.isPending}
+                      onCreateFinding={openFindingForControl}
                     />
                   );
                 }
 
-                // Use SammChecklist for OWASP SAMM
+                // Use SammChecklist for OWASP SAMM — Finding button lives
+                // on each activity (stream) row inside the expanded practice.
                 if (assessment.framework.type === "OWASP_SAMM") {
                   return (
                     <SammChecklist
@@ -2020,6 +2168,7 @@ export function MaturityAssessmentDetailClient({
                         });
                       }}
                       isSavingTarget={updateScoreMutation.isPending}
+                      onCreateFinding={openFindingForControl}
                     />
                   );
                 }
@@ -2042,6 +2191,14 @@ export function MaturityAssessmentDetailClient({
                       )
                     }
                     frameworkType={assessment.framework.type}
+                    onCreateFinding={() =>
+                      openFindingForControl({
+                        id: domain.id,
+                        code: domain.code,
+                        name: domain.name,
+                        description: domain.description,
+                      })
+                    }
                   />
                 );
               })}
@@ -2440,6 +2597,24 @@ export function MaturityAssessmentDetailClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Inline "Create Finding" dialog — one instance, context swapped per
+          card via findingContext state. */}
+      {findingContext && (
+        <CreateFindingDialog
+          open={findingDialogOpen}
+          onOpenChange={setFindingDialogOpen}
+          initialTitle={`${findingContext.code} — ${findingContext.name}`}
+          initialDescription={
+            findingContext.description
+              ? `Observed during assessment "${assessment.name}" (${assessment.identifier}):\n\n${findingContext.description}`
+              : `Observed during assessment "${assessment.name}" (${assessment.identifier}) against ${findingContext.code} — ${findingContext.name}.`
+          }
+          contextLabel={`Linked to ${findingContext.code} — ${findingContext.name} in ${assessment.framework.name}`}
+          maturityAssessmentId={assessment.id}
+          maturityDomainId={findingContext.domainId}
+        />
+      )}
     </AppLayout>
   );
 }

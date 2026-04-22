@@ -34,7 +34,14 @@ import {
   MaturityAssessmentStatus,
   AssessmentDepth,
   AssessmentMode,
+  MaturityScoringScale,
 } from "@prisma/client";
+import {
+  getScaleDefinition,
+  NIST_TIERS_SCALE,
+  CMMI_MATURITY_SCALE,
+  type ScaleDefinition,
+} from "@/lib/maturity-scales";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
@@ -323,7 +330,9 @@ export function MaturityDashboardClient() {
     description: string;
     assessmentDepth: AssessmentDepth;
     assessmentMode: AssessmentMode;
+    scoringScale: MaturityScoringScale | null;
     targetLevel: number | null;
+    functionTargets: Record<string, number>; // code → tier
     targetDate: string;
     businessUnitId: string | null;
   }>({
@@ -332,7 +341,9 @@ export function MaturityDashboardClient() {
     description: "",
     assessmentDepth: AssessmentDepth.FUNCTION,
     assessmentMode: AssessmentMode.SELF,
+    scoringScale: null,
     targetLevel: null,
+    functionTargets: {},
     targetDate: "",
     businessUnitId: null,
   });
@@ -375,7 +386,9 @@ export function MaturityDashboardClient() {
         description: "",
         assessmentDepth: AssessmentDepth.FUNCTION,
         assessmentMode: AssessmentMode.SELF,
+        scoringScale: null,
         targetLevel: null,
+        functionTargets: {},
         targetDate: "",
         businessUnitId: null,
       });
@@ -393,13 +406,26 @@ export function MaturityDashboardClient() {
       toast.error("Please fill in required fields");
       return;
     }
+
+    const isCsf = selectedCreateFramework?.type === "NIST_CSF_2";
+    const hasPerDomainTargets =
+      Object.keys(formData.functionTargets).length > 0;
+
     createMutation.mutate({
       frameworkId: formData.frameworkId,
       name: formData.name.trim(),
       description: formData.description || undefined,
-      assessmentDepth: formData.assessmentDepth,
+      // NIST CSF 2.0 is forced to FUNCTION depth (no Category/Subcategory
+      // for this framework per simplified UX).
+      assessmentDepth: isCsf
+        ? AssessmentDepth.FUNCTION
+        : formData.assessmentDepth,
       assessmentMode: formData.assessmentMode,
-      targetLevel: formData.targetLevel,
+      scoringScale: isCsf
+        ? formData.scoringScale ?? MaturityScoringScale.NIST_TIERS
+        : undefined,
+      targetLevel: hasPerDomainTargets ? null : formData.targetLevel,
+      functionTargets: hasPerDomainTargets ? formData.functionTargets : undefined,
       targetDate: formData.targetDate ? new Date(formData.targetDate) : undefined,
       businessUnitId: formData.businessUnitId,
     });
@@ -631,178 +657,6 @@ export function MaturityDashboardClient() {
         </Card>
       )}
 
-      {/* Domain Scores Chart */}
-      {selectedFrameworkType && domains.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <CardTitle>Domain Scores</CardTitle>
-            </div>
-            <CardDescription>
-              {domainData?.assessmentName
-                ? `Showing scores from: ${domainData.assessmentName}`
-                : "Current vs target levels by domain"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const scoredCount = domains.filter((d) => d.currentLevel > 0).length;
-              if (scoredCount === 0) {
-                return (
-                  <div className="h-[350px] flex items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <Gauge className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>No scores yet</p>
-                      <p className="text-sm mt-1">Score domains to see the chart</p>
-                    </div>
-                  </div>
-                );
-              }
-
-              const maxLevel = domainData?.maxLevel ?? 4;
-
-              // C2M2 uses bar chart
-              if (selectedFrameworkType === "C2M2") {
-                const barData = domains.map((d) => {
-                  const pct = d.targetLevel > 0 ? d.currentLevel / d.targetLevel : 0;
-                  let fill = "hsl(0, 84%, 60%)"; // red
-                  if (d.currentLevel >= d.targetLevel) fill = "hsl(142, 76%, 36%)"; // green
-                  else if (pct >= 0.5) fill = "hsl(45, 93%, 47%)"; // amber
-                  return { ...d, fill };
-                });
-
-                return (
-                  <div className="h-[350px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={barData}
-                        margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis
-                          dataKey="code"
-                          tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
-                          interval={0}
-                          angle={-30}
-                          textAnchor="end"
-                          height={60}
-                        />
-                        <YAxis
-                          domain={[0, maxLevel]}
-                          tick={{ fontSize: 11 }}
-                          tickCount={maxLevel + 1}
-                          label={{ value: "MIL Level", angle: -90, position: "insideLeft", fontSize: 11 }}
-                        />
-                        {barData.length > 0 && barData[0]!.targetLevel > 0 && (
-                          <ReferenceLine
-                            y={barData[0]!.targetLevel}
-                            stroke="#22c55e"
-                            strokeDasharray="3 3"
-                            label={{ value: "Target", fontSize: 10, fill: "#22c55e", position: "right" }}
-                          />
-                        )}
-                        <RechartsTooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            const data = payload[0]?.payload as { name: string; code: string; currentLevel: number; targetLevel: number; fill: string };
-                            return (
-                              <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
-                                <p className="font-medium mb-1">{data.name}</p>
-                                <p className="text-xs text-muted-foreground mb-2">{data.code}</p>
-                                <div className="space-y-1 text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill }} />
-                                    <span>Current: MIL {data.currentLevel}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                                    <span>Target: MIL {data.targetLevel}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          }}
-                        />
-                        <Bar dataKey="currentLevel" radius={[4, 4, 0, 0]}>
-                          {barData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                );
-              }
-
-              // NIST CSF 2.0 and OWASP SAMM use radar chart
-              return (
-                <div className="h-[350px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart data={domains} cx="50%" cy="50%" outerRadius="80%">
-                      <PolarGrid strokeDasharray="3 3" />
-                      <PolarAngleAxis
-                        dataKey="code"
-                        tick={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
-                        tickLine={false}
-                      />
-                      <PolarRadiusAxis
-                        angle={90}
-                        domain={[0, maxLevel]}
-                        tick={{ fontSize: 9 }}
-                        tickCount={maxLevel + 1}
-                      />
-                      <Radar
-                        name="Target"
-                        dataKey="targetLevel"
-                        stroke="hsl(142, 76%, 36%)"
-                        fill="hsl(142, 76%, 36%)"
-                        fillOpacity={0.15}
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                      />
-                      <Radar
-                        name="Current"
-                        dataKey="currentLevel"
-                        stroke="hsl(221, 83%, 53%)"
-                        fill="hsl(221, 83%, 53%)"
-                        fillOpacity={0.4}
-                        strokeWidth={2}
-                      />
-                      <Legend
-                        wrapperStyle={{ paddingTop: "10px" }}
-                        formatter={(value) => <span className="text-xs">{value}</span>}
-                      />
-                      <RechartsTooltip
-                        content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null;
-                          const data = payload[0]?.payload as { name: string; code: string; currentLevel: number; targetLevel: number };
-                          return (
-                            <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
-                              <p className="font-medium mb-2">{data.name}</p>
-                              <div className="space-y-1 text-xs">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                  <span>Current: {data.currentLevel}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                                  <span>Target: {data.targetLevel}</span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              );
-            })()}
-          </CardContent>
-        </Card>
-      )}
-
       {/* Assessments Section */}
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -941,6 +795,10 @@ export function MaturityDashboardClient() {
                     ...prev,
                     frameworkId: value,
                     assessmentDepth: fw?.type === "C2M2" ? AssessmentDepth.FUNCTION : prev.assessmentDepth,
+                    // Per-domain targets are keyed by the previous framework's
+                    // domain codes — clear them when the framework changes.
+                    functionTargets: {},
+                    targetLevel: null,
                   }));
                 }}
               >
@@ -993,40 +851,47 @@ export function MaturityDashboardClient() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Assessment Depth</Label>
-                <Select
-                  value={formData.assessmentDepth}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      assessmentDepth: value as AssessmentDepth,
-                    }))
-                  }
-                  disabled={selectedCreateFramework?.type === "C2M2"}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedCreateFramework?.type === "C2M2" ? (
-                      <SelectItem value="FUNCTION">Domain Level (10 domains)</SelectItem>
-                    ) : selectedCreateFramework?.type === "OWASP_SAMM" ? (
-                      <>
-                        <SelectItem value="FUNCTION">Business Function Level (5 items)</SelectItem>
-                        <SelectItem value="CATEGORY">Practice Level (15 items)</SelectItem>
-                        <SelectItem value="SUBCATEGORY">Activity Level (30 items)</SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value="FUNCTION">Function Level (6 items)</SelectItem>
-                        <SelectItem value="CATEGORY">Category Level (22 items)</SelectItem>
-                        <SelectItem value="SUBCATEGORY">Subcategory Level (106 items)</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Assessment Depth — hidden for NIST CSF 2.0 (Function-only) */}
+              {selectedCreateFramework?.type !== "NIST_CSF_2" && (
+                <div className="grid gap-2">
+                  <Label>Assessment Depth</Label>
+                  <Select
+                    value={formData.assessmentDepth}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        assessmentDepth: value as AssessmentDepth,
+                        // Switching depth changes which domain level is
+                        // scored; stale per-domain targets at the old depth
+                        // won't match, so clear them.
+                        functionTargets: {},
+                      }))
+                    }
+                    disabled={selectedCreateFramework?.type === "C2M2"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedCreateFramework?.type === "C2M2" ? (
+                        <SelectItem value="FUNCTION">Domain Level (10 domains)</SelectItem>
+                      ) : selectedCreateFramework?.type === "OWASP_SAMM" ? (
+                        <>
+                          <SelectItem value="FUNCTION">Business Function Level (5 items)</SelectItem>
+                          <SelectItem value="CATEGORY">Practice Level (15 items)</SelectItem>
+                          <SelectItem value="SUBCATEGORY">Activity Level (30 items)</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="FUNCTION">Function Level (6 items)</SelectItem>
+                          <SelectItem value="CATEGORY">Category Level (22 items)</SelectItem>
+                          <SelectItem value="SUBCATEGORY">Subcategory Level (106 items)</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="grid gap-2">
                 <Label>Assessment Mode</Label>
@@ -1051,50 +916,72 @@ export function MaturityDashboardClient() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* NIST CSF 2.0: pick a scoring scale (Tiers or CMMI) */}
+            {selectedCreateFramework?.type === "NIST_CSF_2" && (
               <div className="grid gap-2">
-                <Label>Target Level</Label>
+                <Label>Scoring Scale</Label>
                 <Select
-                  value={formData.targetLevel?.toString() ?? "none"}
-                  onValueChange={(value) =>
+                  value={formData.scoringScale ?? MaturityScoringScale.NIST_TIERS}
+                  onValueChange={(value) => {
+                    // Clear any per-function targets when the scale changes —
+                    // they're interpreted differently by each scale.
                     setFormData((prev) => ({
                       ...prev,
-                      targetLevel: value === "none" ? null : parseInt(value),
-                    }))
-                  }
+                      scoringScale: value as MaturityScoringScale,
+                      functionTargets: {},
+                    }));
+                  }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="No target" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No target</SelectItem>
-                    {selectedCreateFramework &&
-                      Array.from(
-                        { length: selectedCreateFramework.maxLevel - selectedCreateFramework.minLevel + 1 },
-                        (_, i) => selectedCreateFramework.minLevel + i
-                      ).map((level) => (
-                        <SelectItem key={level} value={level.toString()}>
-                          {selectedCreateFramework.type === "C2M2"
-                            ? `MIL ${level}`
-                            : selectedCreateFramework.type === "OWASP_SAMM"
-                              ? `Level ${level}`
-                              : `Tier ${level}`}
-                        </SelectItem>
-                      ))}
+                    <SelectItem value={MaturityScoringScale.NIST_TIERS}>
+                      NIST Implementation Tiers (0–4)
+                    </SelectItem>
+                    <SelectItem value={MaturityScoringScale.CMMI_MATURITY}>
+                      CMMI Maturity Levels (1–5)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  {formData.scoringScale === MaturityScoringScale.CMMI_MATURITY
+                    ? "Levels: Initial / Managed / Defined / Quantitatively Managed / Optimizing"
+                    : "Tiers: None / Partial / Risk Informed / Repeatable / Adaptive"}
+                </p>
               </div>
+            )}
 
-              <div className="grid gap-2">
-                <Label>Target Date</Label>
-                <Input
-                  type="date"
-                  value={formData.targetDate}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, targetDate: e.target.value }))
-                  }
-                />
-              </div>
+            {/* Per-domain target levels. CSF uses the chosen scoring scale;
+                C2M2 and SAMM use the framework's built-in minLevel→maxLevel
+                range with framework-appropriate labels (MIL / Level). */}
+            {selectedCreateFramework && (
+              <DomainTargetsBlock
+                framework={selectedCreateFramework}
+                assessmentDepth={
+                  selectedCreateFramework.type === "NIST_CSF_2"
+                    ? AssessmentDepth.FUNCTION
+                    : selectedCreateFramework.type === "C2M2"
+                      ? AssessmentDepth.FUNCTION
+                      : formData.assessmentDepth
+                }
+                scoringScale={formData.scoringScale}
+                value={formData.functionTargets}
+                onChange={(next) =>
+                  setFormData((prev) => ({ ...prev, functionTargets: next }))
+                }
+              />
+            )}
+
+            <div className="grid gap-2">
+              <Label>Target Date</Label>
+              <Input
+                type="date"
+                value={formData.targetDate}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, targetDate: e.target.value }))
+                }
+              />
             </div>
           </div>
           <DialogFooter>
@@ -1167,5 +1054,138 @@ function DashboardSkeleton() {
         </div>
       </div>
     </AppLayout>
+  );
+}
+
+/**
+ * Per-domain target level picker. Works for any maturity framework by
+ * fetching the framework's domains at the chosen assessment depth and
+ * rendering one row per domain. Labels are driven by the framework type
+ * (NIST Tier / CMMI / MIL / Level) and — for NIST CSF 2.0 — by the
+ * selected scoring scale.
+ */
+function DomainTargetsBlock(props: {
+  framework: { id: string; type: MaturityFrameworkType; minLevel: number; maxLevel: number };
+  assessmentDepth: AssessmentDepth;
+  scoringScale: MaturityScoringScale | null;
+  value: Record<string, number>;
+  onChange: (next: Record<string, number>) => void;
+}) {
+  const { data: frameworkWithDomains, isLoading } = api.maturity.getFramework.useQuery(
+    { id: props.framework.id },
+    { enabled: !!props.framework.id }
+  );
+
+  const domains = (frameworkWithDomains?.domains ?? [])
+    .filter((d) => d.level === props.assessmentDepth)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  // Build the list of {value, label} options for the target dropdown. CSF
+  // 2.0 uses whichever scoringScale was picked; other frameworks use their
+  // native min→max range with framework-appropriate prefix labels.
+  const scaleDef =
+    props.framework.type === "NIST_CSF_2"
+      ? getScaleDefinition(props.scoringScale ?? MaturityScoringScale.NIST_TIERS)
+      : null;
+
+  const levelOptions = scaleDef
+    ? scaleDef.levels.map((l) => ({ value: l.value, label: l.label }))
+    : Array.from(
+        { length: props.framework.maxLevel - props.framework.minLevel + 1 },
+        (_, i) => props.framework.minLevel + i
+      ).map((level) => ({
+        value: level,
+        label:
+          props.framework.type === "C2M2"
+            ? `MIL ${level}`
+            : props.framework.type === "OWASP_SAMM"
+              ? `Level ${level}`
+              : `Level ${level}`,
+      }));
+
+  const levelHeading =
+    props.framework.type === "NIST_CSF_2"
+      ? "Target levels per Function"
+      : props.framework.type === "C2M2"
+        ? "Target levels per Domain"
+        : props.assessmentDepth === AssessmentDepth.FUNCTION
+          ? "Target levels per Business Function"
+          : props.assessmentDepth === AssessmentDepth.CATEGORY
+            ? "Target levels per Practice"
+            : "Target levels per Activity";
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-2">
+        <Label>{levelHeading}</Label>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading items…
+        </div>
+      </div>
+    );
+  }
+
+  if (domains.length === 0) {
+    return (
+      <div className="grid gap-2">
+        <Label>{levelHeading}</Label>
+        <p className="text-xs text-muted-foreground">
+          No items found for this framework / depth.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-2">
+      <Label>{levelHeading}</Label>
+      <p className="text-xs text-muted-foreground -mt-1">
+        Each item gets its own target. Children inherit their parent's target.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 max-h-[320px] overflow-y-auto">
+        {domains.map((d) => (
+          <div
+            key={d.id}
+            className="flex items-center gap-2 rounded-md border p-2"
+          >
+            <span className="font-mono text-xs text-blue-700 w-12 shrink-0 truncate">
+              {d.code}
+            </span>
+            <span className="text-sm flex-1 truncate" title={d.name}>
+              {d.name}
+            </span>
+            <Select
+              value={
+                props.value[d.code] !== undefined
+                  ? props.value[d.code]!.toString()
+                  : "none"
+              }
+              onValueChange={(v) => {
+                const next = { ...props.value };
+                if (v === "none") {
+                  delete next[d.code];
+                } else {
+                  next[d.code] = parseInt(v, 10);
+                }
+                props.onChange(next);
+              }}
+            >
+              <SelectTrigger className="w-[160px] h-8">
+                <SelectValue placeholder="No target" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No target</SelectItem>
+                {levelOptions.map((lvl) => (
+                  <SelectItem key={lvl.value} value={lvl.value.toString()}>
+                    {lvl.value} — {lvl.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

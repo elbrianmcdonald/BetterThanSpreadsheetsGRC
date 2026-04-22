@@ -12,8 +12,19 @@
 
 import type { PrismaClient, AssessmentDepth } from "@prisma/client";
 
-// NIST CSF 2.0 Implementation Tiers (1-4)
+// NIST CSF 2.0 Implementation Tiers (0-4)
+// Tier 0 "None" extends the official 1-4 tiers to capture not-yet-implemented
+// controls, matching how users actually assess baseline posture.
 export const NIST_CSF_2_TIERS = [
+  {
+    value: 0,
+    label: "None",
+    description: "Not yet implemented.",
+    criteria: [
+      "No formal cybersecurity activity in this area",
+      "No documentation or repeatable process",
+    ],
+  },
   {
     value: 1,
     label: "Partial",
@@ -1077,12 +1088,22 @@ export async function seedNistCsf2Framework(prisma: PrismaClient): Promise<strin
         version: "2.0",
         description:
           "The NIST Cybersecurity Framework (CSF) 2.0 provides a comprehensive and flexible approach for organizations to understand, assess, prioritize, and communicate cybersecurity risks. It consists of six Functions (Govern, Identify, Protect, Detect, Respond, Recover), 22 Categories, and 106 Subcategories.",
-        minLevel: 1,
+        minLevel: 0,
         maxLevel: 4,
         scoringLevels: NIST_CSF_2_TIERS,
         isActive: true,
         isSystemTemplate: true,
         organizationId: null,
+      },
+    });
+  } else {
+    // Keep minLevel + scoringLevels in sync on existing installs (idempotent
+    // backfill so upgrades pick up Tier 0 "None" without a wipe).
+    framework = await prisma.maturityFramework.update({
+      where: { id: framework.id },
+      data: {
+        minLevel: 0,
+        scoringLevels: NIST_CSF_2_TIERS,
       },
     });
   }

@@ -37,6 +37,7 @@ import {
   Edit,
   Shield,
   Building2,
+  AlertTriangle,
 } from "lucide-react";
 import { ComplianceStatus, ComplianceAssessmentStatus } from "@prisma/client";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ import {
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -272,12 +274,14 @@ function ControlScoringItem({
   onUpdate,
   isSaving,
   isEditable,
+  onCreateFinding,
 }: {
   score: ControlScore;
   assessmentId: string;
   onUpdate: (controlId: string, status: ComplianceStatus, notes?: string | null) => void;
   isSaving: boolean;
   isEditable: boolean;
+  onCreateFinding?: () => void;
 }) {
   const level = getStatusLevel(score.status);
   const isScored = score.status !== ComplianceStatus.NOT_ASSESSED;
@@ -309,6 +313,18 @@ function ControlScoringItem({
           </div>
           <p className="text-sm font-medium">{score.control.title}</p>
         </div>
+        {onCreateFinding && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 shrink-0 text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50"
+            onClick={onCreateFinding}
+            title="Create finding linked to this control"
+          >
+            <AlertTriangle className="h-3 w-3" />
+            Finding
+          </Button>
+        )}
       </div>
 
       {/* Control Description - Collapsible */}
@@ -427,6 +443,7 @@ function ControlGroupCard({
   onUpdate,
   isSaving,
   isEditable,
+  onCreateFinding,
 }: {
   group: ControlGroup;
   assessmentId: string;
@@ -435,6 +452,7 @@ function ControlGroupCard({
   onUpdate: (controlId: string, status: ComplianceStatus, notes?: string | null) => void;
   isSaving: boolean;
   isEditable: boolean;
+  onCreateFinding?: (score: ControlScore) => void;
 }) {
   const stats = calculateGroupCompliance(group.children);
   const scoredCount = stats.total - stats.notAssessed;
@@ -550,6 +568,11 @@ function ControlGroupCard({
                 onUpdate={onUpdate}
                 isSaving={isSaving}
                 isEditable={isEditable}
+                onCreateFinding={
+                  onCreateFinding
+                    ? () => onCreateFinding(childScore)
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -770,6 +793,14 @@ export function ComplianceAssessmentDetailClient({
     "ALL"
   );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // Inline finding creation state — captures which control the dialog is for
+  const [findingDialogOpen, setFindingDialogOpen] = useState(false);
+  const [findingContext, setFindingContext] = useState<{
+    controlId: string;
+    controlCode: string;
+    controlTitle: string;
+    controlDescription: string | null;
+  } | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -1131,6 +1162,15 @@ export function ComplianceAssessmentDetailClient({
                     onUpdate={handleUpdateControl}
                     isSaving={updateControlMutation.isPending}
                     isEditable={isEditable}
+                    onCreateFinding={(childScore) => {
+                      setFindingContext({
+                        controlId: childScore.control.id,
+                        controlCode: childScore.control.controlId,
+                        controlTitle: childScore.control.title,
+                        controlDescription: childScore.control.description,
+                      });
+                      setFindingDialogOpen(true);
+                    }}
                   />
                 ))
               )}
@@ -1309,6 +1349,23 @@ export function ComplianceAssessmentDetailClient({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Inline "Create Finding" dialog — one instance, context swapped per
+          control via findingContext state. */}
+      {findingContext && (
+        <CreateFindingDialog
+          open={findingDialogOpen}
+          onOpenChange={setFindingDialogOpen}
+          initialTitle={`${findingContext.controlCode} — ${findingContext.controlTitle}`}
+          initialDescription={
+            findingContext.controlDescription
+              ? `Observed during assessment "${assessment.name}" (${assessment.identifier}):\n\n${findingContext.controlDescription}`
+              : `Observed during assessment "${assessment.name}" (${assessment.identifier}) against ${findingContext.controlCode} — ${findingContext.controlTitle}.`
+          }
+          contextLabel={`Linked to ${findingContext.controlCode} — ${findingContext.controlTitle}`}
+          controlId={findingContext.controlId}
+        />
+      )}
     </AppLayout>
   );
 }
