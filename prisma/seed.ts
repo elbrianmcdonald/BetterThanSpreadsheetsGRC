@@ -7,6 +7,8 @@ import { seedNist80053Controls } from './seeds/nist-800-53-r5';
 import { seedC2m2Framework } from './seeds/c2m2';
 import { seedOwaspSammFramework } from './seeds/owasp-samm';
 import { seedDemoData } from './seeds/demo-data';
+import { seedEnterpriseRisks } from './seeds/enterprise-risks';
+import { seedReleaseVersions } from './seeds/release-versions';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -1065,6 +1067,17 @@ async function main() {
 
   const owaspSammFrameworkId = await seedOwaspSammFramework(prisma);
   console.log(`  ✅ OWASP SAMM Maturity Framework (${owaspSammFrameworkId})\n`);
+
+  // Seed baseline Enterprise Risks for both organizations
+  console.log('Seeding Enterprise Risks...');
+  const erA = await seedEnterpriseRisks(prisma, orgA.id);
+  const erB = await seedEnterpriseRisks(prisma, orgB.id);
+  console.log(`  ✅ Enterprise Risks: ${erA.count} (Org A), ${erB.count} (Org B)\n`);
+
+  // Seed deployment-wide changelog (initial 1.0 entry)
+  console.log('Seeding Release Versions...');
+  const rv = await seedReleaseVersions(prisma);
+  console.log(`  ✅ Release Versions: ${rv.count}\n`);
 
   // Seed demo data for all features (BUs, People, Strategy, Findings, etc.)
   await seedDemoData(prisma);

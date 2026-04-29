@@ -55,6 +55,7 @@ const discoveredRiskFormSchema = z.object({
     errorMap: () => ({ message: "Please select a severity level" }),
   }),
   affectedSystems: z.string().max(2000).optional(),
+  enterpriseRiskId: z.string().optional().nullable(),
 });
 
 type DiscoveredRiskFormValues = z.infer<typeof discoveredRiskFormSchema>;
@@ -95,8 +96,11 @@ export function DiscoveredRiskForm({
       description: "",
       severity: undefined,
       affectedSystems: "",
+      enterpriseRiskId: null,
     },
   });
+
+  const { data: enterpriseRiskOptions } = api.enterpriseRisk.listForPicker.useQuery();
 
   // Create risk mutation
   const createRiskMutation = api.risk.create.useMutation({
@@ -129,6 +133,7 @@ export function DiscoveredRiskForm({
         severity: values.severity,
         affectedSystems: values.affectedSystems || undefined,
         discoveryProjectId: discoveryProjectId,
+        enterpriseRiskId: values.enterpriseRiskId,
       });
     } catch {
       // Error handled by mutation
@@ -220,6 +225,39 @@ export function DiscoveredRiskForm({
                   </Select>
                   <FormDescription>
                     The severity level of this risk
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Enterprise Risk alignment */}
+            <FormField
+              control={form.control}
+              name="enterpriseRiskId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enterprise Risk</FormLabel>
+                  <Select
+                    value={field.value ?? "__none"}
+                    onValueChange={(v) => field.onChange(v === "__none" ? null : v)}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Align to an enterprise risk (optional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none">— None —</SelectItem>
+                      {enterpriseRiskOptions?.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Roll this risk up to a top-level enterprise risk.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

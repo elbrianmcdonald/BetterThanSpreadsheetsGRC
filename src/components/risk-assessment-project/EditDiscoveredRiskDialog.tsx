@@ -54,6 +54,7 @@ const editDiscoveredRiskSchema = z.object({
     errorMap: () => ({ message: "Please select a severity level" }),
   }),
   affectedSystems: z.string().max(2000).optional().nullable(),
+  enterpriseRiskId: z.string().optional().nullable(),
 });
 
 type EditDiscoveredRiskFormValues = z.infer<typeof editDiscoveredRiskSchema>;
@@ -79,6 +80,7 @@ interface EditDiscoveredRiskDialogProps {
     description: string | null;
     severity: Severity;
     affectedSystems?: string | null;
+    enterpriseRiskId?: string | null;
   };
   /** Assessment ID for invalidating queries */
   assessmentId: string;
@@ -102,8 +104,11 @@ export function EditDiscoveredRiskDialog({
       description: risk.description || "",
       severity: risk.severity,
       affectedSystems: risk.affectedSystems || "",
+      enterpriseRiskId: risk.enterpriseRiskId ?? null,
     },
   });
+
+  const { data: enterpriseRiskOptions } = api.enterpriseRisk.listForPicker.useQuery();
 
   // Reset form when risk changes or dialog opens
   useEffect(() => {
@@ -113,6 +118,7 @@ export function EditDiscoveredRiskDialog({
         description: risk.description || "",
         severity: risk.severity,
         affectedSystems: risk.affectedSystems || "",
+        enterpriseRiskId: risk.enterpriseRiskId ?? null,
       });
     }
   }, [open, risk, form]);
@@ -138,6 +144,7 @@ export function EditDiscoveredRiskDialog({
       description: values.description,
       severity: values.severity,
       affectedSystems: values.affectedSystems || null,
+      enterpriseRiskId: values.enterpriseRiskId,
     });
   };
 
@@ -208,6 +215,39 @@ export function EditDiscoveredRiskDialog({
                   </Select>
                   <FormDescription>
                     The severity level of this risk
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Enterprise Risk alignment */}
+            <FormField
+              control={form.control}
+              name="enterpriseRiskId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enterprise Risk</FormLabel>
+                  <Select
+                    value={field.value ?? "__none"}
+                    onValueChange={(v) => field.onChange(v === "__none" ? null : v)}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Align to an enterprise risk (optional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none">— None —</SelectItem>
+                      {enterpriseRiskOptions?.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Roll this risk up to a top-level enterprise risk.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

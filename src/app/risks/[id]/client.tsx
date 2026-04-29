@@ -472,6 +472,7 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
           preventativeControlsInPlace: risk.preventativeControlsInPlace,
           mitigatingControlsNeeded: risk.mitigatingControlsNeeded,
           preventativeControlsNeeded: risk.preventativeControlsNeeded,
+          enterpriseRiskId: (risk as { enterpriseRiskId?: string | null }).enterpriseRiskId ?? null,
         }}
         onSuccess={() => refetch()}
       />

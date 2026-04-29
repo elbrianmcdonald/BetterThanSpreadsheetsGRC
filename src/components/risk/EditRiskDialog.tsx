@@ -138,6 +138,8 @@ const editRiskSchema = z.object({
   preventativeControlsInPlace: z.string().max(10000).optional().nullable(),
   mitigatingControlsNeeded: z.string().max(10000).optional().nullable(),
   preventativeControlsNeeded: z.string().max(10000).optional().nullable(),
+  // Enterprise Risk alignment
+  enterpriseRiskId: z.string().optional().nullable(),
 });
 
 type EditRiskFormValues = z.infer<typeof editRiskSchema>;
@@ -166,6 +168,8 @@ interface EditRiskDialogProps {
     preventativeControlsInPlace: string | null;
     mitigatingControlsNeeded: string | null;
     preventativeControlsNeeded: string | null;
+    // Enterprise Risk alignment
+    enterpriseRiskId?: string | null;
   };
   /** Callback when risk is updated successfully */
   onSuccess?: () => void;
@@ -213,8 +217,11 @@ export function EditRiskDialog({
       preventativeControlsInPlace: risk.preventativeControlsInPlace ?? "",
       mitigatingControlsNeeded: risk.mitigatingControlsNeeded ?? "",
       preventativeControlsNeeded: risk.preventativeControlsNeeded ?? "",
+      enterpriseRiskId: risk.enterpriseRiskId ?? null,
     },
   });
+
+  const { data: enterpriseRiskOptions } = api.enterpriseRisk.listForPicker.useQuery();
 
   // Reset form when risk changes
   useEffect(() => {
@@ -236,6 +243,7 @@ export function EditRiskDialog({
         preventativeControlsInPlace: risk.preventativeControlsInPlace ?? "",
         mitigatingControlsNeeded: risk.mitigatingControlsNeeded ?? "",
         preventativeControlsNeeded: risk.preventativeControlsNeeded ?? "",
+        enterpriseRiskId: risk.enterpriseRiskId ?? null,
       });
       setShowTechnicalDetails(!!risk.technicalDetails);
     }
@@ -318,6 +326,7 @@ export function EditRiskDialog({
       preventativeControlsInPlace: values.preventativeControlsInPlace || null,
       mitigatingControlsNeeded: values.mitigatingControlsNeeded || null,
       preventativeControlsNeeded: values.preventativeControlsNeeded || null,
+      enterpriseRiskId: values.enterpriseRiskId,
     });
   };
 
@@ -380,6 +389,36 @@ export function EditRiskDialog({
                           <span>Low</span>
                         </div>
                       </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Enterprise Risk alignment */}
+            <FormField
+              control={form.control}
+              name="enterpriseRiskId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enterprise Risk</FormLabel>
+                  <Select
+                    value={field.value ?? "__none"}
+                    onValueChange={(v) => field.onChange(v === "__none" ? null : v)}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Align to an enterprise risk (optional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none">— None —</SelectItem>
+                      {enterpriseRiskOptions?.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

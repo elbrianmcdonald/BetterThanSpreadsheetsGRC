@@ -158,6 +158,11 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <BarChart3 className="h-4 w-4" />,
       },
       {
+        href: "/risks/enterprise",
+        label: "Enterprise Risks",
+        icon: <ShieldAlert className="h-4 w-4" />,
+      },
+      {
         href: "/risks",
         label: "Risk Register",
         icon: <ClipboardList className="h-4 w-4" />,
@@ -282,6 +287,12 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin/backups",
         label: "Backups",
         icon: <Database className="h-4 w-4" />,
+        roles: [UserRole.ORG_ADMIN],
+      },
+      {
+        href: "/admin/changelog",
+        label: "Changelog",
+        icon: <FileText className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN],
       },
       // Data group

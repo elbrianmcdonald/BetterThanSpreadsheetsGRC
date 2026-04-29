@@ -199,6 +199,11 @@ const ALLOWLIST_TABLES = new Set([
   "ContingencyProcessImpact",
   "ContingencyResource",
   "ContingencyRecoveryPriority",
+  // Enterprise Risk children — isolation via EnterpriseRisk relation (which has organizationId)
+  "EnterpriseRiskSeveritySnapshot",
+  "EnterpriseRiskReview",
+  // Deployment-wide changelog — not organization-scoped. ORG_ADMIN-gated at the tRPC layer.
+  "ReleaseVersion",
 ]);
 
 /**

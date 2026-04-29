@@ -71,6 +71,7 @@ export function RoleBasedRiskNav({
       case UserRole.SECURITY_ENGINEER:
       case UserRole.ORG_ADMIN:
         return [
+          { href: "/risks/enterprise", label: "Enterprise Risks" },
           { href: "/risks/register", label: "Risk Register" },
           { href: "/risks", label: "Risk Registry" },
           { href: "/risks/my-risks", label: "My Risks" },
@@ -78,6 +79,7 @@ export function RoleBasedRiskNav({
 
       case UserRole.AUDITOR:
         return [
+          { href: "/risks/enterprise", label: "Enterprise Risks" },
           { href: "/risks/register", label: "Risk Register" },
           { href: "/risks", label: "Risk Registry" },
         ];

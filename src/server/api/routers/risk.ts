@@ -83,6 +83,7 @@ import {
   isScoreResult,
 } from "@/lib/matrix/scoring";
 import type { MatrixScales, Threshold } from "@/lib/matrix/types";
+import { recomputeEnterpriseRiskScore } from "@/server/services/enterpriseRiskScore";
 
 /**
  * Roles that can update risks (Story 4.3 AC29)
@@ -236,6 +237,8 @@ export const riskRouter = createTRPCRouter({
         controlIdsNeeded: z.array(z.string()).optional(),
         // Story 2.2: Risk Assessment Project - discovered risk linkage
         discoveryProjectId: z.string().uuid().optional(),
+        // Enterprise Risk alignment (rollup parent)
+        enterpriseRiskId: z.string().optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -345,6 +348,8 @@ export const riskRouter = createTRPCRouter({
           discoveryStatus: input.discoveryProjectId
             ? RiskDiscoveryStatus.PENDING
             : null,
+          // Enterprise Risk alignment
+          enterpriseRiskId: input.enterpriseRiskId ?? null,
         },
       });
 
@@ -436,6 +441,11 @@ export const riskRouter = createTRPCRouter({
           data: controlLinks,
           skipDuplicates: true,
         });
+      }
+
+      // Enterprise Risk: recompute parent score if aligned
+      if (input.enterpriseRiskId) {
+        await recomputeEnterpriseRiskScore(ctx.db, input.enterpriseRiskId);
       }
 
       return risk; // AC20
@@ -1356,6 +1366,8 @@ export const riskRouter = createTRPCRouter({
         preventativeControlsInPlace: z.string().max(10000).optional().nullable(),
         mitigatingControlsNeeded: z.string().max(10000).optional().nullable(),
         preventativeControlsNeeded: z.string().max(10000).optional().nullable(),
+        // Enterprise Risk alignment
+        enterpriseRiskId: z.string().optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1383,6 +1395,8 @@ export const riskRouter = createTRPCRouter({
           preventativeControlsInPlace: true,
           mitigatingControlsNeeded: true,
           preventativeControlsNeeded: true,
+          // Enterprise Risk alignment
+          enterpriseRiskId: true,
         },
       });
 
@@ -1487,6 +1501,12 @@ export const riskRouter = createTRPCRouter({
         changes.preventativeControlsNeeded = { old: "Updated", new: "Updated" }; // Don't log full content
       }
 
+      // Enterprise Risk alignment change tracking
+      if (updateFields.enterpriseRiskId !== undefined && updateFields.enterpriseRiskId !== existingRisk.enterpriseRiskId) {
+        updateData.enterpriseRiskId = updateFields.enterpriseRiskId;
+        changes.enterpriseRiskId = { old: existingRisk.enterpriseRiskId, new: updateFields.enterpriseRiskId };
+      }
+
       // Only update if there are actual changes
       if (Object.keys(updateData).length === 0) {
         return existingRisk;
@@ -1497,6 +1517,14 @@ export const riskRouter = createTRPCRouter({
         where: { id: riskId },
         data: updateData,
       });
+
+      // Enterprise Risk: recompute parents if alignment changed
+      if (changes.enterpriseRiskId) {
+        const oldParent = changes.enterpriseRiskId.old as string | null;
+        const newParent = changes.enterpriseRiskId.new as string | null;
+        if (oldParent) await recomputeEnterpriseRiskScore(ctx.db, oldParent);
+        if (newParent) await recomputeEnterpriseRiskScore(ctx.db, newParent);
+      }
 
       // Story 4.7 AC31-AC33: Recalculate impact score if severity, criticality, or audit date changed
       if (changes.severity || changes.assetCriticality || changes.nextAuditDate) {
@@ -2516,6 +2544,7 @@ export const riskRouter = createTRPCRouter({
           residualScore: true,
           residualScoreLabel: true,
           matrixVersionId: true,
+          enterpriseRiskId: true,
         },
       });
 
@@ -2687,6 +2716,11 @@ export const riskRouter = createTRPCRouter({
           residualScoreLabel: true,
         },
       });
+
+      // Enterprise Risk: recompute parent if score changed and risk is aligned
+      if (existingRisk.enterpriseRiskId && (changes.residualScore || changes.residualScoreLabel)) {
+        await recomputeEnterpriseRiskScore(ctx.db, existingRisk.enterpriseRiskId);
+      }
 
       // Audit logging
       if (Object.keys(changes).length > 0) {
@@ -4406,6 +4440,7 @@ export const riskRouter = createTRPCRouter({
           title: true,
           organizationId: true,
           status: true,
+          enterpriseRiskId: true,
         },
       });
 
@@ -4446,6 +4481,11 @@ export const riskRouter = createTRPCRouter({
           where: { id: input.id },
         }),
       ]);
+
+      // Enterprise Risk: recompute parent score after deletion
+      if (risk.enterpriseRiskId) {
+        await recomputeEnterpriseRiskScore(ctx.db, risk.enterpriseRiskId);
+      }
 
       // Audit log
       void createAuditLog({
