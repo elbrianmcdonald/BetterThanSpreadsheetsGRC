@@ -53,6 +53,9 @@ const createAssetSchema = z.object({
   description: z.string().max(4000).optional(),
   ownerId: z.string().optional(),
   businessUnitId: z.string().optional(),
+  lossMinimum: z.number().min(0).max(1e12).nullable().optional(),
+  lossProbable: z.number().min(0).max(1e12).nullable().optional(),
+  lossMaximum: z.number().min(0).max(1e12).nullable().optional(),
 });
 
 const updateAssetSchema = z.object({
@@ -62,6 +65,10 @@ const updateAssetSchema = z.object({
   description: z.string().max(4000).nullable().optional(),
   ownerId: z.string().nullable().optional(),
   businessUnitId: z.string().nullable().optional(),
+  // Loss Event Range — dollar amounts, must satisfy min ≤ probable ≤ max when present
+  lossMinimum: z.number().min(0).max(1e12).nullable().optional(),
+  lossProbable: z.number().min(0).max(1e12).nullable().optional(),
+  lossMaximum: z.number().min(0).max(1e12).nullable().optional(),
 });
 
 const updateStatusSchema = z.object({
@@ -410,9 +417,9 @@ export const assetRouter = createTRPCRouter({
         ownerId = ctx.session!.user.id;
       }
 
-      // Validate owner exists if provided
+      // Validate owner exists if provided. Asset.ownerId references AssetOwner, not User.
       if (ownerId) {
-        const owner = await ctx.db.user.findFirst({
+        const owner = await ctx.db.assetOwner.findFirst({
           where: {
             id: ownerId,
             organizationId,
@@ -421,7 +428,7 @@ export const assetRouter = createTRPCRouter({
         if (!owner) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Owner user not found",
+            message: "Asset owner not found",
           });
         }
       }
@@ -446,6 +453,29 @@ export const assetRouter = createTRPCRouter({
       // Generate unique identifier
       const identifier = await generateIdentifier(organizationId, "AST");
 
+      // Loss Event Range — server-side ordering validation on create.
+      if (
+        input.lossMinimum !== null && input.lossMinimum !== undefined &&
+        input.lossProbable !== null && input.lossProbable !== undefined &&
+        input.lossMinimum > input.lossProbable
+      ) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss minimum cannot exceed probable." });
+      }
+      if (
+        input.lossProbable !== null && input.lossProbable !== undefined &&
+        input.lossMaximum !== null && input.lossMaximum !== undefined &&
+        input.lossProbable > input.lossMaximum
+      ) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss probable cannot exceed maximum." });
+      }
+      if (
+        input.lossMinimum !== null && input.lossMinimum !== undefined &&
+        input.lossMaximum !== null && input.lossMaximum !== undefined &&
+        input.lossMinimum > input.lossMaximum
+      ) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss minimum cannot exceed maximum." });
+      }
+
       const asset = await ctx.db.asset.create({
         data: {
           organizationId,
@@ -457,6 +487,9 @@ export const assetRouter = createTRPCRouter({
           businessUnitId: input.businessUnitId,
           status: AssetStatus.ACTIVE,
           createdById: ctx.session!.user.id,
+          lossMinimum: input.lossMinimum ?? null,
+          lossProbable: input.lossProbable ?? null,
+          lossMaximum: input.lossMaximum ?? null,
         },
       });
 
@@ -525,9 +558,9 @@ export const assetRouter = createTRPCRouter({
         }
       }
 
-      // Validate owner if changing
+      // Validate owner if changing. Asset.ownerId references AssetOwner, not User.
       if (input.ownerId) {
-        const owner = await ctx.db.user.findFirst({
+        const owner = await ctx.db.assetOwner.findFirst({
           where: {
             id: input.ownerId,
             organizationId,
@@ -536,7 +569,7 @@ export const assetRouter = createTRPCRouter({
         if (!owner) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Owner user not found",
+            message: "Asset owner not found",
           });
         }
       }
@@ -558,6 +591,20 @@ export const assetRouter = createTRPCRouter({
         }
       }
 
+      // Loss Event Range — server-side ordering validation (min ≤ probable ≤ max).
+      const lossMin = input.lossMinimum !== undefined ? input.lossMinimum : (existing.lossMinimum ? Number(existing.lossMinimum) : null);
+      const lossProb = input.lossProbable !== undefined ? input.lossProbable : (existing.lossProbable ? Number(existing.lossProbable) : null);
+      const lossMax = input.lossMaximum !== undefined ? input.lossMaximum : (existing.lossMaximum ? Number(existing.lossMaximum) : null);
+      if (lossMin !== null && lossProb !== null && lossMin > lossProb) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss minimum cannot exceed probable." });
+      }
+      if (lossProb !== null && lossMax !== null && lossProb > lossMax) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss probable cannot exceed maximum." });
+      }
+      if (lossMin !== null && lossMax !== null && lossMin > lossMax) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss minimum cannot exceed maximum." });
+      }
+
       const asset = await ctx.db.asset.update({
         where: { id: input.id },
         data: {
@@ -566,6 +613,9 @@ export const assetRouter = createTRPCRouter({
           description: input.description,
           ownerId: input.ownerId,
           businessUnitId: input.businessUnitId,
+          ...(input.lossMinimum !== undefined ? { lossMinimum: input.lossMinimum } : {}),
+          ...(input.lossProbable !== undefined ? { lossProbable: input.lossProbable } : {}),
+          ...(input.lossMaximum !== undefined ? { lossMaximum: input.lossMaximum } : {}),
         },
       });
 

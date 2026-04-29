@@ -263,6 +263,40 @@ export function AssetDetailClient({ assetId }: Props) {
             </Card>
           )}
 
+          {/* Loss Event Range */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Loss Event Range</CardTitle>
+              <CardDescription>Estimated financial loss in USD if a loss event occurs.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {asset.lossMinimum || asset.lossProbable || asset.lossMaximum ? (
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Minimum</p>
+                    <p className="font-mono text-lg">
+                      {asset.lossMinimum ? `$${Number(asset.lossMinimum).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Probable</p>
+                    <p className="font-mono text-lg">
+                      {asset.lossProbable ? `$${Number(asset.lossProbable).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Maximum</p>
+                    <p className="font-mono text-lg">
+                      {asset.lossMaximum ? `$${Number(asset.lossMaximum).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted-foreground italic text-sm">Not yet estimated</p>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Linked Processes */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">

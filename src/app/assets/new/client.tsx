@@ -36,6 +36,9 @@ export function CreateAssetClient() {
       description: values.description || undefined,
       ownerId: values.ownerId || undefined,
       businessUnitId: values.businessUnitId || undefined,
+      lossMinimum: values.lossMinimum ?? null,
+      lossProbable: values.lossProbable ?? null,
+      lossMaximum: values.lossMaximum ?? null,
     });
   };
 

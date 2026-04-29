@@ -104,6 +104,9 @@ export function ProcessDetailClient({ processId }: ProcessDetailClientProps) {
     name: "",
     description: "",
     workaroundProcedure: "",
+    lossMinimum: "",
+    lossProbable: "",
+    lossMaximum: "",
   });
   const [newStatus, setNewStatus] = useState<BusinessProcessStatus | "">("");
   const [newOwnerId, setNewOwnerId] = useState("");
@@ -175,6 +178,9 @@ export function ProcessDetailClient({ processId }: ProcessDetailClientProps) {
         name: process.name,
         description: process.description ?? "",
         workaroundProcedure: process.workaroundProcedure ?? "",
+        lossMinimum: process.lossMinimum ? String(process.lossMinimum) : "",
+        lossProbable: process.lossProbable ? String(process.lossProbable) : "",
+        lossMaximum: process.lossMaximum ? String(process.lossMaximum) : "",
       });
       setIsEditOpen(true);
     }
@@ -341,6 +347,39 @@ export function ProcessDetailClient({ processId }: ProcessDetailClientProps) {
                       <p className="text-muted-foreground italic">
                         No workaround procedure documented
                       </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Loss Event Range</CardTitle>
+                    <CardDescription>Estimated financial loss in USD if a loss event occurs.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {process.lossMinimum || process.lossProbable || process.lossMaximum ? (
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Minimum</p>
+                          <p className="font-mono text-lg">
+                            {process.lossMinimum ? `$${Number(process.lossMinimum).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Probable</p>
+                          <p className="font-mono text-lg">
+                            {process.lossProbable ? `$${Number(process.lossProbable).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Maximum</p>
+                          <p className="font-mono text-lg">
+                            {process.lossMaximum ? `$${Number(process.lossMaximum).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground italic">Not yet estimated</p>
                     )}
                   </CardContent>
                 </Card>
@@ -522,6 +561,51 @@ export function ProcessDetailClient({ processId }: ProcessDetailClientProps) {
                   maxLength={10000}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Loss Event Range (USD)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Estimated financial loss if a loss event occurs.
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label htmlFor="edit-loss-min" className="text-xs">Minimum</Label>
+                    <Input
+                      id="edit-loss-min"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="$"
+                      value={editForm.lossMinimum}
+                      onChange={(e) => setEditForm({ ...editForm, lossMinimum: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-loss-prob" className="text-xs">Probable</Label>
+                    <Input
+                      id="edit-loss-prob"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="$"
+                      value={editForm.lossProbable}
+                      onChange={(e) => setEditForm({ ...editForm, lossProbable: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-loss-max" className="text-xs">Maximum</Label>
+                    <Input
+                      id="edit-loss-max"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="$"
+                      value={editForm.lossMaximum}
+                      onChange={(e) => setEditForm({ ...editForm, lossMaximum: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <DialogFooter>
@@ -535,6 +619,9 @@ export function ProcessDetailClient({ processId }: ProcessDetailClientProps) {
                     name: editForm.name,
                     description: editForm.description || null,
                     workaroundProcedure: editForm.workaroundProcedure || null,
+                    lossMinimum: editForm.lossMinimum === "" ? null : Number(editForm.lossMinimum),
+                    lossProbable: editForm.lossProbable === "" ? null : Number(editForm.lossProbable),
+                    lossMaximum: editForm.lossMaximum === "" ? null : Number(editForm.lossMaximum),
                   })
                 }
                 disabled={updateMutation.isPending}

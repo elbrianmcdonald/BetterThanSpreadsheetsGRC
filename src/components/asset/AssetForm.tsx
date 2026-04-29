@@ -72,6 +72,10 @@ const assetFormSchema = z.object({
   description: z.string().max(4000, "Description too long").optional(),
   ownerId: z.string().optional(),
   businessUnitId: z.string().optional(),
+  // Loss Event Range — financial impact bounds in USD
+  lossMinimum: z.number().min(0).max(1e12).nullable().optional(),
+  lossProbable: z.number().min(0).max(1e12).nullable().optional(),
+  lossMaximum: z.number().min(0).max(1e12).nullable().optional(),
 });
 
 export type AssetFormValues = z.infer<typeof assetFormSchema>;
@@ -274,6 +278,74 @@ export function AssetForm({
             </FormItem>
           )}
         />
+
+        {/* Loss Event Range (USD) */}
+        <div className="space-y-2">
+          <FormLabel>Loss Event Range (USD)</FormLabel>
+          <FormDescription>Estimated financial loss if a loss event occurs.</FormDescription>
+          <div className="grid grid-cols-3 gap-3">
+            <FormField
+              control={form.control}
+              name="lossMinimum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Minimum</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="$"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lossProbable"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Probable</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="$"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="lossMaximum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Maximum</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="$"
+                      value={field.value ?? ""}
+                      onChange={(e) => field.onChange(e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
 
         {/* Submit */}
         <div className="flex justify-end gap-4">

@@ -45,6 +45,9 @@ export function EditAssetClient({ assetId }: Props) {
       description: values.description ?? null,
       ownerId: values.ownerId ?? null,
       businessUnitId: values.businessUnitId ?? null,
+      lossMinimum: values.lossMinimum ?? null,
+      lossProbable: values.lossProbable ?? null,
+      lossMaximum: values.lossMaximum ?? null,
     });
   };
 
@@ -128,6 +131,9 @@ export function EditAssetClient({ assetId }: Props) {
               description: asset.description || "",
               ownerId: asset.ownerId || "",
               businessUnitId: asset.businessUnitId || "",
+              lossMinimum: asset.lossMinimum ? Number(asset.lossMinimum) : null,
+              lossProbable: asset.lossProbable ? Number(asset.lossProbable) : null,
+              lossMaximum: asset.lossMaximum ? Number(asset.lossMaximum) : null,
             }}
             onSubmit={handleSubmit}
             isSubmitting={updateMutation.isPending}

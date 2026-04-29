@@ -61,6 +61,10 @@ const updateBusinessProcessSchema = z.object({
   description: z.string().max(4000).nullable().optional(),
   businessFunctionId: z.string().nullable().optional(),
   workaroundProcedure: z.string().max(10000).nullable().optional(),
+  // Loss Event Range — dollar amounts, must satisfy min ≤ probable ≤ max when present
+  lossMinimum: z.number().min(0).max(1e12).nullable().optional(),
+  lossProbable: z.number().min(0).max(1e12).nullable().optional(),
+  lossMaximum: z.number().min(0).max(1e12).nullable().optional(),
 });
 
 const updateOwnerSchema = z.object({
@@ -457,6 +461,21 @@ export const businessProcessRouter = createTRPCRouter({
         }
       }
 
+      // Loss Event Range — server-side ordering validation (min ≤ probable ≤ max).
+      // Each field is checked against whichever value (input or existing) is current.
+      const lossMin = input.lossMinimum !== undefined ? input.lossMinimum : (existing.lossMinimum ? Number(existing.lossMinimum) : null);
+      const lossProb = input.lossProbable !== undefined ? input.lossProbable : (existing.lossProbable ? Number(existing.lossProbable) : null);
+      const lossMax = input.lossMaximum !== undefined ? input.lossMaximum : (existing.lossMaximum ? Number(existing.lossMaximum) : null);
+      if (lossMin !== null && lossProb !== null && lossMin > lossProb) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss minimum cannot exceed probable." });
+      }
+      if (lossProb !== null && lossMax !== null && lossProb > lossMax) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss probable cannot exceed maximum." });
+      }
+      if (lossMin !== null && lossMax !== null && lossMin > lossMax) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Loss minimum cannot exceed maximum." });
+      }
+
       const process = await ctx.db.businessProcess.update({
         where: { id: input.id },
         data: {
@@ -464,6 +483,9 @@ export const businessProcessRouter = createTRPCRouter({
           description: input.description,
           businessFunctionId: input.businessFunctionId,
           workaroundProcedure: input.workaroundProcedure,
+          ...(input.lossMinimum !== undefined ? { lossMinimum: input.lossMinimum } : {}),
+          ...(input.lossProbable !== undefined ? { lossProbable: input.lossProbable } : {}),
+          ...(input.lossMaximum !== undefined ? { lossMaximum: input.lossMaximum } : {}),
         },
       });
 

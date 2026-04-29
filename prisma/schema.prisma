@@ -4440,6 +4440,11 @@ model BusinessProcess {
   facilitiesDependencies Json @default("[]")
   transportDependencies  Json @default("[]")
 
+  // Loss Event Range — financial impact bounds in USD if a loss event occurs
+  lossMinimum  Decimal? @db.Decimal(14, 2)
+  lossProbable Decimal? @db.Decimal(14, 2)
+  lossMaximum  Decimal? @db.Decimal(14, 2)
+
   // Audit fields
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -4686,6 +4691,11 @@ model Asset {
 
   // Calculated tier (MAX criticality of linked processes)
   calculatedTierId String?
+
+  // Loss Event Range — financial impact bounds in USD if a loss event occurs
+  lossMinimum  Decimal? @db.Decimal(14, 2)
+  lossProbable Decimal? @db.Decimal(14, 2)
+  lossMaximum  Decimal? @db.Decimal(14, 2)
 
   // Audit fields
   createdAt   DateTime @default(now())
