@@ -263,6 +263,8 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
               },
             },
           },
+          linkedAsset: { select: { id: true, identifier: true, name: true } },
+          linkedBusinessProcess: { select: { id: true, identifier: true, name: true } },
           discoveredRisks: {
             where: {
               // Only include non-soft-deleted risks
@@ -778,6 +780,78 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       });
 
       return updated;
+    }),
+
+  /**
+   * Link an Asset and/or BusinessProcess to the assessment, snapshotting
+   * each entity's current loss event range into the assessment record.
+   * Re-pick to refresh; pass null/null to clear.
+   */
+  setLinkedEntities: organizationProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        linkedAssetId: z.string().nullable(),
+        linkedBusinessProcessId: z.string().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const project = await ctx.db.riskAssessmentProject.findFirst({
+        where: { id: input.id, organizationId },
+        select: { id: true, status: true, assigneeId: true },
+      });
+      if (!project) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment project not found" });
+      }
+      if (project.status !== AssessmentProjectStatus.IN_PROGRESS) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Assessment can only be edited while in progress" });
+      }
+      if (project.assigneeId !== ctx.session?.user?.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only the assigned analyst can edit the assessment" });
+      }
+
+      // Snapshot loss values from the linked entities (frozen at link time).
+      let lossMin: number | null = null;
+      let lossProb: number | null = null;
+      let lossMax: number | null = null;
+      if (input.linkedAssetId) {
+        const a = await ctx.db.asset.findFirst({
+          where: { id: input.linkedAssetId, organizationId },
+          select: { lossMinimum: true, lossProbable: true, lossMaximum: true },
+        });
+        if (!a) throw new TRPCError({ code: "NOT_FOUND", message: "Linked asset not found" });
+        lossMin = a.lossMinimum ? Number(a.lossMinimum) : null;
+        lossProb = a.lossProbable ? Number(a.lossProbable) : null;
+        lossMax = a.lossMaximum ? Number(a.lossMaximum) : null;
+      }
+      if (input.linkedBusinessProcessId) {
+        const p = await ctx.db.businessProcess.findFirst({
+          where: { id: input.linkedBusinessProcessId, organizationId },
+          select: { lossMinimum: true, lossProbable: true, lossMaximum: true },
+        });
+        if (!p) throw new TRPCError({ code: "NOT_FOUND", message: "Linked business process not found" });
+        const pMin = p.lossMinimum ? Number(p.lossMinimum) : null;
+        const pProb = p.lossProbable ? Number(p.lossProbable) : null;
+        const pMax = p.lossMaximum ? Number(p.lossMaximum) : null;
+        // Combine asset + process: take the wider envelope.
+        lossMin = lossMin === null ? pMin : pMin === null ? lossMin : Math.min(lossMin, pMin);
+        lossProb = lossProb === null ? pProb : pProb === null ? lossProb : Math.max(lossProb, pProb);
+        lossMax = lossMax === null ? pMax : pMax === null ? lossMax : Math.max(lossMax, pMax);
+      }
+      const snapshotAt = input.linkedAssetId || input.linkedBusinessProcessId ? new Date() : null;
+
+      return ctx.db.riskAssessmentProject.update({
+        where: { id: input.id },
+        data: {
+          linkedAssetId: input.linkedAssetId,
+          linkedBusinessProcessId: input.linkedBusinessProcessId,
+          inheritedLossMinimum: lossMin,
+          inheritedLossProbable: lossProb,
+          inheritedLossMaximum: lossMax,
+          inheritedLossSnapshotAt: snapshotAt,
+        },
+      });
     }),
 
   /**

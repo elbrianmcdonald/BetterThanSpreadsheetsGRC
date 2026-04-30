@@ -11,7 +11,6 @@ import { evidenceRouter } from "@/server/api/routers/evidence";
 import { evidenceRequestRouter } from "@/server/api/routers/evidence-request";
 import { riskRouter } from "@/server/api/routers/risk";
 import { enterpriseRiskRouter } from "@/server/api/routers/enterpriseRisk";
-import { releaseVersionRouter } from "@/server/api/routers/releaseVersion";
 import { emailQueueRouter } from "@/server/api/routers/emailQueue";
 import { workerRouter } from "@/server/api/routers/worker";
 import { businessUnitRouter } from "@/server/api/routers/businessUnit";
@@ -77,7 +76,6 @@ export const appRouter = createTRPCRouter({
   evidenceRequest: evidenceRequestRouter, // Story 3.12: Evidence Request Workflow
   risk: riskRouter, // Story 3.6: Evidence-to-Risk Linkage
   enterpriseRisk: enterpriseRiskRouter,
-  releaseVersion: releaseVersionRouter,
   emailQueue: emailQueueRouter, // Story 4.15: Email Queue with Retry Logic
   worker: workerRouter, // Story 4.18: Background Job Processing
   businessUnit: businessUnitRouter, // Story 7.0.3: BU Admin CRUD UI

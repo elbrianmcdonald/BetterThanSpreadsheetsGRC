@@ -40,6 +40,7 @@ import {
   Activity,
   Settings,
   Server,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -289,12 +290,6 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <Database className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN],
       },
-      {
-        href: "/admin/changelog",
-        label: "Changelog",
-        icon: <FileText className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
-      },
       // Data group
       {
         href: "/admin/mappings",
@@ -316,6 +311,18 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <Crosshair className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN],
         group: "Data",
+      },
+    ],
+  },
+  {
+    id: "help",
+    label: "Help",
+    icon: <ScrollText className="h-5 w-5" />,
+    items: [
+      {
+        href: "/changelog",
+        label: "Changelog",
+        icon: <ScrollText className="h-4 w-4" />,
       },
     ],
   },

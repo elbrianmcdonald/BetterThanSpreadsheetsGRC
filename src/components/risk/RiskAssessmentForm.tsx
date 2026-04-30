@@ -53,6 +53,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LossSourcePicker } from "@/components/risk/LossSourcePicker";
 import {
   Collapsible,
   CollapsibleContent,
@@ -124,6 +125,9 @@ const riskAssessmentFormSchema = z.object({
   businessOwnerId: z.string().optional().nullable(),
   businessUnitId: z.string().optional().nullable(),
   performedById: z.string().optional().nullable(),
+  // Optional asset / process linkage — loss values inherited from these
+  linkedAssetId: z.string().optional().nullable(),
+  linkedBusinessProcessId: z.string().optional().nullable(),
   // Risk items
   risks: z.array(riskItemSchema).min(1, "At least one risk must be identified"),
 });
@@ -173,6 +177,8 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
       businessOwnerId: undefined,
       businessUnitId: null,
       performedById: null,
+      linkedAssetId: null,
+      linkedBusinessProcessId: null,
       risks: [createEmptyRiskItem()],
     },
   });
@@ -307,6 +313,8 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
         businessOwnerId: values.businessOwnerId,
         businessUnitId: values.businessUnitId,
         performedById: values.performedById,
+        linkedAssetId: values.linkedAssetId,
+        linkedBusinessProcessId: values.linkedBusinessProcessId,
         risks: values.risks.map((risk) => ({
           title: risk.title,
           riskStatement: risk.riskStatement,
@@ -505,6 +513,54 @@ export function RiskAssessmentForm({ onSuccess, onCancel }: RiskAssessmentFormPr
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Asset / Process linkage — loss values snapshot at create time */}
+            <div className="rounded-md border p-4 space-y-3 bg-muted/30">
+              <div>
+                <h4 className="font-medium text-sm">Loss Event Range Source (optional)</h4>
+                <p className="text-xs text-muted-foreground">
+                  Link an asset and/or process. Their loss values are snapshotted onto this assessment and applied to all child risks. Re-pick to refresh.
+                </p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="linkedAssetId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Linked Asset</FormLabel>
+                      <FormControl>
+                        <LossSourcePicker
+                          kind="asset"
+                          value={field.value ?? null}
+                          onChange={field.onChange}
+                          placeholder="Search assets…"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="linkedBusinessProcessId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Linked Business Process</FormLabel>
+                      <FormControl>
+                        <LossSourcePicker
+                          kind="process"
+                          value={field.value ?? null}
+                          onChange={field.onChange}
+                          placeholder="Search processes…"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
           </CardContent>

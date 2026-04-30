@@ -1412,8 +1412,6 @@ model User {
   MatrixVersionsPublished                 RiskMatrixVersion[]         @relation("MatrixVersionPublisher")
   // Enterprise Risk reviews authored by this user
   EnterpriseRiskReviewsAuthored           EnterpriseRiskReview[]      @relation("EnterpriseRiskReviewer")
-  // Release versions created by this user (deployment-wide changelog)
-  ReleaseVersionsCreated                  ReleaseVersion[]            @relation("ReleaseVersionCreator")
   // Story 7.10: Risk Register Entry relationships (AC13-AC14)
   RiskRegisterEntriesOwned                RiskRegisterEntry[]         @relation("RiskRegisterOwner")
   RiskRegisterEntriesClosed               RiskRegisterEntry[]         @relation("RiskRegisterCloser")
@@ -1743,6 +1741,7 @@ enum AuditAction {
   CREATE_ENTERPRISE_RISK
   UPDATE_ENTERPRISE_RISK
   REVIEW_ENTERPRISE_RISK
+  // Note: Application changelog is now file-backed (CHANGELOG.md), not DB-backed.
 }
 
 enum RiskStatus {
@@ -3802,6 +3801,16 @@ model RiskAssessmentProject {
   parentAssessmentId  String? // Link to parent assessment for reassessments
   reassessmentDueDate DateTime? // Calculated on approval based on highest severity
 
+  // Asset / Process linkage with frozen loss-event-range snapshot.
+  // One asset and/or one process per assessment; values snapshotted at link time
+  // and applied to all child risks.
+  linkedAssetId           String?
+  linkedBusinessProcessId String?
+  inheritedLossMinimum    Decimal?  @db.Decimal(14, 2)
+  inheritedLossProbable   Decimal?  @db.Decimal(14, 2)
+  inheritedLossMaximum    Decimal?  @db.Decimal(14, 2)
+  inheritedLossSnapshotAt DateTime?
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3815,6 +3824,10 @@ model RiskAssessmentProject {
   parentAssessment RiskAssessmentProject?  @relation("ReassessmentChain", fields: [parentAssessmentId], references: [id], onDelete: SetNull)
   childAssessments RiskAssessmentProject[] @relation("ReassessmentChain")
   matrixVersion    RiskMatrixVersion?      @relation("ProjectMatrixVersion", fields: [matrixVersionId], references: [id], onDelete: SetNull)
+
+  // Asset / Process linkage relations (loss event range source — snapshotted)
+  linkedAsset           Asset?           @relation("AssessmentLinkedAsset", fields: [linkedAssetId], references: [id], onDelete: SetNull)
+  linkedBusinessProcess BusinessProcess? @relation("AssessmentLinkedProcess", fields: [linkedBusinessProcessId], references: [id], onDelete: SetNull)
 
   // Discovered risks within this assessment project
   discoveredRisks Risk[] @relation("ProjectDiscoveredRisks")
@@ -4484,6 +4497,8 @@ model BusinessProcess {
   contingencyBIAs        SystemContingencyBIA[] @relation("BusinessProcessContingencyBIAs")
   // Cross-reference from process rows inside an asset-anchored contingency BIA
   contingencyProcessRefs ContingencyProcess[]   @relation("ContingencyProcessLinkedProcess")
+  // Risk assessment projects using this process as loss-event-range source
+  linkedRiskAssessmentProjects RiskAssessmentProject[] @relation("AssessmentLinkedProcess")
 
   @@unique([organizationId, identifier])
   @@index([organizationId])
@@ -4714,6 +4729,8 @@ model Asset {
 
   // NIST SP 800-34 System Contingency BIAs anchored to this asset
   contingencyBIAs SystemContingencyBIA[] @relation("AssetContingencyBIAs")
+  // Risk assessment projects using this asset as loss-event-range source
+  linkedRiskAssessmentProjects RiskAssessmentProject[] @relation("AssessmentLinkedAsset")
 
   @@unique([organizationId, identifier])
   @@index([organizationId])
@@ -4762,22 +4779,6 @@ model HostnameConfig {
   updatedById    String?
 
   updatedBy User? @relation("HostnameConfigUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
-}
-
-// Deployment-wide changelog. ORG_ADMIN-gated for writes; readable by any authenticated user.
-model ReleaseVersion {
-  id          String   @id @default(cuid())
-  version     String   @unique  // semver-ish: "1.0", "1.0.1", "2.0-beta"
-  releasedAt  DateTime @default(now())
-  title       String?
-  notes       String   @db.Text  // Markdown body
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  CreatedBy User? @relation("ReleaseVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
-
-  @@index([releasedAt])
 }
 
 enum HostnameMode {

@@ -41,6 +41,7 @@ import {
   Calendar,
   User,
   FileText,
+  Pencil,
 } from "lucide-react";
 import { AssessmentProjectStatus, RiskDiscoveryStatus, UserRole } from "@prisma/client";
 import { toast } from "sonner";
@@ -78,6 +79,7 @@ import { cn } from "@/lib/utils";
 import { AssessmentProjectStatusBadge } from "./AssessmentProjectStatusBadge";
 import { RiskItemCard } from "@/components/risk/RiskItemCard";
 import { PersonPicker } from "@/components/person/PersonPicker";
+import { LossSourcePicker } from "@/components/risk/LossSourcePicker";
 import type { MatrixScales, Threshold } from "@/lib/matrix";
 
 // ============================================================================
@@ -150,6 +152,14 @@ interface ProjectWithRisks {
     id: string;
     template: { id: string; name: string } | null;
   } | null;
+  linkedAssetId: string | null;
+  linkedBusinessProcessId: string | null;
+  inheritedLossMinimum: unknown;
+  inheritedLossProbable: unknown;
+  inheritedLossMaximum: unknown;
+  inheritedLossSnapshotAt: Date | string | null;
+  linkedAsset: { id: string; identifier: string; name: string } | null;
+  linkedBusinessProcess: { id: string; identifier: string; name: string } | null;
   discoveredRisks: DiscoveredRisk[];
 }
 
@@ -800,6 +810,13 @@ export function ProjectRiskAssessmentForm({ projectId }: ProjectRiskAssessmentFo
         </CardContent>
       </Card>
 
+      {/* Loss Event Range Source */}
+      <LossEventRangeCard
+        project={project}
+        isEditable={isEditable}
+        onUpdated={() => void utils.riskAssessmentProject.getById.invalidate({ id: projectId })}
+      />
+
       {/* Assessment Details Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Due Date */}
@@ -1228,5 +1245,140 @@ export function ProjectRiskAssessmentForm({ projectId }: ProjectRiskAssessmentFo
         </Card>
       )}
     </div>
+  );
+}
+
+// ============================================================================
+// Loss Event Range Card — show snapshot + edit linkage
+// ============================================================================
+
+function fmtDollars(d: unknown) {
+  if (d === null || d === undefined) return "—";
+  return `$${Number(d).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function LossEventRangeCard({
+  project,
+  isEditable,
+  onUpdated,
+}: {
+  project: ProjectWithRisks;
+  isEditable: boolean;
+  onUpdated: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [assetId, setAssetId] = useState<string | null>(project.linkedAssetId);
+  const [processId, setProcessId] = useState<string | null>(project.linkedBusinessProcessId);
+
+  const setLinked = api.riskAssessmentProject.setLinkedEntities.useMutation({
+    onSuccess: () => {
+      toast.success("Loss event range source updated");
+      setEditing(false);
+      onUpdated();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const hasSnapshot =
+    project.inheritedLossMinimum !== null && project.inheritedLossMinimum !== undefined ||
+    project.inheritedLossProbable !== null && project.inheritedLossProbable !== undefined ||
+    project.inheritedLossMaximum !== null && project.inheritedLossMaximum !== undefined;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-start justify-between">
+        <div>
+          <CardTitle className="text-base">Loss Event Range</CardTitle>
+          <CardDescription>
+            Inherited from a linked asset and/or business process. Snapshot is frozen at link time and applies to all child risks.
+          </CardDescription>
+        </div>
+        {isEditable && !editing && (
+          <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!editing && (
+          <>
+            <div className="grid sm:grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground">Linked Asset</p>
+                <p>
+                  {project.linkedAsset
+                    ? `${project.linkedAsset.identifier} — ${project.linkedAsset.name}`
+                    : <span className="italic text-muted-foreground">Not linked</span>}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Linked Business Process</p>
+                <p>
+                  {project.linkedBusinessProcess
+                    ? `${project.linkedBusinessProcess.identifier} — ${project.linkedBusinessProcess.name}`
+                    : <span className="italic text-muted-foreground">Not linked</span>}
+                </p>
+              </div>
+            </div>
+            {hasSnapshot ? (
+              <div className="grid grid-cols-3 gap-4 pt-2 border-t">
+                <div>
+                  <p className="text-xs text-muted-foreground">Minimum</p>
+                  <p className="font-mono text-lg">{fmtDollars(project.inheritedLossMinimum)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Probable</p>
+                  <p className="font-mono text-lg">{fmtDollars(project.inheritedLossProbable)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Maximum</p>
+                  <p className="font-mono text-lg">{fmtDollars(project.inheritedLossMaximum)}</p>
+                </div>
+                {project.inheritedLossSnapshotAt && (
+                  <p className="col-span-3 text-xs text-muted-foreground">
+                    Snapshot taken {new Date(project.inheritedLossSnapshotAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No snapshot recorded.</p>
+            )}
+          </>
+        )}
+        {editing && (
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs mb-1">Linked Asset</Label>
+              <LossSourcePicker kind="asset" value={assetId} onChange={setAssetId} />
+            </div>
+            <div>
+              <Label className="text-xs mb-1">Linked Business Process</Label>
+              <LossSourcePicker kind="process" value={processId} onChange={setProcessId} />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={setLinked.isPending}
+                onClick={() =>
+                  setLinked.mutate({
+                    id: project.id,
+                    linkedAssetId: assetId,
+                    linkedBusinessProcessId: processId,
+                  })
+                }
+              >
+                {setLinked.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save (re-snapshot)
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

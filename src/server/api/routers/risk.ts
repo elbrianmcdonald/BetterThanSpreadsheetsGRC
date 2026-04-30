@@ -5837,6 +5837,9 @@ export const riskRouter = createTRPCRouter({
         businessUnitId: z.string().optional().nullable(),
         performedById: z.string().optional().nullable(),
         overallSeverity: z.string().optional().nullable(),
+        // Optional asset / process linkage — loss values snapshot at create time.
+        linkedAssetId: z.string().optional().nullable(),
+        linkedBusinessProcessId: z.string().optional().nullable(),
         risks: z.array(
           z.object({
             title: z.string().min(5, "Risk title must be at least 5 characters").max(200),
@@ -5913,6 +5916,51 @@ export const riskRouter = createTRPCRouter({
       const is3D = matrixVersion.template.dimensionCount === 3;
       const outputScaleMax = Number(matrixVersion.template.outputScaleMax);
 
+      // Snapshot loss values from linked asset / process (frozen at link time).
+      let inheritedLossMinimum: number | null = null;
+      let inheritedLossProbable: number | null = null;
+      let inheritedLossMaximum: number | null = null;
+      if (input.linkedAssetId) {
+        const a = await ctx.db.asset.findFirst({
+          where: { id: input.linkedAssetId, organizationId },
+          select: { lossMinimum: true, lossProbable: true, lossMaximum: true },
+        });
+        if (!a) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Linked asset not found" });
+        }
+        inheritedLossMinimum = a.lossMinimum ? Number(a.lossMinimum) : null;
+        inheritedLossProbable = a.lossProbable ? Number(a.lossProbable) : null;
+        inheritedLossMaximum = a.lossMaximum ? Number(a.lossMaximum) : null;
+      }
+      if (input.linkedBusinessProcessId) {
+        const p = await ctx.db.businessProcess.findFirst({
+          where: { id: input.linkedBusinessProcessId, organizationId },
+          select: { lossMinimum: true, lossProbable: true, lossMaximum: true },
+        });
+        if (!p) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Linked business process not found" });
+        }
+        // If both are linked, take the wider range so the assessment captures
+        // the worst-case envelope. Asset values are already loaded above.
+        const pMin = p.lossMinimum ? Number(p.lossMinimum) : null;
+        const pProb = p.lossProbable ? Number(p.lossProbable) : null;
+        const pMax = p.lossMaximum ? Number(p.lossMaximum) : null;
+        inheritedLossMinimum =
+          inheritedLossMinimum === null ? pMin :
+          pMin === null ? inheritedLossMinimum :
+          Math.min(inheritedLossMinimum, pMin);
+        inheritedLossProbable =
+          inheritedLossProbable === null ? pProb :
+          pProb === null ? inheritedLossProbable :
+          Math.max(inheritedLossProbable, pProb);
+        inheritedLossMaximum =
+          inheritedLossMaximum === null ? pMax :
+          pMax === null ? inheritedLossMaximum :
+          Math.max(inheritedLossMaximum, pMax);
+      }
+      const inheritedLossSnapshotAt =
+        input.linkedAssetId || input.linkedBusinessProcessId ? new Date() : null;
+
       // Create all risks in a transaction, wrapped in a RiskAssessmentProject
       // so the assessment shows up on /risk-assessments. Each child Risk is
       // linked to the project via discoveryProjectId.
@@ -5929,6 +5977,12 @@ export const riskRouter = createTRPCRouter({
             assigneeId: input.performedById ?? userId,
             createdById: userId,
             dueDate,
+            linkedAssetId: input.linkedAssetId ?? null,
+            linkedBusinessProcessId: input.linkedBusinessProcessId ?? null,
+            inheritedLossMinimum,
+            inheritedLossProbable,
+            inheritedLossMaximum,
+            inheritedLossSnapshotAt,
           },
         });
 

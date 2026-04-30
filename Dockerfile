@@ -74,6 +74,9 @@ COPY --from=builder /app/node_modules ./node_modules
 # directly to `prisma db push`, bypassing the config file.
 COPY --from=builder /app/prisma ./prisma
 
+# Copy the dev-managed changelog. Read at request time by /changelog.
+COPY --from=builder /app/CHANGELOG.md ./CHANGELOG.md
+
 # Copy entrypoint (sed strips Windows \r line endings for cross-platform safety)
 COPY docker-entrypoint.sh ./
 RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
