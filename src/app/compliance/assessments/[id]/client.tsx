@@ -58,6 +58,7 @@ import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
+import { AssessmentEvidencePanel } from "@/components/evidence/AssessmentEvidencePanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -113,6 +114,7 @@ interface ControlScore {
   status: ComplianceStatus;
   notes: string | null;
   gapDescription: string | null;
+  evidenceLinks: string[];
   control: {
     id: string;
     controlId: string;
@@ -288,6 +290,19 @@ function ControlScoringItem({
 }) {
   const level = getStatusLevel(score.status);
   const isScored = score.status !== ComplianceStatus.NOT_ASSESSED;
+  const utils = api.useUtils();
+
+  // Evidence attach/detach. Keep local to the item so the mutation only
+  // re-renders this control's panel — invalidates the parent assessment
+  // query so the list of evidenceLinks updates everywhere it's read.
+  const evidenceMutation = api.complianceAssessment.attachEvidenceToControl.useMutation({
+    onSuccess: () => {
+      void utils.complianceAssessment.getById.invalidate({ id: assessmentId });
+    },
+    onError: (e) => {
+      toast.error(`Evidence update failed: ${e.message}`);
+    },
+  });
 
   return (
     <div
@@ -461,6 +476,30 @@ function ControlScoringItem({
               rows={6}
             />
           </div>
+
+          {/* Per-control evidence attachment — pull from the org's
+              evidence repo or upload a new one from /admin/evidence. */}
+          <AssessmentEvidencePanel
+            evidenceIds={score.evidenceLinks ?? []}
+            canEdit={isEditable}
+            isPending={evidenceMutation.isPending}
+            onAttach={(evidenceId) =>
+              evidenceMutation.mutateAsync({
+                assessmentId,
+                controlId: score.controlId,
+                evidenceId,
+                action: "attach",
+              })
+            }
+            onDetach={(evidenceId) =>
+              evidenceMutation.mutateAsync({
+                assessmentId,
+                controlId: score.controlId,
+                evidenceId,
+                action: "detach",
+              })
+            }
+          />
         </div>
       ) : (
         /* Read-only view */

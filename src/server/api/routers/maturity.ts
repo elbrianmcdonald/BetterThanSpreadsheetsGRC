@@ -788,6 +788,147 @@ export const maturityRouter = createTRPCRouter({
     }),
 
   /**
+   * Attach or detach evidence on a subcategory score (NIST CSF and similar
+   * domain-scored maturity frameworks). Mirrors the compliance equivalent —
+   * idempotent, treats evidenceLinks as a set.
+   */
+  attachEvidenceToSubcategory: organizationProcedure
+    .use(requireRole(MATURITY_MANAGE_ROLES))
+    .input(
+      z.object({
+        assessmentId: z.string(),
+        subcategoryId: z.string(),
+        evidenceId: z.string(),
+        action: z.enum(["attach", "detach"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db, session, organizationId } = ctx;
+      if (!organizationId || !session?.user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const assessment = await db.maturityAssessment.findFirst({
+        where: { id: input.assessmentId, organizationId },
+      });
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found" });
+      }
+      const evidence = await db.evidence.findFirst({
+        where: { id: input.evidenceId, organizationId },
+      });
+      if (!evidence) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Evidence not found" });
+      }
+
+      const existing = await db.maturityDomainScore.findUnique({
+        where: {
+          assessmentId_domainId: {
+            assessmentId: input.assessmentId,
+            domainId: input.subcategoryId,
+          },
+        },
+      });
+
+      const currentLinks = existing?.evidenceLinks ?? [];
+      const nextLinks =
+        input.action === "attach"
+          ? Array.from(new Set([...currentLinks, input.evidenceId]))
+          : currentLinks.filter((id) => id !== input.evidenceId);
+
+      return db.maturityDomainScore.upsert({
+        where: {
+          assessmentId_domainId: {
+            assessmentId: input.assessmentId,
+            domainId: input.subcategoryId,
+          },
+        },
+        create: {
+          assessmentId: input.assessmentId,
+          domainId: input.subcategoryId,
+          evidenceLinks: nextLinks,
+          assessedBy: session.user.id,
+          assessedAt: new Date(),
+        },
+        update: {
+          evidenceLinks: nextLinks,
+          assessedBy: session.user.id,
+          assessedAt: new Date(),
+        },
+      });
+    }),
+
+  /**
+   * Attach/detach evidence on a C2M2 practice / SAMM activity response.
+   * Different model from subcategories — evidence ids live on
+   * MaturityQuestionResponse.evidenceIds (note: plural difference from
+   * domain scores' evidenceLinks).
+   */
+  attachEvidenceToPractice: organizationProcedure
+    .use(requireRole(MATURITY_MANAGE_ROLES))
+    .input(
+      z.object({
+        assessmentId: z.string(),
+        questionId: z.string(),
+        evidenceId: z.string(),
+        action: z.enum(["attach", "detach"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db, session, organizationId } = ctx;
+      if (!organizationId || !session?.user?.id) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const assessment = await db.maturityAssessment.findFirst({
+        where: { id: input.assessmentId, organizationId },
+      });
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found" });
+      }
+      const evidence = await db.evidence.findFirst({
+        where: { id: input.evidenceId, organizationId },
+      });
+      if (!evidence) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Evidence not found" });
+      }
+
+      const existing = await db.maturityQuestionResponse.findUnique({
+        where: {
+          assessmentId_questionId: {
+            assessmentId: input.assessmentId,
+            questionId: input.questionId,
+          },
+        },
+      });
+
+      const currentLinks = existing?.evidenceIds ?? [];
+      const nextLinks =
+        input.action === "attach"
+          ? Array.from(new Set([...currentLinks, input.evidenceId]))
+          : currentLinks.filter((id) => id !== input.evidenceId);
+
+      return db.maturityQuestionResponse.upsert({
+        where: {
+          assessmentId_questionId: {
+            assessmentId: input.assessmentId,
+            questionId: input.questionId,
+          },
+        },
+        create: {
+          assessmentId: input.assessmentId,
+          questionId: input.questionId,
+          evidenceIds: nextLinks,
+          answeredBy: session.user.id,
+        },
+        update: {
+          evidenceIds: nextLinks,
+          answeredBy: session.user.id,
+        },
+      });
+    }),
+
+  /**
    * Clone a maturity framework into the current organization. Used when an
    * admin wants an org-specific copy of a system template (NIST CSF, C2M2)
    * that can then be customized without affecting the upstream template.
@@ -1906,6 +2047,7 @@ export const maturityRouter = createTRPCRouter({
           isPerformed: boolean;
           implementationLevel: number | null;
           notes: string | null;
+          evidenceIds: string[];
         }[]
       > = { 1: [], 2: [], 3: [] };
 
@@ -1927,6 +2069,7 @@ export const maturityRouter = createTRPCRouter({
           isPerformed: response?.isPerformed ?? false,
           implementationLevel: response?.scaleValue ?? null,
           notes: response?.notes ?? null,
+          evidenceIds: response?.evidenceIds ?? [],
         });
       }
 
@@ -2145,6 +2288,7 @@ export const maturityRouter = createTRPCRouter({
             isPerformed: boolean;
             notes: string | null;
             confidence: string | null;
+            evidenceLinks: string[];
           }[];
         }
       > = {};
@@ -2183,6 +2327,7 @@ export const maturityRouter = createTRPCRouter({
           isPerformed,
           notes: score?.notes ?? null,
           confidence: score?.confidence ?? null,
+          evidenceLinks: score?.evidenceLinks ?? [],
         });
       }
 

@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 import { getScaleDefinition } from "@/lib/maturity-scales";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
+import { AssessmentEvidencePanel } from "@/components/evidence/AssessmentEvidencePanel";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -714,6 +715,14 @@ function PracticeChecklist({
     },
   });
 
+  // Evidence attach/detach for C2M2 practices — same panel UI as compliance.
+  const practiceEvidenceMutation = api.maturity.attachEvidenceToPractice.useMutation({
+    onSuccess: () => {
+      void utils.maturity.getDomainPractices.invalidate({ assessmentId, domainId: domain.id });
+    },
+    onError: (e) => toast.error(`Evidence update failed: ${e.message}`),
+  });
+
   const handlePracticeUpdate = (
     practiceId: string,
     implementationLevel: number,
@@ -1127,6 +1136,28 @@ function PracticeChecklist({
                                     rows={6}
                                   />
                                 </div>
+
+                                {/* Per-practice evidence attachment */}
+                                <AssessmentEvidencePanel
+                                  evidenceIds={practice.evidenceIds ?? []}
+                                  isPending={practiceEvidenceMutation.isPending}
+                                  onAttach={(evidenceId) =>
+                                    practiceEvidenceMutation.mutateAsync({
+                                      assessmentId,
+                                      questionId: practice.id,
+                                      evidenceId,
+                                      action: "attach",
+                                    })
+                                  }
+                                  onDetach={(evidenceId) =>
+                                    practiceEvidenceMutation.mutateAsync({
+                                      assessmentId,
+                                      questionId: practice.id,
+                                      evidenceId,
+                                      action: "detach",
+                                    })
+                                  }
+                                />
                               </div>
                             </div>
                           );
@@ -1197,6 +1228,14 @@ function SubcategoryChecklist({
     { assessmentId, domainId: domain.id },
     { enabled: isExpanded }
   );
+
+  // Evidence attach/detach for subcategory scores (NIST CSF and similar).
+  const subcategoryEvidenceMutation = api.maturity.attachEvidenceToSubcategory.useMutation({
+    onSuccess: () => {
+      void utils.maturity.getSubcategoriesForFunction.invalidate({ assessmentId, domainId: domain.id });
+    },
+    onError: (e) => toast.error(`Evidence update failed: ${e.message}`),
+  });
 
   // Mutation to save subcategory response
   const saveSubcategoryMutation = api.maturity.saveSubcategoryResponse.useMutation({
@@ -1607,6 +1646,28 @@ function SubcategoryChecklist({
                                     rows={6}
                                   />
                                 </div>
+
+                                {/* Per-subcategory evidence attachment */}
+                                <AssessmentEvidencePanel
+                                  evidenceIds={subcategory.evidenceLinks ?? []}
+                                  isPending={subcategoryEvidenceMutation.isPending}
+                                  onAttach={(evidenceId) =>
+                                    subcategoryEvidenceMutation.mutateAsync({
+                                      assessmentId,
+                                      subcategoryId: subcategory.id,
+                                      evidenceId,
+                                      action: "attach",
+                                    })
+                                  }
+                                  onDetach={(evidenceId) =>
+                                    subcategoryEvidenceMutation.mutateAsync({
+                                      assessmentId,
+                                      subcategoryId: subcategory.id,
+                                      evidenceId,
+                                      action: "detach",
+                                    })
+                                  }
+                                />
                               </div>
                             </div>
                           );

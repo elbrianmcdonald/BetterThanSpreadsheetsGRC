@@ -341,6 +341,34 @@ export const evidenceRouter = createTRPCRouter({
     }),
 
   /**
+   * Batch-fetch evidence rows by id. Used by assessment scoring UIs to
+   * render the metadata for evidenceLinks/evidenceIds arrays in a single
+   * round trip. Returns active rows only; missing ids are silently dropped.
+   */
+  listByIds: organizationProcedure
+    .use(requirePermission(Permission.EVIDENCE_READ))
+    .input(z.object({ ids: z.array(z.string()).max(200) }))
+    .query(async ({ ctx, input }) => {
+      if (input.ids.length === 0) return [];
+      return ctx.db.evidence.findMany({
+        where: {
+          id: { in: input.ids },
+          organizationId: ctx.organizationId!,
+          isActive: true,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          title: true,
+          originalFileName: true,
+          fileType: true,
+          fileSize: true,
+          createdAt: true,
+        },
+      });
+    }),
+
+  /**
    * List evidence with pagination and filtering
    *
    * @requires EVIDENCE_READ permission

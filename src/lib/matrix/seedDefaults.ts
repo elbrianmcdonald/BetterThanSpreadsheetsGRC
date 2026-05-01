@@ -93,6 +93,7 @@ export async function seedDefaultMatrixTemplate(
       name: DEFAULT_MATRIX_TEMPLATE.name,
       description: DEFAULT_MATRIX_TEMPLATE.description,
       dimensionCount: DEFAULT_MATRIX_TEMPLATE.dimensionCount,
+      gridSize: DEFAULT_MATRIX_TEMPLATE.gridSize,
       outputScaleMax: DEFAULT_MATRIX_TEMPLATE.outputScaleMax,
       isDefault: true,
       isActive: true,

@@ -41,13 +41,17 @@ export const DEFAULT_ASSESSMENT_TYPE = {
  * Default risk matrix template configuration
  * AC5: "Standard Risk Matrix" template
  * AC6: 2D matrix (Likelihood × Impact)
- * AC7: Output scale max = 25 (5×5 grid)
+ *
+ * Default seeded matrix is 3×3 — minimal vocabulary (Low/Medium/High) is the
+ * least-friction starting point for new orgs. Larger grids (4×4, 5×5) are
+ * available via the matrix builder once the org needs more granularity.
  */
 export const DEFAULT_MATRIX_TEMPLATE = {
   name: "Standard Risk Matrix",
-  description: "Default 5×5 risk matrix using likelihood and impact dimensions",
-  dimensionCount: 2,
-  outputScaleMax: 25,
+  description: "Default 3×3 risk matrix using likelihood and impact dimensions",
+  dimensionCount: 2 as const,
+  gridSize: 3 as const,
+  outputScaleMax: 9,
 } as const;
 
 // ============================================================================
@@ -123,13 +127,15 @@ export const DEFAULT_IMPACT_SCALE = [
 ] as const;
 
 /**
- * Combined default scales for version creation
- * AC8: Pre-configured scales (1-5 for each dimension)
+ * Combined default scales for version creation. The 5-level scales above
+ * are kept exported for reference and reuse, but the seeded default uses
+ * the 3-level scales generated from the gridSize-aware template helpers
+ * so it lines up with the new 3×3 default matrix.
  */
-export const DEFAULT_SCALES: MatrixScales = {
-  likelihood: [...DEFAULT_LIKELIHOOD_SCALE],
-  impact: [...DEFAULT_IMPACT_SCALE],
-};
+export const DEFAULT_SCALES: MatrixScales = getDefaultScalesForGridSize(
+  DEFAULT_MATRIX_TEMPLATE.gridSize,
+  DEFAULT_MATRIX_TEMPLATE.dimensionCount
+);
 
 // ============================================================================
 // Default Thresholds (AC9, AC15-AC18)
@@ -149,40 +155,10 @@ export const DEFAULT_SCALES: MatrixScales = {
  * Note: Thresholds use maxValue as exclusive bound (except last)
  * Score ranges: Low [0,5), Medium [5,12), High [12,20), Critical [20,25]
  */
-export const DEFAULT_THRESHOLDS: Threshold[] = [
-  {
-    minValue: 0,
-    maxValue: 5,
-    label: "Low",
-    color: "#22C55E",
-    sortOrder: 0,
-    slaDays: 90
-  },
-  {
-    minValue: 5,
-    maxValue: 12,
-    label: "Medium",
-    color: "#EAB308",
-    sortOrder: 1,
-    slaDays: 30
-  },
-  {
-    minValue: 12,
-    maxValue: 20,
-    label: "High",
-    color: "#F97316",
-    sortOrder: 2,
-    slaDays: 14
-  },
-  {
-    minValue: 20,
-    maxValue: 25,
-    label: "Critical",
-    color: "#EF4444",
-    sortOrder: 3,
-    slaDays: 7
-  },
-];
+export const DEFAULT_THRESHOLDS: Threshold[] = getDefaultThresholdsForGridSize(
+  DEFAULT_MATRIX_TEMPLATE.gridSize,
+  DEFAULT_MATRIX_TEMPLATE.outputScaleMax
+);
 
 // ============================================================================
 // Story 11.8: GridSize-Aware Default Generation (AC19-AC22)

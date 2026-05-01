@@ -631,6 +631,91 @@ export const complianceAssessmentRouter = createTRPCRouter({
     }),
 
   /**
+   * Attach or detach a piece of evidence on a single control score. Treats
+   * evidenceLinks as a set — same evidence can't be attached twice, detach
+   * is a no-op if not currently attached.
+   */
+  attachEvidenceToControl: organizationProcedure
+    .use(requireRole(COMPLIANCE_MANAGE_ROLES))
+    .input(
+      z.object({
+        assessmentId: z.string(),
+        controlId: z.string(),
+        evidenceId: z.string(),
+        action: z.enum(["attach", "detach"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db, session, organizationId } = ctx;
+      if (!organizationId || !session?.user) {
+        throw new TRPCError({ code: "UNAUTHORIZED" });
+      }
+
+      const assessment = await db.complianceAssessment.findFirst({
+        where: { id: input.assessmentId, organizationId },
+      });
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found" });
+      }
+      if (
+        assessment.status === ComplianceAssessmentStatus.COMPLETED ||
+        assessment.status === ComplianceAssessmentStatus.ARCHIVED
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot modify completed or archived assessments",
+        });
+      }
+
+      // Verify evidence belongs to the same org so users can't cross-link.
+      const evidence = await db.evidence.findFirst({
+        where: { id: input.evidenceId, organizationId },
+      });
+      if (!evidence) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Evidence not found" });
+      }
+
+      const existing = await db.controlAssessmentScore.findUnique({
+        where: {
+          assessmentId_controlId: {
+            assessmentId: input.assessmentId,
+            controlId: input.controlId,
+          },
+        },
+      });
+
+      const currentLinks = existing?.evidenceLinks ?? [];
+      const nextLinks =
+        input.action === "attach"
+          ? Array.from(new Set([...currentLinks, input.evidenceId]))
+          : currentLinks.filter((id) => id !== input.evidenceId);
+
+      const score = await db.controlAssessmentScore.upsert({
+        where: {
+          assessmentId_controlId: {
+            assessmentId: input.assessmentId,
+            controlId: input.controlId,
+          },
+        },
+        create: {
+          assessmentId: input.assessmentId,
+          controlId: input.controlId,
+          status: ComplianceStatus.NOT_ASSESSED,
+          evidenceLinks: nextLinks,
+          assessedById: session.user.id,
+          assessedAt: new Date(),
+        },
+        update: {
+          evidenceLinks: nextLinks,
+          assessedById: session.user.id,
+          assessedAt: new Date(),
+        },
+      });
+
+      return score;
+    }),
+
+  /**
    * Bulk update control scores
    */
   bulkUpdateControlScores: organizationProcedure
