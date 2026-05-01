@@ -416,6 +416,11 @@ export const complianceAssessmentRouter = createTRPCRouter({
                   title: true,
                   description: true,
                   parentControlId: true,
+                  // Org-authored testing fields shown read-only in the
+                  // scoring panel so the assessor can see how to verify the
+                  // control while documenting evidence.
+                  testInstructions: true,
+                  acceptanceCriteria: true,
                 },
               },
               assessedBy: {

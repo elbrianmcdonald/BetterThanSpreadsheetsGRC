@@ -13,7 +13,7 @@
  * after creating it.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { FindingSource, Severity } from "@prisma/client";
@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { Threshold } from "@/lib/matrix/types";
 
 const SOURCE_OPTIONS: { value: FindingSource; label: string }[] = [
   { value: "AUDIT", label: "Audit" },
@@ -48,11 +49,60 @@ const SOURCE_OPTIONS: { value: FindingSource; label: string }[] = [
   { value: "MANUAL", label: "Manual Discovery" },
 ];
 
-const SEVERITY_OPTIONS: { value: Severity; label: string }[] = [
-  { value: "HIGH", label: "High" },
-  { value: "MEDIUM", label: "Medium" },
-  { value: "LOW", label: "Low" },
+/**
+ * Severity option as rendered in the dropdown. When the org has a default
+ * risk matrix, we surface the matrix's threshold labels (with their colors)
+ * so findings and risks share the same vocabulary. Otherwise we fall back
+ * to the legacy HIGH/MEDIUM/LOW enum values.
+ */
+type SeverityOption = {
+  /** Stable key for the dropdown — uses the threshold label or enum value */
+  key: string;
+  /** Human-readable label, e.g. "Critical" */
+  label: string;
+  /** Hex color from the matrix threshold (or null for legacy options) */
+  color: string | null;
+  /** Coarse Severity enum that gets persisted alongside severityLabel */
+  severity: Severity;
+  /** Threshold label (matches Risk.inherentScoreLabel format) */
+  severityLabel: string | null;
+};
+
+const FALLBACK_SEVERITY_OPTIONS: SeverityOption[] = [
+  { key: "HIGH", label: "High", color: null, severity: "HIGH", severityLabel: null },
+  { key: "MEDIUM", label: "Medium", color: null, severity: "MEDIUM", severityLabel: null },
+  { key: "LOW", label: "Low", color: null, severity: "LOW", severityLabel: null },
 ];
+
+/**
+ * Map a threshold position (0-indexed, sorted by sortOrder ascending) to
+ * the legacy Severity enum so existing filters/badges keep working. The
+ * top tier always maps to HIGH and the bottom tier to LOW; intermediates
+ * fall to MEDIUM. For a typical 4-tier matrix (Low/Medium/High/Critical)
+ * this gives Low→LOW, Medium→MEDIUM, High→MEDIUM, Critical→HIGH.
+ */
+function severityForThresholdIndex(index: number, total: number): Severity {
+  if (total <= 1) return "MEDIUM";
+  if (index === 0) return "LOW";
+  if (index === total - 1) return "HIGH";
+  return "MEDIUM";
+}
+
+function buildSeverityOptions(thresholds: Threshold[] | null | undefined): SeverityOption[] {
+  if (!thresholds || thresholds.length === 0) return FALLBACK_SEVERITY_OPTIONS;
+  // Sort ascending by sortOrder so position-based mapping is predictable,
+  // then reverse for display so the highest tier appears first.
+  const sortedAsc = [...thresholds].sort((a, b) => a.sortOrder - b.sortOrder);
+  const total = sortedAsc.length;
+  const options = sortedAsc.map((t, i) => ({
+    key: t.label,
+    label: t.label,
+    color: t.color,
+    severity: severityForThresholdIndex(i, total),
+    severityLabel: t.label,
+  }));
+  return options.reverse();
+}
 
 export interface CreateFindingDialogProps {
   open: boolean;
@@ -78,9 +128,26 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
   const [source, setSource] = useState<FindingSource>(
     props.initialSource ?? "AUDIT"
   );
-  const [severity, setSeverity] = useState<Severity>(
-    props.initialSeverity ?? "MEDIUM"
+  // Selected severity option key — index into the dynamic option list. We
+  // store the label/key rather than the enum so we can preserve the matrix
+  // threshold the user picked even when several tiers map to the same enum.
+  const [severityKey, setSeverityKey] = useState<string | null>(null);
+
+  // Pull the org's default risk matrix so the severity dropdown can use the
+  // matrix-defined thresholds (Critical/High/Medium/Low etc.) — keeps the
+  // qualitative vocabulary consistent between findings and risks.
+  const { data: defaultMatrix } = api.riskMatrix.getDefault.useQuery(
+    undefined,
+    { enabled: props.open }
   );
+
+  const severityOptions = useMemo(
+    () => buildSeverityOptions(defaultMatrix?.thresholds ?? null),
+    [defaultMatrix?.thresholds]
+  );
+
+  const selectedSeverityOption =
+    severityOptions.find((o) => o.key === severityKey) ?? severityOptions[Math.floor(severityOptions.length / 2)] ?? FALLBACK_SEVERITY_OPTIONS[1]!;
 
   // When the dialog opens with new prefill props (e.g., user clicked a
   // different control), re-hydrate local state.
@@ -89,10 +156,18 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
       setTitle(props.initialTitle ?? "");
       setDescription(props.initialDescription ?? "");
       setSource(props.initialSource ?? "AUDIT");
-      setSeverity(props.initialSeverity ?? "MEDIUM");
+      // Pick the option whose enum matches initialSeverity, falling back to
+      // the middle of the list so the user gets a sensible default.
+      const initialEnum = props.initialSeverity ?? "MEDIUM";
+      const match = severityOptions.find((o) => o.severity === initialEnum);
+      setSeverityKey(
+        match?.key ??
+          severityOptions[Math.floor(severityOptions.length / 2)]?.key ??
+          null
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.open, props.initialTitle, props.initialDescription]);
+  }, [props.open, props.initialTitle, props.initialDescription, severityOptions]);
 
   const utils = api.useUtils();
   const createMutation = api.finding.create.useMutation({
@@ -139,7 +214,12 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
       title: title.trim(),
       description: description.trim(),
       source,
-      severity,
+      severity: selectedSeverityOption.severity,
+      severityLabel: selectedSeverityOption.severityLabel ?? undefined,
+      matrixVersionId:
+        selectedSeverityOption.severityLabel && defaultMatrix?.currentVersionId
+          ? defaultMatrix.currentVersionId
+          : undefined,
       controlId: props.controlId,
       complianceAssessmentId: props.complianceAssessmentId,
       maturityAssessmentId: props.maturityAssessmentId,
@@ -222,20 +302,33 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
             <div>
               <Label>Severity</Label>
               <Select
-                value={severity}
-                onValueChange={(v) => setSeverity(v as Severity)}
+                value={selectedSeverityOption.key}
+                onValueChange={(v) => setSeverityKey(v)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SEVERITY_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
+                  {severityOptions.map((o) => (
+                    <SelectItem key={o.key} value={o.key}>
+                      <div className="flex items-center gap-2">
+                        {o.color && (
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: o.color }}
+                          />
+                        )}
+                        <span>{o.label}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {defaultMatrix?.thresholds && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tiers from <span className="font-medium">{defaultMatrix.name}</span>
+                </p>
+              )}
             </div>
           </div>
         </div>

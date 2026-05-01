@@ -16,6 +16,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import type { PrismaClient } from "@prisma/client";
 import {
+  Prisma,
   UserRole,
   MaturityFrameworkType,
   AssessmentDepth,
@@ -650,6 +651,19 @@ export const maturityRouter = createTRPCRouter({
           domains: {
             orderBy: [{ level: "asc" }, { sortOrder: "asc" }],
           },
+          // Questions are the actual "controls" for question-based maturity
+          // frameworks (C2M2 practices, SAMM activities). Surface them so
+          // the detail page and assessment can show them grouped by domain.
+          questions: {
+            where: {
+              OR: [
+                { organizationId: null }, // official
+                { organizationId }, // org-customized
+              ],
+              isActive: true,
+            },
+            orderBy: [{ sortOrder: "asc" }, { practiceLevel: "asc" }],
+          },
         },
       });
 
@@ -660,25 +674,232 @@ export const maturityRouter = createTRPCRouter({
         });
       }
 
-      // Build hierarchical structure
-      const domainMap = new Map(framework.domains.map((d) => [d.id, { ...d, children: [] as typeof framework.domains }]));
-      const rootDomains: typeof framework.domains = [];
+      // Build hierarchical structure, preserving sortOrder at every level so
+      // the UI tree reads in the framework's intended order (e.g. NIST CSF
+      // GV → ID → PR → DE → RS → RC, not alphabetical).
+      type DomainWithChildren = (typeof framework.domains)[number] & {
+        children: DomainWithChildren[];
+      };
+      const domainMap = new Map<string, DomainWithChildren>(
+        framework.domains.map((d) => [d.id, { ...d, children: [] }])
+      );
+      const rootDomains: DomainWithChildren[] = [];
 
       for (const domain of framework.domains) {
+        const node = domainMap.get(domain.id)!;
         if (domain.parentId) {
           const parent = domainMap.get(domain.parentId);
-          if (parent) {
-            (parent as { children: typeof framework.domains }).children.push(domainMap.get(domain.id)!);
-          }
+          if (parent) parent.children.push(node);
         } else {
-          rootDomains.push(domainMap.get(domain.id)!);
+          rootDomains.push(node);
         }
       }
+
+      const sortByOrder = (a: DomainWithChildren, b: DomainWithChildren) =>
+        a.sortOrder - b.sortOrder;
+      const sortRecursive = (nodes: DomainWithChildren[]) => {
+        nodes.sort(sortByOrder);
+        for (const n of nodes) sortRecursive(n.children);
+      };
+      sortRecursive(rootDomains);
 
       return {
         ...framework,
         domainHierarchy: rootDomains,
       };
+    }),
+
+  /**
+   * Update testInstructions / acceptanceCriteria on a maturity domain.
+   * ORG_ADMIN only — testing fields are org policy, not per-user state.
+   * Allowed even on system-template domains since these fields are layered
+   * on top of the upstream definition rather than mutating it.
+   */
+  updateDomainTestingFields: organizationProcedure
+    .use(requireRole([UserRole.ORG_ADMIN]))
+    .input(
+      z.object({
+        id: z.string(),
+        testInstructions: z.string().nullable(),
+        acceptanceCriteria: z.string().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db, organizationId } = ctx;
+      const domain = await db.maturityDomain.findFirst({
+        where: {
+          id: input.id,
+          framework: {
+            OR: [
+              { organizationId: null, isSystemTemplate: true },
+              { organizationId },
+            ],
+          },
+        },
+      });
+      if (!domain) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Domain not found" });
+      }
+      return db.maturityDomain.update({
+        where: { id: input.id },
+        data: {
+          testInstructions: input.testInstructions,
+          acceptanceCriteria: input.acceptanceCriteria,
+        },
+      });
+    }),
+
+  /**
+   * Same as updateDomainTestingFields but for a MaturityQuestion (C2M2
+   * practice / SAMM activity).
+   */
+  updateQuestionTestingFields: organizationProcedure
+    .use(requireRole([UserRole.ORG_ADMIN]))
+    .input(
+      z.object({
+        id: z.string(),
+        testInstructions: z.string().nullable(),
+        acceptanceCriteria: z.string().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db, organizationId } = ctx;
+      const question = await db.maturityQuestion.findFirst({
+        where: {
+          id: input.id,
+          framework: {
+            OR: [
+              { organizationId: null, isSystemTemplate: true },
+              { organizationId },
+            ],
+          },
+        },
+      });
+      if (!question) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Question not found" });
+      }
+      return db.maturityQuestion.update({
+        where: { id: input.id },
+        data: {
+          testInstructions: input.testInstructions,
+          acceptanceCriteria: input.acceptanceCriteria,
+        },
+      });
+    }),
+
+  /**
+   * Clone a maturity framework into the current organization. Used when an
+   * admin wants an org-specific copy of a system template (NIST CSF, C2M2)
+   * that can then be customized without affecting the upstream template.
+   *
+   * Clones: framework metadata, domains (preserving hierarchy), questions.
+   * Does NOT clone: assessments, responses, scores — those are runtime data.
+   */
+  cloneFramework: organizationProcedure
+    .use(requireRole([UserRole.ORG_ADMIN]))
+    .input(
+      z.object({
+        sourceFrameworkId: z.string(),
+        name: z.string().min(1).max(200),
+        version: z.string().min(1).max(50).default("1.0"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { db, organizationId } = ctx;
+      if (!organizationId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Organization context required" });
+      }
+
+      const source = await db.maturityFramework.findFirst({
+        where: {
+          id: input.sourceFrameworkId,
+          OR: [
+            { organizationId: null, isSystemTemplate: true },
+            { organizationId },
+          ],
+        },
+        include: {
+          domains: { orderBy: [{ level: "asc" }, { sortOrder: "asc" }] },
+          questions: { orderBy: { sortOrder: "asc" } },
+        },
+      });
+
+      if (!source) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Source framework not found" });
+      }
+
+      return db.$transaction(async (tx) => {
+        const cloned = await tx.maturityFramework.create({
+          data: {
+            organizationId,
+            type: source.type,
+            name: input.name,
+            version: input.version,
+            description: source.description,
+            minLevel: source.minLevel,
+            maxLevel: source.maxLevel,
+            scoringLevels: source.scoringLevels as Prisma.InputJsonValue,
+            isActive: true,
+            isSystemTemplate: false,
+          },
+        });
+
+        // Map source domain ids → cloned domain ids so we can re-wire parent
+        // relationships in a second pass after all domains exist.
+        const domainIdMap = new Map<string, string>();
+        for (const domain of source.domains) {
+          const created = await tx.maturityDomain.create({
+            data: {
+              frameworkId: cloned.id,
+              code: domain.code,
+              name: domain.name,
+              description: domain.description,
+              level: domain.level,
+              sortOrder: domain.sortOrder,
+              // Parent wired up below
+            },
+          });
+          domainIdMap.set(domain.id, created.id);
+        }
+
+        for (const domain of source.domains) {
+          if (!domain.parentId) continue;
+          const newParentId = domainIdMap.get(domain.parentId);
+          const newId = domainIdMap.get(domain.id);
+          if (!newParentId || !newId) continue;
+          await tx.maturityDomain.update({
+            where: { id: newId },
+            data: { parentId: newParentId },
+          });
+        }
+
+        for (const question of source.questions) {
+          await tx.maturityQuestion.create({
+            data: {
+              frameworkId: cloned.id,
+              domainId: question.domainId
+                ? domainIdMap.get(question.domainId) ?? null
+                : null,
+              organizationId, // org-owned, not official
+              questionText: question.questionText,
+              guidanceText: question.guidanceText,
+              answerType: question.answerType,
+              weight: question.weight,
+              isOfficial: false,
+              isActive: question.isActive,
+              sortOrder: question.sortOrder,
+              practiceCode: question.practiceCode,
+              practiceLevel: question.practiceLevel,
+              answerOptions:
+                question.answerOptions === null
+                  ? Prisma.JsonNull
+                  : (question.answerOptions as Prisma.InputJsonValue),
+            },
+          });
+        }
+
+        return cloned;
+      });
     }),
 
   // ===========================================================================
@@ -1679,6 +1900,9 @@ export const maturityRouter = createTRPCRouter({
           code: string;
           text: string;
           guidance: string | null;
+          // Org-authored testing fields shown read-only during scoring.
+          testInstructions: string | null;
+          acceptanceCriteria: string | null;
           isPerformed: boolean;
           implementationLevel: number | null;
           notes: string | null;
@@ -1698,6 +1922,8 @@ export const maturityRouter = createTRPCRouter({
           code: practice.practiceCode ?? "",
           text: practice.questionText,
           guidance: practice.guidanceText,
+          testInstructions: practice.testInstructions,
+          acceptanceCriteria: practice.acceptanceCriteria,
           isPerformed: response?.isPerformed ?? false,
           implementationLevel: response?.scaleValue ?? null,
           notes: response?.notes ?? null,
@@ -1911,6 +2137,10 @@ export const maturityRouter = createTRPCRouter({
             code: string;
             name: string;
             description: string | null;
+            // Org-authored testing fields surfaced read-only during scoring
+            // so the assessor sees how to verify and what counts as evidence.
+            testInstructions: string | null;
+            acceptanceCriteria: string | null;
             implementationLevel: number | null;
             isPerformed: boolean;
             notes: string | null;
@@ -1947,6 +2177,8 @@ export const maturityRouter = createTRPCRouter({
           code: sub.code,
           name: sub.name,
           description: sub.description,
+          testInstructions: sub.testInstructions,
+          acceptanceCriteria: sub.acceptanceCriteria,
           implementationLevel,
           isPerformed,
           notes: score?.notes ?? null,

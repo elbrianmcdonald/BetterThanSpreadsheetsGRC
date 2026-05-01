@@ -71,6 +71,12 @@ const severityConfig: Record<
 interface SeverityBadgeProps {
   /** The severity level to display */
   severity: Severity;
+  /**
+   * Matrix-anchored severity label, e.g. "Critical". When present this
+   * replaces the default "HIGH (Critical)" text but the badge colors still
+   * come from the underlying enum.
+   */
+  severityLabel?: string | null;
   /** Whether to show the label text (default: true) */
   showLabel?: boolean;
   /** Whether to show the icon (default: true) */
@@ -95,6 +101,7 @@ interface SeverityBadgeProps {
  */
 export function SeverityBadge({
   severity,
+  severityLabel,
   showLabel = true,
   showIcon = true,
   showTooltip = true,
@@ -103,6 +110,8 @@ export function SeverityBadge({
 }: SeverityBadgeProps) {
   const config = severityConfig[severity];
   const Icon = config.icon;
+  const trimmedLabel = severityLabel?.trim();
+  const hasMatrixLabel = !!trimmedLabel;
 
   // Size-specific classes
   const sizeClasses = {
@@ -132,11 +141,19 @@ export function SeverityBadge({
       {showIcon && <Icon className={cn(iconSizes[size], "shrink-0")} />}
       {showLabel && (
         <span>
-          {severity} <span className="opacity-70">({config.label})</span>
+          {hasMatrixLabel ? (
+            trimmedLabel
+          ) : (
+            <>
+              {severity} <span className="opacity-70">({config.label})</span>
+            </>
+          )}
         </span>
       )}
       {!showLabel && showIcon && (
-        <span className="sr-only">{severity} severity</span>
+        <span className="sr-only">
+          {hasMatrixLabel ? trimmedLabel : `${severity} severity`}
+        </span>
       )}
     </Badge>
   );
@@ -149,7 +166,9 @@ export function SeverityBadge({
           <TooltipTrigger asChild>{badge}</TooltipTrigger>
           <TooltipContent side="top" className="max-w-xs">
             <p className="font-medium">
-              {severity} Severity ({config.label})
+              {hasMatrixLabel
+                ? `${trimmedLabel} (${severity} severity)`
+                : `${severity} Severity (${config.label})`}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               {config.description}

@@ -59,6 +59,11 @@ model Control {
   title                       String
   description                 String
   guidance                    String?
+  // Org-customizable testing fields — stay editable even when isOscalImported
+  // so assessors can document how to verify a control without forking the
+  // upstream OSCAL definition.
+  testInstructions            String?                      @db.Text
+  acceptanceCriteria          String?                      @db.Text
   parentControlId             String?
   baselines                   String? // Comma-separated baseline tags: "LOW,MODERATE,HIGH" or "PRIVACY"
   isActive                    Boolean                      @default(true)
@@ -2160,7 +2165,12 @@ model Finding {
   title          String
   description    String        @db.Text
   source         FindingSource // AC2: AUDIT, PENTEST, SCANNER, INCIDENT, MANUAL
-  severity       Severity // Reuses existing Severity enum (HIGH, MEDIUM, LOW)
+  severity       Severity // Coarse legacy categorical (HIGH, MEDIUM, LOW); kept for filters/badges
+  // Matrix-anchored severity — populated when the finding is created via a
+  // dialog that pulls options from the org's risk matrix thresholds, so
+  // findings and risks share the same qualitative vocabulary.
+  severityLabel   String? // e.g. "Critical", "High", "Medium", "Low" — the matrix threshold label
+  matrixVersionId String? // RiskMatrixVersion locked at create-time for traceability
   status         FindingStatus @default(NEW) // AC3: NEW → TRIAGED → ACCEPTED
 
   // Array fields for related data
@@ -3455,6 +3465,11 @@ model MaturityDomain {
   description String?         @db.Text
   level       AssessmentDepth // FUNCTION, CATEGORY, SUBCATEGORY
   sortOrder   Int             @default(0)
+  // Org-customizable testing fields — surfaced read-only during maturity
+  // assessments so the assessor sees how to verify a subcategory/category
+  // and what counts as evidence of meeting it.
+  testInstructions   String? @db.Text
+  acceptanceCriteria String? @db.Text
 
   framework MaturityFramework @relation(fields: [frameworkId], references: [id], onDelete: Cascade)
   parent    MaturityDomain?   @relation("DomainHierarchy", fields: [parentId], references: [id])
@@ -3622,6 +3637,11 @@ model MaturityQuestion {
   isOfficial   Boolean @default(false)
   isActive     Boolean @default(true)
   sortOrder    Int     @default(0)
+  // Org-customizable testing fields — for C2M2 practices / SAMM questions
+  // these answer how to verify the practice is in place and what counts
+  // as evidence. Shown read-only during the maturity assessment.
+  testInstructions   String? @db.Text
+  acceptanceCriteria String? @db.Text
 
   // C2M2 Practice-specific fields / SAMM question fields
   practiceCode  String? // e.g., "ASSET-1a", "THREAT-2c", "G-SM-A-1"

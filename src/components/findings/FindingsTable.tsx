@@ -44,6 +44,8 @@ export interface FindingListItem {
   title: string;
   source: FindingSource;
   severity: Severity;
+  /** Matrix-anchored severity label, e.g. "Critical" — preferred when present */
+  severityLabel?: string | null;
   status: FindingStatus;
   createdAt: Date | string;
   creator?: { id: string; name: string | null; email: string | null } | null;
@@ -146,6 +148,7 @@ export function FindingsTable({
         cell: ({ row }) => (
           <SeverityBadge
             severity={row.getValue("severity")}
+            severityLabel={row.original.severityLabel}
             size="sm"
             showTooltip={false}
           />

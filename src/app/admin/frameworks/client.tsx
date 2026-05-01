@@ -102,6 +102,12 @@ export function FrameworkManagementClient() {
   const { data: frameworks, isLoading: isLoadingFrameworks } =
     api.framework.list.useQuery({ includeControlCount: true });
 
+  // Maturity frameworks (system templates + org-specific) — listed alongside
+  // compliance frameworks so admins have one place to manage frameworks.
+  const { data: maturityFrameworks } = api.maturity.listFrameworks.useQuery({
+    includeInactive: true,
+  });
+
   // Story 12.2: Fetch health data (AC1-AC14)
   const { data: healthData, isLoading: isLoadingHealth } =
     api.controlLink.getFrameworksWithHealth.useQuery();
@@ -225,20 +231,70 @@ export function FrameworkManagementClient() {
     }
   };
 
-  // Story 12.2: Merge framework list with health data and filter
-  const frameworksWithHealth = frameworks?.map((fw) => {
-    const health = healthData?.frameworks.find((h) => h.frameworkId === fw.id);
-    return {
-      ...fw,
-      health: health?.health ?? "HEALTHY" as const,
-      atRiskControls: (health?.atRiskControls ?? 0) + (health?.criticalControls ?? 0),
-      criticalControls: health?.criticalControls ?? 0,
-      healthyControls: health?.healthyControls ?? 0,
-    };
-  });
+  // Unified row shape — covers both compliance and maturity frameworks so
+  // they render in a single list. `kind` discriminates rendering choices
+  // (badge color, detail link, available actions).
+  type UnifiedFrameworkRow =
+    | {
+        kind: "compliance";
+        id: string;
+        name: string;
+        code: string;
+        version: string;
+        description: string | null;
+        isActive: boolean;
+        controlCount: number;
+        health: "HEALTHY" | "AT_RISK" | "CRITICAL";
+        atRiskControls: number;
+        criticalControls: number;
+        healthyControls: number;
+      }
+    | {
+        kind: "maturity";
+        id: string;
+        name: string;
+        code: string; // MaturityFramework.type used as a code-equivalent
+        version: string;
+        description: string | null;
+        isActive: boolean;
+        isSystemTemplate: boolean;
+      };
+
+  const complianceRows: UnifiedFrameworkRow[] =
+    frameworks?.map((fw) => {
+      const health = healthData?.frameworks.find((h) => h.frameworkId === fw.id);
+      return {
+        kind: "compliance",
+        id: fw.id,
+        name: fw.name,
+        code: fw.code,
+        version: fw.version,
+        description: fw.description ?? null,
+        isActive: fw.isActive,
+        controlCount: fw.controlCount ?? 0,
+        health: (health?.health ?? "HEALTHY") as "HEALTHY" | "AT_RISK" | "CRITICAL",
+        atRiskControls: (health?.atRiskControls ?? 0) + (health?.criticalControls ?? 0),
+        criticalControls: health?.criticalControls ?? 0,
+        healthyControls: health?.healthyControls ?? 0,
+      };
+    }) ?? [];
+
+  const maturityRows: UnifiedFrameworkRow[] =
+    maturityFrameworks?.map((mf) => ({
+      kind: "maturity",
+      id: mf.id,
+      name: mf.name,
+      code: mf.type,
+      version: mf.version,
+      description: mf.description ?? null,
+      isActive: mf.isActive,
+      isSystemTemplate: mf.isSystemTemplate,
+    })) ?? [];
+
+  const allRows: UnifiedFrameworkRow[] = [...complianceRows, ...maturityRows];
 
   // Apply filters (AC15-AC20)
-  const filteredFrameworks = frameworksWithHealth?.filter((fw) => {
+  const filteredFrameworks = allRows.filter((fw) => {
     // Status filter
     if (statusFilter === "active" && !fw.isActive) return false;
     if (statusFilter === "inactive" && fw.isActive) return false;
@@ -555,9 +611,9 @@ export function FrameworkManagementClient() {
           <CardTitle>Imported Frameworks</CardTitle>
           <CardDescription>
             Manage your organization&apos;s compliance frameworks
-            {filteredFrameworks && frameworks && filteredFrameworks.length !== frameworks.length && (
+            {filteredFrameworks && filteredFrameworks.length !== allRows.length && (
               <span className="ml-2 text-muted-foreground">
-                (showing {filteredFrameworks.length} of {frameworks.length})
+                (showing {filteredFrameworks.length} of {allRows.length})
               </span>
             )}
           </CardDescription>
@@ -583,7 +639,7 @@ export function FrameworkManagementClient() {
                 Clear Filters
               </Button>
             </div>
-          ) : frameworks?.length === 0 ? (
+          ) : allRows.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <FileJson className="mx-auto h-12 w-12 text-gray-400" />
               <p className="mt-2">No frameworks imported yet</p>
@@ -593,12 +649,24 @@ export function FrameworkManagementClient() {
             <div className="space-y-4">
               {filteredFrameworks?.map((framework) => (
                 <div
-                  key={framework.id}
+                  key={`${framework.kind}-${framework.id}`}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-medium">{framework.name}</h3>
+                      {/* Type badge — distinguishes compliance frameworks
+                          (NIST 800-53, ISO 27001) from maturity frameworks
+                          (NIST CSF, C2M2) at a glance. */}
+                      {framework.kind === "compliance" ? (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                          Compliance
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded">
+                          Maturity
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 text-xs font-mono bg-gray-100 rounded">
                         {framework.code}
                       </span>
@@ -612,49 +680,69 @@ export function FrameworkManagementClient() {
                           Inactive
                         </span>
                       )}
+                      {framework.kind === "maturity" && framework.isSystemTemplate && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded">
+                          System Template
+                        </span>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-gray-500">
-                      {framework.controlCount} controls
+                      {framework.kind === "compliance"
+                        ? `${framework.controlCount} controls`
+                        : "Maturity framework"}
                       {framework.description && ` • ${framework.description}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/admin/frameworks/${framework.id}`}>
+                    <Link
+                      href={
+                        framework.kind === "compliance"
+                          ? `/admin/frameworks/${framework.id}`
+                          : `/admin/frameworks/maturity/${framework.id}`
+                      }
+                    >
                       <Button variant="outline" size="sm">
                         <Eye className="mr-1 h-4 w-4" />
                         View
                       </Button>
                     </Link>
-                    {framework.isActive ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deactivateMutation.mutate({ id: framework.id, force: true })}
-                        disabled={deactivateMutation.isPending}
-                      >
-                        <PowerOff className="mr-1 h-4 w-4" />
-                        Deactivate
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => activateMutation.mutate({ id: framework.id })}
-                        disabled={activateMutation.isPending}
-                      >
-                        <Power className="mr-1 h-4 w-4" />
-                        Activate
-                      </Button>
+                    {/* Activate/deactivate/delete are compliance-only —
+                        maturity frameworks are managed via the maturity
+                        dashboard and don't have the same lifecycle. */}
+                    {framework.kind === "compliance" && (
+                      <>
+                        {framework.isActive ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deactivateMutation.mutate({ id: framework.id, force: true })}
+                            disabled={deactivateMutation.isPending}
+                          >
+                            <PowerOff className="mr-1 h-4 w-4" />
+                            Deactivate
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => activateMutation.mutate({ id: framework.id })}
+                            disabled={activateMutation.isPending}
+                          >
+                            <Power className="mr-1 h-4 w-4" />
+                            Activate
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDelete(framework.id, framework.name)}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDelete(framework.id, framework.name)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
               ))}

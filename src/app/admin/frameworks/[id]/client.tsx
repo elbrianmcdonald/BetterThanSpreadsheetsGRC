@@ -148,6 +148,15 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
   // Domain tagging state
   const [taggingControlId, setTaggingControlId] = useState<string | null>(null);
   const [taggingControlDomains, setTaggingControlDomains] = useState<string[]>([]);
+  // Test instructions / acceptance criteria edit state. We open one dialog
+  // for a single control at a time; `editingTestingField` selects which of
+  // the two fields the dialog focuses on.
+  const [editingTestingControlId, setEditingTestingControlId] = useState<string | null>(null);
+  const [editingTestingField, setEditingTestingField] = useState<
+    "testInstructions" | "acceptanceCriteria"
+  >("testInstructions");
+  const [editingTestInstructions, setEditingTestInstructions] = useState("");
+  const [editingAcceptanceCriteria, setEditingAcceptanceCriteria] = useState("");
   const pageSize = 50;
 
   const utils = api.useUtils();
@@ -221,6 +230,22 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
       toast.success("Control deleted");
       utils.framework.getControls.invalidate({ frameworkId });
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Test instructions / acceptance criteria mutation. Reuses the existing
+  // updateControl endpoint, which now exempts these two fields from the
+  // OSCAL-import lock.
+  const updateTestingFieldsMutation = api.framework.updateControl.useMutation({
+    onSuccess: () => {
+      toast.success("Control testing fields updated");
+      setEditingTestingControlId(null);
+      setEditingTestInstructions("");
+      setEditingAcceptanceCriteria("");
+      utils.framework.getControls.invalidate({ frameworkId });
     },
     onError: (error) => {
       toast.error(error.message);
@@ -579,6 +604,8 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                       <TableHead className="w-[80px] text-center">Findings</TableHead>
                       <TableHead className="w-[100px]">Health</TableHead>
                       <TableHead className="w-[120px]">Domains</TableHead>
+                      <TableHead className="w-[140px]">Test Instructions</TableHead>
+                      <TableHead className="w-[140px]">Acceptance Criteria</TableHead>
                       <TableHead className="w-[100px]">Children</TableHead>
                       <TableHead className="w-[80px]">Actions</TableHead>
                     </TableRow>
@@ -663,6 +690,78 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                               </Button>
                             )}
                           </div>
+                        </TableCell>
+                        {/* Test Instructions — badge if set, "Add" if empty.
+                            Click opens the testing-fields edit dialog focused
+                            on the testInstructions textarea. */}
+                        <TableCell>
+                          {control.testInstructions ? (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs cursor-pointer hover:bg-secondary/80 max-w-[130px] truncate"
+                              title={control.testInstructions}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTestingControlId(control.id);
+                                setEditingTestingField("testInstructions");
+                                setEditingTestInstructions(control.testInstructions ?? "");
+                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
+                              }}
+                            >
+                              {control.testInstructions}
+                            </Badge>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs text-muted-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTestingControlId(control.id);
+                                setEditingTestingField("testInstructions");
+                                setEditingTestInstructions("");
+                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </Button>
+                          )}
+                        </TableCell>
+                        {/* Acceptance Criteria — same pattern */}
+                        <TableCell>
+                          {control.acceptanceCriteria ? (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs cursor-pointer hover:bg-secondary/80 max-w-[130px] truncate"
+                              title={control.acceptanceCriteria}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTestingControlId(control.id);
+                                setEditingTestingField("acceptanceCriteria");
+                                setEditingTestInstructions(control.testInstructions ?? "");
+                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
+                              }}
+                            >
+                              {control.acceptanceCriteria}
+                            </Badge>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 text-xs text-muted-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTestingControlId(control.id);
+                                setEditingTestingField("acceptanceCriteria");
+                                setEditingTestInstructions(control.testInstructions ?? "");
+                                setEditingAcceptanceCriteria("");
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </Button>
+                          )}
                         </TableCell>
                         <TableCell>
                           {(control._count?.other_Control || 0) > 0 && (
@@ -902,6 +1001,83 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Test Instructions / Acceptance Criteria edit dialog. Both fields
+          live in one dialog so the user can edit them together; the
+          opening trigger autofocuses the field that was clicked. */}
+      <Dialog
+        open={!!editingTestingControlId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingTestingControlId(null);
+            setEditingTestInstructions("");
+            setEditingAcceptanceCriteria("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>Edit testing fields</DialogTitle>
+            <DialogDescription>
+              How an assessor verifies this control and what counts as
+              evidence of compliance. Visible during compliance assessments.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="testInstructions">Test Instructions</Label>
+              <Textarea
+                id="testInstructions"
+                rows={5}
+                autoFocus={editingTestingField === "testInstructions"}
+                value={editingTestInstructions}
+                onChange={(e) => setEditingTestInstructions(e.target.value)}
+                placeholder="e.g., Review password policy doc; sample 10 user accounts and confirm MFA enrollment."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="acceptanceCriteria">Acceptance Criteria</Label>
+              <Textarea
+                id="acceptanceCriteria"
+                rows={5}
+                autoFocus={editingTestingField === "acceptanceCriteria"}
+                value={editingAcceptanceCriteria}
+                onChange={(e) => setEditingAcceptanceCriteria(e.target.value)}
+                placeholder="e.g., Password complexity ≥ 12 chars, MFA enabled for all users, lockout after 5 failed attempts."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditingTestingControlId(null)}
+              disabled={updateTestingFieldsMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!editingTestingControlId) return;
+                updateTestingFieldsMutation.mutate({
+                  id: editingTestingControlId,
+                  testInstructions: editingTestInstructions.trim() || null,
+                  acceptanceCriteria: editingAcceptanceCriteria.trim() || null,
+                });
+              }}
+              disabled={updateTestingFieldsMutation.isPending}
+            >
+              {updateTestingFieldsMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </AppLayout>
   );

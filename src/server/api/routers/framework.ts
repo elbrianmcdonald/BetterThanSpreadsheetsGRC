@@ -1719,6 +1719,10 @@ export const frameworkRouter = createTRPCRouter({
         description: z.string().min(1).optional(),
         guidance: z.string().optional().nullable(),
         parentControlId: z.string().optional().nullable(),
+        // Test instructions / acceptance criteria are org-authored and stay
+        // editable even on OSCAL-imported controls (see lock check below).
+        testInstructions: z.string().optional().nullable(),
+        acceptanceCriteria: z.string().optional().nullable(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1744,7 +1748,18 @@ export const frameworkRouter = createTRPCRouter({
         });
       }
 
-      if (control.isOscalImported) {
+      // OSCAL-imported controls are locked for source-integrity reasons, but
+      // testInstructions / acceptanceCriteria are org-authored fields that
+      // sit alongside the upstream definition — allow editing those even on
+      // locked controls. Block edits only when the user is trying to change
+      // a locked field.
+      const isOscalLockedEditAttempt =
+        control.isOscalImported &&
+        (input.title !== undefined ||
+          input.description !== undefined ||
+          input.guidance !== undefined ||
+          input.parentControlId !== undefined);
+      if (isOscalLockedEditAttempt) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Cannot edit OSCAL-imported controls. They are locked to preserve source integrity.",
@@ -1786,6 +1801,8 @@ export const frameworkRouter = createTRPCRouter({
         description: control.description,
         guidance: control.guidance,
         parentControlId: control.parentControlId,
+        testInstructions: control.testInstructions,
+        acceptanceCriteria: control.acceptanceCriteria,
       };
 
       const updated = await ctx.db.control.update({
@@ -1795,6 +1812,14 @@ export const frameworkRouter = createTRPCRouter({
           description: input.description ?? control.description,
           guidance: input.guidance === null ? null : (input.guidance ?? control.guidance),
           parentControlId: parentDbId,
+          testInstructions:
+            input.testInstructions === null
+              ? null
+              : (input.testInstructions ?? control.testInstructions),
+          acceptanceCriteria:
+            input.acceptanceCriteria === null
+              ? null
+              : (input.acceptanceCriteria ?? control.acceptanceCriteria),
           updatedAt: new Date(),
         },
       });
@@ -1812,6 +1837,8 @@ export const frameworkRouter = createTRPCRouter({
             description: updated.description,
             guidance: updated.guidance,
             parentControlId: updated.parentControlId,
+            testInstructions: updated.testInstructions,
+            acceptanceCriteria: updated.acceptanceCriteria,
           },
         },
       });

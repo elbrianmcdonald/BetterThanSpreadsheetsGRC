@@ -1302,21 +1302,37 @@ export const riskMatrixRouter = createTRPCRouter({
    */
   getDefault: organizationProcedure
     .query(async ({ ctx }) => {
-      const defaultTemplate = await ctx.db.riskMatrixTemplate.findFirst({
-        where: {
-          organizationId: ctx.organizationId!,
-          isDefault: true,
-          isActive: true,
-        },
-        include: {
-          currentVersion: {
-            select: {
-              id: true,
-              versionNumber: true,
-            },
+      // Prefer the explicitly-marked default; fall back to any active matrix
+      // with a published version so consumers (e.g. CreateFindingDialog) get
+      // matrix-aligned options even when no default flag has been set yet.
+      const include = {
+        currentVersion: {
+          select: {
+            id: true,
+            versionNumber: true,
+            thresholds: true,
           },
         },
-      });
+      } as const;
+      const defaultTemplate =
+        (await ctx.db.riskMatrixTemplate.findFirst({
+          where: {
+            organizationId: ctx.organizationId!,
+            isDefault: true,
+            isActive: true,
+            currentVersionId: { not: null },
+          },
+          include,
+        })) ??
+        (await ctx.db.riskMatrixTemplate.findFirst({
+          where: {
+            organizationId: ctx.organizationId!,
+            isActive: true,
+            currentVersionId: { not: null },
+          },
+          orderBy: { updatedAt: "desc" },
+          include,
+        }));
 
       if (!defaultTemplate) {
         return null;
@@ -1330,6 +1346,11 @@ export const riskMatrixRouter = createTRPCRouter({
         outputScaleMax: Number(defaultTemplate.outputScaleMax),
         currentVersionId: defaultTemplate.currentVersionId,
         currentVersionNumber: defaultTemplate.currentVersion?.versionNumber ?? null,
+        // Threshold labels surface to UIs that need matrix-aligned severity
+        // options (e.g., CreateFindingDialog), so findings and risks share
+        // the same qualitative vocabulary.
+        thresholds:
+          (defaultTemplate.currentVersion?.thresholds as unknown as Threshold[] | null) ?? null,
       };
     }),
 });

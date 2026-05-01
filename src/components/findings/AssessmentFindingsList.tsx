@@ -36,7 +36,7 @@ type Status =
   | "DUPLICATE"
   | "REJECTED";
 
-function severityBadge(s: Severity) {
+function severityBadge(s: Severity, label?: string | null) {
   const cls =
     s === "HIGH"
       ? "bg-red-100 text-red-800 border-red-200"
@@ -45,7 +45,7 @@ function severityBadge(s: Severity) {
         : "bg-blue-100 text-blue-800 border-blue-200";
   return (
     <Badge variant="outline" className={cls}>
-      {s}
+      {label?.trim() || s}
     </Badge>
   );
 }
@@ -152,7 +152,7 @@ export function AssessmentFindingsList({
                       {linkLabel}
                     </TableCell>
                     <TableCell className="text-sm">{f.title}</TableCell>
-                    <TableCell>{severityBadge(f.severity as Severity)}</TableCell>
+                    <TableCell>{severityBadge(f.severity as Severity, f.severityLabel)}</TableCell>
                     <TableCell>{statusBadge(f.status as Status)}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {f.creator?.name ?? f.creator?.email ?? "—"}

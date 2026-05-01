@@ -32,9 +32,15 @@ import { BulkImportPanel } from "@/components/organizational-control/BulkImportP
 import type { OrgControlImportRow } from "@/lib/excel-org-control-import";
 
 type Mode = "library" | "excel";
+type FrameworkKind = "compliance" | "maturity";
 
 export function NewFrameworkClient() {
   const router = useRouter();
+
+  // Compliance vs Maturity selector — picks which backend flow to use.
+  // Compliance keeps the existing library/excel UI; Maturity offers a
+  // "clone a system template" form (option 3a from the design discussion).
+  const [kind, setKind] = useState<FrameworkKind>("compliance");
 
   // Framework meta (shared)
   const [name, setName] = useState("");
@@ -42,6 +48,9 @@ export function NewFrameworkClient() {
   const [version, setVersion] = useState("1.0");
   const [description, setDescription] = useState("");
   const [mode, setMode] = useState<Mode>("library");
+
+  // Maturity clone state
+  const [maturitySourceId, setMaturitySourceId] = useState<string>("");
 
   // Library tab state
   const [search, setSearch] = useState("");
@@ -102,7 +111,25 @@ export function NewFrameworkClient() {
     onError: (e) => toast.error(e.message || "Failed to create framework"),
   });
 
-  const isPending = createFromLibrary.isPending || createFromExcel.isPending;
+  // Maturity-only: list of system templates + existing org-specific clones
+  // available as clone sources.
+  const { data: maturitySources } = api.maturity.listFrameworks.useQuery(
+    { includeInactive: false },
+    { enabled: kind === "maturity" }
+  );
+
+  const cloneMaturity = api.maturity.cloneFramework.useMutation({
+    onSuccess: (fw) => {
+      toast.success(`Maturity framework "${fw.name}" cloned`);
+      router.push(`/admin/frameworks/maturity/${fw.id}`);
+    },
+    onError: (e) => toast.error(e.message || "Failed to clone framework"),
+  });
+
+  const isPending =
+    createFromLibrary.isPending ||
+    createFromExcel.isPending ||
+    cloneMaturity.isPending;
 
   const validateMeta = (): boolean => {
     if (name.trim().length < 3) {
@@ -147,6 +174,22 @@ export function NewFrameworkClient() {
     });
   };
 
+  const handleSubmitMaturityClone = () => {
+    if (name.trim().length < 3) {
+      toast.error("Name must be at least 3 characters");
+      return;
+    }
+    if (!maturitySourceId) {
+      toast.error("Pick a source maturity framework to clone from");
+      return;
+    }
+    cloneMaturity.mutate({
+      sourceFrameworkId: maturitySourceId,
+      name: name.trim(),
+      version: version.trim() || "1.0",
+    });
+  };
+
   const controlCount = mode === "library" ? selectedIds.length : importRows.length;
 
   return (
@@ -175,6 +218,60 @@ export function NewFrameworkClient() {
           </Button>
         </div>
 
+        {/* Compliance vs Maturity radio. Drives which form below renders. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Framework type</CardTitle>
+            <CardDescription>
+              Compliance frameworks (NIST 800-53, ISO 27001, etc.) drive
+              compliance assessments. Maturity frameworks (NIST CSF, C2M2)
+              drive maturity assessments.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setKind("compliance")}
+                className={`flex-1 p-4 rounded-lg border-2 text-left transition-colors ${
+                  kind === "compliance"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                    Compliance
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Build from your control library or import from Excel.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setKind("maturity")}
+                className={`flex-1 p-4 rounded-lg border-2 text-left transition-colors ${
+                  kind === "maturity"
+                    ? "border-purple-500 bg-purple-50"
+                    : "border-gray-200 hover:bg-muted/50"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded">
+                    Maturity
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Clone a system template (NIST CSF, C2M2) into your org.
+                </p>
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {kind === "compliance" ? (
+          <>
         <Card>
           <CardHeader>
             <CardTitle>Framework details</CardTitle>
@@ -366,6 +463,83 @@ export function NewFrameworkClient() {
             )}
           </Button>
         </div>
+        </>
+        ) : (
+          <>
+            {/* Maturity clone — pick a source template, give it a name. */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Maturity framework details</CardTitle>
+                <CardDescription>
+                  Cloning copies the source's domains, scoring levels, and
+                  questions into your organization. The clone is independent
+                  of the source — edits won't affect the original.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="mat-source">
+                    Source <span className="text-destructive">*</span>
+                  </Label>
+                  <select
+                    id="mat-source"
+                    className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={maturitySourceId}
+                    onChange={(e) => setMaturitySourceId(e.target.value)}
+                  >
+                    <option value="">Pick a maturity framework to clone…</option>
+                    {(maturitySources ?? []).map((mf) => (
+                      <option key={mf.id} value={mf.id}>
+                        {mf.name} ({mf.type}) v{mf.version}
+                        {mf.isSystemTemplate ? " · system template" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="mat-name">
+                    New name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="mat-name"
+                    placeholder="e.g., Acme NIST CSF Implementation"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="mat-version">Version</Label>
+                  <Input
+                    id="mat-version"
+                    placeholder="1.0"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/admin/frameworks")}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitMaturityClone} disabled={isPending}>
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Cloning...
+                  </>
+                ) : (
+                  "Clone maturity framework"
+                )}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );

@@ -51,8 +51,10 @@ interface FindingHeaderProps {
   status: FindingStatus;
   /** Source of the finding (Audit, Pentest, etc.) */
   source: FindingSource;
-  /** Severity level */
+  /** Severity level (legacy enum, used as fallback) */
   severity: Severity;
+  /** Matrix-anchored severity label, e.g. "Critical" — preferred when present */
+  severityLabel?: string | null;
   /** When the finding was created */
   createdAt: Date | string;
   /** Creator information */
@@ -92,6 +94,7 @@ export function FindingHeader({
   status,
   source,
   severity,
+  severityLabel,
   createdAt,
   creator,
   acceptedAt,
@@ -100,6 +103,10 @@ export function FindingHeader({
 }: FindingHeaderProps) {
   const sourceConfig = SOURCE_CONFIG[source];
   const severityConfig = SEVERITY_CONFIG[severity];
+  // Prefer the matrix-anchored label when present so the badge matches the
+  // org's qualitative vocabulary (e.g. "Critical"); reuse the legacy color
+  // mapping based on the underlying enum.
+  const severityDisplayLabel = severityLabel?.trim() || severityConfig.label;
   const createdDate = new Date(createdAt);
   const formattedDate = format(createdDate, "MMM d, yyyy");
 
@@ -117,9 +124,9 @@ export function FindingHeader({
           {sourceConfig.label}
         </Badge>
 
-        {/* AC10: Severity badge with color coding */}
+        {/* AC10: Severity badge — uses matrix label when available, color from enum */}
         <Badge variant="outline" className={`border ${severityConfig.className}`}>
-          {severityConfig.label}
+          {severityDisplayLabel}
         </Badge>
       </div>
 

@@ -45,6 +45,8 @@ interface FindingData {
   status: FindingStatus;
   source: FindingSource;
   severity: Severity;
+  severityLabel: string | null;
+  matrixVersionId: string | null;
   organizationId: string;
   affectedAssets: string[];
   evidenceIds: string[];
@@ -156,6 +158,7 @@ export function FindingDetailContent({
         status={finding.status}
         source={finding.source}
         severity={finding.severity}
+        severityLabel={finding.severityLabel}
         createdAt={finding.createdAt}
         creator={finding.creator}
         acceptedAt={finding.acceptedAt}

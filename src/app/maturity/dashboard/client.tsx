@@ -420,7 +420,9 @@ export function MaturityDashboardClient() {
       assessmentDepth: isCsf
         ? AssessmentDepth.FUNCTION
         : formData.assessmentDepth,
-      assessmentMode: formData.assessmentMode,
+      // Assessment mode is no longer user-selectable — all maturity
+      // assessments use the same workflow. Persist SELF for compatibility.
+      assessmentMode: AssessmentMode.SELF,
       scoringScale: isCsf
         ? formData.scoringScale ?? MaturityScoringScale.NIST_TIERS
         : undefined,
@@ -893,27 +895,10 @@ export function MaturityDashboardClient() {
                 </div>
               )}
 
-              <div className="grid gap-2">
-                <Label>Assessment Mode</Label>
-                <Select
-                  value={formData.assessmentMode}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      assessmentMode: value as AssessmentMode,
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SELF">Self-Assessment</SelectItem>
-                    <SelectItem value="GUIDED">Guided Wizard</SelectItem>
-                    <SelectItem value="HYBRID">Hybrid</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Assessment Mode dropdown removed — all maturity assessments
+                  follow the same workflow now. assessmentMode is hardcoded
+                  to SELF in the submit payload below to satisfy the DB
+                  constraint without exposing a meaningless choice. */}
             </div>
 
             {/* NIST CSF 2.0: pick a scoring scale (Tiers or CMMI) */}

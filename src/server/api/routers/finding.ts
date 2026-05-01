@@ -70,6 +70,11 @@ const createFindingInput = z.object({
     .min(20, "Description must be at least 20 characters"),
   source: z.nativeEnum(FindingSource),
   severity: z.nativeEnum(Severity),
+  // Matrix-anchored severity — when the create UI pulled options from the
+  // org's risk matrix, it passes the threshold label and the version it came
+  // from so findings and risks share the same qualitative vocabulary.
+  severityLabel: z.string().max(50).optional(),
+  matrixVersionId: z.string().optional(),
   affectedAssets: z.array(z.string()).optional().default([]),
   affectedBusinessUnitIds: z.array(z.string()).optional().default([]),
   assigneeId: z.string().optional(),
@@ -202,6 +207,7 @@ export const findingRouter = createTRPCRouter({
           identifier: true,
           title: true,
           severity: true,
+          severityLabel: true,
           status: true,
           source: true,
           createdAt: true,
@@ -263,6 +269,7 @@ export const findingRouter = createTRPCRouter({
           description: true,
           source: true,
           severity: true,
+          severityLabel: true,
           status: true,
           // Array fields
           affectedAssets: true,
@@ -452,6 +459,8 @@ export const findingRouter = createTRPCRouter({
             title: finding.title,
             source: finding.source,
             severity: finding.severity,
+            severityLabel: finding.severityLabel,
+            matrixVersionId: finding.matrixVersionId,
             assigneeId: finding.assigneeId,
             affectedBusinessUnits: finding.affectedBusinessUnits.map((bu) => bu.id),
           },

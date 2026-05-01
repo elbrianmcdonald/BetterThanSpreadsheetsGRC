@@ -1000,10 +1000,60 @@ function PracticeChecklist({
                                 </Collapsible>
                               )}
 
-                              {/* Scoring Controls */}
-                              <div className="grid gap-3 sm:grid-cols-2">
+                              {/* Test Instructions — read-only, defaults open */}
+                              {practice.testInstructions && (
+                                <Collapsible defaultOpen className="mb-3">
+                                  <CollapsibleTrigger asChild>
+                                    <button className="w-full p-2 bg-indigo-50 border border-indigo-100 rounded-lg hover:bg-indigo-100 transition-colors">
+                                      <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-indigo-600 shrink-0" />
+                                        <span className="text-xs font-medium text-indigo-800">
+                                          Test Instructions
+                                        </span>
+                                        <ChevronRight className="h-4 w-4 text-indigo-600 ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+                                      </div>
+                                    </button>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <div className="mt-1 p-3 bg-indigo-50 border border-t-0 border-indigo-100 rounded-b-lg">
+                                      <p className="text-xs text-indigo-800 whitespace-pre-wrap">
+                                        {practice.testInstructions}
+                                      </p>
+                                    </div>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              )}
+
+                              {/* Acceptance Criteria — read-only, defaults open */}
+                              {practice.acceptanceCriteria && (
+                                <Collapsible defaultOpen className="mb-3">
+                                  <CollapsibleTrigger asChild>
+                                    <button className="w-full p-2 bg-emerald-50 border border-emerald-100 rounded-lg hover:bg-emerald-100 transition-colors">
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                                        <span className="text-xs font-medium text-emerald-800">
+                                          Acceptance Criteria
+                                        </span>
+                                        <ChevronRight className="h-4 w-4 text-emerald-600 ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+                                      </div>
+                                    </button>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <div className="mt-1 p-3 bg-emerald-50 border border-t-0 border-emerald-100 rounded-b-lg">
+                                      <p className="text-xs text-emerald-800 whitespace-pre-wrap">
+                                        {practice.acceptanceCriteria}
+                                      </p>
+                                    </div>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              )}
+
+                              {/* Scoring Controls — implementation level
+                                  on its own row, notes textarea full-width
+                                  below for evidence narratives. */}
+                              <div className="space-y-3">
                                 {/* Implementation Level */}
-                                <div className="space-y-1.5">
+                                <div className="space-y-1.5 sm:max-w-xs">
                                   <Label className="text-xs font-medium">
                                     Implementation Level
                                   </Label>
@@ -1051,7 +1101,7 @@ function PracticeChecklist({
                                   </Select>
                                 </div>
 
-                                {/* Notes */}
+                                {/* Notes — full width, taller, resizable */}
                                 <div className="space-y-1.5">
                                   <Label className="text-xs font-medium">
                                     Notes / Evidence
@@ -1073,8 +1123,8 @@ function PracticeChecklist({
                                       }
                                     }}
                                     disabled={savePracticeMutation.isPending}
-                                    className="h-9 min-h-[36px] text-xs resize-none"
-                                    rows={1}
+                                    className="min-h-[160px] text-sm resize-y"
+                                    rows={6}
                                   />
                                 </div>
                               </div>
@@ -1427,10 +1477,61 @@ function SubcategoryChecklist({
                                 </Collapsible>
                               )}
 
-                              {/* Scoring Controls */}
-                              <div className="grid gap-3 sm:grid-cols-2">
+                              {/* Test Instructions — read-only, defaults open */}
+                              {subcategory.testInstructions && (
+                                <Collapsible defaultOpen className="mb-3">
+                                  <CollapsibleTrigger asChild>
+                                    <button className="w-full p-2 bg-indigo-50 border border-indigo-100 rounded-lg hover:bg-indigo-100 transition-colors">
+                                      <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-indigo-600 shrink-0" />
+                                        <span className="text-xs font-medium text-indigo-800">
+                                          Test Instructions
+                                        </span>
+                                        <ChevronRight className="h-4 w-4 text-indigo-600 ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+                                      </div>
+                                    </button>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <div className="mt-1 p-3 bg-indigo-50 border border-t-0 border-indigo-100 rounded-b-lg">
+                                      <p className="text-xs text-indigo-800 whitespace-pre-wrap">
+                                        {subcategory.testInstructions}
+                                      </p>
+                                    </div>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              )}
+
+                              {/* Acceptance Criteria — read-only, defaults open */}
+                              {subcategory.acceptanceCriteria && (
+                                <Collapsible defaultOpen className="mb-3">
+                                  <CollapsibleTrigger asChild>
+                                    <button className="w-full p-2 bg-emerald-50 border border-emerald-100 rounded-lg hover:bg-emerald-100 transition-colors">
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                                        <span className="text-xs font-medium text-emerald-800">
+                                          Acceptance Criteria
+                                        </span>
+                                        <ChevronRight className="h-4 w-4 text-emerald-600 ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+                                      </div>
+                                    </button>
+                                  </CollapsibleTrigger>
+                                  <CollapsibleContent>
+                                    <div className="mt-1 p-3 bg-emerald-50 border border-t-0 border-emerald-100 rounded-b-lg">
+                                      <p className="text-xs text-emerald-800 whitespace-pre-wrap">
+                                        {subcategory.acceptanceCriteria}
+                                      </p>
+                                    </div>
+                                  </CollapsibleContent>
+                                </Collapsible>
+                              )}
+
+                              {/* Scoring Controls — implementation level on
+                                  its own row so the notes textarea below
+                                  can span full width and grow tall enough
+                                  for evidence narratives. */}
+                              <div className="space-y-3">
                                 {/* Implementation Level */}
-                                <div className="space-y-1.5">
+                                <div className="space-y-1.5 sm:max-w-xs">
                                   <Label className="text-xs font-medium">
                                     Implementation Level
                                   </Label>
@@ -1479,7 +1580,7 @@ function SubcategoryChecklist({
                                   </Select>
                                 </div>
 
-                                {/* Notes */}
+                                {/* Notes — full width, taller, resizable */}
                                 <div className="space-y-1.5">
                                   <Label className="text-xs font-medium">
                                     Notes / Evidence
@@ -1502,8 +1603,8 @@ function SubcategoryChecklist({
                                       }
                                     }}
                                     disabled={saveSubcategoryMutation.isPending}
-                                    className="h-9 min-h-[36px] text-xs resize-none"
-                                    rows={1}
+                                    className="min-h-[160px] text-sm resize-y"
+                                    rows={6}
                                   />
                                 </div>
                               </div>
