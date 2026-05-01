@@ -205,88 +205,96 @@ export function BIADashboardClient() {
         </CardContent>
       </Card>
 
-      {/* Summary Stats */}
+      {/* Summary Stats — each card links to the relevant filtered list. */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Business Processes
-                </p>
-                {loadingStats ? (
-                  <Skeleton className="h-8 w-16" />
-                ) : (
-                  <p className="text-2xl font-semibold">
-                    {summaryStats?.totalProcesses ?? 0}
+        <Link href="/bia/processes" className="block">
+          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Business Processes
                   </p>
-                )}
+                  {loadingStats ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <p className="text-2xl font-semibold">
+                      {summaryStats?.totalProcesses ?? 0}
+                    </p>
+                  )}
+                </div>
+                <Activity className="h-8 w-8 text-muted-foreground" />
               </div>
-              <Activity className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Business Functions
-                </p>
-                {loadingStats ? (
-                  <Skeleton className="h-8 w-16" />
-                ) : (
-                  <p className="text-2xl font-semibold">
-                    {summaryStats?.totalFunctions ?? 0}
+        <Link href="/bia/functions" className="block">
+          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Business Functions
                   </p>
-                )}
+                  {loadingStats ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <p className="text-2xl font-semibold">
+                      {summaryStats?.totalFunctions ?? 0}
+                    </p>
+                  )}
+                </div>
+                <Layers className="h-8 w-8 text-muted-foreground" />
               </div>
-              <Layers className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Assessment Coverage
-                </p>
-                {loadingStats ? (
-                  <Skeleton className="h-8 w-16" />
-                ) : (
-                  <p className="text-2xl font-semibold">
-                    {summaryStats?.assessmentRate ?? 0}%
+        <Link href="/bia/processes?assessment=assessed" className="block">
+          <Card className="hover:bg-muted/50 hover:border-green-300 transition-colors cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Assessment Coverage
                   </p>
-                )}
+                  {loadingStats ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <p className="text-2xl font-semibold">
+                      {summaryStats?.assessmentRate ?? 0}%
+                    </p>
+                  )}
+                </div>
+                <BarChart3 className="h-8 w-8 text-green-600" />
               </div>
-              <BarChart3 className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Pending Assessments
-                </p>
-                {loadingStats ? (
-                  <Skeleton className="h-8 w-16" />
-                ) : (
-                  <p className="text-2xl font-semibold">
-                    {(summaryStats?.pendingAssessments ?? 0) +
-                      (summaryStats?.neverAssessed ?? 0)}
+        <Link href="/bia/processes?assessment=pending" className="block">
+          <Card className="hover:bg-muted/50 hover:border-amber-300 transition-colors cursor-pointer">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Pending Assessments
                   </p>
-                )}
+                  {loadingStats ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <p className="text-2xl font-semibold">
+                      {(summaryStats?.pendingAssessments ?? 0) +
+                        (summaryStats?.neverAssessed ?? 0)}
+                    </p>
+                  )}
+                </div>
+                <AlertTriangle className="h-8 w-8 text-amber-500" />
               </div>
-              <AlertTriangle className="h-8 w-8 text-amber-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

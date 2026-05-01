@@ -44,86 +44,92 @@ export function HomeMetricsCards() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Open Risks */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">
-            Open Risks
-          </CardTitle>
-          <ShieldAlert className="h-5 w-5 text-red-500" />
-        </CardHeader>
-        <CardContent>
-          {isComplianceLoading ? (
-            <Skeleton className="h-10 w-20" />
-          ) : (
-            <div className="text-3xl font-bold">{openRisksCount}</div>
-          )}
-          <p className="text-sm text-muted-foreground mt-1">
-            Requiring attention
-          </p>
-          <Link
-            href="/risks?status=OPEN,ASSIGNED"
-            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 mt-2"
-          >
-            View Risks
-            <ArrowRight className="h-4 w-4 ml-1" />
-          </Link>
-        </CardContent>
-      </Card>
+      {/* Open Risks — whole card clickable, drops into /risks pre-filtered. */}
+      <Link
+        href="/risks?status=OPEN,ASSIGNED"
+        className="block transition-colors"
+      >
+        <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Open Risks
+            </CardTitle>
+            <ShieldAlert className="h-5 w-5 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            {isComplianceLoading ? (
+              <Skeleton className="h-10 w-20" />
+            ) : (
+              <div className="text-3xl font-bold">{openRisksCount}</div>
+            )}
+            <p className="text-sm text-muted-foreground mt-1">
+              Requiring attention
+            </p>
+            <span className="inline-flex items-center text-sm text-blue-600 mt-2">
+              View Risks
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </span>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Open Findings */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">
-            Open Findings
-          </CardTitle>
-          <AlertTriangle className="h-5 w-5 text-orange-500" />
-        </CardHeader>
-        <CardContent>
-          {isFindingLoading ? (
-            <Skeleton className="h-10 w-20" />
-          ) : (
-            <div className="text-3xl font-bold">{openFindingsCount}</div>
-          )}
-          <p className="text-sm text-muted-foreground mt-1">
-            Awaiting triage
-          </p>
-          <Link
-            href="/findings?status=NEW,NEEDS_INFO,TRIAGED"
-            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 mt-2"
-          >
-            View Findings
-            <ArrowRight className="h-4 w-4 ml-1" />
-          </Link>
-        </CardContent>
-      </Card>
+      <Link
+        href="/findings?status=NEW,NEEDS_INFO,TRIAGED"
+        className="block transition-colors"
+      >
+        <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Open Findings
+            </CardTitle>
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            {isFindingLoading ? (
+              <Skeleton className="h-10 w-20" />
+            ) : (
+              <div className="text-3xl font-bold">{openFindingsCount}</div>
+            )}
+            <p className="text-sm text-muted-foreground mt-1">
+              Awaiting triage
+            </p>
+            <span className="inline-flex items-center text-sm text-blue-600 mt-2">
+              View Findings
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </span>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Compliance Coverage */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-gray-600">
-            Avg. Compliance
-          </CardTitle>
-          <CheckCircle className="h-5 w-5 text-green-500" />
-        </CardHeader>
-        <CardContent>
-          {isComplianceLoading ? (
-            <Skeleton className="h-10 w-20" />
-          ) : (
-            <div className="text-3xl font-bold">{avgCoverage}%</div>
-          )}
-          <p className="text-sm text-muted-foreground mt-1">
-            Framework coverage
-          </p>
-          <Link
-            href="/compliance/dashboard"
-            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 mt-2"
-          >
-            View Dashboard
-            <ArrowRight className="h-4 w-4 ml-1" />
-          </Link>
-        </CardContent>
-      </Card>
+      <Link
+        href="/compliance/dashboard"
+        className="block transition-colors"
+      >
+        <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Avg. Compliance
+            </CardTitle>
+            <CheckCircle className="h-5 w-5 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            {isComplianceLoading ? (
+              <Skeleton className="h-10 w-20" />
+            ) : (
+              <div className="text-3xl font-bold">{avgCoverage}%</div>
+            )}
+            <p className="text-sm text-muted-foreground mt-1">
+              Framework coverage
+            </p>
+            <span className="inline-flex items-center text-sm text-blue-600 mt-2">
+              View Dashboard
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </span>
+          </CardContent>
+        </Card>
+      </Link>
     </div>
   );
 }

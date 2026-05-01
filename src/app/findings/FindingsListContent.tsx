@@ -16,6 +16,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -341,8 +342,32 @@ export function FindingsListContent() {
     setIsMounted(true);
   }, []);
 
-  // Filter state (AC13-AC18)
-  const [filters, setFilters] = useState<FindingFilterState>(DEFAULT_FILTERS);
+  // Filter state (AC13-AC18). Seeded from URL search params so deep links
+  // from dashboard metric cards (e.g. /findings?status=NEW,TRIAGED) land
+  // pre-filtered.
+  const searchParams = useSearchParams();
+  const initialFilters = useMemo<FindingFilterState>(() => {
+    const parseEnum = <T extends string>(
+      key: string,
+      allowed: readonly T[]
+    ): T[] => {
+      const raw = searchParams.get(key);
+      if (!raw) return [];
+      return raw
+        .split(",")
+        .map((v) => v.trim())
+        .filter((v): v is T => (allowed as readonly string[]).includes(v));
+    };
+    return {
+      status: parseEnum<FindingStatus>("status", Object.values(FindingStatus)),
+      source: parseEnum<FindingSource>("source", Object.values(FindingSource)),
+      severity: parseEnum<Severity>("severity", Object.values(Severity)),
+      search: searchParams.get("search") ?? "",
+    };
+    // Run once on mount; subsequent filter changes are user-driven.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [filters, setFilters] = useState<FindingFilterState>(initialFilters);
 
   // Sorting state (AC19-AC21)
   const [sorting, setSorting] = useState<SortingState>([

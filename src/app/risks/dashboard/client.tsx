@@ -129,71 +129,79 @@ export function RiskDashboardClient() {
           </div>
         </div>
 
-        {/* Summary Cards */}
+        {/* Summary Cards — each links to /risks pre-filtered. */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Risks</p>
-                  {isRiskMetricsLoading ? (
-                    <Skeleton className="h-8 w-16 mt-1" />
-                  ) : (
-                    <p className="text-2xl font-semibold">{totalRisks}</p>
-                  )}
+          <Link href="/risks" className="block">
+            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Total Risks</p>
+                    {isRiskMetricsLoading ? (
+                      <Skeleton className="h-8 w-16 mt-1" />
+                    ) : (
+                      <p className="text-2xl font-semibold">{totalRisks}</p>
+                    )}
+                  </div>
+                  <ShieldAlert className="h-8 w-8 text-gray-400" />
                 </div>
-                <ShieldAlert className="h-8 w-8 text-gray-400" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">High Severity</p>
-                  {isRiskMetricsLoading ? (
-                    <Skeleton className="h-8 w-16 mt-1" />
-                  ) : (
-                    <p className="text-2xl font-semibold text-red-600">{highSeverityCount}</p>
-                  )}
+          <Link href="/risks?severity=HIGH" className="block">
+            <Card className="hover:bg-muted/50 hover:border-red-300 transition-colors cursor-pointer">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">High Severity</p>
+                    {isRiskMetricsLoading ? (
+                      <Skeleton className="h-8 w-16 mt-1" />
+                    ) : (
+                      <p className="text-2xl font-semibold text-red-600">{highSeverityCount}</p>
+                    )}
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-red-400" />
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-400" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Open</p>
-                  {isRiskMetricsLoading ? (
-                    <Skeleton className="h-8 w-16 mt-1" />
-                  ) : (
-                    <p className="text-2xl font-semibold text-blue-600">{openCount}</p>
-                  )}
+          <Link href="/risks?status=OPEN,ASSIGNED" className="block">
+            <Card className="hover:bg-muted/50 hover:border-blue-300 transition-colors cursor-pointer">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Open</p>
+                    {isRiskMetricsLoading ? (
+                      <Skeleton className="h-8 w-16 mt-1" />
+                    ) : (
+                      <p className="text-2xl font-semibold text-blue-600">{openCount}</p>
+                    )}
+                  </div>
+                  <Clock className="h-8 w-8 text-blue-400" />
                 </div>
-                <Clock className="h-8 w-8 text-blue-400" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Remediated</p>
-                  {isRiskMetricsLoading ? (
-                    <Skeleton className="h-8 w-16 mt-1" />
-                  ) : (
-                    <p className="text-2xl font-semibold text-green-600">{remediatedCount}</p>
-                  )}
+          <Link href="/risks?status=REMEDIATED,CLOSED" className="block">
+            <Card className="hover:bg-muted/50 hover:border-green-300 transition-colors cursor-pointer">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500">Remediated</p>
+                    {isRiskMetricsLoading ? (
+                      <Skeleton className="h-8 w-16 mt-1" />
+                    ) : (
+                      <p className="text-2xl font-semibold text-green-600">{remediatedCount}</p>
+                    )}
+                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-400" />
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Risk Overview - Open Risks & SLA Status */}

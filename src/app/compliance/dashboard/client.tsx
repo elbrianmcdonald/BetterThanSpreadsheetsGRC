@@ -350,10 +350,11 @@ export function ComplianceDashboardClient() {
               /* Selected Framework Overview */
               <div className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                  {/* Compliance Score */}
-                  <div
+                  {/* Compliance Score — clickable to framework detail */}
+                  <Link
+                    href={`/admin/frameworks/${selectedFramework.frameworkId}`}
                     className={cn(
-                      "flex flex-col items-center justify-center p-6 rounded-lg ring-1",
+                      "flex flex-col items-center justify-center p-6 rounded-lg ring-1 hover:ring-2 transition-all cursor-pointer",
                       scoreColors.bg,
                       scoreColors.ring
                     )}
@@ -364,10 +365,13 @@ export function ComplianceDashboardClient() {
                     <span className="text-sm text-muted-foreground mt-1">
                       Compliance Score
                     </span>
-                  </div>
+                  </Link>
 
                   {/* Controls Satisfied */}
-                  <div className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50">
+                  <Link
+                    href={`/admin/frameworks/${selectedFramework.frameworkId}?status=satisfied`}
+                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-green-100 dark:bg-green-950/50">
                         <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -381,10 +385,13 @@ export function ComplianceDashboardClient() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Total Controls */}
-                  <div className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50">
+                  <Link
+                    href={`/admin/frameworks/${selectedFramework.frameworkId}`}
+                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-muted">
                         <Shield className="h-5 w-5 text-muted-foreground" />
@@ -398,10 +405,13 @@ export function ComplianceDashboardClient() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Gaps */}
-                  <div className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50">
+                  <Link
+                    href={`/admin/frameworks/${selectedFramework.frameworkId}/gaps`}
+                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-red-300 transition-all cursor-pointer"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/50">
                         <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
@@ -415,7 +425,7 @@ export function ComplianceDashboardClient() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 </div>
 
                 {/* Progress Bar */}
@@ -464,11 +474,14 @@ export function ComplianceDashboardClient() {
                 </div>
               </div>
             ) : (
-              /* No framework selected - show summary */
+              /* No framework selected — overall summary, each card links
+                 to /admin/frameworks (with a coverage filter where the
+                 number is bucketed by coverage threshold). */
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                <div
+                <Link
+                  href="/admin/frameworks"
                   className={cn(
-                    "flex flex-col items-center justify-center p-4 rounded-lg ring-1",
+                    "flex flex-col items-center justify-center p-4 rounded-lg ring-1 hover:ring-2 transition-all cursor-pointer",
                     scoreColors.bg,
                     scoreColors.ring
                   )}
@@ -479,19 +492,28 @@ export function ComplianceDashboardClient() {
                   <span className="text-sm text-muted-foreground mt-1">
                     Overall Score
                   </span>
-                </div>
-                <div className="flex flex-col justify-center">
+                </Link>
+                <Link
+                  href="/admin/frameworks"
+                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-muted/50 hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+                >
                   <div className="text-2xl font-semibold">{summary.totalFrameworks}</div>
                   <div className="text-sm text-muted-foreground">Total Frameworks</div>
-                </div>
-                <div className="flex flex-col justify-center">
+                </Link>
+                <Link
+                  href="/admin/frameworks?coverage=ready"
+                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-muted/50 hover:ring-1 hover:ring-green-300 transition-all cursor-pointer"
+                >
                   <div className="text-2xl font-semibold text-green-600">{summary.readyForAudit}</div>
                   <div className="text-sm text-muted-foreground">Ready for Audit (≥90%)</div>
-                </div>
-                <div className="flex flex-col justify-center">
+                </Link>
+                <Link
+                  href="/admin/frameworks?coverage=needs-attention"
+                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-muted/50 hover:ring-1 hover:ring-red-300 transition-all cursor-pointer"
+                >
                   <div className="text-2xl font-semibold text-red-600">{summary.needsAttention}</div>
                   <div className="text-sm text-muted-foreground">Needs Attention (&lt;70%)</div>
-                </div>
+                </Link>
               </div>
             )}
           </CardContent>

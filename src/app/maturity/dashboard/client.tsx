@@ -557,65 +557,83 @@ export function MaturityDashboardClient() {
           <CardContent>
             {selectedComparison ? (
               <div className="space-y-6">
-                {/* 4 Stat Boxes */}
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                  {/* Maturity Level */}
-                  <div
-                    className={cn(
-                      "flex flex-col items-center justify-center p-6 rounded-lg ring-1",
-                      levelColors.bg,
-                      levelColors.ring
-                    )}
-                  >
-                    <span className={cn("text-4xl font-bold", levelColors.text)}>
-                      {selectedComparison.currentLevel !== null
-                        ? getLevelLabel(selectedFrameworkType!, selectedComparison.currentLevel)
-                        : "\u2014"}
-                    </span>
-                    <span className="text-sm text-muted-foreground mt-1">
-                      Maturity Level
-                    </span>
-                  </div>
+                {/* 4 Stat Boxes \u2014 link to the latest assessment so the
+                    user lands on the page that actually shows the items
+                    each card is counting. The "Below Target" card adds
+                    a hash anchor so the page can scroll to its target
+                    section once that's wired up. */}
+                {(() => {
+                  const matAssessmentId = selectedComparison.latestAssessment?.id;
+                  const assessmentLink = matAssessmentId
+                    ? `/maturity/${matAssessmentId}`
+                    : "/maturity";
+                  return (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                      <Link
+                        href={assessmentLink}
+                        className={cn(
+                          "flex flex-col items-center justify-center p-6 rounded-lg ring-1 hover:ring-2 transition-all cursor-pointer",
+                          levelColors.bg,
+                          levelColors.ring
+                        )}
+                      >
+                        <span className={cn("text-4xl font-bold", levelColors.text)}>
+                          {selectedComparison.currentLevel !== null
+                            ? getLevelLabel(selectedFrameworkType!, selectedComparison.currentLevel)
+                            : "\u2014"}
+                        </span>
+                        <span className="text-sm text-muted-foreground mt-1">
+                          Maturity Level
+                        </span>
+                      </Link>
 
-                  {/* Domains Scored */}
-                  <div className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-green-100 dark:bg-green-950/50">
-                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-semibold">{domainsScored}</div>
-                        <div className="text-sm text-muted-foreground">Domains Scored</div>
-                      </div>
-                    </div>
-                  </div>
+                      <Link
+                        href={`${assessmentLink}?filter=scored`}
+                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-green-300 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-green-100 dark:bg-green-950/50">
+                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div>
+                            <div className="text-2xl font-semibold">{domainsScored}</div>
+                            <div className="text-sm text-muted-foreground">Domains Scored</div>
+                          </div>
+                        </div>
+                      </Link>
 
-                  {/* Total Domains */}
-                  <div className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Shield className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-semibold">{totalDomains}</div>
-                        <div className="text-sm text-muted-foreground">Total Domains</div>
-                      </div>
-                    </div>
-                  </div>
+                      <Link
+                        href={assessmentLink}
+                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-muted">
+                            <Shield className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <div className="text-2xl font-semibold">{totalDomains}</div>
+                            <div className="text-sm text-muted-foreground">Total Domains</div>
+                          </div>
+                        </div>
+                      </Link>
 
-                  {/* Below Target */}
-                  <div className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/50">
-                        <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-                      </div>
-                      <div>
-                        <div className="text-2xl font-semibold">{domainsBelowTarget}</div>
-                        <div className="text-sm text-muted-foreground">Below Target</div>
-                      </div>
+                      <Link
+                        href={`${assessmentLink}?filter=below-target`}
+                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-red-300 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/50">
+                            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                          </div>
+                          <div>
+                            <div className="text-2xl font-semibold">{domainsBelowTarget}</div>
+                            <div className="text-sm text-muted-foreground">Below Target</div>
+                          </div>
+                        </div>
+                      </Link>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Progress Bar */}
                 <div className="space-y-2">

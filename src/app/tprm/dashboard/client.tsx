@@ -213,137 +213,147 @@ export function TPRMDashboardClient() {
         </div>
       </div>
 
-      {/* Summary Statistics - Row 1 */}
+      {/* Summary Statistics - Row 1 — each card is a clickable link to the
+          vendors list pre-filtered by the dimension the card counts. */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? "..." : stats?.totalCount || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.activeCount || 0} active
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/vendors" className="block">
+          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{isLoading ? "..." : stats?.totalCount || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.activeCount || 0} active
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400">Critical Tier</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-700 dark:text-red-400">
-              {isLoading ? "..." : stats?.tierDistribution?.CRITICAL || 0}
-            </div>
-            <p className="text-xs text-red-600/80 dark:text-red-400/80">
-              6-month review cycle
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/vendors?riskTier=CRITICAL" className="block">
+          <Card className="border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20 hover:border-red-400 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400">Critical Tier</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-700 dark:text-red-400">
+                {isLoading ? "..." : stats?.tierDistribution?.CRITICAL || 0}
+              </div>
+              <p className="text-xs text-red-600/80 dark:text-red-400/80">
+                6-month review cycle
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400">Overdue Reviews</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-              {isLoading ? "..." : stats?.overdueReviewCount || 0}
-            </div>
-            <Link
-              href="/vendors?reviewStatus=overdue"
-              className="text-xs text-orange-600/80 hover:text-orange-700 hover:underline dark:text-orange-400/80"
-            >
-              View overdue vendors
-            </Link>
-          </CardContent>
-        </Card>
+        <Link href="/vendors?reviewStatus=overdue" className="block">
+          <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20 hover:border-orange-400 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400">Overdue Reviews</CardTitle>
+              <Clock className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
+                {isLoading ? "..." : stats?.overdueReviewCount || 0}
+              </div>
+              <span className="text-xs text-orange-600/80 dark:text-orange-400/80">
+                View overdue vendors →
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400">Due in 30 Days</CardTitle>
-            <CalendarClock className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-              {isLoading ? "..." : stats?.upcomingReviewCount || 0}
-            </div>
-            <Link
-              href="/vendors?reviewStatus=due_in_30_days"
-              className="text-xs text-blue-600/80 hover:text-blue-700 hover:underline dark:text-blue-400/80"
-            >
-              View upcoming reviews
-            </Link>
-          </CardContent>
-        </Card>
+        <Link href="/vendors?reviewStatus=due_in_30_days" className="block">
+          <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20 hover:border-blue-400 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400">Due in 30 Days</CardTitle>
+              <CalendarClock className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+                {isLoading ? "..." : stats?.upcomingReviewCount || 0}
+              </div>
+              <span className="text-xs text-blue-600/80 dark:text-blue-400/80">
+                View upcoming reviews →
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
-      {/* Summary Statistics - Row 2: Assessment Coverage & Findings (FR51, FR55) */}
+      {/* Summary Statistics - Row 2: Assessment Coverage & Findings (FR51, FR55).
+          Coverage % cards link to /vendors filtered by tier; Open Findings
+          links to the findings list. */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Assessment Coverage</CardTitle>
-            <ClipboardCheck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-              {isLoading ? "..." : `${stats?.assessmentCoverage?.total || 0}%`}
-            </div>
-            <p className="text-xs text-green-600/80 dark:text-green-400/80">
-              {stats?.assessmentCoverage?.vendorsAssessed || 0} of {stats?.totalCount || 0} vendors assessed
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/vendors" className="block">
+          <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20 hover:border-green-400 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Assessment Coverage</CardTitle>
+              <ClipboardCheck className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-700 dark:text-green-400">
+                {isLoading ? "..." : `${stats?.assessmentCoverage?.total || 0}%`}
+              </div>
+              <p className="text-xs text-green-600/80 dark:text-green-400/80">
+                {stats?.assessmentCoverage?.vendorsAssessed || 0} of {stats?.totalCount || 0} vendors assessed
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Critical Coverage</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? "..." : `${stats?.assessmentCoverage?.byTier?.CRITICAL?.percentage || 0}%`}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.assessmentCoverage?.byTier?.CRITICAL?.assessed || 0} of {stats?.assessmentCoverage?.byTier?.CRITICAL?.total || 0} assessed
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/vendors?riskTier=CRITICAL" className="block">
+          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Critical Coverage</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {isLoading ? "..." : `${stats?.assessmentCoverage?.byTier?.CRITICAL?.percentage || 0}%`}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.assessmentCoverage?.byTier?.CRITICAL?.assessed || 0} of {stats?.assessmentCoverage?.byTier?.CRITICAL?.total || 0} assessed
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">High Coverage</CardTitle>
-            <ShieldAlert className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoading ? "..." : `${stats?.assessmentCoverage?.byTier?.HIGH?.percentage || 0}%`}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.assessmentCoverage?.byTier?.HIGH?.assessed || 0} of {stats?.assessmentCoverage?.byTier?.HIGH?.total || 0} assessed
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/vendors?riskTier=HIGH" className="block">
+          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">High Coverage</CardTitle>
+              <ShieldAlert className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {isLoading ? "..." : `${stats?.assessmentCoverage?.byTier?.HIGH?.percentage || 0}%`}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.assessmentCoverage?.byTier?.HIGH?.assessed || 0} of {stats?.assessmentCoverage?.byTier?.HIGH?.total || 0} assessed
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card className="border-yellow-200 bg-yellow-50/50 dark:border-yellow-900 dark:bg-yellow-950/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-400">Open Findings</CardTitle>
-            <FileWarning className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">
-              {isLoading ? "..." : stats?.openFindingsCount || 0}
-            </div>
-            <Link
-              href="/findings?vendorId=any"
-              className="text-xs text-yellow-600/80 hover:text-yellow-700 hover:underline dark:text-yellow-400/80"
-            >
-              View vendor findings
-            </Link>
-          </CardContent>
-        </Card>
+        <Link href="/findings?source=PENTEST,SCANNER" className="block">
+          <Card className="border-yellow-200 bg-yellow-50/50 dark:border-yellow-900 dark:bg-yellow-950/20 hover:border-yellow-400 transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-400">Open Findings</CardTitle>
+              <FileWarning className="h-4 w-4 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">
+                {isLoading ? "..." : stats?.openFindingsCount || 0}
+              </div>
+              <span className="text-xs text-yellow-600/80 dark:text-yellow-400/80">
+                View vendor findings →
+              </span>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Charts Section */}

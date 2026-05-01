@@ -10,6 +10,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,9 +93,19 @@ export function FrameworkManagementClient() {
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [importStep, setImportStep] = useState<"upload" | "preview" | "importing">("upload");
 
-  // Story 12.2: Filter states (AC15-AC20)
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  // Story 12.2: Filter states (AC15-AC20). Seeded from URL search params
+  // so dashboard metric cards can deep-link into a pre-filtered list
+  // (e.g. ?status=active, ?coverage=ready, ?coverage=needs-attention).
+  const searchParams = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(() => {
+    const raw = searchParams.get("status");
+    return raw === "active" || raw === "inactive" ? raw : "all";
+  });
+  const [coverageFilter, setCoverageFilter] = useState<"all" | "ready" | "needs-attention">(() => {
+    const raw = searchParams.get("coverage");
+    return raw === "ready" || raw === "needs-attention" ? raw : "all";
+  });
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");
 
   const utils = api.useUtils();
 
@@ -293,11 +304,29 @@ export function FrameworkManagementClient() {
 
   const allRows: UnifiedFrameworkRow[] = [...complianceRows, ...maturityRows];
 
-  // Apply filters (AC15-AC20)
+  // Apply filters (AC15-AC20). Coverage filter buckets compliance rows by
+  // healthData coverage % — ≥90 = "ready", <70 = "needs-attention". Maturity
+  // rows have no coverage % so the coverage filter doesn't apply to them
+  // (they're hidden when a coverage filter is active).
+  const coverageByFwId = new Map(
+    healthData?.frameworks.map((h) => [h.frameworkId, h]) ?? []
+  );
   const filteredFrameworks = allRows.filter((fw) => {
     // Status filter
     if (statusFilter === "active" && !fw.isActive) return false;
     if (statusFilter === "inactive" && fw.isActive) return false;
+
+    // Coverage filter — only meaningful for compliance frameworks.
+    if (coverageFilter !== "all") {
+      if (fw.kind !== "compliance") return false;
+      const health = coverageByFwId.get(fw.id);
+      const pct =
+        health && health.totalControls > 0
+          ? (health.healthyControls / health.totalControls) * 100
+          : 0;
+      if (coverageFilter === "ready" && pct < 90) return false;
+      if (coverageFilter === "needs-attention" && pct >= 70) return false;
+    }
 
     // Search filter
     if (searchQuery) {
@@ -310,7 +339,8 @@ export function FrameworkManagementClient() {
     return true;
   });
 
-  const hasActiveFilters = statusFilter !== "all" || searchQuery !== "";
+  const hasActiveFilters =
+    statusFilter !== "all" || coverageFilter !== "all" || searchQuery !== "";
 
   return (
     <div className="mt-8 space-y-6">
@@ -377,6 +407,7 @@ export function FrameworkManagementClient() {
             size="sm"
             onClick={() => {
               setStatusFilter("all");
+              setCoverageFilter("all");
               setSearchQuery("");
             }}
           >

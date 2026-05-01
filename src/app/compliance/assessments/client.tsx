@@ -11,6 +11,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { AppLayout } from "@/components/layout";
 import { api } from "@/trpc/react";
@@ -65,13 +66,25 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function CoverageDashboardClient() {
+  const searchParams = useSearchParams();
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Initial tab + filter state seeded from URL params so the dashboard
+  // metric cards can deep-link with ?tab=assessments&status=...
+  const initialTab = searchParams.get("tab") === "assessments" ? "assessments" : "frameworks";
+  const initialStatusFilter = (() => {
+    const raw = searchParams.get("status");
+    if (!raw) return "__all__";
+    // The current single-select Status filter expects one value. If the URL
+    // carries a comma list, keep the existing UI as-is and pick the first.
+    return raw.split(",")[0] ?? "__all__";
+  })();
 
   // Filter state
   const [filterFramework, setFilterFramework] = useState<string>("__all__");
   const [filterBU, setFilterBU] = useState<string>("__all__");
   const [filterAssessor, setFilterAssessor] = useState<string>("__all__");
-  const [filterStatus, setFilterStatus] = useState<string>("__all__");
+  const [filterStatus, setFilterStatus] = useState<string>(initialStatusFilter);
 
   const utils = api.useUtils();
 
@@ -239,91 +252,101 @@ export function CoverageDashboardClient() {
           </Button>
         </div>
 
-        {/* Summary Statistics */}
+        {/* Summary Statistics \u2014 each card is a clickable Link to the
+            relevant filtered list. */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
-              <p className="text-sm font-medium">Active Frameworks</p>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="p-6 pt-0">
-              <div className="text-2xl font-bold">{summary?.activeFrameworks ?? 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {summary?.totalControls ?? 0} total controls
-              </p>
-            </div>
-          </Card>
+          <Link href="/admin/frameworks?status=active" className="block">
+            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+              <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+                <p className="text-sm font-medium">Active Frameworks</p>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="p-6 pt-0">
+                <div className="text-2xl font-bold">{summary?.activeFrameworks ?? 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  {summary?.totalControls ?? 0} total controls
+                </p>
+              </div>
+            </Card>
+          </Link>
 
-          <Card>
-            <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
-              <p className="text-sm font-medium">Active Assessments</p>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="p-6 pt-0">
-              <div className="text-2xl font-bold">{activeAssessments.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {draftAssessments.length} draft, {completedAssessments.length} completed
-              </p>
-            </div>
-          </Card>
+          <Link href="/compliance/assessments?tab=assessments&status=IN_PROGRESS,IN_REVIEW" className="block">
+            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+              <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+                <p className="text-sm font-medium">Active Assessments</p>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="p-6 pt-0">
+                <div className="text-2xl font-bold">{activeAssessments.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {draftAssessments.length} draft, {completedAssessments.length} completed
+                </p>
+              </div>
+            </Card>
+          </Link>
 
-          <Card>
-            <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
-              <p className="text-sm font-medium">Avg. Compliance</p>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="p-6 pt-0">
-              {(() => {
-                const scoredAssessments = assessments.filter(
-                  (a) => a.complianceScore !== null && a.status !== "DRAFT"
-                );
-                const avgScore =
-                  scoredAssessments.length > 0
-                    ? scoredAssessments.reduce(
-                        (sum, a) => sum + Number(a.complianceScore ?? 0),
-                        0
-                      ) / scoredAssessments.length
-                    : null;
-                return (
-                  <>
-                    <div className="text-2xl font-bold">
-                      {avgScore !== null ? `${avgScore.toFixed(0)}%` : "\u2014"}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Across {scoredAssessments.length} scored assessments
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-          </Card>
+          <Link href="/compliance/dashboard" className="block">
+            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+              <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+                <p className="text-sm font-medium">Avg. Compliance</p>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="p-6 pt-0">
+                {(() => {
+                  const scoredAssessments = assessments.filter(
+                    (a) => a.complianceScore !== null && a.status !== "DRAFT"
+                  );
+                  const avgScore =
+                    scoredAssessments.length > 0
+                      ? scoredAssessments.reduce(
+                          (sum, a) => sum + Number(a.complianceScore ?? 0),
+                          0
+                        ) / scoredAssessments.length
+                      : null;
+                  return (
+                    <>
+                      <div className="text-2xl font-bold">
+                        {avgScore !== null ? `${avgScore.toFixed(0)}%` : "\u2014"}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Across {scoredAssessments.length} scored assessments
+                      </p>
+                    </>
+                  );
+                })()}
+              </div>
+            </Card>
+          </Link>
 
-          <Card>
-            <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
-              <p className="text-sm font-medium">Open Gaps</p>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="p-6 pt-0">
-              {(() => {
-                const totalGaps = activeAssessments.reduce(
-                  (sum, a) => sum + a.nonCompliantCount + a.partialCount,
-                  0
-                );
-                return (
-                  <>
-                    <div className="text-2xl font-bold">{totalGaps}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Non-compliant or partial controls
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-          </Card>
+          <Link href="/compliance/assessments?tab=assessments&gaps=open" className="block">
+            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
+              <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+                <p className="text-sm font-medium">Open Gaps</p>
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="p-6 pt-0">
+                {(() => {
+                  const totalGaps = activeAssessments.reduce(
+                    (sum, a) => sum + a.nonCompliantCount + a.partialCount,
+                    0
+                  );
+                  return (
+                    <>
+                      <div className="text-2xl font-bold">{totalGaps}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Non-compliant or partial controls
+                      </p>
+                    </>
+                  );
+                })()}
+              </div>
+            </Card>
+          </Link>
         </div>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="frameworks" className="space-y-6">
+        {/* Main Content Tabs — initial tab seeded from `?tab=` so card
+            deep-links land on the right tab. */}
+        <Tabs defaultValue={initialTab} className="space-y-6">
           <TabsList>
             <TabsTrigger value="frameworks" className="gap-2">
               <Shield className="h-4 w-4" />
