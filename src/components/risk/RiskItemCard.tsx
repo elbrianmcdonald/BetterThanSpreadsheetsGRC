@@ -120,6 +120,9 @@ export function RiskItemCard({
   // Fetch control domain taxonomy for risk category
   const { data: controlDomains } = api.controlDomain.listAll.useQuery();
 
+  // Enterprise risks for the alignment picker
+  const { data: enterpriseRisks } = api.enterpriseRisk.list.useQuery();
+
   // Calculate inherent score for display
   const inherentScore = useMemo(() => {
     if (!inherentLikelihood || !inherentImpact) return null;
@@ -220,7 +223,7 @@ export function RiskItemCard({
             <Separator />
 
             {/* Title + Category */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <FormField
                 control={control}
                 name={`risks.${index}.title`}
@@ -288,6 +291,39 @@ export function RiskItemCard({
                       {...field}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Enterprise Risk alignment */}
+            <FormField
+              control={control}
+              name={`risks.${index}.enterpriseRiskId`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enterprise Risk</FormLabel>
+                  <Select
+                    value={field.value ?? "__none__"}
+                    onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Not aligned to an enterprise risk" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">Not aligned</SelectItem>
+                      {enterpriseRisks?.map((er) => (
+                        <SelectItem key={er.id} value={er.id}>
+                          {er.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Optional roll-up parent. Used for executive-level reporting.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -636,105 +672,202 @@ export function RiskItemCard({
                 <h4 className="font-medium">Treatment</h4>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={control}
-                  name={`risks.${index}.treatment`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Treatment Decision</FormLabel>
-                      <Select
-                        value={field.value ?? ""}
-                        onValueChange={(v) => field.onChange(v || null)}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select treatment" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="ACCEPT">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-blue-500" />
-                              Accept
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="REMEDIATE">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-green-500" />
-                              Remediate
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={control}
-                  name={`risks.${index}.treatmentDueDate`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Treatment Due Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP")
-                              ) : (
-                                <span>Select due date</span>
-                              )}
-                              <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <CalendarComponent
-                            mode="single"
-                            selected={field.value ?? undefined}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Treatment Plan */}
+              {/* Treatment toggle */}
               <FormField
                 control={control}
-                name={`risks.${index}.treatmentPlan`}
+                name={`risks.${index}.treatment`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Treatment Plan</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe the treatment plan, including specific actions to be taken, responsible parties, and expected outcomes..."
-                        className="min-h-[100px]"
-                        value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value || null)}
-                      />
-                    </FormControl>
+                    <FormLabel>Treatment Decision</FormLabel>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={field.value === "REMEDIATE" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => field.onChange("REMEDIATE")}
+                      >
+                        Remediate
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={field.value === "ACCEPT" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => field.onChange("ACCEPT")}
+                      >
+                        Accept
+                      </Button>
+                      {field.value && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => field.onChange(null)}
+                        >
+                          Clear
+                        </Button>
+                      )}
+                    </div>
                     <FormDescription>
-                      Detail the steps required to address this risk
+                      Switching between Remediate and Accept preserves data on
+                      both forms — only the active form&apos;s fields render.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Remediate fields */}
+              {treatment === "REMEDIATE" && (
+                <div className="space-y-4 border-l-2 border-green-500/30 pl-4">
+                  <FormField
+                    control={control}
+                    name={`risks.${index}.treatmentDueDate`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Treatment Due Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Select due date</span>
+                                )}
+                                <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ?? undefined}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name={`risks.${index}.treatmentPlan`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Treatment Plan</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Describe the treatment plan, including specific actions to be taken, responsible parties, and expected outcomes..."
+                            className="min-h-[100px]"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value || null)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Detail the steps required to address this risk.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* Accept fields */}
+              {treatment === "ACCEPT" && (
+                <div className="space-y-4 border-l-2 border-blue-500/30 pl-4">
+                  <FormField
+                    control={control}
+                    name={`risks.${index}.acceptanceJustification`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Justification *</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Why is this risk being formally accepted? Reference business context, cost/benefit, or compensating posture..."
+                            className="min-h-[100px]"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value || null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name={`risks.${index}.acceptanceReviewDate`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Review / Expiration Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full pl-3 text-left font-normal",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP")
+                                ) : (
+                                  <span>Select review date</span>
+                                )}
+                                <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={field.value ?? undefined}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                          When does this acceptance need to be re-reviewed?
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name={`risks.${index}.acceptanceCompensatingControls`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Compensating Controls (optional)</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Any controls that mitigate residual exposure even though the risk is accepted..."
+                            className="min-h-[80px]"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value || null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
             </div>
 
             <Separator />

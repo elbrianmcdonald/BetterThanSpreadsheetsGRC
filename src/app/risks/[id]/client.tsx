@@ -54,7 +54,6 @@ import { TreatmentSLACard } from "@/components/risk/TreatmentSLACard";
 // Dialogs
 import { EditRiskDialog } from "@/components/risk/EditRiskDialog";
 import { AttachEvidenceDialog } from "@/components/risk/AttachEvidenceDialog";
-import { EditImpactStatementDialog } from "@/components/risk/EditImpactStatementDialog";
 import { StatusTransitionDialog } from "@/components/risk/StatusTransitionDialog";
 import { AssignRiskDialog } from "@/components/risk/AssignRiskDialog";
 
@@ -100,7 +99,6 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
   // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [attachEvidenceOpen, setAttachEvidenceOpen] = useState(false);
-  const [editImpactStatementOpen, setEditImpactStatementOpen] = useState(false);
   const [statusTransitionOpen, setStatusTransitionOpen] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
 
@@ -154,17 +152,6 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
     { riskId },
     { enabled: !!risk }
   );
-
-  // Regenerate impact statement mutation
-  const regenerateMutation = api.risk.regenerateBusinessImpact.useMutation({
-    onSuccess: () => {
-      toast.success("Business impact statement regenerated");
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
 
   // Delete risk mutation
   const deleteMutation = api.risk.delete.useMutation({
@@ -299,12 +286,10 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
               showHeader={false}
             />
             <BusinessImpactStatement
+              riskId={riskId}
               statement={risk.businessImpactStatement}
-              isManuallyEdited={risk.impactStatementManuallyEdited}
-              generatedAt={risk.impactStatementGeneratedAt}
               canEdit={canEditImpactStatement}
-              onEditClick={() => setEditImpactStatementOpen(true)}
-              onRegenerateClick={() => regenerateMutation.mutate({ riskId })}
+              onSaved={() => refetch()}
             />
             {/* Story 16.4: Residual Severity Section (AC8-AC17) */}
             <ResidualSeveritySection
@@ -484,15 +469,6 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
         onSuccess={() => refetch()}
       />
 
-      <EditImpactStatementDialog
-        open={editImpactStatementOpen}
-        onOpenChange={setEditImpactStatementOpen}
-        riskId={riskId}
-        currentStatement={risk.businessImpactStatement}
-        isManuallyEdited={risk.impactStatementManuallyEdited}
-        onSuccess={() => refetch()}
-      />
-
       <StatusTransitionDialog
         open={statusTransitionOpen}
         onOpenChange={setStatusTransitionOpen}
@@ -514,3 +490,4 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
     </AppLayout>
   );
 }
+

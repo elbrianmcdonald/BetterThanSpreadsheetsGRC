@@ -46,6 +46,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
+import { CreatableVendorPicker } from "@/components/vendor";
 
 /**
  * Form validation schema
@@ -79,13 +80,6 @@ export function VendorAssessmentForm({
   isSubmitting = false,
   vendorId,
 }: VendorAssessmentFormProps) {
-  // Fetch vendors for dropdown
-  const { data: vendorsData } = api.vendor.list.useQuery({
-    page: 1,
-    limit: 100,
-    status: ["ACTIVE", "UNDER_REVIEW"],
-  });
-
   // Fetch users who can be assessors
   const { data: usersData } = api.user.listUsers.useQuery({});
 
@@ -143,26 +137,16 @@ export function VendorAssessmentForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Vendor</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={mode === "edit" || !!vendorId}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a vendor" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {vendorsData?.items.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.name} ({vendor.identifier})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CreatableVendorPicker
+                    value={field.value || null}
+                    onChange={(value) => field.onChange(value ?? "")}
+                    placeholder="Select or create a vendor..."
+                    disabled={mode === "edit" || !!vendorId}
+                  />
+                </FormControl>
                 <FormDescription>
-                  The vendor being assessed
+                  The vendor being assessed. Type a name not in the list to create a new vendor inline.
                 </FormDescription>
                 <FormMessage />
               </FormItem>

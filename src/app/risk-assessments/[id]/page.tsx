@@ -1,28 +1,18 @@
 /**
  * Assessment Workspace Page
  *
- * Story 2.1: Assessment Workspace Page
- *
- * Displays the assessment workspace where analysts can:
- * - View assessment details (subject, status, due date, assignee)
- * - View and edit risks using the full risk assessment form
- * - Submit for review (if IN_PROGRESS and has risks)
- * - Approve/reject (if manager and SUBMITTED)
- *
- * AC1: Page accessible at `/risk-assessments/[id]`
- * AC2: Page protected - requires authenticated user
- * AC3: 404 if assessment not found or wrong organization
- * AC4: Breadcrumb: Risk Assessments > {subject}
+ * Tabbed view of a RiskAssessmentProject. The container itself only
+ * carries metadata; risk substance lives on each identified risk inside
+ * the Identified Risks tab.
  */
 
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
-// Force dynamic rendering for session-dependent UI
 export const dynamic = "force-dynamic";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ProjectRiskAssessmentForm } from "@/components/risk-assessment-project/ProjectRiskAssessmentForm";
+import { AssessmentWorkspaceClient } from "./AssessmentWorkspaceClient";
 
 interface AssessmentWorkspacePageProps {
   params: Promise<{ id: string }>;
@@ -51,7 +41,7 @@ export default async function AssessmentWorkspacePage({
           </div>
         }
       >
-        <ProjectRiskAssessmentForm projectId={id} />
+        <AssessmentWorkspaceClient projectId={id} />
       </Suspense>
     </AppLayout>
   );

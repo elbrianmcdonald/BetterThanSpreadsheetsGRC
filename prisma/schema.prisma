@@ -390,6 +390,7 @@ model Organization {
   ComplianceAssessment           ComplianceAssessment[]
   // Risk Assessment Project Module: Container-based risk discovery workflow
   RiskAssessmentProject          RiskAssessmentProject[]
+  RiskAssessmentProjectComment   RiskAssessmentProjectComment[]
   // Base Framework Mapping: Framework-to-framework control mappings
   FrameworkControlMapping        FrameworkControlMapping[]
 
@@ -1056,6 +1057,15 @@ model Risk {
   discoveryStatus    RiskDiscoveryStatus? // PENDING until assessment approved, then PUBLISHED
 
   // ============================================================================
+  // Risk acceptance — populated when treatment = ACCEPT
+  // ============================================================================
+  acceptanceJustification        String?   @db.Text
+  acceptedById                   String?
+  acceptedAt                     DateTime?
+  acceptanceReviewDate           DateTime?
+  acceptanceCompensatingControls String?   @db.Text
+
+  // ============================================================================
   // Epic 5: Vendor Risk Integration (FR48-FR49)
   // Links risks to vendors and vendor assessments
   // ============================================================================
@@ -1114,6 +1124,12 @@ model Risk {
 
   // Risk Assessment Project relationship (container-based discovery)
   DiscoveryProject RiskAssessmentProject? @relation("ProjectDiscoveredRisks", fields: [discoveryProjectId], references: [id], onDelete: SetNull)
+
+  // Risk register entry created when this risk is published from a project assessment
+  RiskRegisterEntry RiskRegisterEntry? @relation("RiskRegisterRisk")
+
+  // User who accepted the risk (when treatment = ACCEPT)
+  AcceptedBy User? @relation("RiskAcceptedBy", fields: [acceptedById], references: [id], onDelete: SetNull)
 
   // Story 15.8: Treatment records
   Treatments RiskTreatment[]
@@ -1226,6 +1242,25 @@ model RiskComment {
   // AC1: Indexes for efficient querying
   @@index([riskId, createdAt]) // Comments sorted by time for a risk
   @@index([organizationId]) // Multi-tenant query optimization
+}
+
+// Project-level comments on a RiskAssessmentProject
+model RiskAssessmentProjectComment {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  authorId       String?
+  content        String    @db.Text
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  Organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      RiskAssessmentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Author       User?                 @relation("ProjectCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([projectId, createdAt])
+  @@index([organizationId])
 }
 
 // Story 4.5: Remediation Option model (AC1-AC7)
@@ -1385,6 +1420,8 @@ model User {
   EvidenceRequestsSent                    EvidenceRequest[]           @relation("EvidenceRequestRequester")
   // Story 4.1: Risks created by this user
   RisksCreated                            Risk[]                      @relation("RiskCreator")
+  RisksAccepted                           Risk[]                      @relation("RiskAcceptedBy")
+  ProjectComments                         RiskAssessmentProjectComment[] @relation("ProjectCommentAuthor")
   // Story 4.5: Remediation options created/approved by this user
   RemediationOptionsCreated               RemediationOption[]         @relation("RemediationOptionCreator")
   RemediationOptionsApproved              RemediationOption[]         @relation("RemediationOptionApprover")
@@ -2377,7 +2414,10 @@ model RiskRegisterEntry {
   treatmentPlan  String?            @db.Text // AC6
   slaDueDate     DateTime? // AC7
   ownerId        String // AC5: Required, inherited from assessment
-  assessmentId   String             @unique // AC4: 1:1 with RiskAssessment
+  // Either an assessment-backed entry (finding flow) or a risk-backed entry
+  // (project-based discovery flow). Exactly one is expected to be set.
+  assessmentId   String?            @unique // 1:1 with RiskAssessment when set
+  riskId         String?            @unique // 1:1 with Risk when set
 
   // Audit fields (AC9)
   createdAt DateTime  @default(now())
@@ -2387,7 +2427,8 @@ model RiskRegisterEntry {
 
   // Relations
   organization  Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  assessment    RiskAssessment              @relation(fields: [assessmentId], references: [id])
+  assessment    RiskAssessment?             @relation(fields: [assessmentId], references: [id])
+  risk          Risk?                       @relation("RiskRegisterRisk", fields: [riskId], references: [id])
   owner         User                        @relation("RiskRegisterOwner", fields: [ownerId], references: [id])
   closer        User?                       @relation("RiskRegisterCloser", fields: [closedBy], references: [id])
   // Story 16.6: Status history relation (AC13-AC14)
@@ -3851,6 +3892,9 @@ model RiskAssessmentProject {
 
   // Discovered risks within this assessment project
   discoveredRisks Risk[] @relation("ProjectDiscoveredRisks")
+
+  // Project-level comments
+  comments RiskAssessmentProjectComment[]
 
   // Indexes for efficient querying
   @@index([organizationId])

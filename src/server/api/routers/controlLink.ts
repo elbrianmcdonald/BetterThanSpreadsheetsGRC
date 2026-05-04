@@ -264,37 +264,83 @@ export const controlLinkRouter = createTRPCRouter({
         });
       }
 
-      // Verify all controls exist and are active
-      const controls = await ctx.db.control.findMany({
+      // Verify framework controls exist and are active. Any IDs that don't
+      // match are treated as organizational-control IDs and routed to the
+      // RiskOrganizationalControl table instead — picker UIs that mix the
+      // two control sources won't blow up with a hard validation error.
+      const frameworkControls = await ctx.db.control.findMany({
         where: {
           id: { in: controlIds },
           organizationId: ctx.organizationId!,
           isActive: true,
         },
-        include: { Framework: true },
+        select: { id: true },
       });
+      const frameworkControlIds = new Set(frameworkControls.map((c) => c.id));
+      const nonFrameworkIds = controlIds.filter((id) => !frameworkControlIds.has(id));
 
-      if (controls.length !== controlIds.length) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Some controls not found or are inactive",
+      // Best-effort: link any non-framework IDs that match an organizational
+      // control to the risk. We don't error if nothing matches; we just skip.
+      let orgLinkCount = 0;
+      if (nonFrameworkIds.length > 0) {
+        const orgControls = await ctx.db.organizationalControl.findMany({
+          where: {
+            id: { in: nonFrameworkIds },
+            organizationId: ctx.organizationId!,
+          },
+          select: { id: true },
         });
+        if (orgControls.length > 0) {
+          const orgRole =
+            linkType === "MITIGATING" ? "IN_PLACE" : "NEEDED";
+          const existing = await ctx.db.riskOrganizationalControl.findMany({
+            where: {
+              riskId,
+              organizationalControlId: { in: orgControls.map((c) => c.id) },
+            },
+            select: { organizationalControlId: true },
+          });
+          const existingSet = new Set(
+            existing.map((e) => e.organizationalControlId)
+          );
+          const toCreate = orgControls
+            .map((c) => c.id)
+            .filter((id) => !existingSet.has(id));
+          if (toCreate.length > 0) {
+            await ctx.db.riskOrganizationalControl.createMany({
+              data: toCreate.map((organizationalControlId) => ({
+                organizationId: ctx.organizationId!,
+                riskId,
+                organizationalControlId,
+                role: orgRole,
+                createdById: ctx.session!.user.id,
+              })),
+              skipDuplicates: true,
+            });
+            orgLinkCount = toCreate.length;
+          }
+        }
       }
 
-      // Get existing links to skip duplicates
+      // Continue with framework links (the original code path)
       const existingLinks = await ctx.db.riskControlLink.findMany({
         where: {
           riskId,
-          controlId: { in: controlIds },
+          controlId: { in: Array.from(frameworkControlIds) },
         },
         select: { controlId: true },
       });
 
       const existingControlIds = new Set(existingLinks.map((l) => l.controlId));
-      const newControlIds = controlIds.filter((id) => !existingControlIds.has(id));
+      const newControlIds = Array.from(frameworkControlIds).filter(
+        (id) => !existingControlIds.has(id)
+      );
 
       if (newControlIds.length === 0) {
-        return { created: 0, skipped: controlIds.length };
+        return {
+          created: orgLinkCount,
+          skipped: controlIds.length - orgLinkCount,
+        };
       }
 
       // Create links in a transaction
@@ -333,7 +379,7 @@ export const controlLinkRouter = createTRPCRouter({
       });
 
       return {
-        created: links.length,
+        created: links.length + orgLinkCount,
         skipped: existingControlIds.size,
       };
     }),

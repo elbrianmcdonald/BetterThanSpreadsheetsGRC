@@ -8,3 +8,4 @@
 export { VendorStatusBadge, getVendorStatusOptions } from "./VendorStatusBadge";
 export { VendorRiskTierBadge, getVendorRiskTierOptions } from "./VendorRiskTierBadge";
 export { VendorForm } from "./VendorForm";
+export { CreatableVendorPicker } from "./CreatableVendorPicker";

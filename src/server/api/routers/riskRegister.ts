@@ -132,31 +132,51 @@ export const riskRegisterRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
 
-      // Build where clause
-      const whereClause: Prisma.RiskRegisterEntryWhereInput = {
-        organizationId,
-        // Status filter (multi-select)
-        ...(input.status && input.status.length > 0 && {
-          status: { in: input.status },
+      // Build where clause. Entries are now either assessment-backed (finding
+      // flow) or risk-backed (project-discovered flow). Filters through the
+      // assessment relation are applied via an AND so risk-backed rows are
+      // not filtered out unless an explicit assessment-only filter is set.
+      const assessmentSubFilter: Prisma.RiskAssessmentWhereInput = {
+        ...(input.businessUnitId && { businessUnitId: input.businessUnitId }),
+        ...(input.severityLabels && input.severityLabels.length > 0 && {
+          inherentScoreLabel: { in: input.severityLabels },
         }),
-        // Owner filter
-        ...(input.ownerId && { ownerId: input.ownerId }),
-        // Filters through assessment relation
-        assessment: {
-          // Business unit filter
-          ...(input.businessUnitId && { businessUnitId: input.businessUnitId }),
-          // Severity label filter
-          ...(input.severityLabels && input.severityLabels.length > 0 && {
-            inherentScoreLabel: { in: input.severityLabels },
-          }),
-          // Search by identifier or finding title
-          ...(input.search && {
+      };
+      const hasAssessmentFilter =
+        Boolean(input.businessUnitId) ||
+        (input.severityLabels?.length ?? 0) > 0;
+
+      const searchClause: Prisma.RiskRegisterEntryWhereInput | undefined = input.search
+        ? {
             OR: [
               { identifier: { contains: input.search, mode: "insensitive" as const } },
-              { finding: { title: { contains: input.search, mode: "insensitive" as const } } },
+              {
+                assessment: {
+                  is: {
+                    OR: [
+                      { identifier: { contains: input.search, mode: "insensitive" as const } },
+                      {
+                        finding: { title: { contains: input.search, mode: "insensitive" as const } },
+                      },
+                    ],
+                  },
+                },
+              },
+              {
+                risk: {
+                  is: { title: { contains: input.search, mode: "insensitive" as const } },
+                },
+              },
             ],
-          }),
-        },
+          }
+        : undefined;
+
+      const whereClause: Prisma.RiskRegisterEntryWhereInput = {
+        organizationId,
+        ...(input.status && input.status.length > 0 && { status: { in: input.status } }),
+        ...(input.ownerId && { ownerId: input.ownerId }),
+        ...(hasAssessmentFilter && { assessment: { is: assessmentSubFilter } }),
+        ...(searchClause ?? {}),
       };
 
       // Build orderBy clause
@@ -197,6 +217,16 @@ export const riskRegisterRouter = createTRPCRouter({
                   name: true,
                 },
               },
+            },
+          },
+          risk: {
+            select: {
+              id: true,
+              identifier: true,
+              title: true,
+              severity: true,
+              status: true,
+              BusinessUnit: { select: { id: true, name: true } },
             },
           },
           owner: {
@@ -252,21 +282,24 @@ export const riskRegisterRouter = createTRPCRouter({
           slaStatus,
           daysRemaining,
           daysOverdue,
-          assessment: {
-            ...entry.assessment,
-            likelihoodValue: entry.assessment.likelihoodValue
-              ? Number(entry.assessment.likelihoodValue)
-              : null,
-            impactValue: entry.assessment.impactValue
-              ? Number(entry.assessment.impactValue)
-              : null,
-            exposureValue: entry.assessment.exposureValue
-              ? Number(entry.assessment.exposureValue)
-              : null,
-            inherentScore: entry.assessment.inherentScore
-              ? Number(entry.assessment.inherentScore)
-              : null,
-          },
+          assessment: entry.assessment
+            ? {
+                ...entry.assessment,
+                likelihoodValue: entry.assessment.likelihoodValue
+                  ? Number(entry.assessment.likelihoodValue)
+                  : null,
+                impactValue: entry.assessment.impactValue
+                  ? Number(entry.assessment.impactValue)
+                  : null,
+                exposureValue: entry.assessment.exposureValue
+                  ? Number(entry.assessment.exposureValue)
+                  : null,
+                inherentScore: entry.assessment.inherentScore
+                  ? Number(entry.assessment.inherentScore)
+                  : null,
+              }
+            : null,
+          risk: entry.risk ?? null,
         };
       });
 
@@ -312,6 +345,17 @@ export const riskRegisterRouter = createTRPCRouter({
               },
             },
           },
+          risk: {
+            select: {
+              id: true,
+              identifier: true,
+              title: true,
+              description: true,
+              severity: true,
+              status: true,
+              BusinessUnit: { select: { id: true, name: true } },
+            },
+          },
           owner: {
             select: {
               id: true,
@@ -333,24 +377,26 @@ export const riskRegisterRouter = createTRPCRouter({
         return null;
       }
 
-      // Convert Decimal values for JSON serialization
       return {
         ...entry,
-        assessment: {
-          ...entry.assessment,
-          likelihoodValue: entry.assessment.likelihoodValue
-            ? Number(entry.assessment.likelihoodValue)
-            : null,
-          impactValue: entry.assessment.impactValue
-            ? Number(entry.assessment.impactValue)
-            : null,
-          exposureValue: entry.assessment.exposureValue
-            ? Number(entry.assessment.exposureValue)
-            : null,
-          inherentScore: entry.assessment.inherentScore
-            ? Number(entry.assessment.inherentScore)
-            : null,
-        },
+        assessment: entry.assessment
+          ? {
+              ...entry.assessment,
+              likelihoodValue: entry.assessment.likelihoodValue
+                ? Number(entry.assessment.likelihoodValue)
+                : null,
+              impactValue: entry.assessment.impactValue
+                ? Number(entry.assessment.impactValue)
+                : null,
+              exposureValue: entry.assessment.exposureValue
+                ? Number(entry.assessment.exposureValue)
+                : null,
+              inherentScore: entry.assessment.inherentScore
+                ? Number(entry.assessment.inherentScore)
+                : null,
+            }
+          : null,
+        risk: entry.risk ?? null,
       };
     }),
 

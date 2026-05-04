@@ -495,32 +495,50 @@ export function RiskRegisterClient() {
                   </TableHeader>
                   <TableBody>
                     {entries.map((entry) => {
-                      const severityStyle = severityConfig[entry.assessment.inherentScoreLabel ?? ""] ?? {
-                        color: "bg-gray-100 text-gray-800",
-                      };
+                      // Resolve display fields from whichever side of the entry is set
+                      const severityLabel =
+                        entry.assessment?.inherentScoreLabel ?? entry.risk?.severity ?? null;
+                      const severityStyle =
+                        (severityLabel ? severityConfig[severityLabel] : null) ?? {
+                          color: "bg-gray-100 text-gray-800",
+                        };
                       const slaStyle = slaStatusConfig[entry.slaStatus];
+                      const targetRiskId =
+                        entry.risk?.id ?? entry.assessment?.finding?.id ?? null;
+                      const titleText =
+                        entry.assessment?.finding?.title ?? entry.risk?.title ?? "Untitled";
+                      const subIdentifier =
+                        entry.assessment?.identifier ?? entry.risk?.identifier ?? null;
+                      const businessUnitName =
+                        entry.assessment?.businessUnit?.name ??
+                        entry.risk?.BusinessUnit?.name ??
+                        null;
 
                       return (
                         <TableRow
                           key={entry.id}
                           className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => router.push(`/risks/${entry.assessment.finding.id}`)}
+                          onClick={() => {
+                            if (targetRiskId) router.push(`/risks/${targetRiskId}`);
+                          }}
                         >
                           <TableCell className="font-mono text-sm">
                             {entry.identifier}
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{entry.assessment.finding.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {entry.assessment.identifier}
-                              </p>
+                              <p className="font-medium">{titleText}</p>
+                              {subIdentifier && (
+                                <p className="text-xs text-muted-foreground">
+                                  {subIdentifier}
+                                </p>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
-                            {entry.assessment.inherentScoreLabel && (
+                            {severityLabel && (
                               <Badge className={severityStyle.color}>
-                                {entry.assessment.inherentScoreLabel}
+                                {severityLabel}
                               </Badge>
                             )}
                           </TableCell>
@@ -534,9 +552,7 @@ export function RiskRegisterClient() {
                             <span className="text-sm">{entry.owner?.name ?? "—"}</span>
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm">
-                              {entry.assessment.businessUnit?.name ?? "—"}
-                            </span>
+                            <span className="text-sm">{businessUnitName ?? "—"}</span>
                           </TableCell>
                           <TableCell>
                             {entry.slaDueDate ? (

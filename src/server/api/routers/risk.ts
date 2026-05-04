@@ -63,7 +63,6 @@ import {
   createCommentDetails,
 } from "@/server/services/riskAuditLogger";
 import { recalculateRiskImpact } from "@/server/services/risk-impact-calculator";
-import { generateAndSaveBusinessImpact } from "@/server/services/businessImpactGenerator";
 import { generateIdentifier } from "@/server/services/identifierService";
 import {
   sendRiskAssignmentNotification,
@@ -213,8 +212,8 @@ export const riskRouter = createTRPCRouter({
     .use(requireRole(RISK_CREATE_ROLES))
     .input(
       z.object({
-        title: z.string().min(5, "Title must be at least 5 characters"),
-        description: z.string().min(20, "Description must be at least 20 characters"),
+        title: z.string().min(1, "Title is required"),
+        description: z.string().min(1, "Description is required").max(10000),
         affectedSystems: z.string().optional(),
         severity: z.nativeEnum(Severity),
         // Story 4.2 (Task 5.1): Optional templateId for template-based risk creation
@@ -236,7 +235,7 @@ export const riskRouter = createTRPCRouter({
         controlIdsInPlace: z.array(z.string()).optional(),
         controlIdsNeeded: z.array(z.string()).optional(),
         // Story 2.2: Risk Assessment Project - discovered risk linkage
-        discoveryProjectId: z.string().uuid().optional(),
+        discoveryProjectId: z.string().min(1).optional(),
         // Enterprise Risk alignment (rollup parent)
         enterpriseRiskId: z.string().optional().nullable(),
       })
@@ -396,9 +395,6 @@ export const riskRouter = createTRPCRouter({
 
       // Story 4.7: Calculate initial impact score after risk creation
       void recalculateRiskImpact(risk.id, ctx.db);
-
-      // Story 4.8 (Task 6.1): Generate business impact statement after risk creation
-      void generateAndSaveBusinessImpact(risk.id, ctx.db);
 
       // Link organizational controls (picker-based approach)
       const controlLinks: Array<{
@@ -602,9 +598,6 @@ export const riskRouter = createTRPCRouter({
       // Story 4.7 AC34: Recalculate impact score when evidence linked (frameworks affected may change)
       void recalculateRiskImpact(input.riskId, ctx.db);
 
-      // Story 4.8 (Task 6.3): Regenerate business impact when evidence linked (frameworks affected changes)
-      void generateAndSaveBusinessImpact(input.riskId, ctx.db);
-
       return link;
     }),
 
@@ -698,9 +691,6 @@ export const riskRouter = createTRPCRouter({
 
       // Story 4.7 AC34: Recalculate impact score when evidence unlinked (frameworks affected may change)
       void recalculateRiskImpact(input.riskId, ctx.db);
-
-      // Story 4.8: Regenerate business impact when evidence unlinked (frameworks affected changes)
-      void generateAndSaveBusinessImpact(input.riskId, ctx.db);
 
       return { success: true };
     }),
@@ -1350,8 +1340,8 @@ export const riskRouter = createTRPCRouter({
       z.object({
         riskId: z.string().min(1, "Risk ID is required"),
         // All fields are optional - only update what's provided
-        title: z.string().min(5).max(200).optional(),
-        description: z.string().min(20).max(10000).optional(),
+        title: z.string().min(1).max(200).optional(),
+        description: z.string().min(1).max(10000).optional(),
         affectedSystems: z.string().optional().nullable(),
         severity: z.nativeEnum(Severity).optional(),
         findingSource: z.nativeEnum(RiskFindingSource).optional().nullable(),
@@ -1368,6 +1358,12 @@ export const riskRouter = createTRPCRouter({
         preventativeControlsNeeded: z.string().max(10000).optional().nullable(),
         // Enterprise Risk alignment
         enterpriseRiskId: z.string().optional().nullable(),
+        // Risk Acceptance (populated when treatment = ACCEPT)
+        acceptanceJustification: z.string().max(10000).optional().nullable(),
+        acceptedById: z.string().optional().nullable(),
+        acceptedAt: z.date().optional().nullable(),
+        acceptanceReviewDate: z.date().optional().nullable(),
+        acceptanceCompensatingControls: z.string().max(10000).optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1507,6 +1503,24 @@ export const riskRouter = createTRPCRouter({
         changes.enterpriseRiskId = { old: existingRisk.enterpriseRiskId, new: updateFields.enterpriseRiskId };
       }
 
+      // Risk acceptance fields (passed through; treatment toggle on the
+      // identified-risk card decides whether to write or null these)
+      if (updateFields.acceptanceJustification !== undefined) {
+        updateData.acceptanceJustification = updateFields.acceptanceJustification;
+      }
+      if (updateFields.acceptedById !== undefined) {
+        updateData.acceptedById = updateFields.acceptedById;
+      }
+      if (updateFields.acceptedAt !== undefined) {
+        updateData.acceptedAt = updateFields.acceptedAt;
+      }
+      if (updateFields.acceptanceReviewDate !== undefined) {
+        updateData.acceptanceReviewDate = updateFields.acceptanceReviewDate;
+      }
+      if (updateFields.acceptanceCompensatingControls !== undefined) {
+        updateData.acceptanceCompensatingControls = updateFields.acceptanceCompensatingControls;
+      }
+
       // Only update if there are actual changes
       if (Object.keys(updateData).length === 0) {
         return existingRisk;
@@ -1529,11 +1543,6 @@ export const riskRouter = createTRPCRouter({
       // Story 4.7 AC31-AC33: Recalculate impact score if severity, criticality, or audit date changed
       if (changes.severity || changes.assetCriticality || changes.nextAuditDate) {
         void recalculateRiskImpact(riskId, ctx.db);
-      }
-
-      // Story 4.8 (Task 6.2): Regenerate business impact when severity/criticality changes
-      if (changes.severity || changes.assetCriticality) {
-        void generateAndSaveBusinessImpact(riskId, ctx.db);
       }
 
       // Audit logging (AC31)
@@ -2782,7 +2791,6 @@ export const riskRouter = createTRPCRouter({
         riskId: z.string().min(1, "Risk ID is required"),
         businessImpactStatement: z
           .string()
-          .min(100, "Impact statement must be at least 100 characters")
           .max(10000, "Impact statement must be at most 10000 characters"),
       })
     )
@@ -2850,70 +2858,6 @@ export const riskRouter = createTRPCRouter({
       });
 
       return updatedRisk;
-    }),
-
-  /**
-   * Regenerate business impact statement (reset manual edit flag)
-   *
-   * Allows regenerating the impact statement after clearing manual edit flag.
-   */
-  regenerateBusinessImpact: organizationProcedure
-    .use(requireRole([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN]))
-    .input(
-      z.object({
-        riskId: z.string().min(1, "Risk ID is required"),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Verify risk exists and belongs to organization
-      const existingRisk = await ctx.db.risk.findUnique({
-        where: { id: input.riskId },
-        select: {
-          id: true,
-          organizationId: true,
-        },
-      });
-
-      if (!existingRisk) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Risk not found",
-        });
-      }
-
-      if (existingRisk.organizationId !== ctx.organizationId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Risk does not belong to your organization",
-        });
-      }
-
-      // Clear manual edit flag first
-      await ctx.db.risk.update({
-        where: { id: input.riskId },
-        data: {
-          impactStatementManuallyEdited: false,
-        },
-      });
-
-      // Regenerate the impact statement
-      const result = await generateAndSaveBusinessImpact(input.riskId, ctx.db);
-
-      // Fetch updated risk
-      const updatedRisk = await ctx.db.risk.findUnique({
-        where: { id: input.riskId },
-        select: {
-          id: true,
-          businessImpactStatement: true,
-          impactStatementManuallyEdited: true,
-          impactStatementGeneratedAt: true,
-        },
-      });
-
-      return {
-        ...updatedRisk,
-        wordCount: result?.wordCount ?? 0,
-      };
     }),
 
   // ===============================================
@@ -6456,9 +6400,6 @@ export const riskRouter = createTRPCRouter({
 
       // Calculate impact score
       void recalculateRiskImpact(risk.id, ctx.db);
-
-      // Generate business impact statement
-      void generateAndSaveBusinessImpact(risk.id, ctx.db);
 
       return risk;
     }),

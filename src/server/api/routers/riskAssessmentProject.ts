@@ -23,6 +23,7 @@ import {
   emitApprovedNotification,
   emitRejectedNotification,
 } from "@/lib/notifications";
+import { generateIdentifier } from "@/server/services/identifierService";
 
 // =============================================================================
 // Input Schemas
@@ -319,6 +320,13 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
                   },
                 },
               },
+              // Enterprise risk alignment + acceptance fields
+              enterpriseRiskId: true,
+              acceptanceJustification: true,
+              acceptedById: true,
+              acceptedAt: true,
+              acceptanceReviewDate: true,
+              acceptanceCompensatingControls: true,
               createdAt: true,
               updatedAt: true,
             },
@@ -707,12 +715,15 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
+        subject: z.string().min(1).max(500).optional(),
         description: z.string().max(5000).optional().nullable(),
         riskOwnerId: z.string().optional().nullable(),
+        assigneeId: z.string().optional().nullable(),
+        dueDate: z.date().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { id, description, riskOwnerId } = input;
+      const { id, subject, description, riskOwnerId, assigneeId, dueDate } = input;
 
       // Verify the assessment exists and belongs to this organization
       const assessment = await ctx.db.riskAssessmentProject.findFirst({
@@ -742,11 +753,13 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
         });
       }
 
-      // Only the assigned analyst can edit
-      if (assessment.assigneeId !== ctx.session?.user?.id) {
+      // Allow ORG_ADMIN OR the assigned worker to edit
+      const isAdmin = ctx.session?.user?.role === UserRole.ORG_ADMIN;
+      const isAssignee = assessment.assigneeId === ctx.session?.user?.id;
+      if (!isAdmin && !isAssignee) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Only the assigned analyst can edit the assessment",
+          message: "Only the assigned worker or an org admin can edit this assessment",
         });
       }
 
@@ -767,15 +780,44 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
         }
       }
 
+      // Validate assigneeId if provided (must be a user in this org)
+      if (assigneeId) {
+        const user = await ctx.db.user.findFirst({
+          where: { id: assigneeId, organizationId: ctx.organizationId },
+        });
+        if (!user) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid assignee — must be a user in your organization",
+          });
+        }
+      }
+
+      // Validate dueDate not in the past
+      if (dueDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (dueDate < today) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Due date cannot be in the past",
+          });
+        }
+      }
+
       // Update assessment details
       const updated = await ctx.db.riskAssessmentProject.update({
         where: { id },
         data: {
+          ...(subject !== undefined && { subject }),
           ...(description !== undefined && { description }),
           ...(riskOwnerId !== undefined && { riskOwnerId }),
+          ...(assigneeId !== undefined && { assigneeId }),
+          ...(dueDate !== undefined && { dueDate }),
         },
         include: {
           riskOwner: { select: { id: true, name: true, email: true } },
+          assignee: { select: { id: true, name: true, email: true } },
         },
       });
 
@@ -885,11 +927,13 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
         });
       }
 
-      // Verify user is the assignee
-      if (assessment.assigneeId !== ctx.session.user.id) {
+      // Verify user is the assignee or an org admin
+      const isAdmin = ctx.session.user.role === UserRole.ORG_ADMIN;
+      const isAssignee = assessment.assigneeId === ctx.session.user.id;
+      if (!isAdmin && !isAssignee) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Only the assigned analyst can submit this assessment",
+          message: "Only the assigned worker or an org admin can submit this assessment",
         });
       }
 
@@ -1183,11 +1227,23 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
         });
       }
 
-      // Verify assessment is SUBMITTED
-      if (assessment.status !== AssessmentProjectStatus.SUBMITTED) {
+      // Org admins can approve directly from IN_PROGRESS (skip submit step);
+      // CISO and other managers require an explicit submission first.
+      const isAdmin = ctx.session.user.role === UserRole.ORG_ADMIN;
+      const isApprovableStatus =
+        assessment.status === AssessmentProjectStatus.SUBMITTED ||
+        (isAdmin && assessment.status === AssessmentProjectStatus.IN_PROGRESS);
+      if (!isApprovableStatus) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Only SUBMITTED assessments can be approved",
+        });
+      }
+      // Require at least one risk before approval
+      if (assessment.discoveredRisks.length === 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Assessment must have at least one identified risk before approval",
         });
       }
 
@@ -1251,6 +1307,31 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
           },
         }),
       ]);
+
+      // Populate the risk register: create one RiskRegisterEntry per published
+      // risk that doesn't already have one. Forward-only — no backfill of
+      // historical approvals.
+      const publishedRisks = await ctx.db.risk.findMany({
+        where: {
+          discoveryProjectId: id,
+          discoveryStatus: "PUBLISHED",
+          RiskRegisterEntry: null,
+        },
+        select: { id: true },
+      });
+
+      const ownerId = assessment.assigneeId ?? ctx.session.user.id;
+      for (const r of publishedRisks) {
+        const identifier = await generateIdentifier(ctx.organizationId, "RR");
+        await ctx.db.riskRegisterEntry.create({
+          data: {
+            organizationId: ctx.organizationId,
+            identifier,
+            ownerId,
+            riskId: r.id,
+          },
+        });
+      }
 
       // Log the approval in audit trail
       await ctx.db.auditLog.create({
@@ -1512,5 +1593,343 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       });
 
       return reassessment;
+    }),
+
+  /**
+   * Aggregate controls across all identified risks in this assessment.
+   * Combines organizational controls (RiskOrganizationalControl) and
+   * framework controls (RiskControlLink) into a single roll-up.
+   */
+  getControlsAggregate: organizationProcedure
+    .input(z.object({ projectId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId;
+      const risks = await ctx.db.risk.findMany({
+        where: { organizationId, discoveryProjectId: input.projectId },
+        select: {
+          id: true,
+          identifier: true,
+          title: true,
+          OrganizationalControls: {
+            select: {
+              id: true,
+              role: true,
+              OrganizationalControl: {
+                select: { id: true, localControlId: true, name: true },
+              },
+            },
+          },
+          ControlLinks: {
+            select: {
+              id: true,
+              linkType: true,
+              control: {
+                select: {
+                  id: true,
+                  controlId: true,
+                  title: true,
+                  Framework: { select: { id: true, code: true } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const rows: Array<{
+        riskId: string;
+        riskIdentifier: string | null;
+        riskTitle: string;
+        source: "organizational" | "framework";
+        role: string;
+        controlIdentifier: string;
+        controlTitle: string;
+        frameworkCode?: string | null;
+      }> = [];
+
+      for (const r of risks) {
+        for (const oc of r.OrganizationalControls) {
+          rows.push({
+            riskId: r.id,
+            riskIdentifier: r.identifier,
+            riskTitle: r.title,
+            source: "organizational",
+            role: oc.role,
+            controlIdentifier: oc.OrganizationalControl.localControlId,
+            controlTitle: oc.OrganizationalControl.name,
+          });
+        }
+        for (const cl of r.ControlLinks) {
+          rows.push({
+            riskId: r.id,
+            riskIdentifier: r.identifier,
+            riskTitle: r.title,
+            source: "framework",
+            role: cl.linkType,
+            controlIdentifier: cl.control.controlId,
+            controlTitle: cl.control.title,
+            frameworkCode: cl.control.Framework?.code,
+          });
+        }
+      }
+
+      return rows;
+    }),
+
+  /**
+   * Aggregate evidence attached to any identified risk in this assessment.
+   */
+  getEvidenceAggregate: organizationProcedure
+    .input(z.object({ projectId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId;
+      const links = await ctx.db.riskEvidence.findMany({
+        where: {
+          Risk: { organizationId, discoveryProjectId: input.projectId },
+        },
+        select: {
+          id: true,
+          linkType: true,
+          linkedAt: true,
+          Risk: { select: { id: true, identifier: true, title: true } },
+          Evidence: {
+            select: {
+              id: true,
+              title: true,
+              originalFileName: true,
+              fileType: true,
+              fileSize: true,
+            },
+          },
+        },
+        orderBy: { linkedAt: "desc" },
+      });
+
+      return links;
+    }),
+
+  /**
+   * Aggregate per-risk treatment / acceptance status across the assessment.
+   */
+  getRemediationAggregate: organizationProcedure
+    .input(z.object({ projectId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId;
+      const risks = await ctx.db.risk.findMany({
+        where: { organizationId, discoveryProjectId: input.projectId },
+        select: {
+          id: true,
+          identifier: true,
+          title: true,
+          severity: true,
+          status: true,
+          acceptanceJustification: true,
+          acceptanceReviewDate: true,
+          Treatments: {
+            select: {
+              id: true,
+              treatmentType: true,
+              detail: true,
+              dueDate: true,
+              actionStatus: true,
+              slaBreached: true,
+              completedAt: true,
+              decidedAt: true,
+            },
+            orderBy: { decidedAt: "desc" },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      return risks.map((r) => {
+        const t = r.Treatments[0];
+        const isAccept =
+          t?.treatmentType === "ACCEPT" || !!r.acceptanceJustification;
+        return {
+          riskId: r.id,
+          riskIdentifier: r.identifier,
+          riskTitle: r.title,
+          severity: r.severity,
+          status: r.status,
+          treatmentType: t?.treatmentType ?? null,
+          plan: isAccept
+            ? r.acceptanceJustification ?? t?.detail ?? null
+            : t?.detail ?? null,
+          dueDate: isAccept
+            ? r.acceptanceReviewDate ?? t?.dueDate ?? null
+            : t?.dueDate ?? null,
+          actionStatus: t?.actionStatus ?? null,
+          slaBreached: t?.slaBreached ?? false,
+          completedAt: t?.completedAt ?? null,
+        };
+      });
+    }),
+
+  /**
+   * Aggregate treatment progress for the assessment dashboard.
+   * Returns counts: total risks, with plan, accepted, breached, no decision.
+   */
+  getTreatmentProgress: organizationProcedure
+    .input(z.object({ projectId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId;
+      const risks = await ctx.db.risk.findMany({
+        where: { organizationId, discoveryProjectId: input.projectId },
+        select: {
+          id: true,
+          acceptanceJustification: true,
+          Treatments: {
+            select: {
+              treatmentType: true,
+              slaBreached: true,
+              completedAt: true,
+            },
+            orderBy: { decidedAt: "desc" },
+            take: 1,
+          },
+        },
+      });
+
+      let total = 0;
+      let withPlan = 0;
+      let accepted = 0;
+      let breached = 0;
+      let completed = 0;
+      let undecided = 0;
+
+      for (const r of risks) {
+        total += 1;
+        const t = r.Treatments[0];
+        if (t?.completedAt) completed += 1;
+        if (t?.slaBreached) breached += 1;
+
+        const isAccept =
+          t?.treatmentType === "ACCEPT" || !!r.acceptanceJustification;
+        if (isAccept) {
+          accepted += 1;
+        } else if (t?.treatmentType === "REMEDIATE") {
+          withPlan += 1;
+        } else if (!t?.treatmentType) {
+          undecided += 1;
+        }
+      }
+
+      return { total, withPlan, accepted, breached, completed, undecided };
+    }),
+
+  /**
+   * List comments on an assessment project (newest first).
+   */
+  listComments: organizationProcedure
+    .input(z.object({ projectId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.riskAssessmentProjectComment.findMany({
+        where: {
+          organizationId: ctx.organizationId,
+          projectId: input.projectId,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+          authorId: true,
+          Author: { select: { id: true, name: true, email: true, image: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }),
+
+  /**
+   * Add a comment to an assessment project. Any user with access to the
+   * assessment can comment.
+   */
+  addComment: organizationProcedure
+    .input(
+      z.object({
+        projectId: z.string().min(1),
+        content: z.string().min(1).max(5000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const project = await ctx.db.riskAssessmentProject.findFirst({
+        where: { id: input.projectId, organizationId: ctx.organizationId },
+        select: { id: true },
+      });
+      if (!project) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment not found" });
+      }
+      return ctx.db.riskAssessmentProjectComment.create({
+        data: {
+          organizationId: ctx.organizationId,
+          projectId: input.projectId,
+          authorId: ctx.session.user.id,
+          content: input.content,
+        },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+          authorId: true,
+          Author: { select: { id: true, name: true, email: true, image: true } },
+        },
+      });
+    }),
+
+  /**
+   * Soft-delete a comment (author only).
+   */
+  deleteComment: organizationProcedure
+    .input(z.object({ commentId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const comment = await ctx.db.riskAssessmentProjectComment.findFirst({
+        where: { id: input.commentId, organizationId: ctx.organizationId },
+        select: { id: true, authorId: true },
+      });
+      if (!comment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Comment not found" });
+      }
+      const isAdmin = ctx.session.user.role === UserRole.ORG_ADMIN;
+      const isAuthor = comment.authorId === ctx.session.user.id;
+      if (!isAdmin && !isAuthor) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only the author or an admin can delete this comment",
+        });
+      }
+      return ctx.db.riskAssessmentProjectComment.update({
+        where: { id: input.commentId },
+        data: { deletedAt: new Date() },
+      });
+    }),
+
+  /**
+   * Audit trail entries scoped to this assessment project.
+   */
+  getAuditTrail: organizationProcedure
+    .input(z.object({ projectId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.auditLog.findMany({
+        where: {
+          organizationId: ctx.organizationId,
+          entityType: "RiskAssessmentProject",
+          entityId: input.projectId,
+        },
+        select: {
+          id: true,
+          action: true,
+          changes: true,
+          timestamp: true,
+          actorName: true,
+          actorRole: true,
+          User: { select: { id: true, name: true, email: true, image: true } },
+        },
+        orderBy: { timestamp: "desc" },
+        take: 100,
+      });
     }),
 });
