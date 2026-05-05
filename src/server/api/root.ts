@@ -44,6 +44,8 @@ import { myAssignmentsRouter } from "@/server/api/routers/myAssignments";
 import { vendorRouter } from "@/server/api/routers/vendor";
 import { vendorAssessmentRouter } from "@/server/api/routers/vendorAssessment";
 import { questionnaireRouter } from "@/server/api/routers/questionnaire";
+import { riskAssessmentTemplateRouter } from "@/server/api/routers/riskAssessmentTemplate";
+import { riskAssessmentQuestionnaireRouter } from "@/server/api/routers/riskAssessmentQuestionnaire";
 import { vendorPortalRouter } from "@/server/api/routers/vendorPortal";
 import { biaConfigRouter } from "@/server/api/routers/biaConfig";
 import { businessFunctionRouter } from "@/server/api/routers/businessFunction";
@@ -109,6 +111,8 @@ export const appRouter = createTRPCRouter({
   vendor: vendorRouter, // Epic 1: TPRM Vendor Registry
   vendorAssessment: vendorAssessmentRouter, // Epic 3: Vendor Assessment Workflow
   questionnaire: questionnaireRouter, // Epic 4: Questionnaire System
+  riskAssessmentTemplate: riskAssessmentTemplateRouter, // Risk-assessment questionnaire templates (library side)
+  riskAssessmentQuestionnaire: riskAssessmentQuestionnaireRouter, // Risk-assessment questionnaire instances (cloned snapshot)
   vendorPortal: vendorPortalRouter, // Epic 6: Vendor Portal (public token-based access)
   biaConfig: biaConfigRouter, // Epic 9: BIA Configuration Admin
   businessFunction: businessFunctionRouter, // Epic 10: BIA Business Functions

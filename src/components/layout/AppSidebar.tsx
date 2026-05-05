@@ -285,6 +285,12 @@ const NAV_SECTIONS: NavSection[] = [
         roles: [UserRole.ORG_ADMIN],
       },
       {
+        href: "/admin/risk-assessment-templates",
+        label: "RA Templates",
+        icon: <ClipboardList className="h-4 w-4" />,
+        roles: [UserRole.ORG_ADMIN],
+      },
+      {
         href: "/admin/backups",
         label: "Backups",
         icon: <Database className="h-4 w-4" />,

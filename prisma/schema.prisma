@@ -174,6 +174,9 @@ model Evidence {
   // Organizational Control Redesign: Evidence linked to OrgControls
   OrgControlLinks OrgControlEvidence[] @relation("OrgControlEvidenceLink")
 
+  // Risk-assessment questionnaire question evidence (M:N via join model)
+  RiskAssessmentQuestionLinks RiskAssessmentQuestionEvidence[]
+
   @@index([organizationId])
   @@index([organizationId, isActive])
   @@index([organizationId, uploadedBy])
@@ -377,6 +380,9 @@ model Organization {
   OrgControlDeficiencies         OrgControlDeficiency[]
   OrgControlExceptions           OrgControlException[]
   OrgControlDependencies         OrgControlDependency[]
+  // Risk-assessment questionnaire instances + question evidence links
+  RiskAssessmentQuestionnaires   RiskAssessmentQuestionnaire[]
+  RiskAssessmentQuestionEvidence RiskAssessmentQuestionEvidence[]
   // Story 1.1: Security Strategy Module - Strategies for organization
   Strategy                       Strategy[]
   // Standards Module: Standards and exceptions for organization
@@ -1042,6 +1048,10 @@ model Risk {
   // ============================================================================
   assessmentId String? // RiskAssessment this risk belongs to (for child risks)
 
+  // Populated when a risk is spawned from a risk-assessment questionnaire
+  // question via [+ Add Risk]. Multiple risks may share a source question.
+  sourceRiskAssessmentQuestionId String?
+
   // Enterprise Risk alignment — risk rolls up to a parent EnterpriseRisk
   enterpriseRiskId String?
 
@@ -1116,6 +1126,9 @@ model Risk {
   // Story 16.10: Assessment relationship (child risks)
   Assessment RiskAssessment? @relation("AssessmentChildRisks", fields: [assessmentId], references: [id], onDelete: SetNull)
 
+  // Risk-assessment questionnaire spawn source ([+ Add Risk] from a question).
+  SourceRiskAssessmentQuestion RiskAssessmentQuestion? @relation("RiskSourceRiskAssessmentQuestion", fields: [sourceRiskAssessmentQuestionId], references: [id], onDelete: SetNull)
+
   // Enterprise Risk alignment relation
   EnterpriseRisk EnterpriseRisk? @relation("EnterpriseRiskChildren", fields: [enterpriseRiskId], references: [id], onDelete: SetNull)
 
@@ -1166,6 +1179,7 @@ model Risk {
   @@index([inherentScore])
   @@index([residualScore])
   @@index([assessmentId]) // Story 16.10: Child risks query
+  @@index([sourceRiskAssessmentQuestionId]) // Spawn-from-questionnaire query
   @@index([organizationId, enterpriseRiskId]) // Enterprise risk rollup query
   // Risk Assessment Assignment Workflow indexes
   @@index([assessorId]) // Assessor's assignment queries
@@ -1467,6 +1481,8 @@ model User {
   FindingComments                         FindingComment[]            @relation("FindingCommentUser")
   // Story 14.6: Finding evidence attached by this user
   FindingEvidenceAttached                 FindingEvidence[]           @relation("FindingEvidenceAttacher")
+  // Risk-assessment questionnaire question evidence attached by this user
+  RAQEvidenceAttachments                  RiskAssessmentQuestionEvidence[] @relation("RAQEvidenceAttacher")
 
   // Story 15.8: Risk treatment decisions made/completed by this user
   TreatmentsDecided                 RiskTreatment[]              @relation("TreatmentDecider")
@@ -2288,9 +2304,14 @@ model Finding {
   /// section at the bottom.
   sourceComplianceAssessmentId String?
 
-  sourceMaturityAssessment   MaturityAssessment?   @relation("FindingMaturitySource", fields: [sourceMaturityAssessmentId], references: [id], onDelete: SetNull)
-  sourceMaturityDomain       MaturityDomain?       @relation("FindingMaturityDomainSource", fields: [sourceMaturityDomainId], references: [id], onDelete: SetNull)
-  sourceComplianceAssessment ComplianceAssessment? @relation("FindingComplianceSource", fields: [sourceComplianceAssessmentId], references: [id], onDelete: SetNull)
+  /// Populated when a finding is spawned from a risk-assessment questionnaire
+  /// question via [+ Add Finding]. Multiple findings may share a source question.
+  sourceRiskAssessmentQuestionId String?
+
+  sourceMaturityAssessment       MaturityAssessment?     @relation("FindingMaturitySource", fields: [sourceMaturityAssessmentId], references: [id], onDelete: SetNull)
+  sourceMaturityDomain           MaturityDomain?         @relation("FindingMaturityDomainSource", fields: [sourceMaturityDomainId], references: [id], onDelete: SetNull)
+  sourceComplianceAssessment     ComplianceAssessment?   @relation("FindingComplianceSource", fields: [sourceComplianceAssessmentId], references: [id], onDelete: SetNull)
+  sourceRiskAssessmentQuestion   RiskAssessmentQuestion? @relation("FindingSourceRiskAssessmentQuestion", fields: [sourceRiskAssessmentQuestionId], references: [id], onDelete: SetNull)
 
   @@unique([organizationId, identifier]) // AC10: Unique identifier per organization
   @@index([organizationId, id])
@@ -2307,6 +2328,7 @@ model Finding {
   @@index([sourceMaturityAssessmentId])
   @@index([sourceMaturityDomainId])
   @@index([sourceComplianceAssessmentId])
+  @@index([sourceRiskAssessmentQuestionId])
 }
 
 // Story 7.5: Risk Assessment model (AC1-AC15)
@@ -2552,6 +2574,118 @@ model FindingEvidence {
 
   @@unique([findingId, evidenceId]) // One attachment per finding-evidence pair
   @@index([organizationId, findingId])
+  @@index([evidenceId])
+}
+
+// ============================================================================
+// Risk Assessment Questionnaires — cloned-snapshot instance side.
+// Library side reuses QuestionnaireTemplate / QuestionnaireSection / QuestionnaireQuestion
+// with usageType = RISK_ASSESSMENT. When a risk assessment picks a template, the
+// template's sections + questions are deep-copied into the models below so the
+// assessment owns an immutable structural snapshot. Answer state (status, notes,
+// evidence, spawned findings/risks) lives on RiskAssessmentQuestion.
+// ============================================================================
+
+model RiskAssessmentQuestionnaire {
+  id                      String  @id @default(cuid())
+  organizationId          String
+  riskAssessmentProjectId String  @unique // One questionnaire per risk-assessment project
+  templateId              String? // Source template (nullable so template deletion doesn't cascade-delete the snapshot)
+  templateName            String // Snapshot of template name at clone time (preserved if template deleted/renamed)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization          Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  riskAssessmentProject RiskAssessmentProject   @relation(fields: [riskAssessmentProjectId], references: [id], onDelete: Cascade)
+  template              QuestionnaireTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sections              RiskAssessmentSection[]
+
+  @@index([organizationId])
+  @@index([riskAssessmentProjectId])
+  @@index([templateId])
+}
+
+model RiskAssessmentSection {
+  id              String  @id @default(cuid())
+  questionnaireId String
+  name            String
+  order           Int     @default(0)
+  description     String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questionnaire RiskAssessmentQuestionnaire @relation(fields: [questionnaireId], references: [id], onDelete: Cascade)
+  questions     RiskAssessmentQuestion[]
+
+  @@index([questionnaireId])
+  @@index([questionnaireId, order])
+}
+
+model RiskAssessmentQuestion {
+  id        String @id @default(cuid())
+  sectionId String
+
+  // Snapshot content (copied from template at clone time, OR authored as a custom add-on)
+  number   String?
+  text     String  @db.Text
+  helpText String? @db.Text
+
+  // Distinguishes cloned-from-template from custom-added-to-this-instance.
+  isCustom           Boolean @default(false)
+  templateQuestionId String? // Null for custom questions
+
+  // Framework reference — at most one set (enforced in app code, not DB CHECK).
+  // Cloned questions inherit values from the template question; custom questions
+  // can set their own. unresolvedReference holds the raw CSV value when import
+  // couldn't resolve the reference and the user hasn't run the resolve wizard yet.
+  standardControlId       String?
+  organizationalControlId String?
+  unresolvedReference     String?
+
+  // Answer state (mutable post-clone, even though structure is immutable).
+  status RiskQuestionStatus?
+  notes  String?             @db.Text
+
+  // Order within section (cloned questions preserve template order; custom adds sort last).
+  order Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  section               RiskAssessmentSection            @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  templateQuestion      QuestionnaireQuestion?           @relation(fields: [templateQuestionId], references: [id], onDelete: SetNull)
+  standardControl       StandardControl?                 @relation("RiskAssessmentQuestionStandardControl", fields: [standardControlId], references: [id], onDelete: SetNull)
+  organizationalControl OrganizationalControl?           @relation("RiskAssessmentQuestionOrgControl", fields: [organizationalControlId], references: [id], onDelete: SetNull)
+  evidenceLinks         RiskAssessmentQuestionEvidence[]
+
+  // Spawn back-relations (1:N). Children carry sourceRiskAssessmentQuestionId.
+  spawnedFindings Finding[] @relation("FindingSourceRiskAssessmentQuestion")
+  spawnedRisks    Risk[]    @relation("RiskSourceRiskAssessmentQuestion")
+
+  @@index([sectionId])
+  @@index([sectionId, order])
+  @@index([templateQuestionId])
+  @@index([standardControlId])
+  @@index([organizationalControlId])
+}
+
+model RiskAssessmentQuestionEvidence {
+  id             String   @id @default(cuid())
+  organizationId String
+  questionId     String
+  evidenceId     String
+  attachedById   String
+  attachedAt     DateTime @default(now())
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  question     RiskAssessmentQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  evidence     Evidence               @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  attachedBy   User                   @relation("RAQEvidenceAttacher", fields: [attachedById], references: [id])
+
+  @@unique([questionId, evidenceId])
+  @@index([organizationId, questionId])
   @@index([evidenceId])
 }
 
@@ -2925,6 +3059,9 @@ model OrganizationalControl {
   CompensatingForExceptions OrgControlException[]           @relation("OrgControlExceptionCompensator")
   DependenciesFrom          OrgControlDependency[]          @relation("DependencyParent")
   DependenciesTo            OrgControlDependency[]          @relation("DependencyChild")
+  // Risk-assessment questionnaire references (template + cloned-instance sides)
+  QuestionnaireQuestions    QuestionnaireQuestion[]         @relation("QuestionnaireQuestionOrgControl")
+  RiskAssessmentQuestions   RiskAssessmentQuestion[]        @relation("RiskAssessmentQuestionOrgControl")
 
   @@unique([organizationId, name])
   @@unique([organizationId, localControlId])
@@ -3292,8 +3429,25 @@ enum VendorAssessmentRecommendation {
   REJECT // Vendor rejected, engagement not recommended
 }
 
+// Discriminator on QuestionnaireTemplate so the same library can power
+// vendor portal questionnaires and risk-assessment-internal questionnaires.
+enum QuestionnaireUsageType {
+  VENDOR_ASSESSMENT
+  RISK_ASSESSMENT
+}
+
+// Implementation status for risk-assessment questionnaire questions.
+enum RiskQuestionStatus {
+  IMPLEMENTED
+  PARTIAL
+  NOT_IMPLEMENTED
+  NOT_APPLICABLE
+}
+
 // Epic 4: Questionnaire System - Question Types (FR28)
-// Supported question types for questionnaire builder
+// Supported question types for questionnaire builder.
+// Risk-assessment-usage templates render with a uniform status/notes/evidence
+// form regardless of this value (derived from QuestionnaireTemplate.usageType).
 enum QuestionType {
   TEXT // Short or long text answer
   YES_NO // Boolean yes/no selection
@@ -3369,6 +3523,9 @@ model StandardControl {
   Exceptions        ControlException[]
   // Control Domain tagging
   ControlDomains    ControlDomainStandardControl[]
+  // Risk-assessment questionnaire references (template + cloned-instance sides)
+  QuestionnaireQuestions  QuestionnaireQuestion[]  @relation("QuestionnaireQuestionStandardControl")
+  RiskAssessmentQuestions RiskAssessmentQuestion[] @relation("RiskAssessmentQuestionStandardControl")
 
   @@unique([standardId, code])
   @@index([standardId])
@@ -3893,6 +4050,9 @@ model RiskAssessmentProject {
   // Discovered risks within this assessment project
   discoveredRisks Risk[] @relation("ProjectDiscoveredRisks")
 
+  // Risk-assessment questionnaire (cloned snapshot from a template). 1:1.
+  questionnaire RiskAssessmentQuestionnaire?
+
   // Project-level comments
   comments RiskAssessmentProjectComment[]
 
@@ -4070,13 +4230,14 @@ model VendorAssessmentComment {
 // Questionnaire Template (FR27, FR28, FR29)
 // Reusable questionnaire templates that can be attached to assessments
 model QuestionnaireTemplate {
-  id               String  @id @default(cuid())
+  id               String                 @id @default(cuid())
   organizationId   String? // Null for system templates (pre-built)
   name             String
-  description      String? @db.Text
-  isSystemTemplate Boolean @default(false) // True for pre-built templates
-  isActive         Boolean @default(true)
-  version          Int     @default(1)
+  description      String?                @db.Text
+  isSystemTemplate Boolean                @default(false) // True for pre-built templates
+  isActive         Boolean                @default(true)
+  version          Int                    @default(1)
+  usageType        QuestionnaireUsageType @default(VENDOR_ASSESSMENT)
 
   // Timestamps
   createdAt   DateTime @default(now())
@@ -4088,12 +4249,14 @@ model QuestionnaireTemplate {
   createdBy    User?         @relation("QuestionnaireTemplateCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   // Child entities
-  sections       QuestionnaireSection[]
-  questionnaires AssessmentQuestionnaire[] // Instances created from this template
+  sections                     QuestionnaireSection[]
+  questionnaires               AssessmentQuestionnaire[] // Vendor instances created from this template
+  riskAssessmentQuestionnaires RiskAssessmentQuestionnaire[] // Risk-assessment instances cloned from this template
 
   @@unique([organizationId, name, version])
   @@index([organizationId])
   @@index([organizationId, isActive])
+  @@index([organizationId, usageType])
   @@index([isSystemTemplate])
 }
 
@@ -4132,17 +4295,31 @@ model QuestionnaireQuestion {
   // For TEXT type
   isLongText Boolean @default(false) // True for textarea, false for input
 
+  // Risk-assessment-specific fields. Only meaningful when the parent template's
+  // usageType = RISK_ASSESSMENT. At most one of standardControlId / organizationalControlId
+  // is set per question (enforced in application code, not via DB CHECK).
+  number                  String?
+  standardControlId       String?
+  organizationalControlId String?
+  unresolvedReference     String? // Raw CSV value when import couldn't resolve framework_ref
+
   // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  section   QuestionnaireSection    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  choices   QuestionChoice[] // Options for MULTI_CHOICE type
-  responses QuestionnaireResponse[]
+  section               QuestionnaireSection     @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  choices               QuestionChoice[] // Options for MULTI_CHOICE type
+  responses             QuestionnaireResponse[]
+  standardControl       StandardControl?         @relation("QuestionnaireQuestionStandardControl", fields: [standardControlId], references: [id], onDelete: SetNull)
+  organizationalControl OrganizationalControl?   @relation("QuestionnaireQuestionOrgControl", fields: [organizationalControlId], references: [id], onDelete: SetNull)
+  // Cloned snapshots in risk-assessment instances point back here.
+  clonedQuestions       RiskAssessmentQuestion[]
 
   @@index([sectionId])
   @@index([sectionId, sortOrder])
+  @@index([standardControlId])
+  @@index([organizationalControlId])
 }
 
 // Question Choice (FR28)

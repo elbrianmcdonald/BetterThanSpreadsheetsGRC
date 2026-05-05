@@ -54,6 +54,8 @@ import { AssessmentProjectStatus } from "@prisma/client";
 
 import { api, type RouterOutputs } from "@/trpc/react";
 import { IdentifiedRisksEditor } from "@/components/risk-assessment-project/IdentifiedRisksEditor";
+import { QuestionnaireTab } from "@/components/risk-assessment-project/QuestionnaireTab";
+import { ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +74,7 @@ interface AssessmentWorkspaceClientProps {
 
 type Tab =
   | "overview"
+  | "questionnaire"
   | "identified-risks"
   | "controls"
   | "evidence"
@@ -84,11 +87,12 @@ interface TabConfig {
   id: Tab;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  countKey?: "identifiedRisksCount";
+  countKey?: "identifiedRisksCount" | "questionnaireUnanswered";
 }
 
 const TABS: TabConfig[] = [
   { id: "overview", label: "Overview", icon: FileText },
+  { id: "questionnaire", label: "Questionnaire", icon: ClipboardList, countKey: "questionnaireUnanswered" },
   { id: "identified-risks", label: "Identified Risks", icon: ListTree, countKey: "identifiedRisksCount" },
   { id: "controls", label: "Controls", icon: Shield },
   { id: "evidence", label: "Evidence", icon: FolderOpen },
@@ -110,6 +114,12 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
   const { data: project, isLoading, error } = api.riskAssessmentProject.getById.useQuery({
     id: projectId,
   });
+
+  // Hooks must be called in the same order every render — keep before any early return.
+  const { data: questionnaireCounts } =
+    api.riskAssessmentQuestionnaire.getCompletionSummary.useQuery({
+      projectId,
+    });
 
   if (isLoading) {
     return (
@@ -138,6 +148,10 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
 
   const counts = {
     identifiedRisksCount: project.discoveredRisks?.length ?? 0,
+    questionnaireUnanswered:
+      questionnaireCounts?.attached === true
+        ? questionnaireCounts.total - questionnaireCounts.answered
+        : 0,
   };
 
   return (
@@ -222,6 +236,12 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
       {/* Tab content */}
       <div role="tabpanel">
         {activeTab === "overview" && <OverviewTab project={project} />}
+        {activeTab === "questionnaire" && (
+          <QuestionnaireTab
+            projectId={projectId}
+            isReadOnly={project.status !== "IN_PROGRESS"}
+          />
+        )}
         {activeTab === "identified-risks" && (
           <IdentifiedRisksEditor
             projectId={projectId}
@@ -980,6 +1000,17 @@ function WorkflowActions({ project }: { project: ProjectData }) {
     rejectMutation.isPending ||
     rescindMutation.isPending;
 
+  // Block submission/approval if a questionnaire is attached but unfinished.
+  const { data: questionnaireSummary } =
+    api.riskAssessmentQuestionnaire.getCompletionSummary.useQuery({
+      projectId: project.id,
+    });
+  const questionnaireBlocking =
+    questionnaireSummary?.attached === true && !questionnaireSummary.isComplete;
+  const questionnaireBlockingMessage = questionnaireBlocking
+    ? `Questionnaire is ${questionnaireSummary.answered}/${questionnaireSummary.total} answered — answer all questions before submitting`
+    : undefined;
+
   if (status === "APPROVED") {
     return (
       <div className="text-sm text-muted-foreground italic shrink-0">
@@ -995,8 +1026,12 @@ function WorkflowActions({ project }: { project: ProjectData }) {
           variant={isAdmin ? "outline" : "default"}
           size="sm"
           onClick={() => submitMutation.mutate({ id: project.id })}
-          disabled={pending || riskCount === 0}
-          title={riskCount === 0 ? "Add at least one identified risk first" : undefined}
+          disabled={pending || riskCount === 0 || questionnaireBlocking}
+          title={
+            riskCount === 0
+              ? "Add at least one identified risk first"
+              : questionnaireBlockingMessage
+          }
         >
           {submitMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
           Submit for Approval

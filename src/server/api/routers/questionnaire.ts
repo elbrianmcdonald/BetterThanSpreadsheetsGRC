@@ -19,6 +19,7 @@ import {
   UserRole,
   QuestionType,
   QuestionnaireStatus,
+  QuestionnaireUsageType,
   ResponseScore,
   VendorAssessmentStatus,
   AuditAction,
@@ -187,12 +188,13 @@ export const questionnaireRouter = createTRPCRouter({
       const userId = ctx.session!.user.id;
       const { name, description, sections } = input;
 
-      // Check for duplicate name in organization
+      // Check for duplicate name in organization (vendor-usage only — risk-assessment templates use a parallel namespace)
       const existing = await ctx.db.questionnaireTemplate.findFirst({
         where: {
           organizationId,
           name,
           isActive: true,
+          usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
         },
       });
 
@@ -210,6 +212,7 @@ export const questionnaireRouter = createTRPCRouter({
           name,
           description,
           isSystemTemplate: false,
+          usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
           createdById: userId,
           sections: {
             create: sections.map((section, sIdx) => ({
@@ -278,9 +281,14 @@ export const questionnaireRouter = createTRPCRouter({
       const userId = ctx.session!.user.id;
       const { id, name, description, sections } = input;
 
-      // Verify template exists and belongs to this organization
+      // Verify template exists and belongs to this organization (vendor-usage only)
       const existing = await ctx.db.questionnaireTemplate.findFirst({
-        where: { id, organizationId, isActive: true },
+        where: {
+          id,
+          organizationId,
+          isActive: true,
+          usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
+        },
       });
 
       if (!existing) {
@@ -383,7 +391,11 @@ export const questionnaireRouter = createTRPCRouter({
       const { id } = input;
 
       const template = await ctx.db.questionnaireTemplate.findFirst({
-        where: { id, organizationId },
+        where: {
+          id,
+          organizationId,
+          usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
+        },
       });
 
       if (!template) {
@@ -430,6 +442,7 @@ export const questionnaireRouter = createTRPCRouter({
 
       const where: Prisma.QuestionnaireTemplateWhereInput = {
         isActive,
+        usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
         AND: [
           // Include system templates (org = null) and/or custom templates (org = current)
           {
@@ -487,6 +500,7 @@ export const questionnaireRouter = createTRPCRouter({
       const template = await ctx.db.questionnaireTemplate.findFirst({
         where: {
           id,
+          usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
           OR: [{ organizationId }, { isSystemTemplate: true }],
         },
         include: {
@@ -524,10 +538,11 @@ export const questionnaireRouter = createTRPCRouter({
       const userId = ctx.session!.user.id;
       const { templateId, newName } = input;
 
-      // Get source template
+      // Get source template (vendor-usage only)
       const source = await ctx.db.questionnaireTemplate.findFirst({
         where: {
           id: templateId,
+          usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
           OR: [{ organizationId }, { isSystemTemplate: true }],
         },
         include: {
@@ -550,9 +565,14 @@ export const questionnaireRouter = createTRPCRouter({
         });
       }
 
-      // Check for duplicate name
+      // Check for duplicate name (vendor-usage namespace)
       const existing = await ctx.db.questionnaireTemplate.findFirst({
-        where: { organizationId, name: newName, isActive: true },
+        where: {
+          organizationId,
+          name: newName,
+          isActive: true,
+          usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
+        },
       });
 
       if (existing) {
@@ -569,6 +589,7 @@ export const questionnaireRouter = createTRPCRouter({
           name: newName,
           description: source.description,
           isSystemTemplate: false,
+          usageType: QuestionnaireUsageType.VENDOR_ASSESSMENT,
           createdById: userId,
           sections: {
             create: source.sections.map((section) => ({

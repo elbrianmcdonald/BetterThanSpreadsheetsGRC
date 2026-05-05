@@ -178,6 +178,9 @@ const ALLOWLIST_TABLES = new Set([
   "AssessmentQuestionnaire", // Gets isolation through VendorAssessment relation (which has organizationId)
   "QuestionnaireResponse", // Gets isolation through AssessmentQuestionnaire → VendorAssessment relation
   "QuestionnaireReminder", // Gets isolation through AssessmentQuestionnaire → VendorAssessment relation
+  // Risk-assessment questionnaire instance children — isolation via RiskAssessmentQuestionnaire (which has organizationId)
+  "RiskAssessmentSection",
+  "RiskAssessmentQuestion",
   // Epic 9-11: BIA Module - child tables get isolation through BIAConfiguration or BusinessProcess relations
   "BIAImpactCategory", // Gets isolation through BIAConfiguration relation
   "BIATierDefinition", // Gets isolation through BIAConfiguration relation
