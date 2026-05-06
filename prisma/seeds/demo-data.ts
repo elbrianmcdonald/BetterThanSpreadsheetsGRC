@@ -1,4 +1,29 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, QuestionType, QuestionnaireUsageType, RiskQuestionStatus } from '@prisma/client';
+
+// ----------------------------------------------------------------------------
+// Inline 3×3 default risk matrix payload. This duplicates a slice of
+// `src/lib/matrix/defaults.ts` because the prisma seed script runs against the
+// standalone runner image, which tree-shakes out source files not referenced
+// by the running Next.js server. Keep in sync with the canonical defaults if
+// they ever change.
+// ----------------------------------------------------------------------------
+const DEFAULT_3x3_SCALES = {
+  likelihood: [
+    { value: 1, label: 'Rare', description: 'May occur only in exceptional circumstances' },
+    { value: 2, label: 'Possible', description: 'Might occur at some time' },
+    { value: 3, label: 'Likely', description: 'Will probably occur in most circumstances' },
+  ],
+  impact: [
+    { value: 1, label: 'Minor', description: 'Some impact, minor disruption' },
+    { value: 2, label: 'Moderate', description: 'Noticeable impact, requires management attention' },
+    { value: 3, label: 'Major', description: 'Significant impact, threatens objectives' },
+  ],
+};
+const DEFAULT_3x3_THRESHOLDS = [
+  { label: 'Low', minValue: 0, maxValue: 3, color: '#22C55E', slaDays: 90 },
+  { label: 'Medium', minValue: 3, maxValue: 6, color: '#EAB308', slaDays: 30 },
+  { label: 'High', minValue: 6, maxValue: 9, color: '#EF4444', slaDays: 7 },
+];
 
 // ============================================================================
 // Demo Data Seed Module
@@ -881,6 +906,330 @@ export async function seedDemoData(prisma: PrismaClient) {
     });
   }
   console.log(`  ✅ ${sequences.length} identifier sequences\n`);
+
+  // ========================================================================
+  // Layer 11: Risk-Assessment Defaults (Risk Matrix + Assessment Type)
+  // Inline implementation (see DEFAULT_3x3_* constants at top of file for the
+  // matrix payload). Idempotent — skips if the org already has a default
+  // matrix and assessment type.
+  // ========================================================================
+  console.log('  Seeding default risk matrix + assessment type...');
+
+  // Default Assessment Type (idempotent on isDefault flag).
+  const existingAssessmentType = await prisma.assessmentType.findFirst({
+    where: { organizationId: ORG_A, isDefault: true },
+  });
+  if (!existingAssessmentType) {
+    await prisma.assessmentType.create({
+      data: {
+        id: 'demo-default-assessment-type',
+        organizationId: ORG_A,
+        name: 'General Risk Assessment',
+        description: 'Standard risk assessment for general organizational risks',
+        isDefault: true,
+        isActive: true,
+      },
+    });
+  }
+
+  // Default Risk Matrix Template + published v1.
+  let defaultMatrix = await prisma.riskMatrixTemplate.findFirst({
+    where: { organizationId: ORG_A, isDefault: true },
+    select: { id: true, currentVersionId: true, name: true },
+  });
+  if (!defaultMatrix) {
+    const tpl = await prisma.riskMatrixTemplate.create({
+      data: {
+        id: 'demo-default-matrix',
+        organizationId: ORG_A,
+        name: 'Standard 3×3 Risk Matrix',
+        description: 'Default 3×3 2D risk matrix using likelihood and impact dimensions',
+        dimensionCount: 2,
+        gridSize: 3,
+        outputScaleMax: 9,
+        isDefault: true,
+        isActive: true,
+      },
+    });
+    const ver = await prisma.riskMatrixVersion.create({
+      data: {
+        id: 'demo-default-matrix-v1',
+        templateId: tpl.id,
+        versionNumber: 1,
+        scales: DEFAULT_3x3_SCALES,
+        thresholds: DEFAULT_3x3_THRESHOLDS,
+        isActive: true,
+        publishedAt: new Date(),
+      },
+    });
+    await prisma.riskMatrixTemplate.update({
+      where: { id: tpl.id },
+      data: { currentVersionId: ver.id },
+    });
+    defaultMatrix = { id: tpl.id, currentVersionId: ver.id, name: tpl.name };
+  }
+  if (!defaultMatrix?.currentVersionId) {
+    throw new Error('Default risk matrix did not seed correctly');
+  }
+  const matrixVersionId = defaultMatrix.currentVersionId;
+  console.log(`  ✅ Default matrix "${defaultMatrix.name}" published\n`);
+
+  // ========================================================================
+  // Layer 12: Risk-Assessment Questionnaire Template (NIST CSF 2.0 lite)
+  // 5 sections (Identify/Protect/Detect/Respond/Recover) × 12 questions,
+  // each linked to a seeded ISP-* StandardControl. 1 unresolved reference
+  // (`ISP-MISSING`) so the post-import "Resolve Now" wizard has data to act
+  // on for demo purposes.
+  // ========================================================================
+  console.log('  Creating risk-assessment questionnaire template...');
+
+  // Look up the seeded StandardControl IDs by code so questions can FK them.
+  const ispControls = await prisma.standardControl.findMany({
+    where: { Standard: { organizationId: ORG_A } },
+    select: { id: true, code: true },
+  });
+  const ispByCode: Record<string, string> = Object.fromEntries(
+    ispControls.map((c) => [c.code, c.id])
+  );
+
+  const TEMPLATE_ID = 'demo-ra-template-csf';
+  const ratemplate = await prisma.questionnaireTemplate.upsert({
+    where: { id: TEMPLATE_ID },
+    update: {},
+    create: {
+      id: TEMPLATE_ID,
+      organizationId: ORG_A,
+      name: 'NIST CSF 2.0 — Demo Assessment',
+      description: 'Demo template — 12 NIST CSF 2.0 questions across the 5 Functions, mapped to the org standard library.',
+      usageType: QuestionnaireUsageType.RISK_ASSESSMENT,
+      isSystemTemplate: false,
+      isActive: true,
+      version: 1,
+      createdById: ALICE,
+      updatedAt: new Date(),
+    },
+  });
+
+  type SeedQuestion = {
+    number: string;
+    text: string;
+    /** ISP-* code for resolution; missing or unknown becomes an unresolvedReference. */
+    refCode: string;
+  };
+  const sectionsData: { id: string; title: string; questions: SeedQuestion[] }[] = [
+    {
+      id: 'demo-ra-section-id',
+      title: 'Identify',
+      questions: [
+        { number: 'ID.AM-1', text: 'Are physical assets inventoried and managed?', refCode: 'ISP-001' },
+        { number: 'ID.AM-2', text: 'Are software platforms and applications inventoried?', refCode: 'ISP-003' },
+        { number: 'ID.RA-1', text: 'Are vulnerabilities identified and documented?', refCode: 'ISP-006' },
+      ],
+    },
+    {
+      id: 'demo-ra-section-pr',
+      title: 'Protect',
+      questions: [
+        { number: 'PR.AC-1', text: 'Are credentials managed for authorized devices and users?', refCode: 'ISP-002' },
+        { number: 'PR.AC-4', text: 'Are access permissions managed (least privilege)?', refCode: 'ISP-007' },
+        { number: 'PR.DS-1', text: 'Is data-at-rest protected?', refCode: 'ISP-004' },
+        { number: 'PR.DS-2', text: 'Is data-in-transit protected?', refCode: 'ISP-MISSING' /* unresolved on purpose */ },
+      ],
+    },
+    {
+      id: 'demo-ra-section-de',
+      title: 'Detect',
+      questions: [
+        { number: 'DE.CM-1', text: 'Is the network monitored to detect potential cybersecurity events?', refCode: 'ISP-006' },
+        { number: 'DE.AE-3', text: 'Is event data collected and correlated from multiple sources?', refCode: 'ISP-006' },
+      ],
+    },
+    {
+      id: 'demo-ra-section-rs',
+      title: 'Respond',
+      questions: [
+        { number: 'RS.RP-1', text: 'Is a response plan executed during or after an incident?', refCode: 'ISP-006' },
+      ],
+    },
+    {
+      id: 'demo-ra-section-rc',
+      title: 'Recover',
+      questions: [
+        { number: 'RC.RP-1', text: 'Is a recovery plan executed during or after a cybersecurity incident?', refCode: 'ISP-009' },
+        { number: 'RC.IM-1', text: 'Are recovery plans incorporating lessons learned?', refCode: 'ISP-010' },
+      ],
+    },
+  ];
+
+  let templateQuestionTotal = 0;
+  // First pass: build the template-side sections + questions. Map keyed by question id
+  // so we can clone them later. Idempotent via upsert on the deterministic IDs.
+  const templateQuestionByPath: Record<string, { id: string; refCode: string; number: string; text: string }> = {};
+  for (let sIdx = 0; sIdx < sectionsData.length; sIdx++) {
+    const sec = sectionsData[sIdx]!;
+    await prisma.questionnaireSection.upsert({
+      where: { id: sec.id },
+      update: {},
+      create: {
+        id: sec.id,
+        templateId: ratemplate.id,
+        title: sec.title,
+        sortOrder: sIdx,
+        updatedAt: new Date(),
+      },
+    });
+    for (let qIdx = 0; qIdx < sec.questions.length; qIdx++) {
+      const q = sec.questions[qIdx]!;
+      const qId = `${sec.id}-q${qIdx + 1}`;
+      const stdControlId = ispByCode[q.refCode] ?? null;
+      const unresolved = stdControlId ? null : q.refCode;
+      await prisma.questionnaireQuestion.upsert({
+        where: { id: qId },
+        update: {},
+        create: {
+          id: qId,
+          sectionId: sec.id,
+          number: q.number,
+          questionText: q.text,
+          questionType: QuestionType.TEXT,
+          isRequired: false,
+          sortOrder: qIdx,
+          isLongText: false,
+          standardControlId: stdControlId,
+          unresolvedReference: unresolved,
+          updatedAt: new Date(),
+        },
+      });
+      templateQuestionByPath[`${sec.id}/${qIdx + 1}`] = {
+        id: qId,
+        refCode: q.refCode,
+        number: q.number,
+        text: q.text,
+      };
+      templateQuestionTotal++;
+    }
+  }
+  console.log(`  ✅ Template "${ratemplate.name}" with ${sectionsData.length} sections, ${templateQuestionTotal} questions\n`);
+
+  // ========================================================================
+  // Layer 13: Two RiskAssessmentProjects — one with an attached questionnaire
+  // (partly answered, ready for the Questionnaire-tab demo), one without
+  // (lands on the empty-state template picker).
+  // ========================================================================
+  console.log('  Creating risk assessments...');
+
+  const PROJECT_WITH_Q_ID = 'demo-ra-project-with-q';
+  const PROJECT_EMPTY_ID = 'demo-ra-project-empty';
+
+  await prisma.riskAssessmentProject.upsert({
+    where: { id: PROJECT_WITH_Q_ID },
+    update: {},
+    create: {
+      id: PROJECT_WITH_Q_ID,
+      organizationId: ORG_A,
+      subject: 'Q3 Internal IT Risk Review',
+      description: 'Quarterly review of IT controls scoped to access management, data protection, monitoring, and incident response.',
+      matrixVersionId,
+      assigneeId: BOB,
+      createdById: ALICE,
+      status: 'IN_PROGRESS',
+      dueDate: new Date('2026-09-30'),
+    },
+  });
+
+  await prisma.riskAssessmentProject.upsert({
+    where: { id: PROJECT_EMPTY_ID },
+    update: {},
+    create: {
+      id: PROJECT_EMPTY_ID,
+      organizationId: ORG_A,
+      subject: 'Cloud Migration Risk Assessment',
+      description: 'Pre-migration risk review for the AWS lift-and-shift of the legacy ERP. Awaiting questionnaire selection.',
+      matrixVersionId,
+      assigneeId: ALICE,
+      createdById: ALICE,
+      status: 'IN_PROGRESS',
+      dueDate: new Date('2026-08-15'),
+    },
+  });
+
+  // Cloned snapshot: deep-copy the template into the first project.
+  const QUESTIONNAIRE_ID = 'demo-ra-questionnaire-1';
+  const existingQuestionnaire = await prisma.riskAssessmentQuestionnaire.findUnique({
+    where: { id: QUESTIONNAIRE_ID },
+    select: { id: true },
+  });
+  if (!existingQuestionnaire) {
+    await prisma.riskAssessmentQuestionnaire.create({
+      data: {
+        id: QUESTIONNAIRE_ID,
+        organizationId: ORG_A,
+        riskAssessmentProjectId: PROJECT_WITH_Q_ID,
+        templateId: ratemplate.id,
+        templateName: ratemplate.name,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Clone every section/question. Pre-answer 3 of the 12 questions so the
+    // tab's progress bar isn't 0% out of the box but also isn't fully
+    // satisfied — leaves room for the demo presenter to answer a question
+    // live and watch the "Submit for Approval" gate flip.
+    const PREANSWER: Record<string, { status: RiskQuestionStatus; notes: string }> = {
+      'ID.AM-1': {
+        status: RiskQuestionStatus.IMPLEMENTED,
+        notes: 'CMDB sync runs nightly against AWS Config. Validated 2026-04-15 by Tom Bradley.',
+      },
+      'PR.AC-1': {
+        status: RiskQuestionStatus.PARTIAL,
+        notes: 'MFA enforced for SSO + privileged accounts. Service accounts still on rotated static credentials — exception until 2026-Q4.',
+      },
+      'PR.DS-1': {
+        status: RiskQuestionStatus.NOT_IMPLEMENTED,
+        notes: 'Production database volumes confirmed unencrypted at rest (AWS RDS — encryption flag was not set at creation time). Treatment plan in Q3.',
+      },
+    };
+
+    for (let sIdx = 0; sIdx < sectionsData.length; sIdx++) {
+      const sec = sectionsData[sIdx]!;
+      const cloneSectionId = `${QUESTIONNAIRE_ID}-${sec.id}`;
+      await prisma.riskAssessmentSection.create({
+        data: {
+          id: cloneSectionId,
+          questionnaireId: QUESTIONNAIRE_ID,
+          name: sec.title,
+          order: sIdx,
+          updatedAt: new Date(),
+        },
+      });
+      for (let qIdx = 0; qIdx < sec.questions.length; qIdx++) {
+        const q = sec.questions[qIdx]!;
+        const tplQ = templateQuestionByPath[`${sec.id}/${qIdx + 1}`]!;
+        const stdControlId = ispByCode[q.refCode] ?? null;
+        const unresolved = stdControlId ? null : q.refCode;
+        const pre = PREANSWER[q.number];
+        await prisma.riskAssessmentQuestion.create({
+          data: {
+            id: `${cloneSectionId}-q${qIdx + 1}`,
+            sectionId: cloneSectionId,
+            number: q.number,
+            text: q.text,
+            isCustom: false,
+            templateQuestionId: tplQ.id,
+            standardControlId: stdControlId,
+            unresolvedReference: unresolved,
+            status: pre?.status ?? null,
+            notes: pre?.notes ?? null,
+            order: qIdx,
+            updatedAt: new Date(),
+          },
+        });
+      }
+    }
+    console.log(`  ✅ 2 risk assessments (1 with attached questionnaire, 3/${templateQuestionTotal} pre-answered)\n`);
+  } else {
+    console.log(`  ⏭️  Risk assessments already seeded — skipping\n`);
+  }
 
   console.log('✅ Demo data seeding complete!\n');
 }

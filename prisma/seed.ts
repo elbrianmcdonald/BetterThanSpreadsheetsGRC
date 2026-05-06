@@ -1089,6 +1089,9 @@ async function main() {
   console.log(`  - ${riskTemplates.length * 2} Risk templates (5 per organization)`);
   console.log(`  - 2 Audit log entries`);
   console.log(`  - 3 Maturity Frameworks (NIST CSF 2.0, C2M2, OWASP SAMM)`);
+  console.log(`  - 1 Default 3×3 Risk Matrix (published)`);
+  console.log(`  - 1 Risk-Assessment Questionnaire Template (12 questions, 1 unresolved demo ref)`);
+  console.log(`  - 2 Risk Assessment Projects (1 with attached questionnaire + 3 pre-answered)`);
 }
 
 main()
