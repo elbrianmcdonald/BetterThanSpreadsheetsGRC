@@ -387,6 +387,14 @@ AWS_SES_SECRET_ACCESS_KEY=...
 EMAIL_FROM_ADDRESS=noreply@example.com
 ```
 
+> **Password reset delivery.** With `EMAIL_PROVIDER=console` (the default) the
+> app has no way to email reset links, so the "Forgot password" flow shows the
+> link **on-screen** to whoever submits the form. This keeps self-service
+> working without email, but it means anyone who can name a registered email
+> can obtain a working reset link — only run console mode on a trusted or
+> internal network. Configuring SendGrid or SES above switches delivery to
+> email automatically and disables the on-screen link.
+
 ---
 
 ## Updating
