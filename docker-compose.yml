@@ -12,6 +12,7 @@ services:
       - HOSTNAME=0.0.0.0
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?required}@postgres:5432/${POSTGRES_DB:-betterthanspreadsheetsGRC}
       - AUTH_SECRET=${AUTH_SECRET:?required}
+      - CRON_SECRET=${CRON_SECRET:?CRON_SECRET is required. Run ./scripts/setup-env.sh (or scripts\\setup-env.ps1 on Windows) to generate one, or set CRON_SECRET in your .env file (openssl rand -hex 32).}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost}
       - AUTH_TRUST_HOST=true
       - CLAMAV_HOST=${CLAMAV_HOST:-}

@@ -89,6 +89,7 @@ env_set() {
 # ------------------------------------------------------------------
 _pg_pass=$(env_val POSTGRES_PASSWORD)
 _auth_sec=$(env_val AUTH_SECRET)
+_cron_sec=$(env_val CRON_SECRET)
 
 if [ -z "$_pg_pass" ]; then
     PG_PASS=$(openssl rand -hex 16)
@@ -104,6 +105,20 @@ if [ -z "$_auth_sec" ]; then
     echo "  Generated random AUTH_SECRET."
 else
     echo "  AUTH_SECRET already set."
+fi
+
+# CRON_SECRET authenticates /api/cron/* endpoints. Required in production —
+# docker-compose.yml refuses to start if it is empty.
+if [ -z "$_cron_sec" ]; then
+    CRON_SEC=$(openssl rand -hex 32)
+    if grep -q '^CRON_SECRET=' .env; then
+        env_set CRON_SECRET "$CRON_SEC"
+    else
+        echo "CRON_SECRET=$CRON_SEC" >> .env
+    fi
+    echo "  Generated random CRON_SECRET."
+else
+    echo "  CRON_SECRET already set."
 fi
 
 # ------------------------------------------------------------------

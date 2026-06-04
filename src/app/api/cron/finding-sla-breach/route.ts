@@ -17,6 +17,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/cron-auth";
 import {
   processFindingSlaBreaches,
   getSlaBreachStats,
@@ -29,15 +30,8 @@ import {
  * Called by external cron scheduler (Vercel Cron, GitHub Actions, etc.)
  */
 export async function POST(request: NextRequest) {
-  // Verify cron secret for security
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  // Skip auth check if no secret configured (development)
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    console.warn("[Cron] Unauthorized SLA breach job attempt");
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = verifyCronRequest(request);
+  if (denied) return denied;
 
   console.log("[Cron] Starting finding SLA breach detection...");
 

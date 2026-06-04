@@ -15,6 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/cron-auth";
 import { processEvidenceRequestReminders } from "@/server/services/evidence-request-reminder.service";
 
 /**
@@ -24,18 +25,8 @@ import { processEvidenceRequestReminders } from "@/server/services/evidence-requ
  * Called by external cron scheduler (Vercel Cron, GitHub Actions, etc.)
  */
 export async function POST(request: NextRequest) {
-  // Verify cron secret for security
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  // Skip auth check if no secret configured (development)
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    console.warn("[Cron] Unauthorized reminder job attempt");
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
+  const denied = verifyCronRequest(request);
+  if (denied) return denied;
 
   console.log("[Cron] Starting evidence request reminder processing...");
 

@@ -12,6 +12,13 @@ export const env = createEnv({
         ? z.string()
         : z.string().optional(),
     AUTH_URL: z.string().url().optional(), // NextAuth v5 base URL
+    // Cron job authentication (Story: H-2 fix). Required in production —
+    // /api/cron/* endpoints refuse to run without it. Generate with
+    // `openssl rand -hex 32` or `./scripts/setup-env.sh`.
+    CRON_SECRET:
+      process.env.NODE_ENV === "production"
+        ? z.string().min(32, "CRON_SECRET must be at least 32 chars in production")
+        : z.string().min(32).optional(),
     DATABASE_URL: z.string().url(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -64,6 +71,7 @@ export const env = createEnv({
   runtimeEnv: {
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_URL: process.env.AUTH_URL,
+    CRON_SECRET: process.env.CRON_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     // File Upload Configuration (Story 3.1)

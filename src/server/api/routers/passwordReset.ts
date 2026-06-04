@@ -9,22 +9,30 @@
  * - Secure token generation (crypto.randomBytes)
  * - Password complexity validation
  * - Audit logging for password changes
+ * - Per-user rate limit on reset requests (max 3 per hour)
+ * - Constant-time response for existent/non-existent emails
  *
- * **Note:** This is a simplified implementation for MVP.
- * In production, you would send reset links via email.
- * For now, tokens are returned directly (for testing/development).
+ * Reset tokens are delivered out-of-band (email). When no email transport
+ * is configured (EMAIL_PROVIDER=console), the reset URL is logged to stdout
+ * for local development. Tokens are never returned to the API caller.
  */
 
 import { TRPCError } from "@trpc/server";
 import crypto, { randomUUID } from "crypto";
 
+import { env } from "@/env";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "@/server/api/trpc";
+import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 import {
   requestPasswordResetSchema,
   resetPasswordSchema,
   changePasswordSchema,
 } from "@/schemas/user";
 import { hashPassword, verifyPassword } from "@/server/services/auth/passwordService";
+
+const RESET_REQUEST_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const MAX_RESET_REQUESTS_PER_WINDOW = 3;
+const TIMING_FLOOR_MS = 80;
 
 /**
  * Generate a secure random token for password reset
@@ -43,33 +51,58 @@ export const passwordResetRouter = createTRPCRouter({
    * **Security:**
    * - Token expires after 1 hour
    * - Token is single-use
-   * - Does not reveal if email exists (timing-safe)
+   * - Does not reveal if the email exists (response shape and timing
+   *   are identical for existent, non-existent, and throttled users)
+   * - Throttled to MAX_RESET_REQUESTS_PER_WINDOW per user per hour
    *
-   * **MVP Note:** Returns token directly for testing.
-   * In production, would send via email instead.
+   * The token is never returned to the caller. In dev (NODE_ENV !==
+   * "production") the reset URL is logged to stdout. Wiring to the email
+   * transport for production delivery is a follow-up task.
    */
   requestReset: publicProcedure
     .input(requestPasswordResetSchema)
     .mutation(async ({ ctx, input }) => {
-      // Find user by email (timing-safe - always takes same time)
+      const startedAt = Date.now();
+      const genericResponse = {
+        success: true,
+        message: "If an account exists with this email, a password reset link has been sent.",
+      };
+
+      const equalizeTiming = async () => {
+        const elapsed = Date.now() - startedAt;
+        if (elapsed < TIMING_FLOOR_MS) {
+          await new Promise((resolve) => setTimeout(resolve, TIMING_FLOOR_MS - elapsed));
+        }
+      };
+
       const user = await ctx.db.user.findUnique({
         where: { email: input.email },
       });
 
-      // Always return success (don't reveal if email exists)
       if (!user || !user.hashedPassword) {
-        // User doesn't exist or uses SSO - but don't reveal this
-        return {
-          success: true,
-          message: "If an account exists with this email, a password reset link has been sent.",
-        };
+        await equalizeTiming();
+        return genericResponse;
       }
 
-      // Generate secure reset token
-      const token = generateResetToken();
-      const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+      const windowStart = new Date(Date.now() - RESET_REQUEST_WINDOW_MS);
+      const recentRequests = await ctx.db.passwordResetToken.count({
+        where: {
+          userId: user.id,
+          createdAt: { gte: windowStart },
+        },
+      });
 
-      // Store reset token
+      if (recentRequests >= MAX_RESET_REQUESTS_PER_WINDOW) {
+        console.warn(
+          `[passwordReset] Throttled reset request for user ${user.id} (${recentRequests} in window)`
+        );
+        await equalizeTiming();
+        return genericResponse;
+      }
+
+      const token = generateResetToken();
+      const expires = new Date(Date.now() + RESET_REQUEST_WINDOW_MS);
+
       await ctx.db.passwordResetToken.create({
         data: {
           id: randomUUID(),
@@ -80,14 +113,22 @@ export const passwordResetRouter = createTRPCRouter({
         },
       });
 
-      // MVP: Return token directly
-      // Production: Send email with reset link
-      return {
-        success: true,
-        message: "If an account exists with this email, a password reset link has been sent.",
-        // TEMPORARY - Remove in production when email sending is implemented
-        __devToken: token, // Only for MVP testing
-      };
+      // Non-production builds log the reset URL to stdout so developers can
+      // complete the flow without configuring a real email transport.
+      // Never return the token to the caller — it is a credential.
+      if (env.NODE_ENV !== "production") {
+        const base = env.AUTH_URL ?? "http://localhost:3000";
+        console.log(
+          `[passwordReset:dev] reset link for ${user.email}: ${base}/reset-password?token=${token}`
+        );
+      }
+
+      // TODO(follow-up): wire to email.service.ts to send the reset URL out-of-band.
+      // Until then, console transport (EMAIL_PROVIDER=console) is the dev workflow
+      // and a production deployment without email configured cannot complete resets.
+
+      await equalizeTiming();
+      return genericResponse;
     }),
 
   /**
@@ -153,32 +194,40 @@ export const passwordResetRouter = createTRPCRouter({
       // Hash new password
       const hashedPassword = await hashPassword(input.newPassword);
 
-      // Update user password
-      await ctx.db.user.update({
-        where: { id: resetToken.userId },
-        data: { hashedPassword },
-      });
+      // resetPassword is a publicProcedure so no tRPC middleware established
+      // the organization AsyncLocalStorage context. AuditLog is not on the
+      // Prisma multi-tenant allowlist, so its create would otherwise throw
+      // "Organization context required for creating AuditLog". Establish the
+      // context now that the user is known, and run the three writes inside
+      // a transaction so the password change, token consumption, and audit
+      // entry succeed or roll back together.
+      await runWithOrganizationContext(user.organizationId, () =>
+        ctx.db.$transaction(async (tx) => {
+          await tx.user.update({
+            where: { id: resetToken.userId },
+            data: { hashedPassword },
+          });
 
-      // Mark token as used
-      await ctx.db.passwordResetToken.update({
-        where: { id: resetToken.id },
-        data: { used: true },
-      });
+          await tx.passwordResetToken.update({
+            where: { id: resetToken.id },
+            data: { used: true },
+          });
 
-      // Audit log entry
-      await ctx.db.auditLog.create({
-        data: {
-          id: randomUUID(),
-          organizationId: user.organizationId,
-          userId: resetToken.userId,
-          action: "PASSWORD_RESET",
-          entityType: "User",
-          entityId: resetToken.userId,
-          changes: {
-            message: "User reset their password via reset token",
-          },
-        },
-      });
+          await tx.auditLog.create({
+            data: {
+              id: randomUUID(),
+              organizationId: user.organizationId,
+              userId: resetToken.userId,
+              action: "PASSWORD_RESET",
+              entityType: "User",
+              entityId: resetToken.userId,
+              changes: {
+                message: "User reset their password via reset token",
+              },
+            },
+          });
+        }),
+      );
 
       return {
         success: true,
@@ -248,26 +297,35 @@ export const passwordResetRouter = createTRPCRouter({
       // Hash new password
       const hashedPassword = await hashPassword(input.newPassword);
 
-      // Update user password
-      await ctx.db.user.update({
-        where: { id: user.id },
-        data: { hashedPassword },
-      });
+      // changePassword uses protectedProcedure, which validates the session
+      // but does not establish the organization AsyncLocalStorage context
+      // (only organizationProcedure does that). AuditLog is not on the
+      // multi-tenant allowlist, so its create would otherwise throw
+      // "Organization context required for creating AuditLog". Wrap the
+      // password update and audit entry in the context + a transaction so
+      // the two writes commit or roll back together.
+      await runWithOrganizationContext(user.organizationId, () =>
+        ctx.db.$transaction(async (tx) => {
+          await tx.user.update({
+            where: { id: user.id },
+            data: { hashedPassword },
+          });
 
-      // Audit log entry
-      await ctx.db.auditLog.create({
-        data: {
-          id: randomUUID(),
-          organizationId: user.organizationId,
-          userId: user.id,
-          action: "PASSWORD_CHANGE",
-          entityType: "User",
-          entityId: user.id,
-          changes: {
-            message: "User changed their password",
-          },
-        },
-      });
+          await tx.auditLog.create({
+            data: {
+              id: randomUUID(),
+              organizationId: user.organizationId,
+              userId: user.id,
+              action: "PASSWORD_CHANGE",
+              entityType: "User",
+              entityId: user.id,
+              changes: {
+                message: "User changed their password",
+              },
+            },
+          });
+        }),
+      );
 
       return {
         success: true,

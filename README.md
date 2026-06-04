@@ -81,7 +81,7 @@ cd betterthanspreadsheetsgrc
 ./start.sh
 ```
 
-`start.sh` creates `.env` from `.env.example`, generates a random `POSTGRES_PASSWORD` and `AUTH_SECRET`, builds the images, starts PostgreSQL and the app, runs `prisma db push` to create the schema, and seeds frameworks + demo data on first run. Expect 3–5 minutes for the first build plus ~1 minute for seeding.
+`start.sh` creates `.env` from `.env.example`, generates a random `POSTGRES_PASSWORD`, `AUTH_SECRET`, and `CRON_SECRET`, builds the images, starts PostgreSQL and the app, runs `prisma db push` to create the schema, and seeds frameworks + demo data on first run. Expect 3–5 minutes for the first build plus ~1 minute for seeding.
 
 When it finishes, open **http://localhost** and sign in:
 
@@ -94,14 +94,27 @@ When it finishes, open **http://localhost** and sign in:
 
 ### Manual Setup (if you want to configure `.env` yourself)
 
-```bash
-cp .env.example .env
-# Edit .env and set POSTGRES_PASSWORD and AUTH_SECRET
-# Generate AUTH_SECRET with: openssl rand -base64 32
-# Set SEED_ON_STARTUP=true for the first run, then remove it
+The cross-platform helper script generates every required secret in one step:
 
+```bash
+# Linux / macOS / Git Bash on Windows
+./scripts/setup-env.sh
+
+# PowerShell on Windows
+.\scripts\setup-env.ps1
+```
+
+Then start the stack:
+
+```bash
+# Set SEED_ON_STARTUP=true in .env for the first run, then remove it
 docker compose up -d --build
 ```
+
+If you prefer to manage `.env` entirely by hand: copy `.env.example`, then set
+`POSTGRES_PASSWORD`, `AUTH_SECRET` (generate with `openssl rand -base64 32`),
+and `CRON_SECRET` (generate with `openssl rand -hex 32`). All three are
+required — `docker compose up` will refuse to start without `CRON_SECRET`.
 
 The app container runs `prisma db push --accept-data-loss` on every start and seeds the database when it is empty or when `SEED_ON_STARTUP=true`. There is no separate `prisma migrate` step to run by hand.
 

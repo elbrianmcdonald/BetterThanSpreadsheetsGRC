@@ -17,7 +17,7 @@ cd BetterThanSpreadsheetsGRC
 ```
 
 That's it. The script automatically:
-- Generates secure random passwords and creates `.env`
+- Generates secure random `POSTGRES_PASSWORD`, `AUTH_SECRET`, and `CRON_SECRET` and creates `.env`
 - Builds and starts all services
 - Runs database migrations and seeds frameworks + demo data
 - Prints the login credentials when ready
@@ -33,15 +33,20 @@ Open **http://localhost** and sign in.
 
 If you prefer to configure things yourself instead of using the start script:
 
-1. Create your environment file:
+1. Generate the required secrets and create `.env` in one step:
    ```bash
-   cp .env.example .env
-   ```
+   # Linux / macOS / Git Bash on Windows
+   ./scripts/setup-env.sh
 
-2. Set the required values in `.env`:
+   # PowerShell on Windows
+   .\scripts\setup-env.ps1
+   ```
+   This copies `.env.example` → `.env` (if missing) and fills in `POSTGRES_PASSWORD`,
+   `AUTH_SECRET`, and `CRON_SECRET` with cryptographically random values. It is
+   idempotent — already-set values are preserved.
+
+2. Set the remaining values in `.env`:
    ```env
-   POSTGRES_PASSWORD=your-strong-password-here
-   AUTH_SECRET=your-secret-here          # Generate with: openssl rand -base64 32
    SEED_ON_STARTUP=true                  # Remove after first run
    ```
 
@@ -50,10 +55,16 @@ If you prefer to configure things yourself instead of using the start script:
    docker compose up -d --build
    ```
    > The first build takes 3–5 minutes. Seeding adds another 1–2 minutes on first run.
+   >
+   > Docker Compose refuses to start if `CRON_SECRET` is unset — if you skipped
+   > step 1, the error message will tell you exactly what to do.
 
 4. Open `http://<server-ip>`
 
 5. After the first successful start, remove `SEED_ON_STARTUP=true` from `.env` so restarts don't re-seed.
+
+6. Configure your scheduler to call the three cron endpoints with the
+   `CRON_SECRET` bearer token — see **[Scheduling cron jobs](#scheduling-cron-jobs)** below.
 
 ---
 
@@ -63,10 +74,12 @@ Uses [Caddy](https://caddyserver.com/) for automatic HTTPS via Let's Encrypt.
 
 1. Point your DNS A record to the server's IP address.
 
-2. Configure `.env`:
+2. Generate secrets and configure `.env`:
+   ```bash
+   ./scripts/setup-env.sh    # populates POSTGRES_PASSWORD, AUTH_SECRET, CRON_SECRET
+   ```
+   Then edit `.env` to add the production-only values:
    ```env
-   POSTGRES_PASSWORD=your-strong-password-here
-   AUTH_SECRET=your-secret-here
    NEXTAUTH_URL=https://grc.example.com
    DOMAIN=grc.example.com
    APP_PORT=                              # Empty — Caddy handles external traffic
@@ -88,6 +101,8 @@ Uses [Caddy](https://caddyserver.com/) for automatic HTTPS via Let's Encrypt.
 Caddy automatically provisions and renews TLS certificates from Let's Encrypt.
 
 > **Subsequent starts:** `docker compose --profile production up -d`
+
+7. Configure your scheduler to call the three cron endpoints — see **[Scheduling cron jobs](#scheduling-cron-jobs)** below.
 
 ---
 
@@ -189,6 +204,7 @@ Four changes — three in the `app` service, one in `postgres`.
 ```env
 DATABASE_URL=postgresql://btsgrc_app:CHANGE-ME@host.docker.internal:5432/btsgrc
 AUTH_SECRET=                   # Generate with: openssl rand -base64 32
+CRON_SECRET=                   # Generate with: openssl rand -hex 32
 NEXTAUTH_URL=http://localhost
 SEED_ON_STARTUP=true           # First run only; remove after the app is up
 ```
@@ -245,6 +261,95 @@ Your external DB is untouched; the containerized DB starts fresh.
 - **`host-gateway`** requires Docker Engine 20.10+ on Linux. Older engines need the literal host IP in `extra_hosts`.
 - **Schema drift** — `prisma db push --accept-data-loss` reconciles the schema every boot. Don't share the DB with other apps.
 - **Prisma client engine compatibility** — PostgreSQL 13–16 all work. Versions outside that range are untested.
+
+---
+
+## Scheduling cron jobs
+
+The app exposes three POST endpoints that perform daily background work. Each
+is protected by the `CRON_SECRET` bearer token from `.env`. Without an external
+scheduler hitting them, evidence-request reminders and SLA breach detection
+will not run.
+
+Endpoints:
+
+| Endpoint | Purpose | Suggested cadence |
+|---|---|---|
+| `POST /api/cron/evidence-request-reminders` | Send 3-days-before and overdue reminders | Daily |
+| `POST /api/cron/finding-sla-breach` | Flip `slaBreached=true` on overdue findings | Daily |
+| `POST /api/cron/treatment-sla-breach` | Flip `slaBreached=true` on overdue treatments | Daily |
+
+Test one manually:
+
+```bash
+curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+  http://localhost/api/cron/finding-sla-breach
+# {"success":true,"processedCount":0,"breachedCount":0,"errors":[]}
+```
+
+### Host cron (Linux self-hosted)
+
+`crontab -e`:
+
+```cron
+CRON_SECRET=<paste the value from your .env>
+URL=https://grc.example.com
+
+0 8 * * * curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" $URL/api/cron/evidence-request-reminders > /dev/null
+5 8 * * * curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" $URL/api/cron/finding-sla-breach > /dev/null
+10 8 * * * curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" $URL/api/cron/treatment-sla-breach > /dev/null
+```
+
+### Vercel Cron
+
+Add to `vercel.json` and put `CRON_SECRET` in the Vercel project's
+Environment Variables. Vercel injects the value into the `Authorization`
+header automatically when the path matches.
+
+### Kubernetes CronJob
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: grc-finding-sla-breach
+spec:
+  schedule: "5 8 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: curl
+              image: curlimages/curl:latest
+              env:
+                - name: CRON_SECRET
+                  valueFrom:
+                    secretKeyRef: { name: grc-secrets, key: CRON_SECRET }
+              command:
+                - sh
+                - -c
+                - >
+                  curl -fsS -X POST
+                  -H "Authorization: Bearer $CRON_SECRET"
+                  https://grc.example.com/api/cron/finding-sla-breach
+```
+
+### GitHub Actions (last resort)
+
+```yaml
+on:
+  schedule: [{cron: "5 8 * * *"}]
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://grc.example.com/api/cron/finding-sla-breach
+```
 
 ---
 
