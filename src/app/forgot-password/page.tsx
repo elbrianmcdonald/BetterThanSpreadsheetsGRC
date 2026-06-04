@@ -1,8 +1,10 @@
 /**
  * Forgot Password Page
  *
- * Allows users to request a password reset link. The reset URL is delivered
- * out-of-band (email transport, or stdout in development).
+ * Allows users to request a password reset link. When email delivery is
+ * configured the link is emailed out-of-band; when it is not (the default,
+ * EMAIL_PROVIDER=console) the API returns the link and it is shown on-screen
+ * so the reset stays self-service.
  */
 
 "use client";
@@ -14,10 +16,16 @@ import Link from "next/link";
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [resetUrl, setResetUrl] = useState<string | null>(null);
 
   const requestResetMutation = api.passwordReset.requestReset.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       setIsSubmitted(true);
+      // Present only when no email transport is configured (the API returns
+      // the link inline for on-screen self-service).
+      if (data && "resetUrl" in data && typeof data.resetUrl === "string") {
+        setResetUrl(data.resetUrl);
+      }
     },
   });
 
@@ -36,7 +44,7 @@ export default function ForgotPasswordPage() {
               BetterThanSpreadsheetsGRC
             </h1>
             <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-              Check Your Email
+              {resetUrl ? "Reset Your Password" : "Check Your Email"}
             </h2>
           </div>
 
@@ -58,11 +66,28 @@ export default function ForgotPasswordPage() {
               </div>
               <div className="ml-3">
                 <p className="text-sm text-green-700">
-                  If an account exists with this email address, a password reset link has been sent.
+                  {resetUrl
+                    ? "Your password reset link is ready. Use the button below to set a new password."
+                    : "If an account exists with this email address, a password reset link has been sent."}
                 </p>
               </div>
             </div>
           </div>
+
+          {/* Inline reset link (shown only when email delivery is not configured) */}
+          {resetUrl && (
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-center">
+              <Link
+                href={resetUrl}
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                Reset your password
+              </Link>
+              <p className="mt-2 text-xs text-blue-700">
+                This link expires in 1 hour and can be used once.
+              </p>
+            </div>
+          )}
 
           {/* Back to Login */}
           <div className="text-center">

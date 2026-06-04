@@ -12,9 +12,15 @@
  * - Per-user rate limit on reset requests (max 3 per hour)
  * - Constant-time response for existent/non-existent emails
  *
- * Reset tokens are delivered out-of-band (email). When no email transport
- * is configured (EMAIL_PROVIDER=console), the reset URL is logged to stdout
- * for local development. Tokens are never returned to the API caller.
+ * Delivery of the reset link depends on the configured email transport:
+ *   - Real transport (sendgrid/ses): the link is emailed out-of-band and the
+ *     token is never exposed to the API caller.
+ *   - No transport (EMAIL_PROVIDER=console, the default): there is no
+ *     out-of-band channel, so the link is returned to the caller and shown
+ *     on-screen, keeping password reset self-service. In this mode anyone who
+ *     can name a registered email can obtain a working reset link — acceptable
+ *     only for trusted/internal deployments. Configuring SendGrid/SES closes
+ *     this automatically (the inline path is skipped once a transport exists).
  */
 
 import { TRPCError } from "@trpc/server";
@@ -23,6 +29,7 @@ import crypto, { randomUUID } from "crypto";
 import { env } from "@/env";
 import { createTRPCRouter, publicProcedure, protectedProcedure } from "@/server/api/trpc";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
+import { emailService } from "@/server/services/email.service";
 import {
   requestPasswordResetSchema,
   resetPasswordSchema,
@@ -55,9 +62,10 @@ export const passwordResetRouter = createTRPCRouter({
    *   are identical for existent, non-existent, and throttled users)
    * - Throttled to MAX_RESET_REQUESTS_PER_WINDOW per user per hour
    *
-   * The token is never returned to the caller. In dev (NODE_ENV !==
-   * "production") the reset URL is logged to stdout. Wiring to the email
-   * transport for production delivery is a follow-up task.
+   * Delivery: with a real email transport the link is emailed and never
+   * returned to the caller; with EMAIL_PROVIDER=console the link is returned
+   * inline so the page can display it (self-service without email). See the
+   * file header for the security trade-off of the inline path.
    */
   requestReset: publicProcedure
     .input(requestPasswordResetSchema)
@@ -113,19 +121,34 @@ export const passwordResetRouter = createTRPCRouter({
         },
       });
 
-      // Non-production builds log the reset URL to stdout so developers can
-      // complete the flow without configuring a real email transport.
-      // Never return the token to the caller — it is a credential.
-      if (env.NODE_ENV !== "production") {
-        const base = env.AUTH_URL ?? "http://localhost:3000";
-        console.log(
-          `[passwordReset:dev] reset link for ${user.email}: ${base}/reset-password?token=${token}`
+      // The reset-password page reads the token from this relative path.
+      const resetPath = `/reset-password?token=${token}`;
+
+      // No email transport configured: there is no out-of-band channel, so
+      // return the link to the caller for on-screen self-service. This lets
+      // anyone who can name a registered email obtain a working reset link —
+      // see the file header. Switch EMAIL_PROVIDER to sendgrid/ses to deliver
+      // out-of-band instead; this inline branch is then never taken.
+      if (env.EMAIL_PROVIDER === "console") {
+        console.warn(
+          "[passwordReset] EMAIL_PROVIDER=console — returning reset link inline for on-screen self-service (configure SendGrid/SES to email it instead)"
         );
+        await equalizeTiming();
+        return { ...genericResponse, resetUrl: resetPath };
       }
 
-      // TODO(follow-up): wire to email.service.ts to send the reset URL out-of-band.
-      // Until then, console transport (EMAIL_PROVIDER=console) is the dev workflow
-      // and a production deployment without email configured cannot complete resets.
+      // Real transport: email the link out-of-band, never expose the token.
+      // Best-effort — a transport failure must not reveal that the account
+      // exists, so we swallow errors and still return the generic response.
+      try {
+        const base = env.AUTH_URL ?? "http://localhost:3000";
+        await emailService.sendPasswordResetEmail({
+          to: user.email ?? input.email,
+          resetUrl: `${base}${resetPath}`,
+        });
+      } catch (error) {
+        console.error("[passwordReset] Failed to send reset email:", error);
+      }
 
       await equalizeTiming();
       return genericResponse;

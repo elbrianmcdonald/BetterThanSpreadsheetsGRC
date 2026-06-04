@@ -289,6 +289,61 @@ class EmailService {
   }
 
   /**
+   * Send a password reset email.
+   *
+   * The reset link is placed near the top of the body so it stays visible
+   * even under the console transport's HTML preview truncation. The token in
+   * the URL is a single-use credential; callers must pass an absolute URL.
+   */
+  async sendPasswordResetEmail(params: {
+    to: string;
+    resetUrl: string;
+  }): Promise<EmailSendResult> {
+    const { to, resetUrl } = params;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h1 style="color: #2563eb; margin-bottom: 24px;">Reset your password</h1>
+
+  <p>We received a request to reset the password for your BetterThanSpreadsheetsGRC account.</p>
+
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${resetUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
+  </div>
+
+  <p style="color: #6b7280; font-size: 14px;">
+    Or paste this link into your browser:<br>
+    <a href="${resetUrl}" style="color: #2563eb; word-break: break-all;">${resetUrl}</a>
+  </p>
+
+  <p style="color: #6b7280; font-size: 14px;">
+    This link expires in 1 hour and can be used once. If you didn't request a
+    password reset, you can safely ignore this email.
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
+
+  <p style="color: #9ca3af; font-size: 12px;">
+    This is an automated message from BetterThanSpreadsheetsGRC.
+  </p>
+</body>
+</html>
+    `.trim();
+
+    return this.sendEmail({
+      to,
+      subject: "Reset your BetterThanSpreadsheetsGRC password",
+      html,
+    });
+  }
+
+  /**
    * Generate HTML for evidence request email
    */
   private generateEvidenceRequestHtml(
