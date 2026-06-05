@@ -236,6 +236,9 @@ export const riskRouter = createTRPCRouter({
         controlIdsNeeded: z.array(z.string()).optional(),
         // Story 2.2: Risk Assessment Project - discovered risk linkage
         discoveryProjectId: z.string().min(1).optional(),
+        // Spawned from a questionnaire question (links the identified risk back
+        // to the source question in the assessment questionnaire).
+        sourceRiskAssessmentQuestionId: z.string().optional().nullable(),
         // Enterprise Risk alignment (rollup parent)
         enterpriseRiskId: z.string().optional().nullable(),
       })
@@ -347,6 +350,9 @@ export const riskRouter = createTRPCRouter({
           discoveryStatus: input.discoveryProjectId
             ? RiskDiscoveryStatus.PENDING
             : null,
+          // Link back to the source questionnaire question when spawned from one
+          sourceRiskAssessmentQuestionId:
+            input.sourceRiskAssessmentQuestionId ?? null,
           // Enterprise Risk alignment
           enterpriseRiskId: input.enterpriseRiskId ?? null,
         },

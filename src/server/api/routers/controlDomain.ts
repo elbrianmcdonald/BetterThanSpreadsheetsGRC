@@ -17,8 +17,23 @@ import {
   publicProcedure,
   protectedProcedure,
   adminProcedure,
+  organizationProcedure,
+  requireRole,
 } from "@/server/api/trpc";
+import { UserRole } from "@prisma/client";
 import { createAuditLog } from "@/server/services/audit-log.service";
+
+/**
+ * Roles allowed to READ the full control-domain taxonomy (drives the Risk
+ * Category dropdown in the risk dialogs). Editing the taxonomy stays admin-only.
+ */
+const TAXONOMY_READ_ROLES = [
+  UserRole.ORG_ADMIN,
+  UserRole.GRC_MANAGER,
+  UserRole.GRC_ANALYST,
+  UserRole.SECURITY_ENGINEER,
+  UserRole.CISO,
+];
 
 /**
  * Control Domain Router
@@ -50,11 +65,12 @@ export const controlDomainRouter = createTRPCRouter({
   /**
    * List all control domains (including inactive)
    *
-   * Returns all domains for admin management.
+   * Returns all domains (including inactive) for management views and the risk
+   * Category dropdown.
    *
-   * @requires ORG_ADMIN role
+   * Read access: ORG_ADMIN + managers/analysts/engineers. Editing stays admin-only.
    */
-  listAll: adminProcedure.query(async ({ ctx }) => {
+  listAll: organizationProcedure.use(requireRole(TAXONOMY_READ_ROLES)).query(async ({ ctx }) => {
     const domains = await ctx.db.controlDomain.findMany({
       orderBy: { sortOrder: "asc" },
       select: {

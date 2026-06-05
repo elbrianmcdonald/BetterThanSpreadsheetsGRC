@@ -1306,6 +1306,17 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
             discoveryStatus: "PUBLISHED",
           },
         }),
+        // Publish all PENDING findings discovered in this assessment into the
+        // findings register (same gating as risks).
+        ctx.db.finding.updateMany({
+          where: {
+            discoveryProjectId: id,
+            discoveryStatus: "PENDING",
+          },
+          data: {
+            discoveryStatus: "PUBLISHED",
+          },
+        }),
       ]);
 
       // Populate the risk register: create one RiskRegisterEntry per published

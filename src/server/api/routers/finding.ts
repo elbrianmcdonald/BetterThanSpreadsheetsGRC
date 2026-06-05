@@ -16,7 +16,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { UserRole, FindingSource, Severity, AuditAction, FindingStatus, AssessmentStatus, Prisma } from "@prisma/client";
+import { UserRole, FindingSource, Severity, AuditAction, FindingStatus, AssessmentStatus, AssessmentProjectStatus, RiskDiscoveryStatus, Prisma } from "@prisma/client";
 
 import {
   createTRPCRouter,
@@ -85,6 +85,11 @@ const createFindingInput = z.object({
   complianceAssessmentId: z.string().optional(),
   maturityAssessmentId: z.string().optional(),
   maturityDomainId: z.string().optional(),
+  // Risk Assessment Project linkage — findings discovered during an assessment.
+  // When set, the finding is created PENDING and published on assessment approval.
+  discoveryProjectId: z.string().min(1).optional(),
+  // Source questionnaire question (when spawned from a question card).
+  sourceRiskAssessmentQuestionId: z.string().optional(),
 });
 
 /**
@@ -226,6 +231,35 @@ export const findingRouter = createTRPCRouter({
       });
     }),
 
+  /**
+   * List findings discovered within a risk-assessment project (the assessment's
+   * own Findings tab). Returns all of the assessment's findings regardless of
+   * discoveryStatus, so PENDING (not-yet-published) findings are visible here.
+   */
+  listForProject: organizationProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      return ctx.db.finding.findMany({
+        where: { organizationId, discoveryProjectId: input.projectId },
+        select: {
+          id: true,
+          identifier: true,
+          title: true,
+          severity: true,
+          severityLabel: true,
+          status: true,
+          source: true,
+          discoveryStatus: true,
+          createdAt: true,
+          assignee: { select: { id: true, name: true, email: true } },
+          creator: { select: { id: true, name: true, email: true } },
+          sourceRiskAssessmentQuestion: { select: { id: true, number: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }),
+
   list: organizationProcedure
     .input(listFindingInput)
     .query(async ({ ctx, input }) => {
@@ -233,15 +267,24 @@ export const findingRouter = createTRPCRouter({
       const { status, source, severity, search, sortBy, sortOrder, limit, cursor } = input;
 
       // Build where clause with filters
+      // Only show findings that are published (from approved assessments) or
+      // created directly (no discoveryStatus). Assessment-discovered findings
+      // stay PENDING and hidden from the register until approval — same gating
+      // as discovered risks.
       const where: Prisma.FindingWhereInput = {
         organizationId,
+        OR: [{ discoveryStatus: RiskDiscoveryStatus.PUBLISHED }, { discoveryStatus: null }],
         ...(status && status.length > 0 && { status: { in: status } }),
         ...(source && source.length > 0 && { source: { in: source } }),
         ...(severity && severity.length > 0 && { severity: { in: severity } }),
         ...(search && {
-          OR: [
-            { identifier: { contains: search, mode: "insensitive" as const } },
-            { title: { contains: search, mode: "insensitive" as const } },
+          AND: [
+            {
+              OR: [
+                { identifier: { contains: search, mode: "insensitive" as const } },
+                { title: { contains: search, mode: "insensitive" as const } },
+              ],
+            },
           ],
         }),
       };
@@ -339,12 +382,49 @@ export const findingRouter = createTRPCRouter({
         complianceAssessmentId,
         maturityAssessmentId,
         maturityDomainId,
+        discoveryProjectId,
+        sourceRiskAssessmentQuestionId,
         ...findingData
       } = input;
 
       // organizationProcedure guarantees session and organizationId are non-null
       const organizationId = ctx.organizationId!;
       const userId = ctx.session!.user.id;
+
+      // Risk Assessment Project linkage: validate the assessment and restrict
+      // to the assigned analyst (mirrors risk.create — the assignee owns the
+      // assessment's discovered items). Findings start PENDING and publish on
+      // assessment approval.
+      if (discoveryProjectId) {
+        const assessment = await ctx.db.riskAssessmentProject.findUnique({
+          where: { id: discoveryProjectId },
+          select: { id: true, organizationId: true, status: true, assigneeId: true },
+        });
+        if (!assessment) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Risk assessment project not found",
+          });
+        }
+        if (assessment.organizationId !== organizationId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You don't have access to this assessment",
+          });
+        }
+        if (assessment.status !== AssessmentProjectStatus.IN_PROGRESS) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cannot add findings to an assessment that is not in progress",
+          });
+        }
+        if (assessment.assigneeId !== userId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only the assigned analyst can add findings to this assessment",
+          });
+        }
+      }
 
       // AC25: Generate sequential identifier
       const identifier = await generateIdentifier(organizationId, "FND");
@@ -421,6 +501,10 @@ export const findingRouter = createTRPCRouter({
           sourceMaturityAssessmentId: maturityAssessmentId ?? null,
           sourceMaturityDomainId: maturityDomainId ?? null,
           sourceComplianceAssessmentId: complianceAssessmentId ?? null,
+          sourceRiskAssessmentQuestionId: sourceRiskAssessmentQuestionId ?? null,
+          // Gated lifecycle: PENDING until the assessment is approved (mirrors risks)
+          discoveryProjectId: discoveryProjectId ?? null,
+          discoveryStatus: discoveryProjectId ? RiskDiscoveryStatus.PENDING : null,
           affectedBusinessUnits: affectedBusinessUnitIds?.length
             ? { connect: affectedBusinessUnitIds.map((id) => ({ id })) }
             : undefined,

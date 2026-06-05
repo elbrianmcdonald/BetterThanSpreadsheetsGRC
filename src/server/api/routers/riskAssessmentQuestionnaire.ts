@@ -12,6 +12,7 @@ import {
   FindingSource,
   FindingStatus,
   QuestionnaireUsageType,
+  RiskDiscoveryStatus,
   RiskQuestionStatus,
   RiskStatus,
   Severity,
@@ -509,6 +510,11 @@ export const riskAssessmentQuestionnaireRouter = createTRPCRouter({
           status: RiskStatus.OPEN,
           createdById: ctx.session!.user.id,
           discoveryProjectId: projectId,
+          // Tie into the assessment's identified-risk lifecycle: PENDING risks
+          // appear under the assessment and are published to the risk register
+          // when the assessment is approved (riskAssessmentProject.approve).
+          // Mirrors risk.create / DiscoveredRiskForm behavior.
+          discoveryStatus: RiskDiscoveryStatus.PENDING,
           sourceRiskAssessmentQuestionId: input.questionId,
           updatedAt: new Date(),
         },

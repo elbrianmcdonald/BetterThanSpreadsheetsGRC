@@ -15,7 +15,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Loader2, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,75 +24,12 @@ import { Form } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RiskItemCard } from "@/components/risk/RiskItemCard";
 import type { MatrixScales, Threshold } from "@/lib/matrix";
-
-const riskItemSchema = z.object({
-  id: z.string(),
-  title: z.string().nullable().optional(),
-  riskStatement: z.string().min(1, "Risk statement is required"),
-  controlDomainId: z.string().nullable().optional(),
-  initialAccessVectorId: z.string().nullable().optional(),
-  threatStepIds: z.array(z.string()),
-  threatObjectiveIds: z.array(z.string()),
-  mitigatingControlIds: z.array(z.string()),
-  controlGapIds: z.array(z.string()),
-  inherentLikelihood: z.number().nullable().optional(),
-  inherentImpact: z.number().nullable().optional(),
-  inherentExposure: z.number().nullable().optional(),
-  residualLikelihood: z.number().nullable().optional(),
-  residualImpact: z.number().nullable().optional(),
-  residualExposure: z.number().nullable().optional(),
-  residualEliminated: z.boolean().optional(),
-  treatment: z.enum(["ACCEPT", "REMEDIATE"]).nullable().optional(),
-  treatmentDueDate: z.date().nullable().optional(),
-  treatmentPlan: z.string().nullable().optional(),
-  // Acceptance form (rendered when treatment === ACCEPT)
-  acceptanceJustification: z.string().nullable().optional(),
-  acceptanceReviewDate: z.date().nullable().optional(),
-  acceptanceCompensatingControls: z.string().nullable().optional(),
-  // Enterprise risk alignment
-  enterpriseRiskId: z.string().nullable().optional(),
-  evidenceIds: z.array(z.string()),
-  isExisting: z.boolean().optional(),
-  dbId: z.string().optional(),
-});
-
-type RiskItemValues = z.infer<typeof riskItemSchema>;
-
-const formSchema = z.object({
-  risks: z.array(riskItemSchema),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-function emptyRisk(): RiskItemValues {
-  return {
-    id: crypto.randomUUID(),
-    title: "",
-    riskStatement: "",
-    controlDomainId: null,
-    initialAccessVectorId: null,
-    threatStepIds: [],
-    threatObjectiveIds: [],
-    mitigatingControlIds: [],
-    controlGapIds: [],
-    inherentLikelihood: null,
-    inherentImpact: null,
-    inherentExposure: null,
-    residualLikelihood: null,
-    residualImpact: null,
-    residualExposure: null,
-    residualEliminated: false,
-    treatment: null,
-    treatmentDueDate: null,
-    treatmentPlan: null,
-    acceptanceJustification: null,
-    acceptanceReviewDate: null,
-    acceptanceCompensatingControls: null,
-    enterpriseRiskId: null,
-    evidenceIds: [],
-    isExisting: false,
-  };
-}
+import {
+  emptyRisk,
+  identifiedRisksFormSchema as formSchema,
+  type IdentifiedRisksFormValues as FormValues,
+  type RiskItemValues,
+} from "./identifiedRiskForm";
 
 interface IdentifiedRisksEditorProps {
   projectId: string;

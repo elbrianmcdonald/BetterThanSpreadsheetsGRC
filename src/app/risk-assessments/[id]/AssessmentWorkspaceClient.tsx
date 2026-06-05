@@ -38,6 +38,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import {
   AlertTriangle,
+  Bug,
   Calendar,
   ClipboardCheck,
   FileText,
@@ -54,6 +55,7 @@ import { AssessmentProjectStatus } from "@prisma/client";
 
 import { api, type RouterOutputs } from "@/trpc/react";
 import { IdentifiedRisksEditor } from "@/components/risk-assessment-project/IdentifiedRisksEditor";
+import { AssessmentFindingsTab } from "@/components/risk-assessment-project/AssessmentFindingsTab";
 import { QuestionnaireTab } from "@/components/risk-assessment-project/QuestionnaireTab";
 import { ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +78,7 @@ type Tab =
   | "overview"
   | "questionnaire"
   | "identified-risks"
+  | "findings"
   | "controls"
   | "evidence"
   | "remediation"
@@ -87,13 +90,14 @@ interface TabConfig {
   id: Tab;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  countKey?: "identifiedRisksCount" | "questionnaireUnanswered";
+  countKey?: "identifiedRisksCount" | "questionnaireUnanswered" | "findingsCount";
 }
 
 const TABS: TabConfig[] = [
   { id: "overview", label: "Overview", icon: FileText },
   { id: "questionnaire", label: "Questionnaire", icon: ClipboardList, countKey: "questionnaireUnanswered" },
   { id: "identified-risks", label: "Identified Risks", icon: ListTree, countKey: "identifiedRisksCount" },
+  { id: "findings", label: "Findings", icon: Bug, countKey: "findingsCount" },
   { id: "controls", label: "Controls", icon: Shield },
   { id: "evidence", label: "Evidence", icon: FolderOpen },
   { id: "remediation", label: "Remediation", icon: Wrench },
@@ -120,6 +124,11 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
     api.riskAssessmentQuestionnaire.getCompletionSummary.useQuery({
       projectId,
     });
+
+  // Drives the Findings tab badge; the same query backs the tab itself (cached).
+  const { data: projectFindings } = api.finding.listForProject.useQuery({
+    projectId,
+  });
 
   if (isLoading) {
     return (
@@ -148,6 +157,7 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
 
   const counts = {
     identifiedRisksCount: project.discoveredRisks?.length ?? 0,
+    findingsCount: projectFindings?.length ?? 0,
     questionnaireUnanswered:
       questionnaireCounts?.attached === true
         ? questionnaireCounts.total - questionnaireCounts.answered
@@ -244,6 +254,12 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
         )}
         {activeTab === "identified-risks" && (
           <IdentifiedRisksEditor
+            projectId={projectId}
+            isReadOnly={project.status !== "IN_PROGRESS"}
+          />
+        )}
+        {activeTab === "findings" && (
+          <AssessmentFindingsTab
             projectId={projectId}
             isReadOnly={project.status !== "IN_PROGRESS"}
           />

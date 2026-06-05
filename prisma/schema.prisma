@@ -2308,10 +2308,18 @@ model Finding {
   /// question via [+ Add Finding]. Multiple findings may share a source question.
   sourceRiskAssessmentQuestionId String?
 
+  /// Risk Assessment Project this finding was discovered in (mirrors
+  /// Risk.discoveryProjectId). Findings added from an assessment stay PENDING
+  /// (hidden from the global register) until the assessment is approved, then
+  /// flip to PUBLISHED — same lifecycle as discovered risks.
+  discoveryProjectId             String?
+  discoveryStatus                RiskDiscoveryStatus?
+
   sourceMaturityAssessment       MaturityAssessment?     @relation("FindingMaturitySource", fields: [sourceMaturityAssessmentId], references: [id], onDelete: SetNull)
   sourceMaturityDomain           MaturityDomain?         @relation("FindingMaturityDomainSource", fields: [sourceMaturityDomainId], references: [id], onDelete: SetNull)
   sourceComplianceAssessment     ComplianceAssessment?   @relation("FindingComplianceSource", fields: [sourceComplianceAssessmentId], references: [id], onDelete: SetNull)
   sourceRiskAssessmentQuestion   RiskAssessmentQuestion? @relation("FindingSourceRiskAssessmentQuestion", fields: [sourceRiskAssessmentQuestionId], references: [id], onDelete: SetNull)
+  DiscoveryProject               RiskAssessmentProject?  @relation("ProjectDiscoveredFindings", fields: [discoveryProjectId], references: [id], onDelete: SetNull)
 
   @@unique([organizationId, identifier]) // AC10: Unique identifier per organization
   @@index([organizationId, id])
@@ -2329,6 +2337,7 @@ model Finding {
   @@index([sourceMaturityDomainId])
   @@index([sourceComplianceAssessmentId])
   @@index([sourceRiskAssessmentQuestionId])
+  @@index([discoveryProjectId])
 }
 
 // Story 7.5: Risk Assessment model (AC1-AC15)
@@ -4049,6 +4058,10 @@ model RiskAssessmentProject {
 
   // Discovered risks within this assessment project
   discoveredRisks Risk[] @relation("ProjectDiscoveredRisks")
+
+  // Discovered findings within this assessment project (gated like risks:
+  // PENDING until approval, then PUBLISHED into the findings register)
+  discoveredFindings Finding[] @relation("ProjectDiscoveredFindings")
 
   // Risk-assessment questionnaire (cloned snapshot from a template). 1:1.
   questionnaire RiskAssessmentQuestionnaire?

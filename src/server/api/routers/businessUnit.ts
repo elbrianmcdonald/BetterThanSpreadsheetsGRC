@@ -24,13 +24,28 @@ import {
   createTRPCRouter,
   adminProcedure,
   organizationProcedure,
+  requireRole,
 } from "@/server/api/trpc";
 import {
   validateBUOperation,
   canDeleteBusinessUnit,
   getBUWithDescendants,
 } from "@/server/services/businessUnitService";
-import { AuditAction } from "@prisma/client";
+import { AuditAction, UserRole } from "@prisma/client";
+
+/**
+ * Roles allowed to READ the business-unit tree (the `list` query backs the
+ * BusinessUnitPicker used in finding/risk creation, etc.). Mutations remain
+ * ORG_ADMIN-only. Analysts and managers — and the other roles that record
+ * findings/risks — need read access so the pickers populate.
+ */
+const BU_READ_ROLES = [
+  UserRole.ORG_ADMIN,
+  UserRole.GRC_MANAGER,
+  UserRole.GRC_ANALYST,
+  UserRole.SECURITY_ENGINEER,
+  UserRole.CISO,
+];
 
 // Zod schemas for input validation
 const createBusinessUnitSchema = z.object({
@@ -165,9 +180,11 @@ export const businessUnitRouter = createTRPCRouter({
    * List Business Units as Tree
    *
    * AC33: Returns hierarchical tree structure with user and child counts
-   * AC37: Restricted to ORG_ADMIN role
+   * Read access: ORG_ADMIN + managers/analysts/engineers (BU_READ_ROLES) so the
+   * BusinessUnitPicker works in finding/risk dialogs. Mutations stay admin-only.
    */
-  list: adminProcedure
+  list: organizationProcedure
+    .use(requireRole(BU_READ_ROLES))
     .input(listBusinessUnitsSchema)
     .query(async ({ ctx, input }) => {
       const units = await ctx.db.businessUnit.findMany({

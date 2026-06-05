@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { RiskQuestionStatus, Severity } from "@prisma/client";
+import { RiskQuestionStatus } from "@prisma/client";
 import {
   AlertCircle,
   CheckCircle2,
@@ -65,6 +65,8 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { QuestionRiskDialog } from "./QuestionRiskDialog";
+import { FindingFormDialog } from "./FindingFormDialog";
 
 type Questionnaire = NonNullable<
   RouterOutputs["riskAssessmentQuestionnaire"]["getForProject"]
@@ -297,6 +299,7 @@ function FilledState({
         <SectionCard
           key={section.id}
           section={section}
+          projectId={projectId}
           isReadOnly={isReadOnly}
           refresh={refresh}
         />
@@ -331,10 +334,12 @@ function FilledState({
 
 function SectionCard({
   section,
+  projectId,
   isReadOnly,
   refresh,
 }: {
   section: Section;
+  projectId: string;
   isReadOnly: boolean;
   refresh: () => void;
 }) {
@@ -376,7 +381,7 @@ function SectionCard({
               <p className="text-sm text-muted-foreground italic">No questions in this section.</p>
             ) : (
               section.questions.map((q) => (
-                <QuestionCard key={q.id} question={q} isReadOnly={isReadOnly} refresh={refresh} />
+                <QuestionCard key={q.id} question={q} projectId={projectId} isReadOnly={isReadOnly} refresh={refresh} />
               ))
             )}
             {!isReadOnly && (
@@ -408,20 +413,18 @@ function SectionCard({
 
 function QuestionCard({
   question,
+  projectId,
   isReadOnly,
   refresh,
 }: {
   question: Question;
+  projectId: string;
   isReadOnly: boolean;
   refresh: () => void;
 }) {
   const [notesDraft, setNotesDraft] = useState(question.notes ?? "");
-  const [spawnKind, setSpawnKind] = useState<null | "finding" | "risk">(null);
-  const [spawnForm, setSpawnForm] = useState({
-    title: "",
-    description: "",
-    severity: Severity.MEDIUM as Severity,
-  });
+  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
+  const [findingDialogOpen, setFindingDialogOpen] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [confirmDeleteCustom, setConfirmDeleteCustom] = useState(false);
 
@@ -445,17 +448,6 @@ function QuestionCard({
     onSuccess: () => refresh(),
     onError: (e) => toast.error(`Failed: ${e.message}`),
   });
-  const spawn = api.riskAssessmentQuestionnaire.spawn.useMutation({
-    onSuccess: (res) => {
-      refresh();
-      toast.success(
-        `${res.kind === "finding" ? "Finding" : "Risk"} ${res.identifier} created`
-      );
-      setSpawnKind(null);
-      setSpawnForm({ title: "", description: "", severity: Severity.MEDIUM });
-    },
-    onError: (e) => toast.error(`Failed: ${e.message}`),
-  });
 
   const onStatusChange = (value: string) => {
     if (isReadOnly) return;
@@ -465,32 +457,10 @@ function QuestionCard({
     });
   };
 
-  const handleSpawn = () => {
-    if (!spawnKind) return;
-    if (!spawnForm.title.trim()) {
-      toast.error("Title is required");
-      return;
-    }
-    spawn.mutate({
-      questionId: question.id,
-      kind: spawnKind,
-      title: spawnForm.title.trim(),
-      description: spawnForm.description.trim() || null,
-      severity: spawnForm.severity,
-    });
-  };
-
-  // Auto-populate spawn form with question text + notes when opening
-  const openSpawn = (kind: "finding" | "risk") => {
-    const truncatedTitle =
-      question.text.length > 80 ? `${question.text.slice(0, 77)}...` : question.text;
-    setSpawnForm({
-      title: truncatedTitle,
-      description: question.notes ?? "",
-      severity: Severity.MEDIUM,
-    });
-    setSpawnKind(kind);
-  };
+  // Prefill the spawn dialogs with the question text (title) and notes (body).
+  const spawnDefaultTitle =
+    question.text.length > 80 ? `${question.text.slice(0, 77)}...` : question.text;
+  const spawnDefaultDescription = question.notes ?? "";
 
   return (
     <div className="rounded-md border p-3 space-y-3 bg-card">
@@ -667,8 +637,7 @@ function QuestionCard({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => openSpawn("finding")}
-              disabled={spawnKind !== null}
+              onClick={() => setFindingDialogOpen(true)}
             >
               <Plus className="h-3 w-3 mr-1" />
               Add Finding
@@ -676,8 +645,7 @@ function QuestionCard({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => openSpawn("risk")}
-              disabled={spawnKind !== null}
+              onClick={() => setRiskDialogOpen(true)}
             >
               <Plus className="h-3 w-3 mr-1" />
               Add Risk
@@ -686,81 +654,6 @@ function QuestionCard({
         )}
       </div>
 
-      {/* Inline spawn form */}
-      {spawnKind && (
-        <div className="rounded-md border-2 border-dashed border-primary/40 p-3 space-y-3 bg-primary/5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              {spawnKind === "finding" ? "New Finding" : "New Risk"}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setSpawnKind(null)}
-            >
-              <XIcon className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`spawn-title-${question.id}`} className="text-xs">
-              Title
-            </Label>
-            <Input
-              id={`spawn-title-${question.id}`}
-              value={spawnForm.title}
-              onChange={(e) => setSpawnForm({ ...spawnForm, title: e.target.value })}
-              maxLength={255}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`spawn-desc-${question.id}`} className="text-xs">
-              Description
-            </Label>
-            <Textarea
-              id={`spawn-desc-${question.id}`}
-              value={spawnForm.description}
-              onChange={(e) => setSpawnForm({ ...spawnForm, description: e.target.value })}
-              rows={3}
-              maxLength={5000}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`spawn-sev-${question.id}`} className="text-xs">
-              Severity
-            </Label>
-            <Select
-              value={spawnForm.severity}
-              onValueChange={(v) =>
-                setSpawnForm({ ...spawnForm, severity: v as Severity })
-              }
-            >
-              <SelectTrigger id={`spawn-sev-${question.id}`} className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={Severity.HIGH}>High</SelectItem>
-                <SelectItem value={Severity.MEDIUM}>Medium</SelectItem>
-                <SelectItem value={Severity.LOW}>Low</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleSpawn}
-              disabled={spawn.isPending || !spawnForm.title.trim()}
-            >
-              {spawn.isPending && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
-              Create {spawnKind === "finding" ? "Finding" : "Risk"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setSpawnKind(null)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
-
       <EvidencePickerDialog
         open={evidenceOpen}
         onOpenChange={setEvidenceOpen}
@@ -768,6 +661,30 @@ function QuestionCard({
         attached={question.evidenceLinks.map((l) => l.evidence.id)}
         onAttached={refresh}
       />
+
+      {riskDialogOpen && (
+        <QuestionRiskDialog
+          questionId={question.id}
+          projectId={projectId}
+          open={riskDialogOpen}
+          onOpenChange={setRiskDialogOpen}
+          onCreated={refresh}
+          defaultTitle={spawnDefaultTitle}
+          defaultDescription={spawnDefaultDescription}
+        />
+      )}
+
+      {findingDialogOpen && (
+        <FindingFormDialog
+          questionId={question.id}
+          projectId={projectId}
+          open={findingDialogOpen}
+          onOpenChange={setFindingDialogOpen}
+          onCreated={refresh}
+          defaultTitle={spawnDefaultTitle}
+          defaultDescription={spawnDefaultDescription}
+        />
+      )}
 
       <AlertDialog open={confirmDeleteCustom} onOpenChange={setConfirmDeleteCustom}>
         <AlertDialogContent>

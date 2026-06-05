@@ -26,8 +26,22 @@ import {
   createTRPCRouter,
   adminProcedure,
   organizationProcedure,
+  requireRole,
 } from "@/server/api/trpc";
-import { AuditAction, Prisma } from "@prisma/client";
+import { AuditAction, Prisma, UserRole } from "@prisma/client";
+
+/**
+ * Roles allowed to READ a matrix version (drives the severity-scoring selects
+ * in the identified-risk / questionnaire risk dialogs). Editing matrices stays
+ * ORG_ADMIN-only — analysts/managers just need to read the scales to score.
+ */
+const MATRIX_READ_ROLES = [
+  UserRole.ORG_ADMIN,
+  UserRole.GRC_MANAGER,
+  UserRole.GRC_ANALYST,
+  UserRole.SECURITY_ENGINEER,
+  UserRole.CISO,
+];
 import {
   matrixScalesSchema,
   thresholdArraySchema,
@@ -900,8 +914,11 @@ export const riskMatrixRouter = createTRPCRouter({
    * Get Version (AC29)
    *
    * Returns full version details including scales and thresholds.
+   * Read access: ORG_ADMIN + managers/analysts/engineers so the risk-scoring
+   * selects populate during assessments. Editing stays admin-only.
    */
-  getVersion: adminProcedure
+  getVersion: organizationProcedure
+    .use(requireRole(MATRIX_READ_ROLES))
     .input(getVersionSchema)
     .query(async ({ ctx, input }) => {
       const version = await ctx.db.riskMatrixVersion.findFirst({
