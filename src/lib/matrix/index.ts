@@ -19,3 +19,4 @@ export * from "./thresholdTemplates";
 export * from "./colorUtils";
 export * from "./comparison";
 export * from "./scoring";
+export * from "./heatmap";

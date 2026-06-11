@@ -362,6 +362,10 @@ export const engagementRouter = createTRPCRouter({
           assessmentKind: input.assessmentKind,
           assessmentId: input.assessmentId,
         },
+        include: {
+          sessions: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+          stakeholders: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] },
+        },
       });
 
       return engagement ?? null;

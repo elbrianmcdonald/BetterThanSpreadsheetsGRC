@@ -192,6 +192,129 @@ export function BIABody({
   );
 }
 
+/** Sectionless BIA criticality/recovery content for the exec summary. */
+export function BiaCriticalityContent({
+  tierName,
+  rto,
+  rpo,
+  workaroundProcedure,
+}: {
+  tierName: string | null;
+  rto: string | null;
+  rpo: string | null;
+  workaroundProcedure: string | null;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
+        <Stat label="Criticality tier" value={tierName ?? "—"} />
+        <Stat label="RTO" value={rto ?? "—"} />
+        <Stat label="RPO" value={rpo ?? "—"} />
+      </div>
+      {workaroundProcedure ? (
+        <div className="mt-5">
+          <p className="eyebrow">Workaround procedure</p>
+          <p className="mt-1 text-sm leading-relaxed text-foreground">{workaroundProcedure}</p>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/** Sectionless impact-by-category bars for the exec summary. */
+export function BiaImpactsContent({ impacts }: { impacts: BiaImpactRow[] }) {
+  if (impacts.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+        No impact scores have been recorded for this process yet.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      {impacts.map((row) => (
+        <ImpactBar key={row.category} row={row} />
+      ))}
+    </div>
+  );
+}
+
+/** Sectionless upstream-dependencies list for the exec summary. */
+export function BiaDependenciesContent({ dependencies }: { dependencies: BiaDependencyRow[] }) {
+  if (dependencies.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+        This process has no recorded upstream dependencies.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {dependencies.map((d) => (
+        <div
+          key={d.id}
+          className="flex items-center justify-between gap-3 rounded-md border px-4 py-3"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <div className="flex min-w-0 items-baseline gap-3">
+            <span className="shrink-0 font-mono text-xs" style={{ color: "var(--muted-foreground)" }}>
+              {d.identifier}
+            </span>
+            <span className="truncate text-sm font-medium text-foreground">{d.name}</span>
+          </div>
+          {d.tier ? <span className="eyebrow shrink-0">{d.tier}</span> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Sectionless linked-risks register for the exec summary (opens the drawer). */
+export function BiaRisksContent({ risks }: { risks: BiaRiskRow[] }) {
+  const { openFinding } = useFindingDrawer();
+  if (risks.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+        No risks are linked to this process.
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="text-left">
+            {["ID", "Risk", "Severity", "Status"].map((h) => (
+              <th key={h} className="eyebrow border-b pb-2 pr-4 font-normal" style={{ borderColor: "var(--border)" }}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {risks.map((row) => (
+            <tr
+              key={row.id}
+              onClick={() => openFinding(row)}
+              className="group border-b transition-colors hover:bg-muted"
+              style={{ cursor: "pointer", borderColor: "var(--border)" }}
+            >
+              <td className="py-3 pr-4 align-top">
+                <IdTag>{row.identifier}</IdTag>
+              </td>
+              <td className="py-3 pr-4 align-top">
+                <div className="font-medium text-foreground">{row.title}</div>
+              </td>
+              <td className="py-3 pr-4 align-top text-muted-foreground">{row.severityLabel ?? "—"}</td>
+              <td className="py-3 align-top text-muted-foreground">{row.status.replace(/_/g, " ")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ImpactBar({ row }: { row: BiaImpactRow }) {
   const pct = Math.max(0, Math.min(100, (row.score / MAX_IMPACT) * 100));
   return (

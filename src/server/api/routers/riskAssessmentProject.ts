@@ -24,6 +24,7 @@ import {
   emitRejectedNotification,
 } from "@/lib/notifications";
 import { generateIdentifier } from "@/server/services/identifierService";
+import { normalizeLayout } from "@/components/deliverable/execSummaryLayout";
 
 // =============================================================================
 // Input Schemas
@@ -822,6 +823,83 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       });
 
       return updated;
+    }),
+
+  /**
+   * Update the executive-summary statement shown atop the assessment's
+   * Executive Summary deliverable. Editable by the assigned analyst or an
+   * ORG_ADMIN. Unlike updateDetails this is NOT gated to IN_PROGRESS — the
+   * executive narrative is typically written at/after completion.
+   */
+  updateExecutiveStatement: organizationProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        executiveStatement: z.string().max(10000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const assessment = await ctx.db.riskAssessmentProject.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+        select: { id: true, assigneeId: true },
+      });
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment project not found" });
+      }
+
+      const isAdmin = ctx.session?.user?.role === UserRole.ORG_ADMIN;
+      const isAssignee = assessment.assigneeId === ctx.session?.user?.id;
+      if (!isAdmin && !isAssignee) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only the assigned analyst or an org admin can edit the executive summary",
+        });
+      }
+
+      return ctx.db.riskAssessmentProject.update({
+        where: { id: input.id },
+        data: { executiveStatement: input.executiveStatement },
+        select: { id: true, executiveStatement: true },
+      });
+    }),
+
+  /**
+   * Update the executive-summary section layout (order + which sections show).
+   * Same gating as updateExecutiveStatement (assigned analyst or ORG_ADMIN). The
+   * payload is normalized server-side so the stored value is always complete.
+   */
+  updateExecSummaryLayout: organizationProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        layout: z.array(z.object({ key: z.string(), enabled: z.boolean() })),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const assessment = await ctx.db.riskAssessmentProject.findFirst({
+        where: { id: input.id, organizationId: ctx.organizationId },
+        select: { id: true, assigneeId: true },
+      });
+      if (!assessment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Assessment project not found" });
+      }
+
+      const isAdmin = ctx.session?.user?.role === UserRole.ORG_ADMIN;
+      const isAssignee = assessment.assigneeId === ctx.session?.user?.id;
+      if (!isAdmin && !isAssignee) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only the assigned analyst or an org admin can edit the executive summary",
+        });
+      }
+
+      const normalized = normalizeLayout("RISK", input.layout);
+      const updated = await ctx.db.riskAssessmentProject.update({
+        where: { id: input.id },
+        data: { execSummaryLayout: normalized as unknown as Prisma.InputJsonValue },
+        select: { id: true, execSummaryLayout: true },
+      });
+      return { id: updated.id, layout: normalized };
     }),
 
   /**

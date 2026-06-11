@@ -139,6 +139,111 @@ describe("Deliverable Shell - Story 17.1", () => {
       expect(html).not.toContain("<script>x</script>");
       expect(html).toContain("&lt;script&gt;");
     });
+
+    it("renders a prose-only section (no table) and escapes its body", () => {
+      const html = renderDeliverableHtml({
+        ...doc,
+        findings: [],
+        sections: [
+          {
+            n: "01",
+            title: "Executive Statement",
+            columns: [],
+            rows: [],
+            body: "Line one.\n\nLine two with <b>markup</b>.",
+          },
+        ],
+      });
+      expect(html).toContain("Executive Statement");
+      expect(html).toContain('<div class="prose">');
+      // Paragraph split + HTML escaped.
+      expect(html).toContain("<p>Line one.</p>");
+      expect(html).toContain("&lt;b&gt;markup&lt;/b&gt;");
+      // Prose-only section must NOT emit a table.
+      const sectionHtml = html.slice(html.indexOf("Executive Statement"));
+      expect(sectionHtml).not.toContain("<table>");
+    });
+
+    it("renders a matrix heatmap section as inline SVG with band-colored cells and dots", () => {
+      const html = renderDeliverableHtml({
+        ...doc,
+        findings: [],
+        sections: [
+          {
+            n: "01",
+            title: "Risk Heatmap",
+            columns: [],
+            rows: [],
+            heatmap: {
+              cols: [
+                { value: 1, label: "Rare" },
+                { value: 2, label: "Possible" },
+                { value: 3, label: "Likely" },
+              ],
+              rows: [
+                { value: 3, label: "Severe" },
+                { value: 2, label: "Moderate" },
+                { value: 1, label: "Minor" },
+              ],
+              cells: [
+                [
+                  { color: "#EAB308", score: 3 },
+                  { color: "#F97316", score: 6 },
+                  { color: "#EF4444", score: 9 },
+                ],
+                [
+                  { color: "#22C55E", score: 2 },
+                  { color: "#EAB308", score: 4 },
+                  { color: "#F97316", score: 6 },
+                ],
+                [
+                  { color: "#22C55E", score: 1 },
+                  { color: "#22C55E", score: 2 },
+                  { color: "#EAB308", score: 3 },
+                ],
+              ],
+              dots: [{ colIndex: 2, rowIndex: 0, color: "#EF4444", label: "1" }],
+              legend: [
+                { label: "Low", color: "#22C55E", count: 0 },
+                { label: "Critical", color: "#EF4444", count: 1 },
+              ],
+            },
+          },
+        ],
+      });
+      expect(html).toContain("<svg");
+      expect(html).toContain('aria-label="Likelihood by impact risk heatmap"');
+      // Cells filled with the matrix band hex colors.
+      expect(html).toContain('fill="#EF4444"');
+      // A finding dot is a band-stroked circle carrying its display number.
+      expect(html).toContain("<circle");
+      expect(html).toContain('stroke="#EF4444"');
+      expect(html).toContain('class="hm-legend"');
+      expect(html).toContain("Critical");
+      // Heatmap-only section emits no table.
+      const sectionHtml = html.slice(html.indexOf("Risk Heatmap"));
+      expect(sectionHtml).not.toContain("<table>");
+    });
+
+    it("renders a section with both a narrative body and a steps table", () => {
+      const html = renderDeliverableHtml({
+        ...doc,
+        findings: [],
+        sections: [
+          {
+            n: "01",
+            title: "Exploitation Pathway",
+            columns: ["#", "Tactic", "Technique", "MITRE"],
+            rows: [[{ text: "1", mono: true }, "Initial Access", "Phishing", { text: "T1566", mono: true }]],
+            body: "Verdict: exploitable in three steps.",
+          },
+        ],
+      });
+      expect(html).toContain('<div class="prose">');
+      expect(html).toContain("exploitable in three steps");
+      expect(html).toContain("<table>");
+      expect(html).toContain("T1566");
+    });
   });
 
   describe("getStub (AC26, AC24)", () => {

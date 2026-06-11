@@ -12,6 +12,7 @@
  */
 
 import puppeteer from "puppeteer";
+import { getContrastColor } from "@/lib/matrix";
 
 export type DeliverableTone = "ok" | "high" | "crit" | "med" | "low" | "brand";
 
@@ -34,13 +35,51 @@ export interface DeliverableFinding {
 /** A generic table cell for body sections rendered in the PDF. */
 export type DocCell = string | { text: string; mono?: boolean; color?: string };
 
-/** A generic body section (a titled table) for non-risk deliverables. */
+/** A finding plotted on the heatmap, by grid cell index, with its band color. */
+export interface HeatmapDot {
+  /** Column (likelihood) index into `cols`. */
+  colIndex: number;
+  /** Row (impact) index into `rows`. */
+  rowIndex: number;
+  color: string;
+  /** Short dot label (the finding's display rank). */
+  label: string;
+}
+
+/**
+ * A precomputed N×M risk-matrix heatmap (sized + colored by the assessment's
+ * matrix; the caller builds it via `@/lib/matrix` buildHeatmapGrid). Cell colors
+ * are the matrix threshold-band hex colors.
+ */
+export interface HeatmapGridData {
+  /** Likelihood levels, ascending (left → right). */
+  cols: { value: number; label: string }[];
+  /** Impact levels, descending (top → bottom). */
+  rows: { value: number; label: string }[];
+  /** cells[rowIndex][colIndex] band color + normalized score. */
+  cells: { color: string; score: number }[][];
+  dots: HeatmapDot[];
+  legend: { label: string; color: string; count: number }[];
+}
+
+/** A generic body section for non-risk deliverables. */
 export interface DocSection {
   n: string;
   title: string;
   columns: string[];
   rows: DocCell[][];
-  /** Optional empty-state text when rows is empty. */
+  /**
+   * Optional narrative prose rendered above the table. Blank-line-separated
+   * paragraphs; single newlines become line breaks. A section may carry a body
+   * with no columns (prose-only, e.g. an executive statement).
+   */
+  body?: string;
+  /**
+   * Optional N×M matrix heatmap rendered (as inline SVG) above the table. A
+   * section may carry a heatmap with no columns (chart-only, e.g. Risk Heatmap).
+   */
+  heatmap?: HeatmapGridData;
+  /** Optional empty-state text when a tabular section has no rows. */
   empty?: string;
 }
 
@@ -100,6 +139,90 @@ function sevColor(score: number): string {
   return TOKENS.ok;
 }
 
+/**
+ * Fan a cell's dots from center so labels stay readable (mirrors the on-screen
+ * heatmap): 1 dot centered; more distribute on a small ring.
+ */
+function dotOffsets(count: number, cell: number): Array<{ dx: number; dy: number }> {
+  if (count <= 1) return [{ dx: 0, dy: 0 }];
+  const radius = Math.min(cell / 4, 12);
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+    return { dx: Math.cos(angle) * radius, dy: Math.sin(angle) * radius };
+  });
+}
+
+/**
+ * Render the assessment's N×M risk matrix as an inline SVG heatmap. Grid is sized
+ * to the matrix scales (x = Likelihood asc, y = Impact desc) and cells are filled
+ * with the matrix threshold-band colors; findings plot as numbered, band-stroked
+ * dots in their L×I cell. Legend lists the bands present with counts.
+ */
+function renderHeatmapBlock(grid: HeatmapGridData): string {
+  const nCols = grid.cols.length;
+  const nRows = grid.rows.length;
+  const cell = Math.max(40, Math.min(64, Math.floor(520 / Math.max(nCols, 1))));
+  const pad = 26; // gutter for axis tick labels
+  const gw = cell * nCols;
+  const gh = cell * nRows;
+  const W = pad + gw;
+  const H = gh + pad;
+
+  // Bucket dots by cell so co-located findings fan out.
+  const byCell = new Map<string, HeatmapDot[]>();
+  for (const d of grid.dots) {
+    const k = `${d.rowIndex}-${d.colIndex}`;
+    const arr = byCell.get(k);
+    if (arr) arr.push(d);
+    else byCell.set(k, [d]);
+  }
+
+  let body = "";
+  grid.rows.forEach((_r, rowIdx) => {
+    grid.cols.forEach((_c, colIdx) => {
+      const x = pad + colIdx * cell;
+      const y = rowIdx * cell;
+      const c = grid.cells[rowIdx]?.[colIdx];
+      const fill = c?.color ?? "#CCCCCC";
+      const scoreText = c ? c.score.toFixed(c.score % 1 === 0 ? 0 : 1) : "";
+      body += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${fill}" stroke="${TOKENS.border}" stroke-width="1"/>`;
+      body += `<text x="${x + 5}" y="${y + 13}" font-size="9" font-family="ui-monospace, monospace" fill="${getContrastColor(fill)}" opacity="0.75">${scoreText}</text>`;
+      const dots = byCell.get(`${rowIdx}-${colIdx}`) ?? [];
+      const offs = dotOffsets(dots.length, cell);
+      dots.forEach((d, i) => {
+        const cx = x + cell / 2 + offs[i]!.dx;
+        const cy = y + cell / 2 + offs[i]!.dy;
+        body += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="9" fill="white" stroke="${d.color}" stroke-width="2"/>`;
+        body += `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" font-size="10" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="${TOKENS.foreground}">${esc(d.label)}</text>`;
+      });
+    });
+  });
+  // Axis tick labels: impact down the left, likelihood across the bottom.
+  grid.rows.forEach((r, rowIdx) => {
+    const cy = rowIdx * cell + cell / 2;
+    body += `<text x="${pad / 2}" y="${cy}" font-size="9" font-family="ui-monospace, monospace" text-anchor="middle" dominant-baseline="central" fill="${TOKENS.muted}">${esc(String(r.value))}</text>`;
+  });
+  grid.cols.forEach((col, colIdx) => {
+    const cx = pad + colIdx * cell + cell / 2;
+    body += `<text x="${cx}" y="${gh + pad / 2 + 2}" font-size="9" font-family="ui-monospace, monospace" text-anchor="middle" dominant-baseline="central" fill="${TOKENS.muted}">${esc(String(col.value))}</text>`;
+  });
+
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Likelihood by impact risk heatmap">${body}</svg>`;
+
+  const legendItems = grid.legend
+    .map(
+      (l) =>
+        `<span class="hm-legend-item"><span class="hm-dot" style="background:${l.color};border-color:${l.color}"></span>${esc(l.label)} ${l.count}</span>`,
+    )
+    .join("");
+
+  return `<div class="heatmap">
+    ${svg}
+    <div class="hm-axis">x = Likelihood · y = Impact</div>
+    <div class="hm-legend">${legendItems}</div>
+  </div>`;
+}
+
 function esc(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -145,6 +268,11 @@ export function renderDeliverableHtml(data: DeliverableDocData): string {
     const style = c.color ? ` style="color:${c.color}"` : "";
     return `<span${cls}${style}>${esc(c.text)}</span>`;
   };
+  const renderProse = (body: string): string =>
+    `<div class="prose">${body
+      .split(/\n{2,}/)
+      .map((p) => `<p>${esc(p).replace(/\n/g, "<br/>")}</p>`)
+      .join("")}</div>`;
   const bodyHtml =
     data.sections && data.sections.length > 0
       ? data.sections
@@ -155,7 +283,11 @@ export function renderDeliverableHtml(data: DeliverableDocData): string {
           <span class="section-n">${esc(s.n)}</span>
           <span class="section-title">${esc(s.title)}</span>
         </div>
-        <table>
+        ${s.body ? renderProse(s.body) : ""}
+        ${s.heatmap ? renderHeatmapBlock(s.heatmap) : ""}
+        ${
+          s.columns.length
+            ? `<table>
           <thead><tr>${s.columns.map((c) => `<th>${esc(c)}</th>`).join("")}</tr></thead>
           <tbody>${
             s.rows.length
@@ -164,7 +296,11 @@ export function renderDeliverableHtml(data: DeliverableDocData): string {
                   .join("")
               : `<tr><td colspan="${s.columns.length}" style="color:var(--muted)">${esc(s.empty ?? "Nothing to show.")}</td></tr>`
           }</tbody>
-        </table>
+        </table>`
+            : s.body || s.heatmap
+              ? ""
+              : `<p class="prose" style="color:var(--muted)">${esc(s.empty ?? "Nothing to show.")}</p>`
+        }
       </div>`,
           )
           .join("")
@@ -225,6 +361,15 @@ export function renderDeliverableHtml(data: DeliverableDocData): string {
   .section-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
   .section-n { font-family: ui-monospace, "Courier New", monospace; font-size: 13px; color: var(--primary); }
   .section-title { font-size: 18px; font-weight: 600; }
+  .prose { margin-top: 14px; font-size: 13px; line-height: 1.6; color: var(--foreground); }
+  .prose p { margin: 0 0 10px; }
+  .prose p:last-child { margin-bottom: 0; }
+  .heatmap { margin-top: 16px; text-align: center; }
+  .heatmap svg { display: block; margin: 0 auto; }
+  .hm-axis { margin-top: 6px; font-family: ui-monospace, "Courier New", monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .hm-legend { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; justify-content: center; font-size: 12px; color: var(--muted); }
+  .hm-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .hm-dot { width: 10px; height: 10px; border-radius: 999px; border: 2px solid; background: #fff; display: inline-block; }
   table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
   th { text-align: left; font-family: ui-monospace, "Courier New", monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; background: var(--surface-2); }
   td { padding: 10px; border-bottom: 1px solid var(--border); }

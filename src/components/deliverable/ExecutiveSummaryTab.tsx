@@ -25,19 +25,31 @@ import { api } from "@/trpc/react";
 import type { AssessmentKind } from "@/components/engagement/types";
 import { DeliverableShell } from "@/components/deliverable/DeliverableShell";
 import { FindingDrawerProvider } from "@/components/deliverable/FindingDrawerProvider";
-import { ComplianceBody } from "@/components/deliverable/bodies/ComplianceBody";
-import { RiskFindingsBody } from "@/components/deliverable/bodies/RiskFindingsBody";
-import { MaturityBody } from "@/components/deliverable/bodies/MaturityBody";
-import { VendorBody } from "@/components/deliverable/bodies/VendorBody";
-import { BIABody } from "@/components/deliverable/bodies/BIABody";
+import { RiskExecutiveBody } from "@/components/deliverable/bodies/RiskExecutiveBody";
+import { AssessmentExecBody } from "@/components/deliverable/bodies/AssessmentExecBody";
+import { ControlStatusGrid, GapRegister } from "@/components/deliverable/bodies/ComplianceBody";
+import {
+  MaturityDomainsContent,
+  MaturityBelowTargetContent,
+} from "@/components/deliverable/bodies/MaturityBody";
+import {
+  VendorSummaryContent,
+  VendorQuestionnairesContent,
+} from "@/components/deliverable/bodies/VendorBody";
+import {
+  BiaCriticalityContent,
+  BiaImpactsContent,
+  BiaDependenciesContent,
+  BiaRisksContent,
+} from "@/components/deliverable/bodies/BIABody";
 
-/** Maps each kind to the `exportPdf` `type` value, or null when unsupported. */
-const PDF_TYPE: Record<AssessmentKind, "compliance" | "risk" | "maturity" | null> = {
+/** Maps each kind to the `exportPdf` `type` value. */
+const PDF_TYPE: Record<AssessmentKind, "compliance" | "risk-exec" | "maturity" | "vendor" | "bia"> = {
   COMPLIANCE: "compliance",
-  RISK: "risk",
+  RISK: "risk-exec",
   MATURITY: "maturity",
-  VENDOR: null,
-  BIA: null,
+  VENDOR: "vendor",
+  BIA: "bia",
 };
 
 /** Lowercase eyebrow label per kind for the deliverable toolbar. */
@@ -77,7 +89,7 @@ export function ExecutiveSummaryTab({
     { id: assessmentId },
     { enabled: assessmentKind === "COMPLIANCE" },
   );
-  const risk = api.deliverable.getRiskBody.useQuery(
+  const risk = api.deliverable.getRiskExecBody.useQuery(
     { id: assessmentId },
     { enabled: assessmentKind === "RISK" },
   );
@@ -157,9 +169,18 @@ export function ExecutiveSummaryTab({
           exporting={exporting}
           toolbarEyebrow={EYEBROW.COMPLIANCE}
         >
-          <ComplianceBody
-            controls={compliance.data.controls}
-            gaps={compliance.data.gaps}
+          <AssessmentExecBody
+            assessmentKind="COMPLIANCE"
+            assessmentId={assessmentId}
+            canEdit={compliance.data.canEdit}
+            executiveStatement={compliance.data.executiveStatement}
+            layout={compliance.data.layout}
+            matrix={compliance.data.matrix}
+            rows={compliance.data.rows}
+            nativeContent={{
+              controls: <ControlStatusGrid controls={compliance.data.controls} />,
+              gaps: <GapRegister gaps={compliance.data.gaps} />,
+            }}
           />
         </DeliverableShell>
       ) : null}
@@ -172,7 +193,15 @@ export function ExecutiveSummaryTab({
           exporting={exporting}
           toolbarEyebrow={EYEBROW.RISK}
         >
-          <RiskFindingsBody rows={risk.data.rows} />
+          <RiskExecutiveBody
+            assessmentId={assessmentId}
+            executiveStatement={risk.data.executiveStatement}
+            canEdit={risk.data.canEdit}
+            matrix={risk.data.matrix}
+            layout={risk.data.layout}
+            rows={risk.data.rows}
+            risks={risk.data.risks}
+          />
         </DeliverableShell>
       ) : null}
 
@@ -184,10 +213,18 @@ export function ExecutiveSummaryTab({
           exporting={exporting}
           toolbarEyebrow={EYEBROW.MATURITY}
         >
-          <MaturityBody
-            domains={maturity.data.domains}
-            overallLevel={maturity.data.overallLevel}
-            targetLevel={maturity.data.targetLevel}
+          <AssessmentExecBody
+            assessmentKind="MATURITY"
+            assessmentId={assessmentId}
+            canEdit={maturity.data.canEdit}
+            executiveStatement={maturity.data.executiveStatement}
+            layout={maturity.data.layout}
+            matrix={maturity.data.matrix}
+            rows={maturity.data.rows}
+            nativeContent={{
+              domains: <MaturityDomainsContent domains={maturity.data.domains} />,
+              belowTarget: <MaturityBelowTargetContent domains={maturity.data.domains} />,
+            }}
           />
         </DeliverableShell>
       ) : null}
@@ -200,14 +237,26 @@ export function ExecutiveSummaryTab({
           exporting={exporting}
           toolbarEyebrow={EYEBROW.VENDOR}
         >
-          <VendorBody
-            findings={vendor.data.findings}
-            questionnaires={vendor.data.questionnaires}
-            statusLabel={vendor.data.statusLabel}
-            recommendation={vendor.data.recommendation}
-            riskScore={vendor.data.riskScore}
-            riskTier={vendor.data.riskTier}
-            summary={vendor.data.summary}
+          <AssessmentExecBody
+            assessmentKind="VENDOR"
+            assessmentId={assessmentId}
+            canEdit={vendor.data.canEdit}
+            executiveStatement={vendor.data.executiveStatement}
+            layout={vendor.data.layout}
+            matrix={vendor.data.matrix}
+            rows={vendor.data.rows}
+            nativeContent={{
+              vendorSummary: (
+                <VendorSummaryContent
+                  statusLabel={vendor.data.statusLabel}
+                  recommendation={vendor.data.recommendation}
+                  riskTier={vendor.data.riskTier}
+                  riskScore={vendor.data.riskScore}
+                  summary={vendor.data.summary}
+                />
+              ),
+              questionnaires: <VendorQuestionnairesContent questionnaires={vendor.data.questionnaires} />,
+            }}
           />
         </DeliverableShell>
       ) : null}
@@ -220,15 +269,27 @@ export function ExecutiveSummaryTab({
           exporting={exporting}
           toolbarEyebrow={EYEBROW.BIA}
         >
-          <BIABody
-            impacts={bia.data.impacts}
-            dependencies={bia.data.dependencies}
-            risks={bia.data.risks}
-            tierName={bia.data.tierName}
-            rto={bia.data.rto}
-            rpo={bia.data.rpo}
-            assessmentStatusLabel={bia.data.assessmentStatusLabel}
-            workaroundProcedure={bia.data.workaroundProcedure}
+          <AssessmentExecBody
+            assessmentKind="BIA"
+            assessmentId={assessmentId}
+            canEdit={bia.data.canEdit}
+            executiveStatement={bia.data.executiveStatement}
+            layout={bia.data.layout}
+            matrix={bia.data.matrix}
+            rows={bia.data.rows}
+            nativeContent={{
+              criticality: (
+                <BiaCriticalityContent
+                  tierName={bia.data.tierName}
+                  rto={bia.data.rto}
+                  rpo={bia.data.rpo}
+                  workaroundProcedure={bia.data.workaroundProcedure}
+                />
+              ),
+              impacts: <BiaImpactsContent impacts={bia.data.impacts} />,
+              dependencies: <BiaDependenciesContent dependencies={bia.data.dependencies} />,
+              biaRisks: <BiaRisksContent risks={bia.data.risks} />,
+            }}
           />
         </DeliverableShell>
       ) : null}

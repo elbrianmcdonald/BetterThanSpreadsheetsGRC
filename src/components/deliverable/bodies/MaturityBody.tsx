@@ -139,6 +139,88 @@ export function MaturityBody({
   );
 }
 
+/** Sectionless domain-maturity content (bars + legend) for the exec summary. */
+export function MaturityDomainsContent({ domains }: { domains: MaturityDomainRow[] }) {
+  if (domains.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+        No domains have been scored for this assessment yet.
+      </p>
+    );
+  }
+  return (
+    <>
+      <div className="flex flex-col gap-4">
+        {domains.map((d) => (
+          <DomainMaturityBar
+            key={d.name}
+            name={d.name}
+            currentLevel={d.currentLevel}
+            targetLevel={d.targetLevel}
+            isNotApplicable={d.isNotApplicable}
+          />
+        ))}
+      </div>
+      <LevelLegend />
+    </>
+  );
+}
+
+/** Sectionless below-target callouts for the exec summary. */
+export function MaturityBelowTargetContent({ domains }: { domains: MaturityDomainRow[] }) {
+  const belowTarget = domains
+    .filter(isBelowTarget)
+    .map((d) => ({ ...d, gap: (d.targetLevel as number) - (d.currentLevel as number) }))
+    .sort((a, b) => b.gap - a.gap);
+  if (belowTarget.length === 0) {
+    return (
+      <div
+        className="rounded-md border px-4 py-3 text-sm"
+        style={{
+          borderColor: "var(--border)",
+          color: "var(--success)",
+          background: "color-mix(in oklch, var(--success) 8%, var(--card))",
+        }}
+      >
+        All scored domains meet or exceed their target maturity level.
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {belowTarget.map((d) => (
+        <div
+          key={d.name}
+          className="flex items-center justify-between gap-3 rounded-md border px-4 py-3"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ background: levelColor(d.currentLevel) }}
+            />
+            <span className="text-sm font-medium text-foreground">{d.name}</span>
+          </div>
+          <div className="flex items-center gap-3 font-mono text-xs">
+            <span style={{ color: levelColor(d.currentLevel) }}>{d.currentLevel}</span>
+            <span style={{ color: "var(--muted-foreground)" }}>→ {d.targetLevel}</span>
+            <span
+              className="rounded px-1.5 py-0.5 font-semibold"
+              style={{
+                color: "var(--severity-high)",
+                background: "color-mix(in oklch, var(--severity-high) 14%, var(--card))",
+              }}
+            >
+              gap {d.gap}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function OverallChip({
   overallLevel,
   targetLevel,

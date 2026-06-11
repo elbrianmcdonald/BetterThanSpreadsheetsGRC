@@ -3758,6 +3758,10 @@ model MaturityAssessment {
   name           String
   description    String? @db.Text
 
+  // Executive summary (deliverable) — editable narrative + section layout.
+  executiveStatement String? @db.Text
+  execSummaryLayout  Json?
+
   assessmentDepth AssessmentDepth          @default(FUNCTION)
   assessmentMode  AssessmentMode           @default(SELF)
   /// Which label+value set to use when rendering levels. For NIST CSF 2.0
@@ -3957,6 +3961,11 @@ model ComplianceAssessment {
   identifier     String // COMP-YYYY-NNNN
   name           String
   description    String?                    @db.Text
+
+  // Executive summary (deliverable) — editable narrative + section layout.
+  executiveStatement String? @db.Text
+  execSummaryLayout  Json?
+
   status         ComplianceAssessmentStatus @default(DRAFT)
   baseline       String? // Selected baseline filter: "LOW", "MODERATE", "HIGH", "PRIVACY", or null (all)
 
@@ -4055,6 +4064,14 @@ model RiskAssessmentProject {
   // Assessment subject and description
   subject     String // What is being assessed (e.g., "AWS Migration Project")
   description String? @db.Text // Optional description/scope of the assessment
+
+  // Executive summary narrative — free-text statement shown at the top of the
+  // assessment's Executive Summary deliverable, authored by the assignee/admin.
+  executiveStatement String? @db.Text
+
+  // Executive summary section layout — ordered [{ key, enabled }] controlling
+  // which deliverable sections show and in what order. Null = canonical default.
+  execSummaryLayout Json?
 
   // Risk matrix for scoring all risks in this project
   matrixVersionId String? // Risk matrix version used for scoring
@@ -4210,6 +4227,10 @@ model VendorAssessment {
   identifier     String // VA-YYYY-NNNN format
   organizationId String
   vendorId       String
+
+  // Executive summary (deliverable) — editable narrative + section layout.
+  executiveStatement String? @db.Text
+  execSummaryLayout  Json?
 
   // Assessment Details (FR17, FR19)
   title   String
@@ -4728,6 +4749,11 @@ model BusinessProcess {
   businessFunctionId String? // Optional - process may not be assigned to a function
   name               String
   description        String?               @db.Text
+
+  // Executive summary (deliverable) — editable narrative + section layout.
+  executiveStatement String? @db.Text
+  execSummaryLayout  Json?
+
   status             BusinessProcessStatus @default(ACTIVE)
 
   // Ownership (FR11, FR12, FR17)

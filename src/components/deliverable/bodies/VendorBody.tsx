@@ -164,6 +164,78 @@ export function VendorBody({
   );
 }
 
+/** Sectionless vendor assessment summary (chips + narrative) for the exec summary. */
+export function VendorSummaryContent({
+  statusLabel,
+  recommendation,
+  riskTier,
+  riskScore,
+  summary,
+}: {
+  statusLabel: string;
+  recommendation: string;
+  riskTier: string;
+  riskScore: number | null;
+  summary: string | null;
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
+        <Stat label="Status" value={statusLabel} />
+        <Stat label="Recommendation" value={recommendation} />
+        <Stat label="Risk tier" value={riskTier} />
+        <Stat label="Risk score" value={riskScore == null ? "—" : `${riskScore} / 100`} />
+      </div>
+      <div className="mt-5">
+        <p className="eyebrow">Summary</p>
+        <p
+          className="mt-1 text-sm leading-relaxed"
+          style={{
+            color: summary ? "var(--foreground)" : "var(--muted-foreground)",
+            fontStyle: summary ? "normal" : "italic",
+          }}
+        >
+          {summary ?? "No assessment summary recorded."}
+        </p>
+      </div>
+    </>
+  );
+}
+
+/** Sectionless questionnaire-completion list for the exec summary. */
+export function VendorQuestionnairesContent({
+  questionnaires,
+}: {
+  questionnaires: VendorQuestionnaireRow[];
+}) {
+  if (questionnaires.length === 0) {
+    return (
+      <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
+        No questionnaires are attached to this assessment.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {questionnaires.map((q) => (
+        <div
+          key={q.id}
+          className="flex items-center justify-between gap-3 rounded-md border px-4 py-3"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium text-foreground">{q.name}</div>
+            <div className="eyebrow mt-0.5">{q.status.replace(/_/g, " ")}</div>
+          </div>
+          <div className="font-mono text-xs tabular-nums" style={{ color: "var(--muted-foreground)" }}>
+            {q.overallScore == null ? "—" : `${Math.round(q.overallScore)}%`}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>

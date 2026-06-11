@@ -97,7 +97,7 @@ function FamilyTally({ rows }: { rows: ComplianceControlRow[] }) {
   );
 }
 
-function ControlStatusGrid({ controls }: { controls: ComplianceControlRow[] }) {
+export function ControlStatusGrid({ controls }: { controls: ComplianceControlRow[] }) {
   if (controls.length === 0) {
     return (
       <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
@@ -164,7 +164,7 @@ function GapField({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-function GapRegister({ gaps }: { gaps: ComplianceGapRow[] }) {
+export function GapRegister({ gaps }: { gaps: ComplianceGapRow[] }) {
   if (gaps.length === 0) {
     return (
       <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
