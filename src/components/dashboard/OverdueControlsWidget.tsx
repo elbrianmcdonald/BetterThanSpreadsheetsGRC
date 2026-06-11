@@ -37,7 +37,7 @@ export function OverdueControlsWidget({ className }: { className?: string }) {
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <AlertTriangle className="h-[17px] w-[17px] text-primary" />
             Overdue Control Tests
           </CardTitle>
           <CardDescription>Controls whose next test date has passed</CardDescription>
@@ -54,12 +54,12 @@ export function OverdueControlsWidget({ className }: { className?: string }) {
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <AlertTriangle className="h-[17px] w-[17px] text-primary" />
             Overdue Control Tests
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-red-600">{error.message}</p>
+          <p className="text-sm text-destructive">{error.message}</p>
         </CardContent>
       </Card>
     );
@@ -73,7 +73,7 @@ export function OverdueControlsWidget({ className }: { className?: string }) {
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-500" />
+            <CheckCircle className="h-[17px] w-[17px] text-success" />
             Overdue Control Tests
           </CardTitle>
           <CardDescription>Controls whose next test date has passed</CardDescription>
@@ -89,9 +89,9 @@ export function OverdueControlsWidget({ className }: { className?: string }) {
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-red-500" />
+          <AlertTriangle className="h-[17px] w-[17px] text-primary" />
           Overdue Control Tests
-          <Badge variant="outline" className="ml-auto bg-red-100 text-red-800 border-red-200">
+          <Badge variant="critical" className="ml-auto">
             {total}
           </Badge>
         </CardTitle>
@@ -106,16 +106,16 @@ export function OverdueControlsWidget({ className }: { className?: string }) {
             <Link
               key={c.id}
               href={`/controls/${c.id}`}
-              className="flex items-center gap-3 py-2 px-3 rounded-md hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-secondary"
             >
-              <span className="font-mono text-xs text-blue-700 w-20 shrink-0">
+              <Badge variant="code" className="w-20 shrink-0 justify-center">
                 {c.localControlId}
+              </Badge>
+              <span className="flex-1 truncate text-sm font-semibold text-foreground">
+                {c.name}
               </span>
-              <span className="text-sm text-gray-900 flex-1 truncate">{c.name}</span>
               {days !== null && (
-                <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">
-                  {days}d overdue
-                </Badge>
+                <Badge variant="critical">{days}d overdue</Badge>
               )}
             </Link>
           );

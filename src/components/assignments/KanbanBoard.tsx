@@ -185,7 +185,7 @@ export function KanbanBoard({
           id="todo"
           title="To Do"
           count={todo.length}
-          color="bg-slate-600"
+          color="bg-muted-foreground/40"
           taskIds={todo.map((t) => t.id)}
         >
           {todo.map((task) => (
@@ -197,7 +197,7 @@ export function KanbanBoard({
             />
           ))}
           {todo.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-muted-foreground/70">
               <p className="text-sm">No pending tasks</p>
             </div>
           )}
@@ -208,7 +208,7 @@ export function KanbanBoard({
           id="in-progress"
           title="In Progress"
           count={inProgress.length}
-          color="bg-blue-600"
+          color="bg-primary"
           taskIds={inProgress.map((t) => t.id)}
         >
           {inProgress.map((task) => (
@@ -220,7 +220,7 @@ export function KanbanBoard({
             />
           ))}
           {inProgress.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-muted-foreground/70">
               <p className="text-sm">No tasks in progress</p>
             </div>
           )}
@@ -231,7 +231,7 @@ export function KanbanBoard({
           id="completed"
           title="Completed"
           count={completed.length}
-          color="bg-green-600"
+          color="bg-success"
           taskIds={completed.map((t) => t.id)}
         >
           {completed.map((task) => (
@@ -242,7 +242,7 @@ export function KanbanBoard({
             />
           ))}
           {completed.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-muted-foreground/70">
               <p className="text-sm">No completed tasks</p>
             </div>
           )}

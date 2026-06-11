@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,33 +132,29 @@ export function RiskAssessmentTemplatesClient() {
   return (
     <AppLayout breadcrumbs={[{ label: "Administration" }, { label: "RA Templates" }]}>
       <div className="px-4 sm:px-6 lg:px-8 py-8">
-        <div className="sm:flex sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <ClipboardList className="h-6 w-6" />
-              Risk Assessment Templates
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Reusable questionnaires that can be cloned into a risk assessment.
-              Pick a template when creating an assessment to seed its questions.
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0 flex items-center gap-2">
-            <Button variant="outline" onClick={() => setImportOpen(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Import CSV
-            </Button>
-            <Button
-              onClick={() => {
-                setForm(EMPTY);
-                setCreateOpen(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Template
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="ADMINISTRATION"
+          title="Risk Assessment Templates"
+          icon={<ClipboardList />}
+          description="Reusable questionnaires that can be cloned into a risk assessment. Pick a template when creating an assessment to seed its questions."
+          actions={
+            <>
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button
+                onClick={() => {
+                  setForm(EMPTY);
+                  setCreateOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Template
+              </Button>
+            </>
+          }
+        />
 
         <CsvImportDialog
           open={importOpen}
@@ -202,24 +198,24 @@ export function RiskAssessmentTemplatesClient() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-center">Sections</TableHead>
-                    <TableHead className="text-center">Questions</TableHead>
-                    <TableHead className="text-center">In Use</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Name</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Description</TableHead>
+                    <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Sections</TableHead>
+                    <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Questions</TableHead>
+                    <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">In Use</TableHead>
+                    <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {templates.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="font-medium">
+                    <TableRow key={t.id} className="hover:bg-secondary">
+                      <TableCell className="font-semibold text-foreground">
                         <Link
                           href={`/admin/risk-assessment-templates/${t.id}`}
-                          className="hover:underline inline-flex items-center gap-1"
+                          className="text-primary hover:underline inline-flex items-center gap-1"
                         >
                           {t.name}
-                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                          <ExternalLink className="h-3 w-3 text-muted-foreground/70" />
                         </Link>
                       </TableCell>
                       <TableCell className="max-w-md">
@@ -227,14 +223,14 @@ export function RiskAssessmentTemplatesClient() {
                           {t.description ?? "—"}
                         </span>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="secondary">{t.sectionCount}</Badge>
+                      <TableCell className="text-center tnum">
+                        <Badge variant="code">{t.sectionCount}</Badge>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="secondary">{t.questionCount}</Badge>
+                      <TableCell className="text-center tnum">
+                        <Badge variant="code">{t.questionCount}</Badge>
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={t.instanceCount > 0 ? "default" : "outline"}>
+                      <TableCell className="text-center tnum">
+                        <Badge variant={t.instanceCount > 0 ? "info" : "neutral"}>
                           {t.instanceCount}
                         </Badge>
                       </TableCell>
@@ -242,8 +238,8 @@ export function RiskAssessmentTemplatesClient() {
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
+                            size="icon-sm"
+                            className="text-muted-foreground/70"
                             onClick={() => {
                               setEditTarget({
                                 id: t.id,
@@ -258,8 +254,8 @@ export function RiskAssessmentTemplatesClient() {
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            size="icon-sm"
+                            className="text-muted-foreground/70 hover:text-destructive"
                             onClick={() =>
                               setDeleteTarget({
                                 id: t.id,

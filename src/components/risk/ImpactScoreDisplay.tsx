@@ -60,27 +60,27 @@ export function getImpactScoreColor(score: number): {
 } {
   if (score >= 70) {
     return {
-      text: "text-red-700 dark:text-red-400",
-      bg: "bg-red-100 dark:bg-red-900/30",
-      border: "border-red-200 dark:border-red-800",
-      progress: "bg-red-500",
+      text: "text-destructive",
+      bg: "bg-destructive/10",
+      border: "border-destructive/20",
+      progress: "bg-destructive",
       label: "Critical",
     };
   }
   if (score >= 40) {
     return {
-      text: "text-amber-700 dark:text-amber-400",
-      bg: "bg-amber-100 dark:bg-amber-900/30",
-      border: "border-amber-200 dark:border-amber-800",
-      progress: "bg-amber-500",
+      text: "text-warning",
+      bg: "bg-warning/10",
+      border: "border-warning/20",
+      progress: "bg-warning",
       label: "Elevated",
     };
   }
   return {
-    text: "text-green-700 dark:text-green-400",
-    bg: "bg-green-100 dark:bg-green-900/30",
-    border: "border-green-200 dark:border-green-800",
-    progress: "bg-green-500",
+    text: "text-success",
+    bg: "bg-success/10",
+    border: "border-success/20",
+    progress: "bg-success",
     label: "Low",
   };
 }

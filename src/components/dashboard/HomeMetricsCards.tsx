@@ -3,7 +3,9 @@
 /**
  * Home Page Metrics Cards
  *
- * Dashboard metrics component showing key GRC stats:
+ * Three KPI tiles (consulting-grade): mono label + faint icon, big tabular
+ * value, muted sub, navy "View →" footer link. The lead tile carries the
+ * navy top accent rule. Each tile is a whole-card link into a pre-filtered view.
  * - Open risks count
  * - Open findings count
  * - Framework coverage average
@@ -18,8 +20,17 @@ import {
 } from "lucide-react";
 
 import { api } from "@/trpc/react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatTile } from "@/components/layout";
 import { Skeleton } from "@/components/ui/skeleton";
+
+function ViewLink({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-primary">
+      {label}
+      <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+    </span>
+  );
+}
 
 export function HomeMetricsCards() {
   // Fetch risk stats
@@ -42,93 +53,52 @@ export function HomeMetricsCards() {
         )
       : 0;
 
+  const tileClass =
+    "h-full transition-colors hover:bg-secondary/60 hover:border-primary/30";
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-[18px] md:grid-cols-3">
       {/* Open Risks — whole card clickable, drops into /risks pre-filtered. */}
-      <Link
-        href="/risks?status=OPEN,ASSIGNED"
-        className="block transition-colors"
-      >
-        <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Open Risks
-            </CardTitle>
-            <ShieldAlert className="h-5 w-5 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            {isComplianceLoading ? (
-              <Skeleton className="h-10 w-20" />
-            ) : (
-              <div className="text-3xl font-bold">{openRisksCount}</div>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">
-              Requiring attention
-            </p>
-            <span className="inline-flex items-center text-sm text-blue-600 mt-2">
-              View Risks
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </span>
-          </CardContent>
-        </Card>
+      <Link href="/risks?status=OPEN,ASSIGNED" className="block">
+        <StatTile
+          className={tileClass}
+          accent
+          label="Open Risks"
+          icon={<ShieldAlert />}
+          value={
+            isComplianceLoading ? <Skeleton className="h-9 w-16" /> : openRisksCount
+          }
+          sub="Requiring attention"
+          footer={<ViewLink label="View risks" />}
+        />
       </Link>
 
       {/* Open Findings */}
-      <Link
-        href="/findings?status=NEW,NEEDS_INFO,TRIAGED"
-        className="block transition-colors"
-      >
-        <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Open Findings
-            </CardTitle>
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            {isFindingLoading ? (
-              <Skeleton className="h-10 w-20" />
-            ) : (
-              <div className="text-3xl font-bold">{openFindingsCount}</div>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">
-              Awaiting triage
-            </p>
-            <span className="inline-flex items-center text-sm text-blue-600 mt-2">
-              View Findings
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </span>
-          </CardContent>
-        </Card>
+      <Link href="/findings?status=NEW,NEEDS_INFO,TRIAGED" className="block">
+        <StatTile
+          className={tileClass}
+          label="Open Findings"
+          icon={<AlertTriangle />}
+          value={
+            isFindingLoading ? <Skeleton className="h-9 w-16" /> : openFindingsCount
+          }
+          sub="Awaiting triage"
+          footer={<ViewLink label="View findings" />}
+        />
       </Link>
 
       {/* Compliance Coverage */}
-      <Link
-        href="/compliance/dashboard"
-        className="block transition-colors"
-      >
-        <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Avg. Compliance
-            </CardTitle>
-            <CheckCircle className="h-5 w-5 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            {isComplianceLoading ? (
-              <Skeleton className="h-10 w-20" />
-            ) : (
-              <div className="text-3xl font-bold">{avgCoverage}%</div>
-            )}
-            <p className="text-sm text-muted-foreground mt-1">
-              Framework coverage
-            </p>
-            <span className="inline-flex items-center text-sm text-blue-600 mt-2">
-              View Dashboard
-              <ArrowRight className="h-4 w-4 ml-1" />
-            </span>
-          </CardContent>
-        </Card>
+      <Link href="/compliance/dashboard" className="block">
+        <StatTile
+          className={tileClass}
+          label="Avg. Compliance"
+          icon={<CheckCircle />}
+          value={
+            isComplianceLoading ? <Skeleton className="h-9 w-16" /> : `${avgCoverage}%`
+          }
+          sub="Framework coverage"
+          footer={<ViewLink label="View dashboard" />}
+        />
       </Link>
     </div>
   );

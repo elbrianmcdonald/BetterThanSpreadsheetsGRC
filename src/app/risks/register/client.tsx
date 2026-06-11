@@ -53,7 +53,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import {
   Select,
   SelectContent,
@@ -75,29 +75,29 @@ import { RiskRegisterStatusDropdown } from "@/components/risk/RiskRegisterStatus
 
 /** Status badge configuration */
 const statusConfig: Record<RiskRegisterStatus, { color: string; label: string; icon: typeof AlertTriangle }> = {
-  OPEN: { color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", label: "Open", icon: AlertCircle },
-  IN_TREATMENT: { color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300", label: "In Treatment", icon: Clock },
-  ACCEPTED: { color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300", label: "Accepted", icon: CheckCircle },
-  MITIGATED: { color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300", label: "Mitigated", icon: ShieldCheck },
-  TRANSFERRED: { color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300", label: "Transferred", icon: ArrowRightLeft },
-  CLOSED: { color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300", label: "Closed", icon: XCircle },
+  OPEN: { color: "bg-primary/10 text-primary", label: "Open", icon: AlertCircle },
+  IN_TREATMENT: { color: "bg-warning/10 text-warning", label: "In Treatment", icon: Clock },
+  ACCEPTED: { color: "bg-muted text-secondary-foreground", label: "Accepted", icon: CheckCircle },
+  MITIGATED: { color: "bg-success/10 text-success", label: "Mitigated", icon: ShieldCheck },
+  TRANSFERRED: { color: "bg-primary/10 text-primary", label: "Transferred", icon: ArrowRightLeft },
+  CLOSED: { color: "bg-muted text-secondary-foreground", label: "Closed", icon: XCircle },
 };
 
 /** Severity badge configuration */
 const severityConfig: Record<string, { color: string }> = {
-  Critical: { color: "bg-red-600 text-white" },
-  High: { color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300" },
-  Medium: { color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" },
-  Low: { color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
-  Info: { color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" },
+  Critical: { color: "bg-destructive/10 text-destructive" },
+  High: { color: "bg-severity-high/10 text-severity-high" },
+  Medium: { color: "bg-warning/10 text-warning" },
+  Low: { color: "bg-success/10 text-success" },
+  Info: { color: "bg-primary/10 text-primary" },
 };
 
 /** SLA status configuration (AC19) */
 const slaStatusConfig = {
-  on_track: { color: "text-green-600", bgColor: "bg-green-100 dark:bg-green-900/30", label: "On Track" },
-  at_risk: { color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900/30", label: "At Risk" },
-  breached: { color: "text-red-600", bgColor: "bg-red-100 dark:bg-red-900/30", label: "Breached" },
-  no_sla: { color: "text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800", label: "No SLA" },
+  on_track: { color: "text-success", bgColor: "bg-success/10", label: "On Track" },
+  at_risk: { color: "text-warning", bgColor: "bg-warning/10", label: "At Risk" },
+  breached: { color: "text-destructive", bgColor: "bg-destructive/10", label: "Breached" },
+  no_sla: { color: "text-muted-foreground/70", bgColor: "bg-muted", label: "No SLA" },
 };
 
 export function RiskRegisterClient() {
@@ -204,91 +204,70 @@ export function RiskRegisterClient() {
     <AppLayout breadcrumbs={[{ label: "Risk", href: "/risks" }, { label: "Risk Register" }]}>
       <div className="space-y-6">
         {/* Header (AC8, AC9) */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold flex items-center gap-2">
-              <ClipboardList className="h-6 w-6" />
-              Risk Register
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Unified view of all organizational risks from assessments
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="RISK"
+          title="Risk Register"
+          icon={<ClipboardList />}
+          description="Unified view of all organizational risks from assessments"
+        />
 
       {/* Stats Cards (AC9, AC10) */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setSelectedStatuses([])}>
-          <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total</p>
-              <p className="text-2xl font-bold">{statusCounts?.total ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <button type="button" className="block w-full text-left" onClick={() => setSelectedStatuses([])}>
+          <StatTile
+            label="Total"
+            value={statusCounts?.total ?? 0}
+            tone="primary"
+            accent
+          />
+        </button>
 
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setSelectedStatuses([RiskRegisterStatus.OPEN])}>
-          <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Open</p>
-              <p className="text-2xl font-bold text-blue-600">{statusCounts?.OPEN ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <button type="button" className="block w-full text-left" onClick={() => setSelectedStatuses([RiskRegisterStatus.OPEN])}>
+          <StatTile
+            label="Open"
+            value={statusCounts?.OPEN ?? 0}
+            tone="primary"
+          />
+        </button>
 
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setSelectedStatuses([RiskRegisterStatus.IN_TREATMENT])}>
-          <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">In Treatment</p>
-              <p className="text-2xl font-bold text-amber-600">{statusCounts?.IN_TREATMENT ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <button type="button" className="block w-full text-left" onClick={() => setSelectedStatuses([RiskRegisterStatus.IN_TREATMENT])}>
+          <StatTile
+            label="In Treatment"
+            value={statusCounts?.IN_TREATMENT ?? 0}
+            tone="warning"
+          />
+        </button>
 
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setSelectedStatuses([RiskRegisterStatus.ACCEPTED])}>
-          <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Accepted</p>
-              <p className="text-2xl font-bold text-purple-600">{statusCounts?.ACCEPTED ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <button type="button" className="block w-full text-left" onClick={() => setSelectedStatuses([RiskRegisterStatus.ACCEPTED])}>
+          <StatTile
+            label="Accepted"
+            value={statusCounts?.ACCEPTED ?? 0}
+            tone="default"
+          />
+        </button>
 
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setSelectedStatuses([RiskRegisterStatus.MITIGATED])}>
-          <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Mitigated</p>
-              <p className="text-2xl font-bold text-green-600">{statusCounts?.MITIGATED ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <button type="button" className="block w-full text-left" onClick={() => setSelectedStatuses([RiskRegisterStatus.MITIGATED])}>
+          <StatTile
+            label="Mitigated"
+            value={statusCounts?.MITIGATED ?? 0}
+            tone="success"
+          />
+        </button>
 
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setSelectedStatuses([RiskRegisterStatus.CLOSED])}>
-          <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Closed</p>
-              <p className="text-2xl font-bold text-gray-600">{statusCounts?.CLOSED ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <button type="button" className="block w-full text-left" onClick={() => setSelectedStatuses([RiskRegisterStatus.CLOSED])}>
+          <StatTile
+            label="Closed"
+            value={statusCounts?.CLOSED ?? 0}
+            tone="default"
+          />
+        </button>
 
-        <Card className={cn(
-          "cursor-pointer hover:bg-muted/50 transition-colors",
-          (statusCounts?.overdue ?? 0) > 0 && "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950"
-        )}>
-          <CardContent className="pt-4 pb-4">
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Overdue</p>
-              <p className="text-2xl font-bold text-red-600">{statusCounts?.overdue ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="Overdue"
+          value={statusCounts?.overdue ?? 0}
+          tone="critical"
+          filled={(statusCounts?.overdue ?? 0) > 0}
+        />
       </div>
 
       {/* Filters (AC11-AC16) */}
@@ -444,13 +423,13 @@ export function RiskRegisterClient() {
             </div>
           ) : error ? (
             <div className="text-center py-12">
-              <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-              <p className="text-red-600">{error.message}</p>
+              <AlertTriangle className="h-12 w-12 text-destructive/70 mx-auto mb-4" />
+              <p className="text-destructive">{error.message}</p>
             </div>
           ) : entries.length === 0 ? (
             <div className="text-center py-12">
-              <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No risk register entries found</h3>
+              <ClipboardList className="h-12 w-12 text-muted-foreground/70 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No risk register entries found</h3>
               <p className="text-muted-foreground">
                 {hasFilters
                   ? "Try adjusting your filters"
@@ -463,34 +442,34 @@ export function RiskRegisterClient() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[120px]">ID</TableHead>
-                      <TableHead>Risk Title</TableHead>
+                      <TableHead className="w-[120px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">ID</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Risk Title</TableHead>
                       <TableHead className="w-[100px]">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="gap-1 -ml-3"
+                          className="gap-1 -ml-3 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground"
                           onClick={() => toggleSort("severity")}
                         >
                           Severity
                           <ArrowUpDown className="h-3 w-3" />
                         </Button>
                       </TableHead>
-                      <TableHead className="w-[130px]">Status</TableHead>
-                      <TableHead className="w-[150px]">Owner</TableHead>
-                      <TableHead className="w-[150px]">Business Unit</TableHead>
+                      <TableHead className="w-[130px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                      <TableHead className="w-[150px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Owner</TableHead>
+                      <TableHead className="w-[150px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Business Unit</TableHead>
                       <TableHead className="w-[120px]">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="gap-1 -ml-3"
+                          className="gap-1 -ml-3 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground"
                           onClick={() => toggleSort("dueDate")}
                         >
                           Due Date
                           <ArrowUpDown className="h-3 w-3" />
                         </Button>
                       </TableHead>
-                      <TableHead className="w-[120px]">SLA Status</TableHead>
+                      <TableHead className="w-[120px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">SLA Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -500,7 +479,7 @@ export function RiskRegisterClient() {
                         entry.assessment?.inherentScoreLabel ?? entry.risk?.severity ?? null;
                       const severityStyle =
                         (severityLabel ? severityConfig[severityLabel] : null) ?? {
-                          color: "bg-gray-100 text-gray-800",
+                          color: "bg-muted text-secondary-foreground",
                         };
                       const slaStyle = slaStatusConfig[entry.slaStatus];
                       const targetRiskId =
@@ -522,14 +501,14 @@ export function RiskRegisterClient() {
                             if (targetRiskId) router.push(`/risks/${targetRiskId}`);
                           }}
                         >
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-sm text-muted-foreground">
                             {entry.identifier}
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{titleText}</p>
+                              <p className="font-semibold text-foreground">{titleText}</p>
                               {subIdentifier && (
-                                <p className="text-xs text-muted-foreground">
+                                <p className="font-mono text-xs text-muted-foreground/70">
                                   {subIdentifier}
                                 </p>
                               )}
@@ -537,7 +516,7 @@ export function RiskRegisterClient() {
                           </TableCell>
                           <TableCell>
                             {severityLabel && (
-                              <Badge className={severityStyle.color}>
+                              <Badge variant="neutral" className={severityStyle.color}>
                                 {severityLabel}
                               </Badge>
                             )}
@@ -556,7 +535,7 @@ export function RiskRegisterClient() {
                           </TableCell>
                           <TableCell>
                             {entry.slaDueDate ? (
-                              <span className="text-sm">
+                              <span className="font-mono text-sm text-muted-foreground">
                                 {new Date(entry.slaDueDate).toLocaleDateString()}
                               </span>
                             ) : (

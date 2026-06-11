@@ -1,8 +1,8 @@
 import "@/styles/globals.css";
 
 import { type Metadata } from "next";
-import { Geist } from "next/font/google";
 
+import { sans, mono } from "./fonts";
 import { TRPCReactProvider } from "@/trpc/react";
 import { NextAuthProvider } from "@/components/providers/NextAuthProvider";
 import { ToasterProvider } from "@/components/ToasterProvider";
@@ -14,17 +14,12 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geist.variable}`}>
-      <body>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+      <body className="font-sans antialiased">
         <NextAuthProvider>
           <TRPCReactProvider>
             {children}

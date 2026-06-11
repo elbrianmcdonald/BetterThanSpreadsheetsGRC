@@ -41,9 +41,9 @@ const criticalityConfig: Record<
   }
 > = {
   CRITICAL: {
-    color: "text-red-700 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    borderColor: "border-red-200 dark:border-red-800",
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+    borderColor: "border-transparent",
     icon: AlertCircle,
     label: "Critical",
     description:
@@ -51,9 +51,9 @@ const criticalityConfig: Record<
     score: 100,
   },
   HIGH: {
-    color: "text-orange-700 dark:text-orange-400",
-    bgColor: "bg-orange-100 dark:bg-orange-900/30",
-    borderColor: "border-orange-200 dark:border-orange-800",
+    color: "text-severity-high",
+    bgColor: "bg-severity-high/10",
+    borderColor: "border-transparent",
     icon: AlertTriangle,
     label: "High",
     description:
@@ -61,9 +61,9 @@ const criticalityConfig: Record<
     score: 75,
   },
   MEDIUM: {
-    color: "text-amber-700 dark:text-amber-400",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    borderColor: "border-amber-200 dark:border-amber-800",
+    color: "text-warning",
+    bgColor: "bg-warning/10",
+    borderColor: "border-transparent",
     icon: Building,
     label: "Medium",
     description:
@@ -71,9 +71,9 @@ const criticalityConfig: Record<
     score: 50,
   },
   LOW: {
-    color: "text-blue-700 dark:text-blue-400",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    borderColor: "border-blue-200 dark:border-blue-800",
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    borderColor: "border-transparent",
     icon: Info,
     label: "Low",
     description:
@@ -81,9 +81,9 @@ const criticalityConfig: Record<
     score: 25,
   },
   NONE: {
-    color: "text-gray-600 dark:text-gray-400",
-    bgColor: "bg-gray-100 dark:bg-gray-800/50",
-    borderColor: "border-gray-200 dark:border-gray-700",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+    borderColor: "border-transparent",
     icon: MinusCircle,
     label: "None",
     description:
@@ -199,11 +199,11 @@ export function AssetCriticalityDot({
     <span
       className={cn(
         "inline-block h-2 w-2 rounded-full",
-        criticality === "CRITICAL" && "bg-red-500",
-        criticality === "HIGH" && "bg-orange-500",
-        criticality === "MEDIUM" && "bg-amber-500",
-        criticality === "LOW" && "bg-blue-500",
-        criticality === "NONE" && "bg-gray-400",
+        criticality === "CRITICAL" && "bg-destructive",
+        criticality === "HIGH" && "bg-severity-high",
+        criticality === "MEDIUM" && "bg-warning",
+        criticality === "LOW" && "bg-primary",
+        criticality === "NONE" && "bg-muted-foreground/40",
         className
       )}
       title={`${config.label} criticality`}

@@ -66,11 +66,18 @@ import {
   ShieldAlert,
   History,
   GitMerge,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BusinessProcessStatus } from "@prisma/client";
 import { ImpactAssessmentTab } from "@/components/bia/ImpactAssessmentTab";
 import { DependenciesTab } from "@/components/bia/DependenciesTab";
+import {
+  WRAPPER_TAB_DEFS,
+  WrapperTabPanel,
+} from "@/components/engagement/WrapperTabs";
+import type { AssessmentKind } from "@/components/engagement/types";
+import { ExecutiveSummaryTab } from "@/components/deliverable/ExecutiveSummaryTab";
 
 interface ProcessDetailClientProps {
   processId: string;
@@ -313,6 +320,19 @@ export function ProcessDetailClient({ processId }: ProcessDetailClientProps) {
             <TabsTrigger value="assessment">Impact Assessment</TabsTrigger>
             <TabsTrigger value="dependencies">Dependencies</TabsTrigger>
             <TabsTrigger value="audit">Audit History</TabsTrigger>
+            {WRAPPER_TAB_DEFS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger key={tab.id} value={tab.id}>
+                  <Icon className="h-4 w-4 mr-2" />
+                  {tab.label}
+                </TabsTrigger>
+              );
+            })}
+            <TabsTrigger value="summary">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Executive Summary
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -516,6 +536,24 @@ export function ProcessDetailClient({ processId }: ProcessDetailClientProps) {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Consulting wrapper tabs (Schedule / Stakeholders / Evidence /
+              Exploitation Pathways / Action Plans) */}
+          {WRAPPER_TAB_DEFS.map((tab) => (
+            <TabsContent key={tab.id} value={tab.id}>
+              <WrapperTabPanel
+                tab={tab.id}
+                assessmentKind={"BIA" as AssessmentKind}
+                assessmentId={processId}
+                clientName={process.name}
+              />
+            </TabsContent>
+          ))}
+
+          {/* Executive Summary (shared deliverable) */}
+          <TabsContent value="summary">
+            <ExecutiveSummaryTab assessmentKind="BIA" assessmentId={processId} />
           </TabsContent>
         </Tabs>
 

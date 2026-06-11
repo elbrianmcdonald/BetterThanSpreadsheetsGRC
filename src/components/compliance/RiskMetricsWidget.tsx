@@ -108,22 +108,22 @@ function SeverityDistributionChart({
   return (
     <div className="space-y-3">
       {/* Stacked bar */}
-      <div className="h-4 rounded-full overflow-hidden flex bg-muted">
+      <div className="h-4 rounded-sm overflow-hidden flex bg-muted">
         {distribution.HIGH > 0 && (
           <div
-            className="bg-red-500 transition-all"
+            className="bg-severity-high transition-all"
             style={{ width: `${percentages.HIGH}%` }}
           />
         )}
         {distribution.MEDIUM > 0 && (
           <div
-            className="bg-yellow-500 transition-all"
+            className="bg-warning transition-all"
             style={{ width: `${percentages.MEDIUM}%` }}
           />
         )}
         {distribution.LOW > 0 && (
           <div
-            className="bg-blue-500 transition-all"
+            className="bg-primary transition-all"
             style={{ width: `${percentages.LOW}%` }}
           />
         )}
@@ -132,19 +132,19 @@ function SeverityDistributionChart({
       {/* Legend */}
       <div className="flex flex-wrap gap-4 text-sm">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
+          <div className="w-3 h-3 rounded-sm bg-severity-high" />
           <span className="text-muted-foreground">High</span>
-          <span className="font-medium">{distribution.HIGH}</span>
+          <span className="font-medium tabular-nums">{distribution.HIGH}</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-yellow-500" />
+          <div className="w-3 h-3 rounded-sm bg-warning" />
           <span className="text-muted-foreground">Medium</span>
-          <span className="font-medium">{distribution.MEDIUM}</span>
+          <span className="font-medium tabular-nums">{distribution.MEDIUM}</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-blue-500" />
+          <div className="w-3 h-3 rounded-sm bg-primary" />
           <span className="text-muted-foreground">Low</span>
-          <span className="font-medium">{distribution.LOW}</span>
+          <span className="font-medium tabular-nums">{distribution.LOW}</span>
         </div>
       </div>
     </div>
@@ -156,9 +156,9 @@ function SeverityDistributionChart({
  */
 function SeverityBadge({ severity }: { severity: "HIGH" | "MEDIUM" | "LOW" }) {
   const variants = {
-    HIGH: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-    MEDIUM: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400",
-    LOW: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
+    HIGH: "bg-severity-high/10 text-severity-high",
+    MEDIUM: "bg-warning/10 text-warning",
+    LOW: "bg-primary/10 text-primary",
   };
 
   const icons = {
@@ -189,7 +189,7 @@ export function RiskMetricsWidget({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-500" />
+              <AlertCircle className="h-5 w-5 text-severity-high" />
               <CardTitle className="text-base">Open Risks</CardTitle>
             </div>
             {/* AC4: Button navigates to filtered risk list */}
@@ -208,15 +208,15 @@ export function RiskMetricsWidget({
           {/* AC6: Empty state when no open risks */}
           {openRisksCount === 0 ? (
             <div className="text-center py-6">
-              <Trophy className="h-12 w-12 mx-auto mb-3 text-green-500" />
-              <p className="text-lg font-semibold text-green-600">No open risks!</p>
+              <Trophy className="h-12 w-12 mx-auto mb-3 text-success" />
+              <p className="text-lg font-semibold text-success">No open risks!</p>
               <p className="text-sm text-muted-foreground mt-1">Excellent work!</p>
             </div>
           ) : (
             <>
               {/* AC4: Clickable count navigates to filtered list */}
               <Link href="/risks?status=OPEN,ASSIGNED" className="block mb-4 group">
-                <div className="text-4xl font-bold group-hover:text-primary transition-colors cursor-pointer">
+                <div className="text-4xl font-bold tabular-nums group-hover:text-primary transition-colors cursor-pointer">
                   {openRisksCount}
                 </div>
               </Link>
@@ -231,7 +231,7 @@ export function RiskMetricsWidget({
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <CheckCircle2 className="h-5 w-5 text-success" />
             <CardTitle className="text-base">Recently Closed</CardTitle>
           </div>
           <CardDescription>
@@ -252,7 +252,7 @@ export function RiskMetricsWidget({
                 <Link
                   key={risk.id}
                   href={`/risks/${risk.id}`}
-                  className="block p-2 rounded-lg hover:bg-muted transition-colors"
+                  className="block p-2 rounded-md hover:bg-secondary transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2">
                     {/* AC8: Risk title */}
@@ -260,7 +260,7 @@ export function RiskMetricsWidget({
                       {risk.title}
                     </span>
                     {/* AC8, AC9: Days-to-close metric */}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0 font-mono tabular-nums">
                       <Clock className="h-3 w-3" />
                       {risk.daysToClose}d
                     </div>

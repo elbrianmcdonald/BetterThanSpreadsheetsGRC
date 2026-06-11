@@ -23,7 +23,7 @@ import {
   UserRole,
 } from "@prisma/client";
 import { api, type RouterOutputs } from "@/trpc/react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -72,8 +72,6 @@ import {
   ORG_CONTROL_STATUS_OPTIONS,
   labelForControlType,
   labelForOrgControlStatus,
-  statusBadgeColor,
-  controlTypeBadgeColor,
 } from "@/components/organizational-control/enum-labels";
 
 const CAN_CREATE_CONTROL_ROLES: UserRole[] = [
@@ -106,6 +104,21 @@ function initials(name: string | null | undefined, email: string | null | undefi
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
+function orgControlStatusBadgeVariant(
+  status: OrgControlStatus
+): "success" | "warning" | "info" | "neutral" {
+  switch (status) {
+    case OrgControlStatus.IMPLEMENTED:
+      return "success";
+    case OrgControlStatus.PARTIALLY_IMPLEMENTED:
+      return "warning";
+    case OrgControlStatus.PLANNED:
+      return "info";
+    default:
+      return "neutral";
+  }
 }
 
 export function ControlsListClient() {
@@ -220,18 +233,13 @@ export function ControlsListClient() {
     <AppLayout breadcrumbs={[{ label: "Controls" }]}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-              <Shield className="h-6 w-6" />
-              Organizational Controls
-            </h1>
-            <p className="mt-2 text-sm text-gray-700">
-              Author, classify, and operate the controls your organization runs.
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0 flex gap-2">
-            {canCreate && (
+        <PageHeader
+          eyebrow="GOVERNANCE"
+          title="Organizational Controls"
+          icon={<Shield />}
+          description="Author, classify, and operate the controls your organization runs."
+          actions={
+            canCreate && (
               <>
                 <Button variant="outline" onClick={() => setImportOpen(true)}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
@@ -244,9 +252,9 @@ export function ControlsListClient() {
                   </Link>
                 </Button>
               </>
-            )}
-          </div>
-        </div>
+            )
+          }
+        />
 
         {canCreate && (
           <Dialog open={importOpen} onOpenChange={setImportOpen}>
@@ -302,7 +310,7 @@ export function ControlsListClient() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[260px] max-w-md">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
               <Input
                 placeholder="Search by ID, name, or description..."
                 value={search}
@@ -329,7 +337,7 @@ export function ControlsListClient() {
                 Clear
               </Button>
             )}
-            <label className="ml-auto flex items-center gap-2 text-sm text-gray-700">
+            <label className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
               <input
                 type="checkbox"
                 checked={overdueOnly}
@@ -338,7 +346,7 @@ export function ControlsListClient() {
               />
               Overdue tests only
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <input
                 type="checkbox"
                 checked={showArchived}
@@ -353,7 +361,7 @@ export function ControlsListClient() {
             <Card>
               <CardContent className="pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Status</label>
+                  <label className="text-[12.5px] font-semibold text-secondary-foreground">Status</label>
                   <Select
                     value={status}
                     onValueChange={(v) =>
@@ -374,7 +382,7 @@ export function ControlsListClient() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Type</label>
+                  <label className="text-[12.5px] font-semibold text-secondary-foreground">Type</label>
                   <Select
                     value={controlType}
                     onValueChange={(v) =>
@@ -395,7 +403,7 @@ export function ControlsListClient() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Nature</label>
+                  <label className="text-[12.5px] font-semibold text-secondary-foreground">Nature</label>
                   <Select
                     value={nature}
                     onValueChange={(v) =>
@@ -416,7 +424,7 @@ export function ControlsListClient() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Automation</label>
+                  <label className="text-[12.5px] font-semibold text-secondary-foreground">Automation</label>
                   <Select
                     value={automationLevel}
                     onValueChange={(v) =>
@@ -437,7 +445,7 @@ export function ControlsListClient() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Family</label>
+                  <label className="text-[12.5px] font-semibold text-secondary-foreground">Family</label>
                   <Select
                     value={family || ANY}
                     onValueChange={(v) =>
@@ -458,7 +466,7 @@ export function ControlsListClient() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Owner</label>
+                  <label className="text-[12.5px] font-semibold text-secondary-foreground">Owner</label>
                   <Select
                     value={ownerId || ANY}
                     onValueChange={(v) =>
@@ -495,20 +503,20 @@ export function ControlsListClient() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
               </div>
             ) : error ? (
               <div className="text-center py-12">
-                <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-2" />
-                <p className="text-red-600">{error.message}</p>
+                <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-2" />
+                <p className="text-destructive">{error.message}</p>
               </div>
             ) : !data?.controls.length ? (
               <div className="text-center py-12">
-                <ShieldAlert className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <ShieldAlert className="h-12 w-12 text-muted-foreground/70 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
                   {hasActiveFilters ? "No controls match these filters" : "No controls yet"}
                 </h3>
-                <p className="text-gray-500 mb-4">
+                <p className="text-muted-foreground mb-4">
                   {hasActiveFilters
                     ? "Try relaxing the filters above."
                     : "Define the first organizational control to start tracking ownership, testing, and evidence."}
@@ -523,18 +531,18 @@ export function ControlsListClient() {
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-md border">
+              <div className="overflow-x-auto rounded-md border border-border">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Local ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Owners</TableHead>
-                      <TableHead>Frameworks</TableHead>
-                      <TableHead>Last tested</TableHead>
-                      <TableHead>Next due</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Local ID</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Name</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Type</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Owners</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Frameworks</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Last tested</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Next due</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -549,7 +557,7 @@ export function ControlsListClient() {
             {/* Pagination */}
             {data?.controls.length ? (
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Page {cursorStack.length} · {data.controls.length} results
                   {data.nextCursor ? " (more available)" : ""}
                 </p>
@@ -594,25 +602,25 @@ function ControlRow({
 
   return (
     <TableRow
-      className={`cursor-pointer hover:bg-gray-50 ${isDeprecated ? "opacity-60" : ""}`}
+      className={`cursor-pointer hover:bg-secondary ${isDeprecated ? "opacity-60" : ""}`}
       onClick={onClick}
     >
-      <TableCell className="font-mono text-sm text-blue-700">
-        {control.localControlId}
+      <TableCell>
+        <Badge variant="code">{control.localControlId}</Badge>
       </TableCell>
       <TableCell className="max-w-[320px]">
-        <div className="font-medium text-gray-900 truncate">{control.name}</div>
+        <div className="font-semibold text-foreground truncate">{control.name}</div>
         {control.family && (
-          <div className="text-xs text-gray-500 truncate">{control.family}</div>
+          <div className="text-xs text-muted-foreground truncate">{control.family}</div>
         )}
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className={controlTypeBadgeColor(control.controlType)}>
+        <Badge variant="neutral">
           {labelForControlType(control.controlType)}
         </Badge>
       </TableCell>
       <TableCell>
-        <Badge variant="outline" className={statusBadgeColor(control.status)}>
+        <Badge variant={orgControlStatusBadgeVariant(control.status)}>
           {labelForOrgControlStatus(control.status)}
         </Badge>
       </TableCell>
@@ -625,16 +633,16 @@ function ControlRow({
             {control._count.FrameworkMappings} mapped
           </Badge>
         ) : (
-          <span className="text-xs text-gray-400">—</span>
+          <span className="text-xs text-muted-foreground/70">—</span>
         )}
       </TableCell>
-      <TableCell className="text-sm text-gray-500">
+      <TableCell className="text-sm text-muted-foreground">
         {formatDate(control.lastTestedDate)}
       </TableCell>
-      <TableCell className={`text-sm ${overdue ? "text-red-600 font-medium" : "text-gray-500"}`}>
+      <TableCell className={`text-sm ${overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
         {control.nextTestDueDate ? formatDate(control.nextTestDueDate) : "—"}
         {overdue && (
-          <Badge variant="outline" className="ml-2 bg-red-100 text-red-800 border-red-200">
+          <Badge variant="critical" className="ml-2">
             Overdue
           </Badge>
         )}
@@ -645,7 +653,7 @@ function ControlRow({
 
 function OwnerAvatars({ owners }: { owners: ListedControl["Assignments"] }) {
   if (!owners.length) {
-    return <span className="text-xs text-gray-400">Unassigned</span>;
+    return <span className="text-xs text-muted-foreground/70">Unassigned</span>;
   }
 
   const shown = owners.slice(0, 3);
@@ -657,8 +665,8 @@ function OwnerAvatars({ owners }: { owners: ListedControl["Assignments"] }) {
         {shown.map((a) => (
           <Tooltip key={a.id}>
             <TooltipTrigger asChild>
-              <Avatar className="h-7 w-7 border-2 border-white">
-                <AvatarFallback className="text-xs bg-blue-100 text-blue-700">
+              <Avatar className="h-7 w-7 border-2 border-card">
+                <AvatarFallback className="text-xs bg-primary/10 text-primary">
                   {initials(a.Person.name, a.Person.email)}
                 </AvatarFallback>
               </Avatar>
@@ -667,8 +675,8 @@ function OwnerAvatars({ owners }: { owners: ListedControl["Assignments"] }) {
           </Tooltip>
         ))}
         {extra > 0 && (
-          <Avatar className="h-7 w-7 border-2 border-white">
-            <AvatarFallback className="text-xs bg-gray-200 text-gray-700">
+          <Avatar className="h-7 w-7 border-2 border-card">
+            <AvatarFallback className="text-xs bg-muted text-secondary-foreground">
               +{extra}
             </AvatarFallback>
           </Avatar>

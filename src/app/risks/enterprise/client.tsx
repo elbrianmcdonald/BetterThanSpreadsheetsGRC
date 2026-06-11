@@ -11,7 +11,7 @@ import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader } from "@/components/layout";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +36,7 @@ function Sparkline({ points }: { points: Array<{ score: number | null; capturedA
     })
     .join(" ");
   return (
-    <svg width={width} height={height} className="text-blue-500">
+    <svg width={width} height={height} className="text-primary">
       <path d={path} stroke="currentColor" fill="none" strokeWidth={1.5} />
     </svg>
   );
@@ -53,33 +53,30 @@ export function EnterpriseRisksClient() {
   return (
     <AppLayout>
       <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <ShieldAlert className="h-6 w-6" />
-              Enterprise Risks
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Top-level rollup risks. Each individual risk can be aligned to one of these.
-            </p>
-          </div>
-          {canWrite && (
-            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Enterprise Risk
-                </Button>
-              </DialogTrigger>
-              <CreateEnterpriseRiskDialog
-                onCreated={() => {
-                  setCreateOpen(false);
-                  void refetch();
-                }}
-              />
-            </Dialog>
-          )}
-        </div>
+        <PageHeader
+          eyebrow="RISK"
+          title="Enterprise Risks"
+          icon={<ShieldAlert />}
+          description="Top-level rollup risks. Each individual risk can be aligned to one of these."
+          actions={
+            canWrite && (
+              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Enterprise Risk
+                  </Button>
+                </DialogTrigger>
+                <CreateEnterpriseRiskDialog
+                  onCreated={() => {
+                    setCreateOpen(false);
+                    void refetch();
+                  }}
+                />
+              </Dialog>
+            )
+          }
+        />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -97,17 +94,17 @@ export function EnterpriseRisksClient() {
               const overdue = er.nextReviewDue && new Date(er.nextReviewDue) < new Date();
               return (
                 <Link key={er.id} href={`/risks/enterprise/${er.id}`}>
-                  <Card className="hover:bg-accent/30 transition-colors">
+                  <Card className="hover:bg-secondary transition-colors">
                     <CardContent className="py-4">
                       <div className="flex items-start gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold truncate">{er.name}</h3>
+                            <h3 className="font-semibold text-foreground truncate">{er.name}</h3>
                             {er.effectiveScoreLabel && (
-                              <Badge variant="secondary">{er.effectiveScoreLabel}</Badge>
+                              <Badge variant="neutral">{er.effectiveScoreLabel}</Badge>
                             )}
                             {overdue && (
-                              <Badge variant="destructive" className="gap-1">
+                              <Badge variant="critical" className="gap-1">
                                 <AlertCircle className="h-3 w-3" />
                                 Review overdue
                               </Badge>
@@ -116,16 +113,16 @@ export function EnterpriseRisksClient() {
                           <p className="text-sm text-muted-foreground line-clamp-1">
                             {er.description ?? "No description"}
                           </p>
-                          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
                             <span>Owner: {er.Owner?.name ?? "—"}</span>
                             <span>Children: {er._count.ChildRisks}</span>
                             {Object.entries(er.childCountsByLabel).map(([label, count]) => (
-                              <span key={label} className="rounded bg-muted px-1.5 py-0.5">
+                              <span key={label} className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em]">
                                 {label}: {count}
                               </span>
                             ))}
                             {er.nextReviewDue && (
-                              <span>
+                              <span className="font-mono">
                                 Next review: {new Date(er.nextReviewDue).toLocaleDateString()}
                               </span>
                             )}
@@ -133,9 +130,9 @@ export function EnterpriseRisksClient() {
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <Sparkline points={er.sparkline} />
-                          <span className="text-xs text-muted-foreground">trend</span>
+                          <span className="eyebrow">trend</span>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground self-center" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/70 self-center" />
                       </div>
                     </CardContent>
                   </Card>

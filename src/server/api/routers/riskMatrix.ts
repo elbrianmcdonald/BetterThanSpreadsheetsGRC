@@ -1328,6 +1328,7 @@ export const riskMatrixRouter = createTRPCRouter({
             id: true,
             versionNumber: true,
             thresholds: true,
+            scales: true,
           },
         },
       } as const;
@@ -1368,6 +1369,10 @@ export const riskMatrixRouter = createTRPCRouter({
         // the same qualitative vocabulary.
         thresholds:
           (defaultTemplate.currentVersion?.thresholds as unknown as Threshold[] | null) ?? null,
+        // Scales (L/I/E levels) so scoring UIs can render level selectors that
+        // match the matrix; exposure is present only for 3D matrices.
+        scales:
+          (defaultTemplate.currentVersion?.scales as unknown as MatrixScales | null) ?? null,
       };
     }),
 });

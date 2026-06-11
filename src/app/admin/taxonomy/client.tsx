@@ -12,7 +12,7 @@
  */
 
 import { useState } from "react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -117,66 +117,38 @@ export function TaxonomyAdminClient() {
     <AppLayout breadcrumbs={[{ label: "Governance" }, { label: "Taxonomy" }]}>
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-              <Tag className="h-6 w-6" />
-              Control Taxonomy
-            </h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Manage simplified control domains for evidence tagging. These domains map to
-            OSCAL framework controls for compliance tracking.
-          </p>
-        </div>
-      </div>
+        <PageHeader
+          eyebrow="GOVERNANCE"
+          title="Control Taxonomy"
+          icon={<Tag />}
+          description="Manage simplified control domains for evidence tagging. These domains map to OSCAL framework controls for compliance tracking."
+        />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Domains</p>
-                <p className="text-2xl font-semibold">{domains?.length ?? 0}</p>
-              </div>
-              <Tag className="h-8 w-8 text-gray-400" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="Total Domains"
+          value={domains?.length ?? 0}
+          icon={<Tag />}
+          tone="primary"
+        />
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Active Domains</p>
-                <p className="text-2xl font-semibold text-green-600">
-                  {domains?.filter((d) => d.isActive).length ?? 0}
-                </p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-                <span className="text-green-600 text-sm font-medium">
-                  {domains ? Math.round((domains.filter((d) => d.isActive).length / domains.length) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="Active Domains"
+          value={domains?.filter((d) => d.isActive).length ?? 0}
+          tone="success"
+          sub={
+            <span className="font-mono">
+              {domains ? Math.round((domains.filter((d) => d.isActive).length / domains.length) * 100) : 0}% active
+            </span>
+          }
+        />
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Inactive Domains</p>
-                <p className="text-2xl font-semibold text-gray-400">
-                  {domains?.filter((d) => !d.isActive).length ?? 0}
-                </p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <Info className="h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="Inactive Domains"
+          value={domains?.filter((d) => !d.isActive).length ?? 0}
+          icon={<Info />}
+        />
       </div>
 
       {/* Domains Table */}
@@ -191,32 +163,32 @@ export function TaxonomyAdminClient() {
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
             </div>
           ) : (
-            <div className="overflow-hidden rounded-md border">
+            <div className="overflow-hidden rounded-md border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[60px]">Order</TableHead>
-                    <TableHead className="w-[200px]">Domain</TableHead>
-                    <TableHead className="w-[150px]">Code</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="w-[100px]">Actions</TableHead>
+                    <TableHead className="w-[60px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Order</TableHead>
+                    <TableHead className="w-[200px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Domain</TableHead>
+                    <TableHead className="w-[150px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Code</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Description</TableHead>
+                    <TableHead className="w-[100px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                    <TableHead className="w-[100px] text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {domains?.map((domain, index) => (
-                    <TableRow key={domain.id} className={!domain.isActive ? "opacity-50" : ""}>
-                      <TableCell className="font-mono text-sm">
+                    <TableRow key={domain.id} className={`hover:bg-secondary ${!domain.isActive ? "opacity-50" : ""}`}>
+                      <TableCell className="font-mono text-sm text-muted-foreground">
                         {domain.sortOrder}
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{domain.name}</div>
+                        <div className="font-semibold text-foreground">{domain.name}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="font-mono text-xs">
+                        <Badge variant="code">
                           {domain.code}
                         </Badge>
                       </TableCell>
@@ -224,7 +196,7 @@ export function TaxonomyAdminClient() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <p className="text-sm text-gray-600 truncate max-w-md cursor-help">
+                              <p className="text-sm text-muted-foreground truncate max-w-md cursor-help">
                                 {domain.description}
                               </p>
                             </TooltipTrigger>
@@ -241,16 +213,17 @@ export function TaxonomyAdminClient() {
                             onCheckedChange={() => handleToggleActive(domain.id, domain.isActive)}
                             disabled={updatingId === domain.id}
                           />
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-muted-foreground">
                             {domain.isActive ? "Active" : "Inactive"}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-sm"
+                            className="text-muted-foreground/70"
                             onClick={() => handleMoveUp(index)}
                             disabled={index === 0 || reorderMutation.isPending}
                           >
@@ -258,7 +231,8 @@ export function TaxonomyAdminClient() {
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-sm"
+                            className="text-muted-foreground/70"
                             onClick={() => handleMoveDown(index)}
                             disabled={index === (domains?.length ?? 0) - 1 || reorderMutation.isPending}
                           >

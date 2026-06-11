@@ -40,27 +40,27 @@ const severityConfig: Record<
   }
 > = {
   HIGH: {
-    color: "text-red-700 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    borderColor: "border-red-200 dark:border-red-800",
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+    borderColor: "border-transparent",
     icon: AlertCircle,
     label: "Critical",
     description:
       "Immediate attention required. Active exploitation possible, critical data at risk, or compliance violation.",
   },
   MEDIUM: {
-    color: "text-amber-700 dark:text-amber-400",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    borderColor: "border-amber-200 dark:border-amber-800",
+    color: "text-warning",
+    bgColor: "bg-warning/10",
+    borderColor: "border-transparent",
     icon: AlertTriangle,
     label: "Moderate",
     description:
       "Should be addressed soon. Potential for exploitation with moderate impact if compromised.",
   },
   LOW: {
-    color: "text-blue-700 dark:text-blue-400",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    borderColor: "border-blue-200 dark:border-blue-800",
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    borderColor: "border-transparent",
     icon: Info,
     label: "Minor",
     description:
@@ -199,9 +199,9 @@ export function SeverityDot({
     <span
       className={cn(
         "inline-block h-2 w-2 rounded-full",
-        severity === "HIGH" && "bg-red-500",
-        severity === "MEDIUM" && "bg-amber-500",
-        severity === "LOW" && "bg-blue-500",
+        severity === "HIGH" && "bg-destructive",
+        severity === "MEDIUM" && "bg-warning",
+        severity === "LOW" && "bg-primary",
         className
       )}
       title={`${severity} severity (${config.label})`}

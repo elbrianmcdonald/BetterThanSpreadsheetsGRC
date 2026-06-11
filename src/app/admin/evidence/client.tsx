@@ -22,10 +22,10 @@ import {
   Download,
 } from "lucide-react";
 
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -94,15 +94,15 @@ export function EvidenceManagementClient() {
   // Get file icon based on MIME type
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith("image/")) {
-      return <Image className="h-4 w-4 text-green-500" />;
+      return <Image className="h-4 w-4 text-success" />;
     }
     if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) {
-      return <FileSpreadsheet className="h-4 w-4 text-emerald-500" />;
+      return <FileSpreadsheet className="h-4 w-4 text-success" />;
     }
     if (mimeType.includes("pdf") || mimeType.includes("word")) {
-      return <FileText className="h-4 w-4 text-red-500" />;
+      return <FileText className="h-4 w-4 text-destructive" />;
     }
-    return <File className="h-4 w-4 text-gray-500" />;
+    return <File className="h-4 w-4 text-muted-foreground/70" />;
   };
 
   // Format date
@@ -117,79 +117,57 @@ export function EvidenceManagementClient() {
   return (
     <AppLayout breadcrumbs={[{ label: "Compliance" }, { label: "Evidence" }]}>
       <div className="mt-8 space-y-6">
+        <PageHeader
+          eyebrow="COMPLIANCE"
+          title="Evidence Library"
+          icon={<File />}
+          description="Upload, tag, and map compliance evidence to control domains and frameworks."
+          actions={
+            canUploadEvidence ? (
+              <Button onClick={() => setShowUploadDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Upload Evidence
+              </Button>
+            ) : undefined
+          }
+        />
+
         {/* Story 3.8: Auditor role indicator banner */}
         {isAuditor && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20 text-primary">
           <Eye className="h-5 w-5" />
           <span className="font-medium">Auditor View</span>
-          <span className="text-sm text-blue-600">You have read-only access to evidence assigned to your frameworks</span>
+          <span className="text-sm text-muted-foreground">You have read-only access to evidence assigned to your frameworks</span>
         </div>
       )}
 
       {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Evidence</CardTitle>
-            <File className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total ?? 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.active ?? 0} active, {stats?.inactive ?? 0} archived
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Storage Used</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.totalStorageFormatted ?? "0 Bytes"}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Across all evidence files
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">File Types</CardTitle>
-            <Image className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats?.byFileType?.length ?? 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Different formats uploaded
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Files</CardTitle>
-            <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.active ?? 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Available for compliance
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Upload Button - Story 3.8: Hide for AUDITOR role */}
-      <div className="flex justify-end">
-        {canUploadEvidence && (
-          <Button onClick={() => setShowUploadDialog(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Upload Evidence
-          </Button>
-        )}
+        <StatTile
+          label="TOTAL EVIDENCE"
+          value={stats?.total ?? 0}
+          sub={`${stats?.active ?? 0} active, ${stats?.inactive ?? 0} archived`}
+          icon={<File />}
+          accent
+        />
+        <StatTile
+          label="STORAGE USED"
+          value={stats?.totalStorageFormatted ?? "0 Bytes"}
+          sub="Across all evidence files"
+          icon={<FileText />}
+        />
+        <StatTile
+          label="FILE TYPES"
+          value={stats?.byFileType?.length ?? 0}
+          sub="Different formats uploaded"
+          icon={<Image />}
+        />
+        <StatTile
+          label="ACTIVE FILES"
+          value={stats?.active ?? 0}
+          sub="Available for compliance"
+          icon={<FileSpreadsheet />}
+        />
       </div>
 
       {/* Story 3.10: Evidence Table with TanStack Table */}
@@ -274,19 +252,19 @@ export function EvidenceManagementClient() {
               {/* Evidence Metadata */}
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">File Size:</span>
-                  <span className="ml-2 font-medium">
+                  <span className="text-muted-foreground">File Size:</span>
+                  <span className="ml-2 font-medium tnum">
                     {formatFileSize(selectedEvidence.fileSize)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Uploaded:</span>
-                  <span className="ml-2 font-medium">
+                  <span className="text-muted-foreground">Uploaded:</span>
+                  <span className="ml-2 font-mono text-muted-foreground">
                     {formatDate(selectedEvidence.createdAt)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500">Uploaded By:</span>
+                  <span className="text-muted-foreground">Uploaded By:</span>
                   <span className="ml-2 font-medium">
                     {selectedEvidence.User?.name ??
                       selectedEvidence.User?.email ??
@@ -294,8 +272,8 @@ export function EvidenceManagementClient() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500">File Type:</span>
-                  <span className="ml-2 font-medium">
+                  <span className="text-muted-foreground">File Type:</span>
+                  <span className="ml-2 font-mono text-muted-foreground">
                     {selectedEvidence.fileType}
                   </span>
                 </div>
@@ -304,10 +282,10 @@ export function EvidenceManagementClient() {
               {/* Description */}
               {selectedEvidence.description && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  <h4 className="text-sm font-medium text-secondary-foreground mb-2">
                     Description
                   </h4>
-                  <p className="text-sm text-gray-600 bg-gray-50 rounded p-3">
+                  <p className="text-sm text-muted-foreground bg-secondary rounded p-3">
                     {selectedEvidence.description}
                   </p>
                 </div>
@@ -315,7 +293,7 @@ export function EvidenceManagementClient() {
 
               {/* Control Domain Tags */}
               <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                <h4 className="text-sm font-medium text-secondary-foreground mb-2">
                   Control Domain Tags
                 </h4>
                 <ControlDomainBadgeList

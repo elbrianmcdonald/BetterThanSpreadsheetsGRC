@@ -89,7 +89,7 @@ import {
 import { toast } from "sonner";
 import { api } from "@/trpc/react";
 import { useHasRole } from "@/hooks/useHasRole";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import {
   VendorStatusBadge,
   getVendorStatusOptions,
@@ -319,7 +319,7 @@ export function VendorListContent() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="-ml-4"
+            className="-ml-4 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground"
           >
             ID
             {column.getIsSorted() === "asc" ? (
@@ -334,7 +334,7 @@ export function VendorListContent() {
         cell: ({ row }) => (
           <Link
             href={`/vendors/${row.original.id}`}
-            className="font-medium text-primary hover:underline"
+            className="font-mono text-[13px] font-medium text-primary hover:underline"
           >
             {row.getValue("identifier")}
           </Link>
@@ -346,7 +346,7 @@ export function VendorListContent() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="-ml-4"
+            className="-ml-4 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground"
           >
             Name
             {column.getIsSorted() === "asc" ? (
@@ -361,7 +361,7 @@ export function VendorListContent() {
         cell: ({ row }) => (
           <Link
             href={`/vendors/${row.original.id}`}
-            className="hover:underline"
+            className="font-semibold text-foreground hover:underline"
           >
             {row.getValue("name")}
           </Link>
@@ -397,11 +397,11 @@ export function VendorListContent() {
           const daysUntil = differenceInDays(date, new Date());
           return (
             <div className="flex items-center gap-2">
-              <span className={isOverdue ? "text-destructive" : daysUntil <= 30 ? "text-yellow-600" : ""}>
+              <span className={`font-mono text-[13px] ${isOverdue ? "text-destructive" : daysUntil <= 30 ? "text-warning" : "text-muted-foreground"}`}>
                 {format(date, "MMM d, yyyy")}
               </span>
               {isOverdue && <AlertTriangle className="h-4 w-4 text-destructive" />}
-              {!isOverdue && daysUntil <= 30 && <Clock className="h-4 w-4 text-yellow-600" />}
+              {!isOverdue && daysUntil <= 30 && <Clock className="h-4 w-4 text-warning" />}
             </div>
           );
         },
@@ -423,7 +423,7 @@ export function VendorListContent() {
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="-ml-4"
+            className="-ml-4 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground"
           >
             Created
             {column.getIsSorted() === "asc" ? (
@@ -462,19 +462,13 @@ export function VendorListContent() {
     >
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Building2 className="h-8 w-8 text-primary" />
-            <div>
-              <h1 className="text-2xl font-semibold text-foreground">
-                Vendor Registry
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Manage third-party vendor relationships
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+        <PageHeader
+          eyebrow="THIRD PARTY"
+          title="Vendor Registry"
+          icon={<Building2 />}
+          description="Manage third-party vendor relationships"
+          actions={
+            <>
             {/* Export Button */}
             <Button variant="outline" onClick={handleExport} disabled={isExporting}>
               {isExporting ? (
@@ -512,7 +506,7 @@ export function VendorListContent() {
                         </Button>
                       </div>
 
-                      <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                      <div className="border-2 border-dashed border-input rounded-lg p-8 text-center">
                         <input
                           type="file"
                           accept=".csv"
@@ -535,7 +529,7 @@ export function VendorListContent() {
                   {importStep === "validate" && validationResult && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-green-600">
+                        <div className="flex items-center gap-2 text-success">
                           <CheckCircle className="h-5 w-5" />
                           <span>{validationResult.validCount} valid</span>
                         </div>
@@ -547,14 +541,14 @@ export function VendorListContent() {
                         )}
                       </div>
 
-                      <div className="border rounded-lg max-h-64 overflow-y-auto">
+                      <div className="border border-border rounded-lg max-h-64 overflow-y-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="w-12">Row</TableHead>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Category</TableHead>
-                              <TableHead>Status</TableHead>
+                              <TableHead className="w-12 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Row</TableHead>
+                              <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Name</TableHead>
+                              <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Category</TableHead>
+                              <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -575,11 +569,11 @@ export function VendorListContent() {
                                 <TableCell>{result.data.category || "-"}</TableCell>
                                 <TableCell>
                                   {result.isValid ? (
-                                    <Badge variant="outline" className="bg-green-50 text-green-700">
+                                    <Badge variant="success">
                                       Valid
                                     </Badge>
                                   ) : (
-                                    <Badge variant="destructive">Error</Badge>
+                                    <Badge variant="critical">Error</Badge>
                                   )}
                                 </TableCell>
                               </TableRow>
@@ -613,7 +607,7 @@ export function VendorListContent() {
                   {importStep === "success" && importResult && (
                     <div className="space-y-4">
                       <div className="flex flex-col items-center py-8">
-                        <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
+                        <CheckCircle className="h-16 w-16 text-success mb-4" />
                         <h3 className="text-lg font-semibold">Import Complete</h3>
                         <p className="text-muted-foreground">
                           Successfully imported {importResult.importedCount} vendors
@@ -639,102 +633,74 @@ export function VendorListContent() {
                 </Button>
               </Link>
             )}
-          </div>
-        </div>
+            </>
+          }
+        />
 
         {/* Stats Cards */}
         {stats && (
           <div className="space-y-4">
             {/* Status Stats */}
             <div className="grid gap-4 md:grid-cols-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Total Vendors</CardDescription>
-                  <CardTitle className="text-2xl">{stats.totalCount}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Active</CardDescription>
-                  <CardTitle className="text-2xl text-green-600">
-                    {stats.activeCount}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Under Review</CardDescription>
-                  <CardTitle className="text-2xl text-yellow-600">
-                    {stats.underReviewCount}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Inactive</CardDescription>
-                  <CardTitle className="text-2xl text-gray-600">
-                    {stats.inactiveCount}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+              <StatTile
+                label="TOTAL VENDORS"
+                value={stats.totalCount}
+                icon={<Building2 />}
+                accent
+              />
+              <StatTile
+                label="ACTIVE"
+                value={stats.activeCount}
+                tone="success"
+              />
+              <StatTile
+                label="UNDER REVIEW"
+                value={stats.underReviewCount}
+                tone="warning"
+              />
+              <StatTile
+                label="INACTIVE"
+                value={stats.inactiveCount}
+              />
             </div>
 
             {/* Risk Tier & Review Stats (FR13, FR14, FR15) */}
             <div className="grid gap-4 md:grid-cols-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Critical</CardDescription>
-                  <CardTitle className="text-2xl text-red-600">
-                    {stats.tierDistribution?.CRITICAL ?? 0}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>High</CardDescription>
-                  <CardTitle className="text-2xl text-orange-600">
+              <StatTile
+                label="CRITICAL"
+                value={stats.tierDistribution?.CRITICAL ?? 0}
+                tone="critical"
+              />
+              <StatTile
+                label="HIGH"
+                value={
+                  <span className="text-severity-high">
                     {stats.tierDistribution?.HIGH ?? 0}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Medium</CardDescription>
-                  <CardTitle className="text-2xl text-yellow-600">
-                    {stats.tierDistribution?.MEDIUM ?? 0}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription>Low</CardDescription>
-                  <CardTitle className="text-2xl text-green-600">
-                    {stats.tierDistribution?.LOW ?? 0}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card className={stats.overdueReviewCount > 0 ? "border-destructive" : ""}>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-1">
-                    <AlertTriangle className={`h-3 w-3 ${stats.overdueReviewCount > 0 ? "text-destructive" : ""}`} />
-                    Overdue Reviews
-                  </CardDescription>
-                  <CardTitle className={`text-2xl ${stats.overdueReviewCount > 0 ? "text-destructive" : ""}`}>
-                    {stats.overdueReviewCount}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-yellow-600" />
-                    Due in 30 Days
-                  </CardDescription>
-                  <CardTitle className="text-2xl text-yellow-600">
-                    {stats.upcomingReviewCount}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+                  </span>
+                }
+              />
+              <StatTile
+                label="MEDIUM"
+                value={stats.tierDistribution?.MEDIUM ?? 0}
+                tone="warning"
+              />
+              <StatTile
+                label="LOW"
+                value={stats.tierDistribution?.LOW ?? 0}
+                tone="success"
+              />
+              <StatTile
+                label="OVERDUE REVIEWS"
+                value={stats.overdueReviewCount}
+                icon={<AlertTriangle />}
+                tone={stats.overdueReviewCount > 0 ? "critical" : "default"}
+              />
+              <StatTile
+                label="DUE IN 30 DAYS"
+                value={stats.upcomingReviewCount}
+                icon={<Clock />}
+                tone="warning"
+              />
             </div>
           </div>
         )}
@@ -882,7 +848,7 @@ export function VendorListContent() {
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
+                        <TableHead key={header.id} className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
                           {header.isPlaceholder
                             ? null
                             : flexRender(
@@ -896,7 +862,7 @@ export function VendorListContent() {
                 </TableHeader>
                 <TableBody>
                   {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
+                    <TableRow key={row.id} className="hover:bg-secondary">
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
                           {flexRender(
@@ -914,10 +880,10 @@ export function VendorListContent() {
 
           {/* Pagination */}
           {data && data.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t px-4 py-4">
+            <div className="flex items-center justify-between border-t border-border px-4 py-4">
               <p className="text-sm text-muted-foreground">
-                Showing {(page - 1) * 25 + 1} to{" "}
-                {Math.min(page * 25, data.totalCount)} of {data.totalCount}{" "}
+                Showing <span className="font-mono">{(page - 1) * 25 + 1}</span> to{" "}
+                <span className="font-mono">{Math.min(page * 25, data.totalCount)}</span> of <span className="font-mono">{data.totalCount}</span>{" "}
                 vendors
               </p>
               <div className="flex items-center gap-2">
@@ -931,7 +897,7 @@ export function VendorListContent() {
                   Previous
                 </Button>
                 <span className="text-sm">
-                  Page {page} of {data.totalPages}
+                  Page <span className="font-mono">{page}</span> of <span className="font-mono">{data.totalPages}</span>
                 </span>
                 <Button
                   variant="outline"

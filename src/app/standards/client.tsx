@@ -35,7 +35,7 @@ import { UserRole, StandardStatus } from "@prisma/client";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -80,10 +80,10 @@ const CAN_MANAGE_STANDARD_ROLES: UserRole[] = [
 ];
 
 /** Status badge configuration */
-const statusConfig: Record<StandardStatus, { color: string; label: string; icon: typeof CheckCircle }> = {
-  DRAFT: { color: "bg-slate-100 text-slate-700 border-slate-200", label: "Draft", icon: Clock },
-  ACTIVE: { color: "bg-green-100 text-green-700 border-green-200", label: "Active", icon: CheckCircle },
-  DEPRECATED: { color: "bg-amber-100 text-amber-700 border-amber-200", label: "Deprecated", icon: AlertCircle },
+const statusConfig: Record<StandardStatus, { variant: "neutral" | "success" | "warning"; label: string; icon: typeof CheckCircle }> = {
+  DRAFT: { variant: "neutral", label: "Draft", icon: Clock },
+  ACTIVE: { variant: "success", label: "Active", icon: CheckCircle },
+  DEPRECATED: { variant: "warning", label: "Deprecated", icon: AlertCircle },
 };
 
 export function StandardsListClient() {
@@ -307,24 +307,20 @@ export function StandardsListClient() {
     <AppLayout breadcrumbs={[{ label: "Standards" }]}>
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              Organizational Standards
-            </h1>
-            <p className="text-muted-foreground">
-              Define and manage internal policies and standards for compliance auditing
-            </p>
-          </div>
-          {canManageStandard && (
-            <div className="flex gap-2">
-              {/* Upload CSV Dialog */}
-              <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-                <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload CSV
-                </Button>
+        <PageHeader
+          eyebrow="STANDARDS"
+          title="Organizational Standards"
+          icon={<Shield />}
+          description="Define and manage internal policies and standards for compliance auditing"
+          actions={
+            canManageStandard ? (
+              <div className="flex gap-2">
+                {/* Upload CSV Dialog */}
+                <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                  <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload CSV
+                  </Button>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
                     <DialogTitle>Upload Standard from CSV</DialogTitle>
@@ -499,37 +495,38 @@ export function StandardsListClient() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            </div>
-          )}
-        </div>
+              </div>
+            ) : null
+          }
+        />
 
         {/* Summary Stats */}
         {summary && (
           <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Total Standards</CardDescription>
-                <CardTitle className="text-2xl">{summary.totalStandards}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Active Standards</CardDescription>
-                <CardTitle className="text-2xl text-green-600">{summary.activeStandards}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Total Controls</CardDescription>
-                <CardTitle className="text-2xl">{summary.totalControls}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Pending Exceptions</CardDescription>
-                <CardTitle className="text-2xl text-amber-600">{summary.pendingExceptions}</CardTitle>
-              </CardHeader>
-            </Card>
+            <StatTile
+              label="TOTAL STANDARDS"
+              value={summary.totalStandards}
+              icon={<Shield />}
+              tone="primary"
+              accent
+            />
+            <StatTile
+              label="ACTIVE STANDARDS"
+              value={summary.activeStandards}
+              icon={<CheckCircle />}
+              tone="success"
+            />
+            <StatTile
+              label="TOTAL CONTROLS"
+              value={summary.totalControls}
+              icon={<FileText />}
+            />
+            <StatTile
+              label="PENDING EXCEPTIONS"
+              value={summary.pendingExceptions}
+              icon={<AlertCircle />}
+              tone="warning"
+            />
           </div>
         )}
 
@@ -591,11 +588,11 @@ export function StandardsListClient() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">Standard</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Controls</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Effective Date</TableHead>
+                    <TableHead className="w-[40%] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Standard</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Controls</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Owner</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Effective Date</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -606,7 +603,7 @@ export function StandardsListClient() {
                     return (
                       <TableRow
                         key={standard.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="cursor-pointer hover:bg-secondary"
                         onClick={() => handleRowClick(standard.id)}
                       >
                         <TableCell>
@@ -615,7 +612,7 @@ export function StandardsListClient() {
                               <Shield className="h-4 w-4 text-primary" />
                             </div>
                             <div>
-                              <div className="font-medium">{standard.title}</div>
+                              <div className="font-semibold text-foreground">{standard.title}</div>
                               <div className="text-sm text-muted-foreground">
                                 v{standard.version} · Review every {standard.reviewCycleMonths} months
                               </div>
@@ -623,33 +620,33 @@ export function StandardsListClient() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={config.color}>
+                          <Badge variant={config.variant}>
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {config.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <span className="font-medium">{standard._count.Controls}</span>
+                        <TableCell className="text-right">
+                          <span className="tnum font-semibold text-foreground">{standard._count.Controls}</span>
                           <span className="text-muted-foreground"> controls</span>
                         </TableCell>
                         <TableCell>
                           {standard.Owner ? (
                             <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
+                              <User className="h-4 w-4 text-muted-foreground/70" />
                               <span className="text-sm">{standard.Owner.name || standard.Owner.email}</span>
                             </div>
                           ) : (
-                            <span className="text-slate-500 text-sm italic">Unassigned</span>
+                            <span className="text-muted-foreground text-sm italic">Unassigned</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex items-center gap-2 font-mono text-[12px] text-muted-foreground">
+                            <Calendar className="h-4 w-4 text-muted-foreground/70" />
                             {format(new Date(standard.effectiveDate), "MMM d, yyyy")}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
                         </TableCell>
                       </TableRow>
                     );

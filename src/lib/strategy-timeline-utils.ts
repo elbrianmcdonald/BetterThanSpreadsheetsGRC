@@ -205,18 +205,18 @@ export function getFiscalYearRange(
  * Get progress color class based on percentage
  */
 export function getProgressColor(progress: number): string {
-  if (progress >= 67) return "bg-green-500";
-  if (progress >= 34) return "bg-amber-500";
-  return "bg-red-500";
+  if (progress >= 67) return "bg-success";
+  if (progress >= 34) return "bg-warning";
+  return "bg-destructive";
 }
 
 /**
  * Get progress text color class based on percentage
  */
 export function getProgressTextColor(progress: number): string {
-  if (progress >= 67) return "text-green-600";
-  if (progress >= 34) return "text-amber-600";
-  return "text-red-600";
+  if (progress >= 67) return "text-success";
+  if (progress >= 34) return "text-warning";
+  return "text-destructive";
 }
 
 /**
@@ -225,14 +225,14 @@ export function getProgressTextColor(progress: number): string {
 export function getStatusColor(status: ObjectiveStatus): string {
   switch (status) {
     case "COMPLETED":
-      return "bg-green-500";
+      return "bg-success";
     case "IN_PROGRESS":
-      return "bg-blue-500";
+      return "bg-warning";
     case "AT_RISK":
-      return "bg-amber-500";
+      return "bg-severity-high";
     case "NOT_STARTED":
     default:
-      return "bg-slate-400";
+      return "bg-muted-foreground/40";
   }
 }
 
@@ -242,14 +242,14 @@ export function getStatusColor(status: ObjectiveStatus): string {
 export function getStatusBadgeColor(status: ObjectiveStatus): string {
   switch (status) {
     case "COMPLETED":
-      return "bg-green-100 text-green-700 border-green-200";
+      return "bg-success/10 text-success border-success/20";
     case "IN_PROGRESS":
-      return "bg-blue-100 text-blue-700 border-blue-200";
+      return "bg-warning/10 text-warning border-warning/20";
     case "AT_RISK":
-      return "bg-amber-100 text-amber-700 border-amber-200";
+      return "bg-severity-high/10 text-severity-high border-severity-high/20";
     case "NOT_STARTED":
     default:
-      return "bg-slate-100 text-slate-700 border-slate-200";
+      return "bg-muted text-muted-foreground border-border";
   }
 }
 

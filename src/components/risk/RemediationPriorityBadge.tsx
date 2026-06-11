@@ -38,27 +38,27 @@ const priorityConfig: Record<
   }
 > = {
   RECOMMENDED: {
-    color: "text-blue-700 dark:text-blue-400",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    borderColor: "border-blue-200 dark:border-blue-800",
+    color: "text-primary",
+    bgColor: "bg-primary/10",
+    borderColor: "border-transparent",
     icon: Star,
     label: "Recommended",
     description:
       "The preferred remediation approach. Offers the best balance of cost, timeline, and risk reduction.",
   },
   ALTERNATIVE: {
-    color: "text-slate-700 dark:text-slate-400",
-    bgColor: "bg-slate-100 dark:bg-slate-900/30",
-    borderColor: "border-slate-200 dark:border-slate-800",
+    color: "text-secondary-foreground",
+    bgColor: "bg-muted",
+    borderColor: "border-transparent",
     icon: CircleDot,
     label: "Alternative",
     description:
       "A viable alternative approach. Consider if the recommended option is not feasible for your organization.",
   },
   NOT_RECOMMENDED: {
-    color: "text-red-700 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    borderColor: "border-red-200 dark:border-red-800",
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+    borderColor: "border-transparent",
     icon: XCircle,
     label: "Not Recommended",
     description:

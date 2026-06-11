@@ -51,6 +51,7 @@ import {
 
 import { api } from "@/trpc/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, StatTile } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { VendorRiskTierBadge, VendorStatusBadge } from "@/components/vendor";
@@ -73,14 +74,15 @@ import {
 import { Progress } from "@/components/ui/progress";
 
 /**
- * Risk tier colors for charts
+ * Risk tier colors for charts — muted "report" status tokens
+ * (Critical=destructive, High=severity-high, Medium=warning, Low=success).
  */
 const TIER_COLORS = {
-  CRITICAL: "#dc2626", // red-600
-  HIGH: "#ea580c", // orange-600
-  MEDIUM: "#ca8a04", // yellow-600
-  LOW: "#16a34a", // green-600
-  NOT_CLASSIFIED: "#6b7280", // gray-500
+  CRITICAL: "var(--destructive)",
+  HIGH: "var(--severity-high)",
+  MEDIUM: "var(--warning)",
+  LOW: "var(--success)",
+  NOT_CLASSIFIED: "var(--muted-foreground)",
 };
 
 /**
@@ -183,9 +185,9 @@ export function TPRMDashboardClient() {
       if (!entry) return null;
       const data = entry.payload;
       return (
-        <div className="rounded-lg border bg-background p-3 shadow-md">
-          <p className="font-medium">{data.name}</p>
-          <p className="text-sm text-muted-foreground">
+        <div className="rounded-md border border-border bg-background p-3 shadow-sm">
+          <p className="text-sm font-semibold text-foreground">{data.name}</p>
+          <p className="font-mono text-xs text-muted-foreground">
             {data.value} vendor{data.value !== 1 ? "s" : ""}
           </p>
         </div>
@@ -203,83 +205,57 @@ export function TPRMDashboardClient() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="flex items-center gap-3">
-        <Building2 className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">TPRM Dashboard</h1>
-          <p className="text-muted-foreground">
-            Third Party Risk Management overview and review status
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="THIRD PARTY RISK"
+        title="TPRM Dashboard"
+        icon={<Building2 />}
+        description="Third Party Risk Management overview and review status"
+      />
 
       {/* Summary Statistics - Row 1 — each card is a clickable link to the
           vendors list pre-filtered by the dimension the card counts. */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Link href="/vendors" className="block">
-          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{isLoading ? "..." : stats?.totalCount || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.activeCount || 0} active
-              </p>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="TOTAL VENDORS"
+            value={isLoading ? "..." : stats?.totalCount || 0}
+            sub={`${stats?.activeCount || 0} active`}
+            icon={<Building2 />}
+            tone="primary"
+            accent
+          />
         </Link>
 
         <Link href="/vendors?riskTier=CRITICAL" className="block">
-          <Card className="border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20 hover:border-red-400 transition-colors cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-red-700 dark:text-red-400">Critical Tier</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-700 dark:text-red-400">
-                {isLoading ? "..." : stats?.tierDistribution?.CRITICAL || 0}
-              </div>
-              <p className="text-xs text-red-600/80 dark:text-red-400/80">
-                6-month review cycle
-              </p>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="CRITICAL TIER"
+            value={isLoading ? "..." : stats?.tierDistribution?.CRITICAL || 0}
+            sub="6-month review cycle"
+            icon={<AlertTriangle />}
+            tone="critical"
+            filled
+          />
         </Link>
 
         <Link href="/vendors?reviewStatus=overdue" className="block">
-          <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20 hover:border-orange-400 transition-colors cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400">Overdue Reviews</CardTitle>
-              <Clock className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-                {isLoading ? "..." : stats?.overdueReviewCount || 0}
-              </div>
-              <span className="text-xs text-orange-600/80 dark:text-orange-400/80">
-                View overdue vendors →
-              </span>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="OVERDUE REVIEWS"
+            value={isLoading ? "..." : stats?.overdueReviewCount || 0}
+            sub="View overdue vendors →"
+            icon={<Clock />}
+            tone="warning"
+            filled
+          />
         </Link>
 
         <Link href="/vendors?reviewStatus=due_in_30_days" className="block">
-          <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20 hover:border-blue-400 transition-colors cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-400">Due in 30 Days</CardTitle>
-              <CalendarClock className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
-                {isLoading ? "..." : stats?.upcomingReviewCount || 0}
-              </div>
-              <span className="text-xs text-blue-600/80 dark:text-blue-400/80">
-                View upcoming reviews →
-              </span>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="DUE IN 30 DAYS"
+            value={isLoading ? "..." : stats?.upcomingReviewCount || 0}
+            sub="View upcoming reviews →"
+            icon={<CalendarClock />}
+            tone="primary"
+          />
         </Link>
       </div>
 
@@ -288,71 +264,42 @@ export function TPRMDashboardClient() {
           links to the findings list. */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Link href="/vendors" className="block">
-          <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20 hover:border-green-400 transition-colors cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-700 dark:text-green-400">Assessment Coverage</CardTitle>
-              <ClipboardCheck className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-700 dark:text-green-400">
-                {isLoading ? "..." : `${stats?.assessmentCoverage?.total || 0}%`}
-              </div>
-              <p className="text-xs text-green-600/80 dark:text-green-400/80">
-                {stats?.assessmentCoverage?.vendorsAssessed || 0} of {stats?.totalCount || 0} vendors assessed
-              </p>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="ASSESSMENT COVERAGE"
+            value={isLoading ? "..." : `${stats?.assessmentCoverage?.total || 0}%`}
+            sub={`${stats?.assessmentCoverage?.vendorsAssessed || 0} of ${stats?.totalCount || 0} vendors assessed`}
+            icon={<ClipboardCheck />}
+            tone="success"
+          />
         </Link>
 
         <Link href="/vendors?riskTier=CRITICAL" className="block">
-          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Critical Coverage</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {isLoading ? "..." : `${stats?.assessmentCoverage?.byTier?.CRITICAL?.percentage || 0}%`}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.assessmentCoverage?.byTier?.CRITICAL?.assessed || 0} of {stats?.assessmentCoverage?.byTier?.CRITICAL?.total || 0} assessed
-              </p>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="CRITICAL COVERAGE"
+            value={isLoading ? "..." : `${stats?.assessmentCoverage?.byTier?.CRITICAL?.percentage || 0}%`}
+            sub={`${stats?.assessmentCoverage?.byTier?.CRITICAL?.assessed || 0} of ${stats?.assessmentCoverage?.byTier?.CRITICAL?.total || 0} assessed`}
+            icon={<AlertTriangle />}
+          />
         </Link>
 
         <Link href="/vendors?riskTier=HIGH" className="block">
-          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">High Coverage</CardTitle>
-              <ShieldAlert className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {isLoading ? "..." : `${stats?.assessmentCoverage?.byTier?.HIGH?.percentage || 0}%`}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.assessmentCoverage?.byTier?.HIGH?.assessed || 0} of {stats?.assessmentCoverage?.byTier?.HIGH?.total || 0} assessed
-              </p>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="HIGH COVERAGE"
+            value={isLoading ? "..." : `${stats?.assessmentCoverage?.byTier?.HIGH?.percentage || 0}%`}
+            sub={`${stats?.assessmentCoverage?.byTier?.HIGH?.assessed || 0} of ${stats?.assessmentCoverage?.byTier?.HIGH?.total || 0} assessed`}
+            icon={<ShieldAlert />}
+          />
         </Link>
 
         <Link href="/findings?source=PENTEST,SCANNER" className="block">
-          <Card className="border-yellow-200 bg-yellow-50/50 dark:border-yellow-900 dark:bg-yellow-950/20 hover:border-yellow-400 transition-colors cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-400">Open Findings</CardTitle>
-              <FileWarning className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">
-                {isLoading ? "..." : stats?.openFindingsCount || 0}
-              </div>
-              <span className="text-xs text-yellow-600/80 dark:text-yellow-400/80">
-                View vendor findings →
-              </span>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="OPEN FINDINGS"
+            value={isLoading ? "..." : stats?.openFindingsCount || 0}
+            sub="View vendor findings →"
+            icon={<FileWarning />}
+            tone="warning"
+            filled
+          />
         </Link>
       </div>
 
@@ -377,7 +324,7 @@ export function TPRMDashboardClient() {
                     labelLine={false}
                     label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={100}
-                    fill="#8884d8"
+                    fill="var(--chart-1)"
                     dataKey="value"
                     onClick={(data) => handleChartClick(data.tier)}
                     style={{ cursor: "pointer" }}
@@ -386,6 +333,8 @@ export function TPRMDashboardClient() {
                       <Cell
                         key={`cell-${index}`}
                         fill={TIER_COLORS[entry.tier as keyof typeof TIER_COLORS]}
+                        stroke="var(--background)"
+                        strokeWidth={1}
                       />
                     ))}
                   </Pie>
@@ -422,17 +371,27 @@ export function TPRMDashboardClient() {
                   ]}
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="name" className="text-xs" />
-                  <YAxis allowDecimals={false} className="text-xs" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="name"
+                    stroke="var(--border)"
+                    tick={{ fontSize: 11, fontFamily: "var(--font-mono)", fill: "var(--muted-foreground)" }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    stroke="var(--border)"
+                    tick={{ fontSize: 11, fontFamily: "var(--font-mono)", fill: "var(--muted-foreground)" }}
+                  />
                   <Tooltip
+                    cursor={{ fill: "var(--secondary)" }}
                     contentStyle={{
-                      backgroundColor: "hsl(var(--background))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
+                      backgroundColor: "var(--background)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "6px",
+                      fontSize: "12px",
                     }}
                   />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="count" radius={[2, 2, 0, 0]}>
                     {[
                       { fill: TIER_COLORS.CRITICAL },
                       { fill: TIER_COLORS.HIGH },
@@ -457,12 +416,12 @@ export function TPRMDashboardClient() {
       {/* Review Alerts Section */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Overdue Reviews */}
-        <Card className={overdueReviews.length > 0 ? "border-red-200 dark:border-red-900" : ""}>
+        <Card className={overdueReviews.length > 0 ? "border-destructive/30" : ""}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-red-600" />
+                  <Clock className="h-[17px] w-[17px] text-destructive" />
                   Overdue Reviews
                 </CardTitle>
                 <CardDescription>
@@ -483,7 +442,7 @@ export function TPRMDashboardClient() {
               <p className="text-muted-foreground">Loading...</p>
             ) : overdueReviews.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
-                <ShieldCheck className="h-12 w-12 text-green-500 mb-2" />
+                <ShieldCheck className="h-12 w-12 text-success mb-2" />
                 <p className="text-muted-foreground">No overdue reviews</p>
                 <p className="text-xs text-muted-foreground">All vendors are up to date</p>
               </div>
@@ -492,7 +451,7 @@ export function TPRMDashboardClient() {
                 {overdueReviews.slice(0, 5).map((vendor) => (
                   <div
                     key={vendor.id}
-                    className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-900 dark:bg-red-950/20"
+                    className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-3"
                   >
                     <div className="flex items-center gap-3">
                       <VendorRiskTierBadge tier={vendor.riskTier as VendorRiskTier} />
@@ -503,16 +462,16 @@ export function TPRMDashboardClient() {
                         >
                           {vendor.name}
                         </Link>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="font-mono text-xs text-muted-foreground">
                           {vendor.identifier}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                      <p className="text-sm font-medium text-destructive">
                         {vendor.nextReviewDate && formatDistanceToNow(new Date(vendor.nextReviewDate), { addSuffix: true })}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-mono text-xs text-muted-foreground">
                         {vendor.nextReviewDate && format(new Date(vendor.nextReviewDate), "MMM d, yyyy")}
                       </p>
                     </div>
@@ -529,7 +488,7 @@ export function TPRMDashboardClient() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <CalendarClock className="h-5 w-5 text-blue-600" />
+                  <CalendarClock className="h-[17px] w-[17px] text-primary" />
                   Upcoming Reviews
                 </CardTitle>
                 <CardDescription>
@@ -570,16 +529,16 @@ export function TPRMDashboardClient() {
                         >
                           {vendor.name}
                         </Link>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="font-mono text-xs text-muted-foreground">
                           {vendor.identifier}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      <p className="text-sm font-medium text-primary">
                         {vendor.nextReviewDate && formatDistanceToNow(new Date(vendor.nextReviewDate), { addSuffix: true })}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-mono text-xs text-muted-foreground">
                         {vendor.nextReviewDate && format(new Date(vendor.nextReviewDate), "MMM d, yyyy")}
                       </p>
                     </div>
@@ -626,7 +585,7 @@ export function TPRMDashboardClient() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <GitCompare className="h-5 w-5" />
+                <GitCompare className="h-[17px] w-[17px] text-primary" />
                 Vendor Comparison
               </CardTitle>
               <CardDescription>
@@ -732,9 +691,9 @@ export function TPRMDashboardClient() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b">
-                        <th className="py-3 px-4 text-left font-medium text-muted-foreground">Metric</th>
+                        <th className="py-3 px-4 text-left font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Metric</th>
                         {comparisonData.vendors.map((vendor) => (
-                          <th key={vendor.id} className="py-3 px-4 text-center font-medium">
+                          <th key={vendor.id} className="py-3 px-4 text-center font-semibold text-foreground">
                             <Link href={`/vendors/${vendor.id}`} className="hover:underline">
                               {vendor.name}
                             </Link>
@@ -867,7 +826,7 @@ export function TPRMDashboardClient() {
                         <td className="py-2 px-4 text-muted-foreground">Open Findings</td>
                         {comparisonData.vendors.map((vendor) => (
                           <td key={vendor.id} className="py-2 px-4 text-center">
-                            <span className={vendor.metrics.findings.open > 0 ? "text-yellow-600 font-medium" : ""}>
+                            <span className={vendor.metrics.findings.open > 0 ? "text-warning font-medium" : ""}>
                               {vendor.metrics.findings.open}
                             </span>
                           </td>
@@ -877,7 +836,7 @@ export function TPRMDashboardClient() {
                         <td className="py-2 px-4 text-muted-foreground">High Findings</td>
                         {comparisonData.vendors.map((vendor) => (
                           <td key={vendor.id} className="py-2 px-4 text-center">
-                            <span className={vendor.metrics.findings.high > 0 ? "text-red-600 font-medium" : ""}>
+                            <span className={vendor.metrics.findings.high > 0 ? "text-destructive font-medium" : ""}>
                               {vendor.metrics.findings.high}
                             </span>
                           </td>
@@ -887,7 +846,7 @@ export function TPRMDashboardClient() {
                         <td className="py-2 px-4 text-muted-foreground">Medium Findings</td>
                         {comparisonData.vendors.map((vendor) => (
                           <td key={vendor.id} className="py-2 px-4 text-center">
-                            <span className={vendor.metrics.findings.medium > 0 ? "text-orange-600 font-medium" : ""}>
+                            <span className={vendor.metrics.findings.medium > 0 ? "text-severity-high font-medium" : ""}>
                               {vendor.metrics.findings.medium}
                             </span>
                           </td>

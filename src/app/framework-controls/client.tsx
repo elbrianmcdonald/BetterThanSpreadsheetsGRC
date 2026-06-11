@@ -14,7 +14,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
 } from "@/components/ui/card";
 import {
   Table,
@@ -387,34 +385,34 @@ export function ControlLibraryClient() {
     <AppLayout breadcrumbs={[{ label: "Governance" }, { label: "Framework/Standard Control Library" }]}>
       <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Page Header (AC4) */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold">Framework/Standard Control Library</h1>
-            <p className="text-sm text-muted-foreground">
-              {summary ? `${summary.totalControls} controls across all frameworks and standards` : "Browse controls across all frameworks and standards"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Control
-          </Button>
-          <Button variant="outline" onClick={handleExport} disabled={!controlsData?.controls?.length}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-        </div>
-      </div>
+        <PageHeader
+          eyebrow="GOVERNANCE"
+          title="Framework/Standard Control Library"
+          icon={<Shield />}
+          description={
+            summary
+              ? `${summary.totalControls} controls across all frameworks and standards`
+              : "Browse controls across all frameworks and standards"
+          }
+          actions={
+            <>
+              <Button variant="outline" onClick={handleExport} disabled={!controlsData?.controls?.length}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Control
+              </Button>
+            </>
+          }
+        />
 
       {/* Summary Cards (AC5) — clickable to filter */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card
-          className={`cursor-pointer transition-colors hover:border-primary/50 ${
-            statusFilter === "all" && !hasRisks ? "border-primary ring-1 ring-primary/20" : ""
-          }`}
+        <button
+          type="button"
+          className="block w-full text-left transition-colors"
           onClick={() => {
             setStatusFilter("all");
             setHasRisks(false);
@@ -422,21 +420,16 @@ export function ControlLibraryClient() {
             setPage(0);
           }}
         >
-          <CardHeader className="pb-2">
-            <CardDescription>Total Controls</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {summaryLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold">{summary?.totalControls ?? 0}</div>
-            )}
-          </CardContent>
-        </Card>
-        <Card
-          className={`cursor-pointer transition-colors hover:border-primary/50 ${
-            statusFilter === "active" && !hasRisks ? "border-primary ring-1 ring-primary/20" : ""
-          }`}
+          <StatTile
+            label="Total Controls"
+            value={summaryLoading ? <Skeleton className="h-8 w-20" /> : (summary?.totalControls ?? 0)}
+            tone="default"
+            accent
+          />
+        </button>
+        <button
+          type="button"
+          className="block w-full text-left transition-colors"
           onClick={() => {
             setStatusFilter("active");
             setHasRisks(false);
@@ -444,21 +437,15 @@ export function ControlLibraryClient() {
             setPage(0);
           }}
         >
-          <CardHeader className="pb-2">
-            <CardDescription>Active Controls</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {summaryLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold text-green-600">{summary?.activeControls ?? 0}</div>
-            )}
-          </CardContent>
-        </Card>
-        <Card
-          className={`cursor-pointer transition-colors hover:border-primary/50 ${
-            hasRisks ? "border-primary ring-1 ring-primary/20" : ""
-          }`}
+          <StatTile
+            label="Active Controls"
+            value={summaryLoading ? <Skeleton className="h-8 w-20" /> : (summary?.activeControls ?? 0)}
+            tone="success"
+          />
+        </button>
+        <button
+          type="button"
+          className="block w-full text-left transition-colors"
           onClick={() => {
             setStatusFilter("active");
             setHasRisks(true);
@@ -466,21 +453,15 @@ export function ControlLibraryClient() {
             setPage(0);
           }}
         >
-          <CardHeader className="pb-2">
-            <CardDescription>At-Risk Controls</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {summaryLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold text-amber-600">{summary?.controlsAtRisk ?? 0}</div>
-            )}
-          </CardContent>
-        </Card>
-        <Card
-          className={`cursor-pointer transition-colors hover:border-primary/50 ${
-            statusFilter === "inactive" && !hasRisks ? "border-primary ring-1 ring-primary/20" : ""
-          }`}
+          <StatTile
+            label="At-Risk Controls"
+            value={summaryLoading ? <Skeleton className="h-8 w-20" /> : (summary?.controlsAtRisk ?? 0)}
+            tone="warning"
+          />
+        </button>
+        <button
+          type="button"
+          className="block w-full text-left transition-colors"
           onClick={() => {
             setStatusFilter("inactive");
             setHasRisks(false);
@@ -488,17 +469,12 @@ export function ControlLibraryClient() {
             setPage(0);
           }}
         >
-          <CardHeader className="pb-2">
-            <CardDescription>Inactive Controls</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {summaryLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold text-red-600">{summary?.inactiveControls ?? 0}</div>
-            )}
-          </CardContent>
-        </Card>
+          <StatTile
+            label="Inactive Controls"
+            value={summaryLoading ? <Skeleton className="h-8 w-20" /> : (summary?.inactiveControls ?? 0)}
+            tone="critical"
+          />
+        </button>
       </div>
 
       {/* Search and Filters (AC9-AC17) */}
@@ -677,8 +653,8 @@ export function ControlLibraryClient() {
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-3">
-          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary px-4 py-3">
+          <span className="text-sm font-medium text-foreground">{selectedIds.size} selected</span>
           <div className="flex items-center gap-2 ml-auto">
             {statusFilter !== "inactive" && (
               <Button
@@ -705,7 +681,7 @@ export function ControlLibraryClient() {
             <Button
               variant="outline"
               size="sm"
-              className="text-red-600 hover:text-red-600"
+              className="text-destructive hover:text-destructive"
               onClick={() => setBulkAction("delete")}
               disabled={isBulkPending}
             >
@@ -762,12 +738,12 @@ export function ControlLibraryClient() {
                         aria-label="Select all"
                       />
                     </TableHead>
-                    <TableHead className="w-[120px]">Control ID</TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead className="w-[140px]">Framework</TableHead>
-                    <TableHead className="w-[100px]">Status</TableHead>
-                    <TableHead className="w-[80px] text-center">Risks</TableHead>
-                    <TableHead className="w-[80px] text-center">Findings</TableHead>
+                    <TableHead className="w-[120px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Control ID</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Title</TableHead>
+                    <TableHead className="w-[140px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Framework</TableHead>
+                    <TableHead className="w-[100px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                    <TableHead className="w-[80px] text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Risks</TableHead>
+                    <TableHead className="w-[80px] text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Findings</TableHead>
                     <TableHead className="w-[60px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -775,7 +751,7 @@ export function ControlLibraryClient() {
                   {controlsData.controls.map((control) => (
                     <TableRow
                       key={control.id}
-                      className="cursor-pointer hover:bg-muted/50"
+                      className="cursor-pointer hover:bg-secondary"
                       onClick={() => setSelectedControlId(control.id)}
                     >
                       <TableCell className="px-2" onClick={(e) => e.stopPropagation()}>
@@ -785,45 +761,45 @@ export function ControlLibraryClient() {
                           aria-label={`Select ${control.controlId}`}
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-sm font-medium">
+                      <TableCell>
                         <div className="flex items-center gap-1.5">
-                          {control.controlId}
+                          <span className="font-mono text-sm text-muted-foreground">{control.controlId}</span>
                           {control.isCustom && (
-                            <Badge variant="outline" className="text-xs px-1 py-0">Custom</Badge>
+                            <Badge variant="code" className="text-xs px-1 py-0">Custom</Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-[300px] truncate" title={control.title}>
+                      <TableCell className="max-w-[300px] truncate font-semibold text-foreground" title={control.title}>
                         {control.title}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{control.framework?.code}</Badge>
+                        <Badge variant="code">{control.framework?.code}</Badge>
                       </TableCell>
                       <TableCell>
                         {control.isActive ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">Active</Badge>
+                          <Badge variant="success">Active</Badge>
                         ) : (
-                          <Badge variant="secondary" className="bg-gray-100 text-gray-600">Inactive</Badge>
+                          <Badge variant="neutral">Inactive</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
                         {control.riskCount > 0 ? (
-                          <Badge variant="secondary">{control.riskCount}</Badge>
+                          <Badge variant="neutral">{control.riskCount}</Badge>
                         ) : (
-                          <span className="text-muted-foreground">&mdash;</span>
+                          <span className="text-muted-foreground/70">&mdash;</span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
                         {control.findingCount > 0 ? (
-                          <Badge variant="secondary">{control.findingCount}</Badge>
+                          <Badge variant="neutral">{control.findingCount}</Badge>
                         ) : (
-                          <span className="text-muted-foreground">&mdash;</span>
+                          <span className="text-muted-foreground/70">&mdash;</span>
                         )}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Button variant="ghost" size="icon-sm" className="text-muted-foreground/70">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -867,7 +843,7 @@ export function ControlLibraryClient() {
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  className="text-red-600 focus:text-red-600"
+                                  className="text-destructive focus:text-destructive"
                                   onClick={() => setDeleteControlId(control.id)}
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
@@ -1092,7 +1068,7 @@ export function ControlLibraryClient() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {
                 if (deleteControlId) {
                   deleteControlMutation.mutate({ id: deleteControlId });
@@ -1124,7 +1100,7 @@ export function ControlLibraryClient() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isBulkPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={bulkAction === "delete" ? "bg-red-600 hover:bg-red-700" : ""}
+              className={bulkAction === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
               onClick={handleBulkConfirm}
               disabled={isBulkPending}
             >

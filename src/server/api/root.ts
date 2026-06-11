@@ -57,6 +57,10 @@ import { assetRouter } from "@/server/api/routers/asset";
 import { assetOwnerRouter } from "@/server/api/routers/assetOwner";
 import { systemSettingsRouter } from "@/server/api/routers/systemSettings";
 import { biaSystemContingencyRouter } from "@/server/api/routers/biaSystemContingency";
+import { deliverableRouter } from "@/server/api/routers/deliverable";
+import { engagementRouter } from "@/server/api/routers/engagement";
+import { pathwayRouter } from "@/server/api/routers/pathway";
+import { actionPlanRouter } from "@/server/api/routers/actionPlan";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 
 /**
@@ -124,6 +128,10 @@ export const appRouter = createTRPCRouter({
   assetOwner: assetOwnerRouter, // Epic 14: Asset Owners (separate from Users)
   systemSettings: systemSettingsRouter, // Deployment-level settings: hostname + TLS
   biaSystemContingency: biaSystemContingencyRouter, // NIST SP 800-34 System Contingency BIA (asset/process-anchored)
+  deliverable: deliverableRouter, // Story 17.1: Consulting Deliverable Shell + PDF export
+  engagement: engagementRouter, // Epic 18: Consulting Engagement wrapper (polymorphic over assessments)
+  pathway: pathwayRouter, // Epic 19: Exploitation Pathway (per-assessment, findings + risks)
+  actionPlan: actionPlanRouter, // Remediation Roadmap: per-assessment Action Plan initiatives
 });
 
 // export type definition of API

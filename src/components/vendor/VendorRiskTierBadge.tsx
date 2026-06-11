@@ -28,39 +28,39 @@ const TIER_CONFIG: Record<
   VendorRiskTier | "NOT_CLASSIFIED",
   {
     label: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
+    variant: "critical" | "high" | "warning" | "success" | "neutral";
     className: string;
     icon: React.ComponentType<{ className?: string }>;
   }
 > = {
   CRITICAL: {
     label: "Critical",
-    variant: "destructive",
-    className: "bg-red-100 text-red-800 hover:bg-red-100 border-red-200",
+    variant: "critical",
+    className: "",
     icon: AlertTriangle,
   },
   HIGH: {
     label: "High",
-    variant: "outline",
-    className: "bg-orange-100 text-orange-800 hover:bg-orange-100 border-orange-200",
+    variant: "high",
+    className: "",
     icon: ShieldAlert,
   },
   MEDIUM: {
     label: "Medium",
-    variant: "outline",
-    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200",
+    variant: "warning",
+    className: "",
     icon: Shield,
   },
   LOW: {
     label: "Low",
-    variant: "default",
-    className: "bg-green-100 text-green-800 hover:bg-green-100 border-green-200",
+    variant: "success",
+    className: "",
     icon: ShieldCheck,
   },
   NOT_CLASSIFIED: {
     label: "Not Classified",
-    variant: "secondary",
-    className: "bg-gray-100 text-gray-500 hover:bg-gray-100 border-gray-200",
+    variant: "neutral",
+    className: "",
     icon: HelpCircle,
   },
 };

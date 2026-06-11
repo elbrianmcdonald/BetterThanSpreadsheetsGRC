@@ -29,7 +29,7 @@ import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -171,17 +171,12 @@ export function MyAssignmentsKanbanClient() {
     <AppLayout breadcrumbs={[{ label: "Assignments", href: "/assignments" }, { label: "My Assignments" }]}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-              <LayoutGrid className="h-6 w-6" />
-              My Assignments
-            </h1>
-            <p className="mt-2 text-sm text-gray-700">
-              Manage your assigned assessment tasks. Drag cards between columns to update status.
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0 flex items-center gap-4">
+        <PageHeader
+          eyebrow="ASSIGNMENTS"
+          title="My Assignments"
+          icon={<LayoutGrid />}
+          description="Manage your assigned assessment tasks. Drag cards between columns to update status."
+          actions={
             <Button
               variant="outline"
               size="sm"
@@ -191,47 +186,35 @@ export function MyAssignmentsKanbanClient() {
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Active</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalTasks}</div>
-              <p className="text-xs text-muted-foreground">Tasks in your queue</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">To Do</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-600">{data?.counts?.todo ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Waiting to start</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{data?.counts?.inProgress ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Currently working</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{data?.counts?.completed ?? 0}</div>
-              <p className="text-xs text-muted-foreground">Recently finished</p>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="Total Active"
+            value={totalTasks}
+            sub="Tasks in your queue"
+            tone="primary"
+          />
+          <StatTile
+            label="To Do"
+            value={data?.counts?.todo ?? 0}
+            sub="Waiting to start"
+          />
+          <StatTile
+            label="In Progress"
+            value={data?.counts?.inProgress ?? 0}
+            sub="Currently working"
+            tone="primary"
+            accent={false}
+          />
+          <StatTile
+            label="Completed"
+            value={data?.counts?.completed ?? 0}
+            sub="Recently finished"
+            tone="success"
+          />
         </div>
 
         {/* Filters */}
@@ -239,8 +222,8 @@ export function MyAssignmentsKanbanClient() {
           <CardContent className="py-4">
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Filters:</span>
+                <Filter className="h-4 w-4 text-muted-foreground/70" />
+                <span className="eyebrow">Filters</span>
               </div>
 
               {/* Type Filter */}
@@ -286,7 +269,7 @@ export function MyAssignmentsKanbanClient() {
         {/* Kanban Board */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
           </div>
         ) : error ? (
           <Card className="border-destructive">
@@ -316,9 +299,9 @@ export function MyAssignmentsKanbanClient() {
         {!isLoading && !error && totalTasks === 0 && (
           <Card className="text-center py-12">
             <CardContent>
-              <ClipboardList className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Assignments</h3>
-              <p className="text-gray-500 mb-4">
+              <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No Assignments</h3>
+              <p className="text-muted-foreground mb-4">
                 You don&apos;t have any tasks assigned to you yet.
               </p>
               <Button onClick={() => router.push("/assignments/backlog")}>

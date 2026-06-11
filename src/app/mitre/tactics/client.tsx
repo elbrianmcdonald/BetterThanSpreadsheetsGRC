@@ -11,7 +11,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/trpc/react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -101,8 +101,8 @@ export function TacticsClient() {
     return (
       <AppLayout breadcrumbs={[{ label: "Governance", href: "/mitre/tactics" }, { label: "MITRE ATT&CK" }]}>
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Target className="h-16 w-16 text-muted-foreground mb-6" />
-          <h2 className="text-2xl font-semibold mb-2">No MITRE Data Available</h2>
+          <Target className="h-16 w-16 text-muted-foreground/70 mb-6" />
+          <h2 className="text-2xl font-semibold mb-2 text-foreground">No MITRE Data Available</h2>
           <p className="text-muted-foreground mb-6 max-w-md">
             MITRE ATT&CK data has not been loaded yet. Click below to fetch the latest
             threat intelligence from the official MITRE repository.
@@ -132,8 +132,8 @@ export function TacticsClient() {
     return (
       <AppLayout breadcrumbs={[{ label: "Governance", href: "/mitre/tactics" }, { label: "MITRE ATT&CK" }]}>
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <AlertTriangle className="h-16 w-16 text-red-500 mb-6" />
-          <h2 className="text-2xl font-semibold mb-2">Error Loading Tactics</h2>
+          <AlertTriangle className="h-16 w-16 text-destructive mb-6" />
+          <h2 className="text-2xl font-semibold mb-2 text-foreground">Error Loading Tactics</h2>
           <p className="text-muted-foreground mb-6">{error.message}</p>
           <Button onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -147,38 +147,63 @@ export function TacticsClient() {
   return (
     <AppLayout breadcrumbs={[{ label: "Governance", href: "/mitre/tactics" }, { label: "MITRE ATT&CK" }]}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Target className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold">MITRE ATT&CK Tactics</h1>
-            <p className="text-sm text-muted-foreground">
-              {stats?.tacticsCount ?? 0} tactics, {stats?.totalTechniques ?? 0} techniques
-              {stats?.lastSyncAt && (
-                <span className="ml-2">
-                  (Last synced: {new Date(stats.lastSyncAt).toLocaleDateString()})
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="outline"
-          onClick={() => syncMutation.mutate()}
-          disabled={syncMutation.isPending}
-        >
-          {syncMutation.isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Syncing...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Sync MITRE Data
-            </>
-          )}
-        </Button>
+      <PageHeader
+        eyebrow="THREAT INTELLIGENCE"
+        title="MITRE ATT&CK Tactics"
+        icon={<Target />}
+        description={
+          <>
+            {stats?.tacticsCount ?? 0} tactics, {stats?.totalTechniques ?? 0} techniques
+            {stats?.lastSyncAt && (
+              <span className="ml-2 font-mono text-[12px] text-muted-foreground/70">
+                Last synced {new Date(stats.lastSyncAt).toLocaleDateString()}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <Button
+            variant="outline"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+          >
+            {syncMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Sync MITRE Data
+              </>
+            )}
+          </Button>
+        }
+      />
+
+      {/* KPI Tiles */}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatTile
+          label="Tactics"
+          value={stats?.tacticsCount ?? 0}
+          sub="Kill chain phases"
+          tone="primary"
+        />
+        <StatTile
+          label="Techniques"
+          value={stats?.totalTechniques ?? 0}
+          sub="Adversary techniques"
+        />
+        <StatTile
+          label="Last Synced"
+          value={
+            stats?.lastSyncAt
+              ? new Date(stats.lastSyncAt).toLocaleDateString()
+              : "—"
+          }
+          sub="From MITRE repository"
+        />
       </div>
 
       {/* Tactics Grid */}
@@ -193,16 +218,14 @@ export function TacticsClient() {
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono">
-                      {tactic.externalId}
-                    </Badge>
-                    <Badge variant="secondary">{tactic.techniqueCount} techniques</Badge>
+                    <Badge variant="code">{tactic.externalId}</Badge>
+                    <Badge variant="neutral">{tactic.techniqueCount} techniques</Badge>
                   </div>
                   <a
                     href={tactic.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
+                    className="text-muted-foreground/70 hover:text-primary"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ExternalLink className="h-4 w-4" />
@@ -214,9 +237,9 @@ export function TacticsClient() {
                       {tactic.name}
                     </CardTitle>
                     {expandedTactic === tactic.id ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown className="h-4 w-4 text-muted-foreground/70" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
                     )}
                   </button>
                 </CollapsibleTrigger>
@@ -227,8 +250,8 @@ export function TacticsClient() {
 
               <CollapsibleContent>
                 <CardContent className="pt-0">
-                  <div className="border-t pt-4 mt-2">
-                    <h4 className="font-medium mb-2">Techniques in this Tactic:</h4>
+                  <div className="border-t border-border pt-4 mt-2">
+                    <h4 className="eyebrow mb-2.5">Techniques in this Tactic</h4>
                     {tacticDetails?.techniques ? (
                       <div className="flex flex-wrap gap-2">
                         {tacticDetails.techniques.slice(0, 10).map((tech) => (
@@ -238,12 +261,15 @@ export function TacticsClient() {
                           >
                             <Badge
                               variant="outline"
-                              className="cursor-pointer hover:bg-primary/10"
+                              className="cursor-pointer hover:bg-primary/10 hover:text-primary"
                             >
-                              {tech.externalId} - {tech.name}
+                              <span className="font-mono text-muted-foreground">
+                                {tech.externalId}
+                              </span>{" "}
+                              {tech.name}
                               {tech.subTechniqueCount > 0 && (
-                                <span className="ml-1 text-muted-foreground">
-                                  (+{tech.subTechniqueCount})
+                                <span className="ml-1 font-mono text-muted-foreground/70">
+                                  +{tech.subTechniqueCount}
                                 </span>
                               )}
                             </Badge>
@@ -251,7 +277,7 @@ export function TacticsClient() {
                         ))}
                         {tacticDetails.techniques.length > 10 && (
                           <Link href={`/mitre/techniques?tactic=${tactic.id}`}>
-                            <Badge variant="secondary" className="cursor-pointer">
+                            <Badge variant="neutral" className="cursor-pointer">
                               +{tacticDetails.techniques.length - 10} more
                             </Badge>
                           </Link>

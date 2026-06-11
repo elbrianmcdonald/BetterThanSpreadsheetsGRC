@@ -29,21 +29,21 @@ const statusConfig: Record<AssessmentProjectStatus, StatusConfig> = {
     description: "Analyst actively discovering risks",
     icon: Clock,
     badgeVariant: "secondary",
-    className: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-100",
+    className: "bg-primary/10 text-primary border-transparent hover:bg-primary/10",
   },
   SUBMITTED: {
     label: "Submitted",
     description: "Submitted for manager review",
     icon: Send,
     badgeVariant: "secondary",
-    className: "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-100",
+    className: "bg-warning/10 text-warning border-transparent hover:bg-warning/10",
   },
   APPROVED: {
     label: "Approved",
     description: "Manager approved, risks published to register",
     icon: CheckCircle,
     badgeVariant: "secondary",
-    className: "bg-green-100 text-green-800 border-green-300 hover:bg-green-100",
+    className: "bg-success/10 text-success border-transparent hover:bg-success/10",
   },
 };
 

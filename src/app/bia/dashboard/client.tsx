@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/layout";
 import {
   Activity,
   BarChart3,
@@ -93,7 +94,7 @@ export function BIADashboardClient() {
       {/* Filter Bar */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Filters</CardTitle>
+          <CardTitle className="eyebrow">Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 items-center">
@@ -207,93 +208,71 @@ export function BIADashboardClient() {
 
       {/* Summary Stats — each card links to the relevant filtered list. */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Link href="/bia/processes" className="block">
-          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Business Processes
-                  </p>
-                  {loadingStats ? (
-                    <Skeleton className="h-8 w-16" />
-                  ) : (
-                    <p className="text-2xl font-semibold">
-                      {summaryStats?.totalProcesses ?? 0}
-                    </p>
-                  )}
-                </div>
-                <Activity className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
+        <Link href="/bia/processes" className="block w-full text-left">
+          <StatTile
+            label="Business Processes"
+            value={
+              loadingStats ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                (summaryStats?.totalProcesses ?? 0)
+              )
+            }
+            icon={<Activity />}
+            tone="primary"
+            accent
+          />
         </Link>
 
-        <Link href="/bia/functions" className="block">
-          <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Business Functions
-                  </p>
-                  {loadingStats ? (
-                    <Skeleton className="h-8 w-16" />
-                  ) : (
-                    <p className="text-2xl font-semibold">
-                      {summaryStats?.totalFunctions ?? 0}
-                    </p>
-                  )}
-                </div>
-                <Layers className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
+        <Link href="/bia/functions" className="block w-full text-left">
+          <StatTile
+            label="Business Functions"
+            value={
+              loadingStats ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                (summaryStats?.totalFunctions ?? 0)
+              )
+            }
+            icon={<Layers />}
+          />
         </Link>
 
-        <Link href="/bia/processes?assessment=assessed" className="block">
-          <Card className="hover:bg-muted/50 hover:border-green-300 transition-colors cursor-pointer">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Assessment Coverage
-                  </p>
-                  {loadingStats ? (
-                    <Skeleton className="h-8 w-16" />
-                  ) : (
-                    <p className="text-2xl font-semibold">
-                      {summaryStats?.assessmentRate ?? 0}%
-                    </p>
-                  )}
-                </div>
-                <BarChart3 className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
+        <Link
+          href="/bia/processes?assessment=assessed"
+          className="block w-full text-left"
+        >
+          <StatTile
+            label="Assessment Coverage"
+            value={
+              loadingStats ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                `${summaryStats?.assessmentRate ?? 0}%`
+              )
+            }
+            icon={<BarChart3 />}
+            tone="success"
+          />
         </Link>
 
-        <Link href="/bia/processes?assessment=pending" className="block">
-          <Card className="hover:bg-muted/50 hover:border-amber-300 transition-colors cursor-pointer">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Pending Assessments
-                  </p>
-                  {loadingStats ? (
-                    <Skeleton className="h-8 w-16" />
-                  ) : (
-                    <p className="text-2xl font-semibold">
-                      {(summaryStats?.pendingAssessments ?? 0) +
-                        (summaryStats?.neverAssessed ?? 0)}
-                    </p>
-                  )}
-                </div>
-                <AlertTriangle className="h-8 w-8 text-amber-500" />
-              </div>
-            </CardContent>
-          </Card>
+        <Link
+          href="/bia/processes?assessment=pending"
+          className="block w-full text-left"
+        >
+          <StatTile
+            label="Pending Assessments"
+            value={
+              loadingStats ? (
+                <Skeleton className="h-8 w-16" />
+              ) : (
+                (summaryStats?.pendingAssessments ?? 0) +
+                (summaryStats?.neverAssessed ?? 0)
+              )
+            }
+            icon={<AlertTriangle />}
+            tone="warning"
+          />
         </Link>
       </div>
 
@@ -301,8 +280,8 @@ export function BIADashboardClient() {
         {/* Tier Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-[15px] font-bold">
+              <BarChart3 className="h-[17px] w-[17px] text-primary" />
               Tier Distribution
             </CardTitle>
             <CardDescription>
@@ -331,21 +310,21 @@ export function BIADashboardClient() {
                       href={`/bia/processes?tierId=${tier.id}`}
                       className="block"
                     >
-                      <div className="flex items-center gap-3 p-2 rounded hover:bg-muted transition-colors">
+                      <div className="flex items-center gap-3 p-2 rounded hover:bg-secondary transition-colors">
                         <div
                           className="w-4 h-4 rounded-full flex-shrink-0"
                           style={{ backgroundColor: tier.colorHex }}
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-semibold text-foreground">
                               {tier.name}
                             </span>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="font-mono text-[12px] text-muted-foreground tnum">
                               {tier.count} ({percentage}%)
                             </span>
                           </div>
-                          <div className="w-full bg-muted rounded-full h-2">
+                          <div className="w-full bg-secondary rounded-full h-2">
                             <div
                               className="h-2 rounded-full transition-all"
                               style={{
@@ -363,13 +342,13 @@ export function BIADashboardClient() {
                 {(tierDistribution?.unassigned ?? 0) > 0 && (
                   <Link href="/bia/processes?unassigned=true" className="block">
                     <div className="flex items-center gap-3 p-2 rounded hover:bg-muted transition-colors">
-                      <div className="w-4 h-4 rounded-full flex-shrink-0 bg-gray-300" />
+                      <div className="w-4 h-4 rounded-full flex-shrink-0 bg-muted-foreground/30" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium">
+                          <span className="text-sm font-semibold text-foreground">
                             Unassigned
                           </span>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="font-mono text-[12px] text-muted-foreground tnum">
                             {tierDistribution?.unassigned}
                           </span>
                         </div>
@@ -385,8 +364,8 @@ export function BIADashboardClient() {
         {/* Assessment Freshness */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-[15px] font-bold">
+              <Clock className="h-[17px] w-[17px] text-primary" />
               Assessment Freshness
             </CardTitle>
             <CardDescription>
@@ -402,42 +381,42 @@ export function BIADashboardClient() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded bg-green-50 dark:bg-green-950">
+                <div className="flex items-center justify-between p-3 rounded bg-success/10">
                   <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="font-medium">Current (&lt; 6 months)</span>
+                    <CheckCircle2 className="h-5 w-5 text-success" />
+                    <span className="font-medium text-foreground">Current (&lt; 6 months)</span>
                   </div>
-                  <Badge variant="outline" className="bg-green-100 text-green-700">
+                  <Badge variant="success" className="tnum">
                     {freshnessStats?.current ?? 0}
                   </Badge>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded bg-yellow-50 dark:bg-yellow-950">
+                <div className="flex items-center justify-between p-3 rounded bg-warning/10">
                   <div className="flex items-center gap-3">
-                    <AlertCircle className="h-5 w-5 text-yellow-600" />
-                    <span className="font-medium">Aging (6-12 months)</span>
+                    <AlertCircle className="h-5 w-5 text-warning" />
+                    <span className="font-medium text-foreground">Aging (6-12 months)</span>
                   </div>
-                  <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+                  <Badge variant="warning" className="tnum">
                     {freshnessStats?.aging ?? 0}
                   </Badge>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded bg-red-50 dark:bg-red-950">
+                <div className="flex items-center justify-between p-3 rounded bg-destructive/10">
                   <div className="flex items-center gap-3">
-                    <XCircle className="h-5 w-5 text-red-600" />
-                    <span className="font-medium">Stale (&gt; 12 months)</span>
+                    <XCircle className="h-5 w-5 text-destructive" />
+                    <span className="font-medium text-foreground">Stale (&gt; 12 months)</span>
                   </div>
-                  <Badge variant="outline" className="bg-red-100 text-red-700">
+                  <Badge variant="critical" className="tnum">
                     {freshnessStats?.stale ?? 0}
                   </Badge>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded bg-gray-50 dark:bg-gray-900">
+                <div className="flex items-center justify-between p-3 rounded bg-secondary">
                   <div className="flex items-center gap-3">
-                    <AlertTriangle className="h-5 w-5 text-gray-500" />
-                    <span className="font-medium">Never Assessed</span>
+                    <AlertTriangle className="h-5 w-5 text-muted-foreground/70" />
+                    <span className="font-medium text-foreground">Never Assessed</span>
                   </div>
-                  <Badge variant="outline">
+                  <Badge variant="neutral" className="tnum">
                     {freshnessStats?.neverAssessed ?? 0}
                   </Badge>
                 </div>
@@ -450,7 +429,7 @@ export function BIADashboardClient() {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle className="text-[15px] font-bold">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4">

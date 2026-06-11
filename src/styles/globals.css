@@ -3,12 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-}
-
 @theme inline {
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: var(--font-mono), ui-monospace, "SFMono-Regular", "Menlo", monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -31,6 +29,13 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-severity-high: var(--severity-high);
+  --color-severity-high-foreground: var(--severity-high-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -49,73 +54,108 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* =============================================================================
+   BetterThanSpreadsheets GRC — "Consulting-grade" theme
+   OKLCH tokens (hex in comments = source of truth from the design handoff).
+   Hues kept on a single cool axis (~250) for neutrals + the navy accent.
+   ============================================================================= */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.625rem;          /* 10px — cards. Controls use calc(var(--radius) - 3px) */
+
+  /* surfaces */
+  --background:          oklch(0.971 0.002 247);  /* #f5f6f8  app canvas */
+  --foreground:          oklch(0.218 0.013 252);  /* #161a20  near-black, cool */
+  --card:                oklch(1 0 0);            /* #ffffff */
+  --card-foreground:     oklch(0.218 0.013 252);  /* #161a20 */
+  --popover:             oklch(1 0 0);            /* #ffffff */
+  --popover-foreground:  oklch(0.218 0.013 252);  /* #161a20 */
+
+  /* primary = deep navy (the ONE accent) */
+  --primary:            oklch(0.345 0.058 252);  /* #1f3a5f */
+  --primary-foreground: oklch(0.985 0 0);        /* #ffffff */
+
+  /* secondary / muted / accent — quiet neutral tints */
+  --secondary:            oklch(0.957 0.004 250); /* #f3f5f7  inset gray */
+  --secondary-foreground: oklch(0.36 0.017 252);  /* #3c434d */
+  --muted:                oklch(0.957 0.004 250); /* #f3f5f7 */
+  --muted-foreground:     oklch(0.534 0.015 252); /* #6b727c  secondary text */
+  --accent:               oklch(0.957 0.007 250); /* #eef2f7  navy-tint hover/selected bg */
+  --accent-foreground:    oklch(0.345 0.058 252); /* #1f3a5f */
+
+  /* status — muted "report" tones, NOT candy */
+  --destructive:            oklch(0.495 0.155 25);  /* #a3322f  brick */
+  --destructive-foreground: oklch(0.985 0 0);
+  --warning:                oklch(0.520 0.100 75);  /* #936219  ochre */
+  --warning-foreground:     oklch(0.985 0 0);
+  --success:                oklch(0.490 0.075 160); /* #2f6b53  forest */
+  --success-foreground:     oklch(0.985 0 0);
+  /* risk/vendor TIER scale "High" — the one tier color not covered by status tokens.
+     Full scale: Critical=destructive · High=severity-high · Medium=warning · Low=success */
+  --severity-high:          oklch(0.565 0.135 47);  /* #c4622d  burnt orange */
+  --severity-high-foreground: oklch(0.985 0 0);
+
+  /* lines & fields — hairlines do the work */
+  --border: oklch(0.918 0.004 250);  /* #e6e8ec */
+  --input:  oklch(0.866 0.006 250);  /* #d6dae0  slightly stronger on inputs */
+  --ring:   oklch(0.345 0.058 252);  /* #1f3a5f  navy focus ring */
+
+  /* charts — restrained, navy-led */
+  --chart-1: oklch(0.345 0.058 252); /* #1f3a5f navy */
+  --chart-2: oklch(0.490 0.075 160); /* #2f6b53 forest */
+  --chart-3: oklch(0.520 0.100 75);  /* #936219 ochre */
+  --chart-4: oklch(0.495 0.155 25);  /* #a3322f brick */
+  --chart-5: oklch(0.69 0.014 252);  /* #99a0aa faint */
+
+  /* sidebar — LIGHT & refined */
+  --sidebar:                     oklch(0.985 0.002 247); /* #fafbfc near-white */
+  --sidebar-foreground:          oklch(0.36 0.017 252);  /* #3c434d nav item text */
+  --sidebar-primary:             oklch(0.345 0.058 252); /* #1f3a5f active text/indicator */
+  --sidebar-primary-foreground:  oklch(0.985 0 0);
+  --sidebar-accent:              oklch(0.957 0.007 250); /* #eef2f7 active item bg */
+  --sidebar-accent-foreground:   oklch(0.345 0.058 252); /* #1f3a5f */
+  --sidebar-border:              oklch(0.918 0.004 250); /* #e6e8ec */
+  --sidebar-ring:                oklch(0.345 0.058 252);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background:          oklch(0.205 0.018 252); /* #131d29 deep navy-ink */
+  --foreground:          oklch(0.96 0.003 247);
+  --card:                oklch(0.245 0.018 252); /* #1a2533 */
+  --card-foreground:     oklch(0.96 0.003 247);
+  --popover:             oklch(0.245 0.018 252);
+  --popover-foreground:  oklch(0.96 0.003 247);
+  --primary:             oklch(0.70 0.07 252);   /* #7ba2d0 lighter navy */
+  --primary-foreground:  oklch(0.20 0.02 252);
+  --secondary:           oklch(0.28 0.018 252);
+  --secondary-foreground:oklch(0.90 0.004 247);
+  --muted:               oklch(0.28 0.018 252);
+  --muted-foreground:    oklch(0.66 0.015 252);
+  --accent:              oklch(0.30 0.025 252);
+  --accent-foreground:   oklch(0.90 0.01 252);
+  --destructive:            oklch(0.62 0.16 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --warning:                oklch(0.66 0.11 75);
+  --warning-foreground:     oklch(0.20 0.02 252);
+  --success:                oklch(0.62 0.09 160);
+  --success-foreground:     oklch(0.20 0.02 252);
+  --severity-high:          oklch(0.70 0.13 47);
+  --severity-high-foreground: oklch(0.20 0.02 252);
+  --border:              oklch(1 0 0 / 8%);
+  --input:               oklch(1 0 0 / 12%);
+  --ring:                oklch(0.70 0.07 252);
+  --chart-1: oklch(0.70 0.07 252);
+  --chart-2: oklch(0.62 0.09 160);
+  --chart-3: oklch(0.66 0.11 75);
+  --chart-4: oklch(0.62 0.16 25);
+  --chart-5: oklch(0.66 0.015 252);
+  --sidebar:                    oklch(0.185 0.018 252); /* #131d29 */
+  --sidebar-foreground:         oklch(0.78 0.012 252);
+  --sidebar-primary:            oklch(0.70 0.07 252);
+  --sidebar-primary-foreground: oklch(0.96 0.003 247);
+  --sidebar-accent:             oklch(0.30 0.04 252 / 35%);
+  --sidebar-accent-foreground:  oklch(0.86 0.03 252);
+  --sidebar-border:             oklch(1 0 0 / 8%);
+  --sidebar-ring:               oklch(0.70 0.07 252);
 }
 
 @layer base {
@@ -124,5 +164,29 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "tnum" 1;   /* tabular numerals everywhere (data app) */
   }
+  /* Headlines balance; long copy reads pretty */
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+  /* Cards/popovers: hairline border, almost no shadow. Override shadcn defaults. */
+  .shadow-xs { box-shadow: 0 1px 1px rgb(20 24 31 / 0.03); }
+  .shadow-sm { box-shadow: 0 1px 2px rgb(20 24 31 / 0.045), 0 1px 1px rgb(20 24 31 / 0.03); }
+  .shadow,
+  .shadow-md { box-shadow: 0 1px 2px rgb(20 24 31 / 0.05); }
+}
+
+/* -----------------------------------------------------------------------------
+   Typography helpers — the "consulting" detailing (mono eyebrows, tabular nums)
+   ----------------------------------------------------------------------------- */
+@layer components {
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
 }

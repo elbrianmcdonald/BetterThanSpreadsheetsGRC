@@ -3,31 +3,41 @@
 /**
  * Application Top Bar
  *
- * Minimal top bar with sign out functionality.
- * Works alongside the sidebar navigation.
+ * 56px white bar with a hairline bottom border.
+ * Left: breadcrumb trail. Right: notifications, email (mono), Sign Out.
  */
 
 import { useSession } from "next-auth/react";
 import { Bell } from "lucide-react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { Button } from "@/components/ui/button";
+import { AppBreadcrumb, type BreadcrumbItem } from "./AppBreadcrumb";
 
-export function AppTopBar() {
+interface AppTopBarProps {
+  breadcrumbs?: BreadcrumbItem[];
+}
+
+export function AppTopBar({ breadcrumbs = [] }: AppTopBarProps) {
   const { data: session } = useSession();
 
   return (
-    <header className="h-14 bg-white border-b flex items-center justify-end px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center border-b border-border bg-card px-7">
+      {/* Left: breadcrumbs */}
+      <AppBreadcrumb items={breadcrumbs} />
+
       {/* Right side actions */}
-      <div className="flex items-center gap-4">
-        {/* Notifications placeholder */}
-        <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700">
-          <Bell className="h-5 w-5" />
+      <div className="ml-auto flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground/70 hover:text-foreground"
+        >
+          <Bell className="h-[17px] w-[17px]" />
         </Button>
 
-        {/* User info and sign out */}
         {session?.user && (
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-600 hidden sm:inline">
+          <div className="flex items-center gap-4">
+            <span className="hidden font-mono text-[12.5px] tracking-[-0.01em] text-muted-foreground sm:inline">
               {session.user.email}
             </span>
             <SignOutButton />

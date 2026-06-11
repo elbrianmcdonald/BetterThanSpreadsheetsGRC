@@ -91,24 +91,24 @@ function TrendIndicator({
 
   if (direction === "improving") {
     return (
-      <div className="flex items-center gap-1 text-sm font-medium px-2 py-1 rounded bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400">
+      <div className="flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-md bg-success/10 text-success">
         <TrendingDown className="h-4 w-4" />
-        <span>-{absChange.toFixed(1)}d</span>
+        <span className="tabular-nums">-{absChange.toFixed(1)}d</span>
       </div>
     );
   }
 
   if (direction === "degrading") {
     return (
-      <div className="flex items-center gap-1 text-sm font-medium px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400">
+      <div className="flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-md bg-destructive/10 text-destructive">
         <TrendingUp className="h-4 w-4" />
-        <span>+{absChange.toFixed(1)}d</span>
+        <span className="tabular-nums">+{absChange.toFixed(1)}d</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-1 text-sm font-medium px-2 py-1 rounded bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+    <div className="flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-md bg-secondary text-muted-foreground">
       <Minus className="h-4 w-4" />
       <span>Stable</span>
     </div>
@@ -133,9 +133,9 @@ function BenchmarkIndicator({
         <TooltipTrigger asChild>
           <span className="cursor-help">
             {meetsBenchmark ? (
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CheckCircle2 className="h-4 w-4 text-success" />
             ) : (
-              <XCircle className="h-4 w-4 text-red-500" />
+              <XCircle className="h-4 w-4 text-destructive" />
             )}
           </span>
         </TooltipTrigger>
@@ -166,23 +166,23 @@ function SeverityVelocityCard({
     HIGH: {
       icon: AlertCircle,
       label: "High",
-      color: "text-red-600 dark:text-red-400",
-      bgColor: "bg-red-50 dark:bg-red-950",
-      borderColor: "border-red-200 dark:border-red-900",
+      color: "text-severity-high",
+      bgColor: "bg-severity-high/10",
+      borderColor: "border-severity-high/20",
     },
     MEDIUM: {
       icon: AlertTriangle,
       label: "Medium",
-      color: "text-yellow-600 dark:text-yellow-400",
-      bgColor: "bg-yellow-50 dark:bg-yellow-950",
-      borderColor: "border-yellow-200 dark:border-yellow-900",
+      color: "text-warning",
+      bgColor: "bg-warning/10",
+      borderColor: "border-warning/20",
     },
     LOW: {
       icon: Info,
       label: "Low",
-      color: "text-blue-600 dark:text-blue-400",
-      bgColor: "bg-blue-50 dark:bg-blue-950",
-      borderColor: "border-blue-200 dark:border-blue-900",
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+      borderColor: "border-primary/20",
     },
   };
 
@@ -193,7 +193,7 @@ function SeverityVelocityCard({
   return (
     <div
       className={cn(
-        "rounded-lg border p-3 flex flex-col",
+        "rounded-md border p-3 flex flex-col",
         bgColor,
         borderColor
       )}
@@ -208,7 +208,7 @@ function SeverityVelocityCard({
         )}
       </div>
       <div className="flex items-baseline gap-1">
-        <span className={cn("text-2xl font-bold", color)}>
+        <span className={cn("text-2xl font-bold tabular-nums", color)}>
           {count > 0 ? velocity.toFixed(1) : "—"}
         </span>
         <span className="text-sm text-muted-foreground">days</span>
@@ -216,7 +216,7 @@ function SeverityVelocityCard({
       <div className="text-xs text-muted-foreground mt-1">
         {count} risk{count !== 1 ? "s" : ""} closed
       </div>
-      <div className="text-xs text-muted-foreground opacity-75">
+      <div className="text-xs text-muted-foreground/70 font-mono">
         Target: &lt;{benchmark}d
       </div>
     </div>
@@ -279,13 +279,13 @@ export function VelocityWidget({
         ) : (
           <>
             {/* Overall average */}
-            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+            <div className="mb-4 p-3 bg-secondary rounded-md">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
+                <span className="eyebrow">
                   Overall Average
                 </span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold">
+                  <span className="text-3xl font-bold tabular-nums text-primary">
                     {overall.toFixed(1)}
                   </span>
                   <span className="text-sm text-muted-foreground">days</span>

@@ -77,7 +77,7 @@ export function StaleDraftsWidget({
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTriangle className="h-[17px] w-[17px] text-primary" />
             Stale Draft Assessments
           </CardTitle>
           <CardDescription>
@@ -97,12 +97,12 @@ export function StaleDraftsWidget({
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTriangle className="h-[17px] w-[17px] text-primary" />
             Stale Draft Assessments
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-6 text-center">
-          <AlertTriangle className="h-8 w-8 text-red-400 mb-2" />
+          <AlertTriangle className="h-8 w-8 text-destructive mb-2" />
           <p className="text-sm text-muted-foreground">
             Unable to load stale drafts
           </p>
@@ -124,14 +124,14 @@ export function StaleDraftsWidget({
   const showViewAll = data && data.count > 5;
 
   return (
-    <Card className={`${className ?? ""} ${hasStale ? "border-amber-200" : ""}`}>
+    <Card className={className}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className={`h-5 w-5 ${hasStale ? "text-amber-500" : "text-muted-foreground"}`} />
+            <AlertTriangle className="h-[17px] w-[17px] text-primary" />
             Stale Draft Assessments
             {hasStale && (
-              <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 ml-1">
+              <Badge variant="warning" className="ml-1">
                 {data.count}
               </Badge>
             )}
@@ -140,10 +140,10 @@ export function StaleDraftsWidget({
           {/* Refresh button (AC17) */}
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={() => refetch()}
             disabled={isRefetching}
-            className="h-8 w-8"
+            className="text-muted-foreground/70 hover:text-foreground"
             title="Refresh"
           >
             <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
@@ -163,8 +163,8 @@ export function StaleDraftsWidget({
           </div>
         ) : (
           <div className="text-center py-4">
-            <CheckCircle className="h-10 w-10 text-green-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-green-700">All clear!</p>
+            <CheckCircle className="h-10 w-10 text-success mx-auto mb-2" />
+            <p className="text-sm font-medium text-success">All clear!</p>
             <p className="text-xs text-muted-foreground mt-1">
               No stale drafts found
             </p>

@@ -17,7 +17,6 @@ import { Clock, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   calculateDaysStale,
-  getDaysStaleBgColor,
   formatDaysStale,
 } from "@/lib/utils/stale-drafts";
 
@@ -48,7 +47,7 @@ interface StaleDraftItemProps {
  */
 export function StaleDraftItem({ assessment }: StaleDraftItemProps) {
   const daysStale = calculateDaysStale(assessment.updatedAt);
-  const daysColorClass = getDaysStaleBgColor(daysStale);
+  const daysVariant = daysStale >= 14 ? "critical" : "warning";
 
   // Link to finding detail page if finding exists, otherwise to assessment
   const href = assessment.finding
@@ -81,12 +80,9 @@ export function StaleDraftItem({ assessment }: StaleDraftItemProps) {
       </div>
 
       {/* Days Stale Badge */}
-      <Badge
-        variant="outline"
-        className={`${daysColorClass} flex items-center gap-1 shrink-0`}
-      >
+      <Badge variant={daysVariant} className="shrink-0">
         <Clock className="h-3 w-3" />
-        {formatDaysStale(daysStale)}
+        {formatDaysStale(daysStale)} idle
       </Badge>
     </div>
   );

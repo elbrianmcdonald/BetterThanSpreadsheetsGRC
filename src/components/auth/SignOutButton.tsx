@@ -27,7 +27,7 @@ export function SignOutButton() {
     <button
       onClick={handleSignOut}
       disabled={isSigningOut}
-      className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="inline-flex h-8 items-center rounded-md border border-input bg-card px-3 text-[12px] font-semibold text-foreground transition-colors hover:bg-secondary hover:border-muted-foreground/40 focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {isSigningOut ? (
         <>

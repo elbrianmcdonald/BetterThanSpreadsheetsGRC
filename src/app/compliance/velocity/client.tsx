@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import Link from "next/link";
 import { api } from "@/trpc/react";
 import {
@@ -51,6 +51,7 @@ import {
   ArrowUpDown,
   User,
   FileText,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VelocityTrendChart, type VelocityTrendPoint } from "@/components/compliance/VelocityTrendChart";
@@ -73,10 +74,10 @@ type SortOrder = "asc" | "desc";
  */
 function SeverityBadge({ severity }: { severity: Severity }) {
   const variants = {
-    HIGH: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-    MEDIUM: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400",
-    LOW: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400",
-  };
+    HIGH: "high",
+    MEDIUM: "warning",
+    LOW: "info",
+  } as const;
 
   const icons = {
     HIGH: AlertCircle,
@@ -87,7 +88,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
   const Icon = icons[severity];
 
   return (
-    <Badge variant="secondary" className={cn("gap-1", variants[severity])}>
+    <Badge variant={variants[severity]} className="gap-1">
       <Icon className="h-3 w-3" />
       {severity}
     </Badge>
@@ -108,24 +109,24 @@ function TrendIndicator({
 
   if (direction === "improving") {
     return (
-      <div className="flex items-center gap-1 text-sm font-medium text-green-600">
+      <div className="flex items-center gap-1 text-sm font-medium text-success">
         <TrendingDown className="h-4 w-4" />
-        <span>-{absChange.toFixed(1)}d faster</span>
+        <span className="tnum">-{absChange.toFixed(1)}d faster</span>
       </div>
     );
   }
 
   if (direction === "degrading") {
     return (
-      <div className="flex items-center gap-1 text-sm font-medium text-red-600">
+      <div className="flex items-center gap-1 text-sm font-medium text-destructive">
         <TrendingUp className="h-4 w-4" />
-        <span>+{absChange.toFixed(1)}d slower</span>
+        <span className="tnum">+{absChange.toFixed(1)}d slower</span>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-1 text-sm font-medium text-gray-500">
+    <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
       <Minus className="h-4 w-4" />
       <span>Stable</span>
     </div>
@@ -147,11 +148,11 @@ function BenchmarkStatus({
   return (
     <div className="flex items-center gap-1">
       {meetsBenchmark ? (
-        <CheckCircle2 className="h-4 w-4 text-green-500" />
+        <CheckCircle2 className="h-4 w-4 text-success" />
       ) : (
-        <XCircle className="h-4 w-4 text-red-500" />
+        <XCircle className="h-4 w-4 text-destructive" />
       )}
-      <span className={cn("text-xs", meetsBenchmark ? "text-green-600" : "text-red-600")}>
+      <span className={cn("text-xs", meetsBenchmark ? "text-success" : "text-destructive")}>
         {meetsBenchmark ? "On target" : `${(velocity - benchmark).toFixed(1)}d over`}
       </span>
     </div>
@@ -168,6 +169,7 @@ function MetricCard({
   icon: Icon,
   trend,
   benchmark,
+  accent,
 }: {
   title: string;
   value: number;
@@ -178,35 +180,40 @@ function MetricCard({
     change: number;
   };
   benchmark?: number;
+  accent?: boolean;
 }) {
+  const hasFooter =
+    Boolean(trend) || (benchmark !== undefined && value > 0);
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Icon className="h-4 w-4" />
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold">
-            {value > 0 ? value.toFixed(1) : "—"}
+    <StatTile
+      label={title}
+      accent={accent}
+      icon={<Icon />}
+      value={
+        <span className="flex items-baseline gap-1.5">
+          <span>{value > 0 ? value.toFixed(1) : "—"}</span>
+          <span className="text-[13px] font-medium text-muted-foreground">
+            days
           </span>
-          <span className="text-sm text-muted-foreground">days</span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-        {trend && (
-          <div className="mt-2">
-            <TrendIndicator direction={trend.direction} change={trend.change} />
-          </div>
-        )}
-        {benchmark !== undefined && value > 0 && (
-          <div className="mt-2">
-            <BenchmarkStatus velocity={value} benchmark={benchmark} />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </span>
+      }
+      sub={subtitle}
+      footer={
+        hasFooter ? (
+          <>
+            {trend && (
+              <TrendIndicator direction={trend.direction} change={trend.change} />
+            )}
+            {benchmark !== undefined && value > 0 && (
+              <div className={cn(trend && "mt-2")}>
+                <BenchmarkStatus velocity={value} benchmark={benchmark} />
+              </div>
+            )}
+          </>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -266,44 +273,42 @@ export function VelocityReportClient() {
     <AppLayout breadcrumbs={[{ label: "Compliance", href: "/compliance/dashboard" }, { label: "Velocity Metrics" }]}>
       <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Remediation Velocity Report</h1>
-            <p className="text-muted-foreground">
-              Average days-to-close analysis for risk remediation
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Timeframe selector */}
-          <Select
-            value={String(timeframe)}
-            onValueChange={(v) => setTimeframe(Number(v))}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="60">Last 60 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="180">Last 6 months</SelectItem>
-              <SelectItem value="365">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+      <PageHeader
+        eyebrow="VELOCITY METRICS"
+        title="Remediation Velocity Report"
+        icon={<Gauge />}
+        description="Average days-to-close analysis for risk remediation"
+        actions={
+          <>
+            {/* Timeframe selector */}
+            <Select
+              value={String(timeframe)}
+              onValueChange={(v) => setTimeframe(Number(v))}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="60">Last 60 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="180">Last 6 months</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
+              </SelectContent>
+            </Select>
 
-          {/* AC21: CSV export button */}
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            disabled={exportMutation.isPending || isLoading}
-          >
-            <Download className="h-4 w-4 mr-1" />
-            {exportMutation.isPending ? "Exporting..." : "Export CSV"}
-          </Button>
-        </div>
-      </div>
+            {/* AC21: CSV export button */}
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={exportMutation.isPending || isLoading}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              {exportMutation.isPending ? "Exporting..." : "Export CSV"}
+            </Button>
+          </>
+        }
+      />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -315,6 +320,7 @@ export function VelocityReportClient() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <MetricCard
               title="Overall Average"
+              accent
               value={velocityData?.overall ?? 0}
               subtitle={`${velocityData?.closedRisksCount ?? 0} risks closed`}
               icon={Clock}
@@ -361,8 +367,8 @@ export function VelocityReportClient() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-base">By IT Owner (Top 5)</CardTitle>
+                  <User className="h-[17px] w-[17px] text-primary" />
+                  <CardTitle className="text-[15px] font-bold">By IT Owner (Top 5)</CardTitle>
                 </div>
                 <CardDescription>
                   Average days-to-close by risk owner
@@ -373,21 +379,21 @@ export function VelocityReportClient() {
                   {reportData.averageByItOwner.slice(0, 5).map((owner, index) => (
                     <div
                       key={owner.ownerId || index}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      className="flex items-center justify-between rounded-md border border-border bg-secondary p-3"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
                           <User className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium">{owner.ownerName}</p>
+                          <p className="font-semibold text-foreground">{owner.ownerName}</p>
                           <p className="text-xs text-muted-foreground">
                             {owner.count} risks closed
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold">{owner.average.toFixed(1)}d</p>
+                        <p className="tnum text-lg font-bold text-foreground">{owner.average.toFixed(1)}d</p>
                       </div>
                     </div>
                   ))}
@@ -401,8 +407,8 @@ export function VelocityReportClient() {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-base">By Finding Source</CardTitle>
+                  <FileText className="h-[17px] w-[17px] text-primary" />
+                  <CardTitle className="text-[15px] font-bold">By Finding Source</CardTitle>
                 </div>
                 <CardDescription>
                   Average days-to-close by how the risk was discovered
@@ -413,12 +419,12 @@ export function VelocityReportClient() {
                   {reportData.averageByFindingSource.map((source) => (
                     <div
                       key={source.source}
-                      className="p-3 bg-muted/50 rounded-lg text-center"
+                      className="rounded-md border border-border bg-secondary p-3 text-center"
                     >
-                      <p className="text-sm text-muted-foreground">
+                      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
                         {source.source.replace(/_/g, " ")}
                       </p>
-                      <p className="text-2xl font-bold">{source.average.toFixed(1)}d</p>
+                      <p className="tnum mt-1 text-2xl font-bold text-foreground">{source.average.toFixed(1)}d</p>
                       <p className="text-xs text-muted-foreground">
                         {source.count} risks
                       </p>
@@ -433,7 +439,7 @@ export function VelocityReportClient() {
           {reportData?.slowestRisks && reportData.slowestRisks.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Slowest Remediation</CardTitle>
+                <CardTitle className="text-[15px] font-bold">Slowest Remediation</CardTitle>
                 <CardDescription>
                   Top 10 risks with longest time to resolution
                 </CardDescription>
@@ -442,19 +448,19 @@ export function VelocityReportClient() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Risk</TableHead>
-                      <TableHead>Severity</TableHead>
-                      <TableHead>Days to Close</TableHead>
-                      <TableHead>Closed Date</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Risk</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Severity</TableHead>
+                      <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Days to Close</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Closed Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {reportData.slowestRisks.map((risk) => (
-                      <TableRow key={risk.id}>
+                      <TableRow key={risk.id} className="hover:bg-secondary">
                         <TableCell>
                           <Link
                             href={`/risks/${risk.id}`}
-                            className="font-medium hover:underline text-primary"
+                            className="font-semibold text-primary hover:underline"
                           >
                             {risk.title}
                           </Link>
@@ -462,10 +468,10 @@ export function VelocityReportClient() {
                         <TableCell>
                           <SeverityBadge severity={risk.severity as Severity} />
                         </TableCell>
-                        <TableCell className="font-mono">
+                        <TableCell className="tnum text-right font-mono">
                           {risk.daysToClose}d
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="font-mono text-muted-foreground">
                           {format(new Date(risk.closedAt), "MMM d, yyyy")}
                         </TableCell>
                       </TableRow>
@@ -480,7 +486,7 @@ export function VelocityReportClient() {
           {reportData?.closedRisks && reportData.closedRisks.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">All Closed Risks</CardTitle>
+                <CardTitle className="text-[15px] font-bold">All Closed Risks</CardTitle>
                 <CardDescription>
                   Complete list of closed risks in the selected timeframe
                 </CardDescription>
@@ -489,24 +495,24 @@ export function VelocityReportClient() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Risk</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Risk</TableHead>
                       <TableHead>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="-ml-3 h-8 data-[state=open]:bg-accent"
+                          className="-ml-3 h-8 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground data-[state=open]:bg-accent"
                           onClick={() => toggleSort("severity")}
                         >
                           Severity
                           <ArrowUpDown className="ml-2 h-3 w-3" />
                         </Button>
                       </TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Owner</TableHead>
+                      <TableHead className="text-right">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="-ml-3 h-8 data-[state=open]:bg-accent"
+                          className="-mr-3 ml-auto h-8 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground data-[state=open]:bg-accent"
                           onClick={() => toggleSort("daysToClose")}
                         >
                           Days to Close
@@ -517,7 +523,7 @@ export function VelocityReportClient() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="-ml-3 h-8 data-[state=open]:bg-accent"
+                          className="-ml-3 h-8 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground data-[state=open]:bg-accent"
                           onClick={() => toggleSort("closedAt")}
                         >
                           Closed Date
@@ -528,11 +534,11 @@ export function VelocityReportClient() {
                   </TableHeader>
                   <TableBody>
                     {reportData.closedRisks.map((risk) => (
-                      <TableRow key={risk.id}>
+                      <TableRow key={risk.id} className="hover:bg-secondary">
                         <TableCell>
                           <Link
                             href={`/risks/${risk.id}`}
-                            className="font-medium hover:underline text-primary"
+                            className="font-semibold text-primary hover:underline"
                           >
                             {risk.title}
                           </Link>
@@ -543,10 +549,10 @@ export function VelocityReportClient() {
                         <TableCell className="text-muted-foreground">
                           {risk.itOwnerName || "Unassigned"}
                         </TableCell>
-                        <TableCell className="font-mono">
+                        <TableCell className="tnum text-right font-mono">
                           {risk.daysToClose}d
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="font-mono text-muted-foreground">
                           {format(new Date(risk.closedAt), "MMM d, yyyy")}
                         </TableCell>
                       </TableRow>
@@ -561,8 +567,8 @@ export function VelocityReportClient() {
           {(!reportData?.closedRisks || reportData.closedRisks.length === 0) && (
             <Card>
               <CardContent className="py-12 text-center">
-                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="text-lg font-semibold mb-2">No Closed Risks</h3>
+                <Clock className="mx-auto mb-4 h-12 w-12 text-muted-foreground/70" />
+                <h3 className="mb-2 text-lg font-semibold text-foreground">No Closed Risks</h3>
                 <p className="text-muted-foreground">
                   No risks have been closed in the last {timeframe} days.
                 </p>

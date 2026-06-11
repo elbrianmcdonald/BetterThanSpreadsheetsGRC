@@ -31,6 +31,11 @@ import {
   generateFindingsExportFilename,
   type FindingExportData,
 } from "@/lib/csvFormatter";
+import {
+  calculateInherentScore,
+  isScoreResult,
+} from "@/lib/matrix/scoring";
+import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 
 /**
  * Roles that can create findings (Story 7.2 AC29)
@@ -75,6 +80,14 @@ const createFindingInput = z.object({
   // from so findings and risks share the same qualitative vocabulary.
   severityLabel: z.string().max(50).optional(),
   matrixVersionId: z.string().optional(),
+  // Matrix-based L×I(×E) scoring. When likelihood + impact are supplied, the
+  // server computes the authoritative inherent score (and derives severity +
+  // severityLabel) against the matrix version's scales/thresholds — the
+  // client-sent severity/severityLabel are ignored in that path so the score
+  // can't be spoofed.
+  likelihood: z.number().positive().optional(),
+  impact: z.number().positive().optional(),
+  exposure: z.number().positive().optional(),
   affectedAssets: z.array(z.string()).optional().default([]),
   affectedBusinessUnitIds: z.array(z.string()).optional().default([]),
   assigneeId: z.string().optional(),
@@ -91,6 +104,20 @@ const createFindingInput = z.object({
   // Source questionnaire question (when spawned from a question card).
   sourceRiskAssessmentQuestionId: z.string().optional(),
 });
+
+/**
+ * Map a matrix threshold label to the coarse Severity enum (mirrors risk.ts).
+ * Critical/High → HIGH, Low → LOW, everything else → MEDIUM. Keeps the legacy
+ * severity filters/badges working while the qualitative label is preserved in
+ * severityLabel.
+ */
+function severityFromLabel(label: string | null): Severity {
+  if (!label) return Severity.MEDIUM;
+  const upper = label.toUpperCase();
+  if (upper === "CRITICAL" || upper === "HIGH") return Severity.HIGH;
+  if (upper === "LOW") return Severity.LOW;
+  return Severity.MEDIUM;
+}
 
 /**
  * Transition Finding Input Schema (Story 7.3 AC7)
@@ -196,15 +223,42 @@ export const findingRouter = createTRPCRouter({
     .input(
       z.object({
         assessmentId: z.string(),
-        assessmentType: z.enum(["MATURITY", "COMPLIANCE"]),
+        // Full AssessmentKind set so the consulting wrapper (Exploitation
+        // Pathways / Action Plans pickers) works for every assessment kind.
+        assessmentType: z.enum([
+          "COMPLIANCE",
+          "MATURITY",
+          "VENDOR",
+          "RISK",
+          "BIA",
+        ]),
       })
     )
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const where: Prisma.FindingWhereInput =
-        input.assessmentType === "MATURITY"
-          ? { organizationId, sourceMaturityAssessmentId: input.assessmentId }
-          : { organizationId, sourceComplianceAssessmentId: input.assessmentId };
+
+      // Map each assessment kind to the Finding source field it lives under.
+      // BIA has no Finding↔BIA linkage, so short-circuit with an empty array
+      // before touching the DB (keeps the picker working, never throws).
+      let where: Prisma.FindingWhereInput;
+      switch (input.assessmentType) {
+        case "COMPLIANCE":
+          where = { organizationId, sourceComplianceAssessmentId: input.assessmentId };
+          break;
+        case "MATURITY":
+          where = { organizationId, sourceMaturityAssessmentId: input.assessmentId };
+          break;
+        case "VENDOR":
+          where = { organizationId, vendorAssessmentId: input.assessmentId };
+          break;
+        case "RISK":
+          where = { organizationId, discoveryProjectId: input.assessmentId };
+          break;
+        case "BIA":
+        default:
+          return [];
+      }
+
       return ctx.db.finding.findMany({
         where,
         select: {
@@ -384,6 +438,9 @@ export const findingRouter = createTRPCRouter({
         maturityDomainId,
         discoveryProjectId,
         sourceRiskAssessmentQuestionId,
+        likelihood,
+        impact,
+        exposure,
         ...findingData
       } = input;
 
@@ -489,10 +546,101 @@ export const findingRouter = createTRPCRouter({
         }
       }
 
+      // Matrix-based L×I(×E) scoring (authoritative, server-side). When the
+      // caller supplies likelihood + impact we load the referenced matrix
+      // version (or fall back to the org default) and compute the inherent
+      // score + threshold label, then derive the coarse severity from that
+      // label. The client-sent severity/severityLabel are overridden in this
+      // path so a score can't be spoofed. When no scores are passed we keep the
+      // existing categorical severity flow untouched (back-compat).
+      let inherentLikelihood: number | null = null;
+      let inherentImpact: number | null = null;
+      let inherentExposure: number | null = null;
+      let inherentScore: number | null = null;
+      let computedSeverity: Severity | null = null;
+      let computedSeverityLabel: string | null = null;
+      let resolvedMatrixVersionId: string | null = findingData.matrixVersionId ?? null;
+
+      if (likelihood !== undefined && impact !== undefined) {
+        // Load the matrix version: explicit one from the client, else the org
+        // default template's current published version.
+        let matrixVersion = findingData.matrixVersionId
+          ? await ctx.db.riskMatrixVersion.findUnique({
+              where: { id: findingData.matrixVersionId },
+              include: { template: true },
+            })
+          : null;
+
+        if (!matrixVersion) {
+          const defaultTemplate = await ctx.db.riskMatrixTemplate.findFirst({
+            where: {
+              organizationId,
+              isDefault: true,
+              isActive: true,
+              currentVersionId: { not: null },
+            },
+            select: { currentVersionId: true },
+          });
+          if (defaultTemplate?.currentVersionId) {
+            matrixVersion = await ctx.db.riskMatrixVersion.findUnique({
+              where: { id: defaultTemplate.currentVersionId },
+              include: { template: true },
+            });
+          }
+        }
+
+        if (matrixVersion) {
+          // Guard org ownership of an explicitly-supplied version.
+          if (matrixVersion.template.organizationId !== organizationId) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Invalid matrix version — must be in same organization",
+            });
+          }
+          const scales = matrixVersion.scales as unknown as MatrixScales;
+          const thresholds = matrixVersion.thresholds as unknown as Threshold[];
+          const outputScaleMax = Number(matrixVersion.template.outputScaleMax);
+
+          const scoreResult = calculateInherentScore(
+            scales,
+            thresholds,
+            outputScaleMax,
+            likelihood,
+            impact,
+            exposure
+          );
+
+          if (isScoreResult(scoreResult)) {
+            inherentLikelihood = likelihood;
+            inherentImpact = impact;
+            // Only store exposure when the matrix is 3D (has exposure scale).
+            inherentExposure =
+              scales.exposure && scales.exposure.length > 0 && exposure !== undefined
+                ? exposure
+                : null;
+            inherentScore = scoreResult.normalizedScore;
+            computedSeverityLabel = scoreResult.label;
+            computedSeverity = severityFromLabel(scoreResult.label);
+            resolvedMatrixVersionId = matrixVersion.id;
+          }
+        }
+      }
+
       // AC22, AC26, AC27: Create finding with status NEW, createdBy and organizationId from session
       const finding = await ctx.db.finding.create({
         data: {
           ...findingData,
+          // Matrix scoring overrides the categorical severity when present.
+          severity: computedSeverity ?? findingData.severity,
+          severityLabel: computedSeverityLabel ?? findingData.severityLabel,
+          matrixVersionId: resolvedMatrixVersionId,
+          inherentLikelihood:
+            inherentLikelihood !== null ? new Prisma.Decimal(inherentLikelihood) : null,
+          inherentImpact:
+            inherentImpact !== null ? new Prisma.Decimal(inherentImpact) : null,
+          inherentExposure:
+            inherentExposure !== null ? new Prisma.Decimal(inherentExposure) : null,
+          inherentScore: inherentScore !== null ? new Prisma.Decimal(inherentScore) : null,
           identifier,
           organizationId,
           createdBy: userId,

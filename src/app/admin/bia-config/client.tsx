@@ -15,7 +15,7 @@
  */
 
 import { useState } from "react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader } from "@/components/layout";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -226,11 +226,14 @@ function ImpactCategoriesTab() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Impact Categories</h3>
-          <p className="text-sm text-muted-foreground">
-            Define the dimensions used to assess business impact (e.g., Financial, Operational, Compliance).
-          </p>
+        <div className="flex items-center gap-2">
+          <Layers className="h-[17px] w-[17px] text-primary" />
+          <div>
+            <h3 className="text-[15px] font-bold text-foreground">Impact Categories</h3>
+            <p className="text-sm text-muted-foreground">
+              Define the dimensions used to assess business impact (e.g., Financial, Operational, Compliance).
+            </p>
+          </div>
         </div>
         <Button onClick={openCreateForm}>
           <Plus className="h-4 w-4 mr-2" />
@@ -239,9 +242,9 @@ function ImpactCategoriesTab() {
       </div>
 
       {totalWeight !== 100 && categories.length > 0 && (
-        <div className="flex items-center gap-2 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <AlertTriangle className="h-5 w-5 text-amber-600" />
-          <span className="text-sm text-amber-800">
+        <div className="flex items-center gap-2 p-4 bg-warning/10 border border-warning/30 rounded-lg">
+          <AlertTriangle className="h-5 w-5 text-warning" />
+          <span className="text-sm text-warning">
             Category weights total {totalWeight}%. They should sum to 100%.
           </span>
         </div>
@@ -251,8 +254,8 @@ function ImpactCategoriesTab() {
         <CardContent className="pt-6">
           {categories.length === 0 ? (
             <div className="text-center py-12">
-              <Layers className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h4 className="text-lg font-medium mb-2">No Impact Categories</h4>
+              <Layers className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+              <h4 className="text-lg font-medium text-foreground mb-2">No Impact Categories</h4>
               <p className="text-sm text-muted-foreground mb-4">
                 Create your first impact category to define how business impact is measured.
               </p>
@@ -266,30 +269,30 @@ function ImpactCategoriesTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-center">Weight</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Name</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Description</TableHead>
+                  <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Weight</TableHead>
+                  <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {categories.map((category) => (
-                  <TableRow key={category.id}>
+                  <TableRow key={category.id} className="hover:bg-secondary">
                     <TableCell>
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                      <GripVertical className="h-4 w-4 text-muted-foreground/70 cursor-grab" />
                     </TableCell>
-                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell className="font-semibold text-foreground">{category.name}</TableCell>
                     <TableCell className="max-w-md">
                       <span className="text-muted-foreground line-clamp-2">
                         {category.description ?? "—"}
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary">{category.weight}%</Badge>
+                      <Badge variant="code">{category.weight}%</Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={category.isActive ? "default" : "outline"}>
+                      <Badge variant={category.isActive ? "success" : "neutral"}>
                         {category.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
@@ -297,16 +300,16 @@ function ImpactCategoriesTab() {
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          size="icon-sm"
+                          className="text-muted-foreground/70"
                           onClick={() => openEditForm(category)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          size="icon-sm"
+                          className="text-muted-foreground/70 hover:text-destructive"
                           onClick={() => {
                             setDeletingCategory(category);
                             setIsDeleteOpen(true);
@@ -340,7 +343,9 @@ function ImpactCategoriesTab() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name" className="text-[12.5px] font-semibold text-secondary-foreground">
+                Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -351,7 +356,7 @@ function ImpactCategoriesTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className="text-[12.5px] font-semibold text-secondary-foreground">Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -362,7 +367,7 @@ function ImpactCategoriesTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="weight">Weight (%)</Label>
+              <Label htmlFor="weight" className="text-[12.5px] font-semibold text-secondary-foreground">Weight (%)</Label>
               <Input
                 id="weight"
                 type="number"
@@ -371,7 +376,7 @@ function ImpactCategoriesTab() {
                 value={formData.weight}
                 onChange={(e) => setFormData({ ...formData, weight: parseInt(e.target.value) || 0 })}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11.5px] text-muted-foreground">
                 All category weights should sum to 100%.
               </p>
             </div>
@@ -467,11 +472,14 @@ function ScoreScaleTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Score Scale</h3>
-        <p className="text-sm text-muted-foreground">
-          Define the numeric range used for impact scoring. Default is 1-5.
-        </p>
+      <div className="flex items-center gap-2">
+        <Sliders className="h-[17px] w-[17px] text-primary" />
+        <div>
+          <h3 className="text-[15px] font-bold text-foreground">Score Scale</h3>
+          <p className="text-sm text-muted-foreground">
+            Define the numeric range used for impact scoring. Default is 1-5.
+          </p>
+        </div>
       </div>
 
       <Card>
@@ -481,13 +489,13 @@ function ScoreScaleTab() {
               <div className="space-y-4">
                 <div className="flex items-center gap-8">
                   <div>
-                    <p className="text-sm text-muted-foreground">Minimum Score</p>
-                    <p className="text-3xl font-semibold">{config?.scoreScaleMin ?? 1}</p>
+                    <p className="eyebrow">Minimum Score</p>
+                    <p className="text-3xl font-semibold tabular-nums text-primary">{config?.scoreScaleMin ?? 1}</p>
                   </div>
                   <div className="text-2xl text-muted-foreground">to</div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Maximum Score</p>
-                    <p className="text-3xl font-semibold">{config?.scoreScaleMax ?? 5}</p>
+                    <p className="eyebrow">Maximum Score</p>
+                    <p className="text-3xl font-semibold tabular-nums text-primary">{config?.scoreScaleMax ?? 5}</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -503,7 +511,7 @@ function ScoreScaleTab() {
             <div className="space-y-6">
               <div className="flex items-center gap-8">
                 <div className="space-y-2">
-                  <Label htmlFor="minScore">Minimum Score</Label>
+                  <Label htmlFor="minScore" className="text-[12.5px] font-semibold text-secondary-foreground">Minimum Score</Label>
                   <Input
                     id="minScore"
                     type="number"
@@ -514,7 +522,7 @@ function ScoreScaleTab() {
                 </div>
                 <div className="text-2xl text-muted-foreground pt-6">to</div>
                 <div className="space-y-2">
-                  <Label htmlFor="maxScore">Maximum Score</Label>
+                  <Label htmlFor="maxScore" className="text-[12.5px] font-semibold text-secondary-foreground">Maximum Score</Label>
                   <Input
                     id="maxScore"
                     type="number"
@@ -525,10 +533,10 @@ function ScoreScaleTab() {
                 </div>
               </div>
 
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-                  <div className="text-sm text-amber-800">
+                  <AlertTriangle className="h-5 w-5 text-warning mt-0.5" />
+                  <div className="text-sm text-warning">
                     <p className="font-medium">Important</p>
                     <p>Changing the score scale will only affect future assessments. Existing assessment scores will not be modified.</p>
                   </div>
@@ -662,11 +670,14 @@ function TierDefinitionsTab() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Tier Definitions</h3>
-          <p className="text-sm text-muted-foreground">
-            Define criticality tiers with RTO/RPO targets (e.g., Mission Critical, High, Medium, Low).
-          </p>
+        <div className="flex items-center gap-2">
+          <Activity className="h-[17px] w-[17px] text-primary" />
+          <div>
+            <h3 className="text-[15px] font-bold text-foreground">Tier Definitions</h3>
+            <p className="text-sm text-muted-foreground">
+              Define criticality tiers with RTO/RPO targets (e.g., Mission Critical, High, Medium, Low).
+            </p>
+          </div>
         </div>
         <Button onClick={openCreateForm}>
           <Plus className="h-4 w-4 mr-2" />
@@ -678,8 +689,8 @@ function TierDefinitionsTab() {
         <CardContent className="pt-6">
           {tiers.length === 0 ? (
             <div className="text-center py-12">
-              <Layers className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h4 className="text-lg font-medium mb-2">No Tier Definitions</h4>
+              <Layers className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+              <h4 className="text-lg font-medium text-foreground mb-2">No Tier Definitions</h4>
               <p className="text-sm text-muted-foreground mb-4">
                 Create tier definitions to classify business process criticality.
               </p>
@@ -693,18 +704,18 @@ function TierDefinitionsTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
-                  <TableHead>Tier</TableHead>
-                  <TableHead>RTO</TableHead>
-                  <TableHead>RPO</TableHead>
-                  <TableHead className="text-center">Color</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Tier</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">RTO</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">RPO</TableHead>
+                  <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Color</TableHead>
+                  <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tiers.map((tier) => (
-                  <TableRow key={tier.id}>
+                  <TableRow key={tier.id} className="hover:bg-secondary">
                     <TableCell>
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                      <GripVertical className="h-4 w-4 text-muted-foreground/70 cursor-grab" />
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -712,11 +723,11 @@ function TierDefinitionsTab() {
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: tier.colorHex }}
                         />
-                        <span className="font-medium">{tier.name}</span>
+                        <span className="font-semibold text-foreground">{tier.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>{tier.rtoText}</TableCell>
-                    <TableCell>{tier.rpoText}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{tier.rtoText}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{tier.rpoText}</TableCell>
                     <TableCell className="text-center">
                       <Badge
                         style={{ backgroundColor: tier.colorHex, color: "#fff" }}
@@ -727,8 +738,8 @@ function TierDefinitionsTab() {
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
+                        size="icon-sm"
+                        className="text-muted-foreground/70"
                         onClick={() => openEditForm(tier)}
                       >
                         <Pencil className="h-4 w-4" />
@@ -756,7 +767,9 @@ function TierDefinitionsTab() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="tierName">Name *</Label>
+              <Label htmlFor="tierName" className="text-[12.5px] font-semibold text-secondary-foreground">
+                Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="tierName"
                 value={formData.name}
@@ -767,7 +780,9 @@ function TierDefinitionsTab() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="rto">RTO (Recovery Time Objective) *</Label>
+                <Label htmlFor="rto" className="text-[12.5px] font-semibold text-secondary-foreground">
+                  RTO (Recovery Time Objective) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="rto"
                   value={formData.rtoText}
@@ -776,7 +791,9 @@ function TierDefinitionsTab() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rpo">RPO (Recovery Point Objective) *</Label>
+                <Label htmlFor="rpo" className="text-[12.5px] font-semibold text-secondary-foreground">
+                  RPO (Recovery Point Objective) <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="rpo"
                   value={formData.rpoText}
@@ -787,7 +804,7 @@ function TierDefinitionsTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="color">Color</Label>
+              <Label htmlFor="color" className="text-[12.5px] font-semibold text-secondary-foreground">Color</Label>
               <div className="flex items-center gap-4">
                 <Input
                   id="color"
@@ -892,18 +909,21 @@ function TierCriteriaTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Tier Criteria Matrix</h3>
-        <p className="text-sm text-muted-foreground">
-          Define criteria descriptions for each category/tier intersection. These guide Process Owners during scoring.
-        </p>
+      <div className="flex items-center gap-2">
+        <Grid3X3 className="h-[17px] w-[17px] text-primary" />
+        <div>
+          <h3 className="text-[15px] font-bold text-foreground">Tier Criteria Matrix</h3>
+          <p className="text-sm text-muted-foreground">
+            Define criteria descriptions for each category/tier intersection. These guide Process Owners during scoring.
+          </p>
+        </div>
       </div>
 
       {categories.length === 0 || tiers.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Grid3X3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h4 className="text-lg font-medium mb-2">Configure Categories and Tiers First</h4>
+            <Grid3X3 className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+            <h4 className="text-lg font-medium text-foreground mb-2">Configure Categories and Tiers First</h4>
             <p className="text-sm text-muted-foreground">
               You need at least one impact category and one tier definition to configure criteria.
             </p>
@@ -915,9 +935,9 @@ function TierCriteriaTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-32">Tier / Category</TableHead>
+                  <TableHead className="w-32 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Tier / Category</TableHead>
                   {categories.map((cat) => (
-                    <TableHead key={cat.id} className="text-center min-w-48">
+                    <TableHead key={cat.id} className="text-center min-w-48 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
                       {cat.name}
                     </TableHead>
                   ))}
@@ -925,14 +945,14 @@ function TierCriteriaTab() {
               </TableHeader>
               <TableBody>
                 {tiers.map((tier) => (
-                  <TableRow key={tier.id}>
+                  <TableRow key={tier.id} className="hover:bg-secondary">
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: tier.colorHex }}
                         />
-                        <span className="font-medium">{tier.name}</span>
+                        <span className="font-semibold text-foreground">{tier.name}</span>
                       </div>
                     </TableCell>
                     {categories.map((cat) => {
@@ -940,11 +960,11 @@ function TierCriteriaTab() {
                       return (
                         <TableCell
                           key={`${cat.id}-${tier.id}`}
-                          className="text-center cursor-pointer hover:bg-muted/50 transition-colors"
+                          className="text-center cursor-pointer hover:bg-secondary transition-colors"
                           onClick={() => handleEditClick(cat.id, tier.id)}
                         >
                           {cellCriteria?.description ? (
-                            <p className="text-sm text-left line-clamp-3">
+                            <p className="text-sm text-left line-clamp-3 text-foreground">
                               {cellCriteria.description}
                             </p>
                           ) : (
@@ -990,7 +1010,7 @@ function TierCriteriaTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="criteria">Criteria Description</Label>
+              <Label htmlFor="criteria" className="text-[12.5px] font-semibold text-secondary-foreground">Criteria Description</Label>
               <Textarea
                 id="criteria"
                 value={description}
@@ -1116,11 +1136,14 @@ function TimePeriodsTab() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Time Periods</h3>
-          <p className="text-sm text-muted-foreground">
-            Define time periods for the time-to-impact matrix (e.g., 30 min, 4 hrs, 24 hrs).
-          </p>
+        <div className="flex items-center gap-2">
+          <Clock className="h-[17px] w-[17px] text-primary" />
+          <div>
+            <h3 className="text-[15px] font-bold text-foreground">Time Periods</h3>
+            <p className="text-sm text-muted-foreground">
+              Define time periods for the time-to-impact matrix (e.g., 30 min, 4 hrs, 24 hrs).
+            </p>
+          </div>
         </div>
         <Button onClick={openCreateForm}>
           <Plus className="h-4 w-4 mr-2" />
@@ -1132,8 +1155,8 @@ function TimePeriodsTab() {
         <CardContent className="pt-6">
           {periods.length === 0 ? (
             <div className="text-center py-12">
-              <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h4 className="text-lg font-medium mb-2">No Time Periods</h4>
+              <Clock className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+              <h4 className="text-lg font-medium text-foreground mb-2">No Time Periods</h4>
               <p className="text-sm text-muted-foreground mb-4">
                 Create time periods for the time-to-impact assessment matrix.
               </p>
@@ -1147,22 +1170,22 @@ function TimePeriodsTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
-                  <TableHead>Label</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Label</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Duration</TableHead>
+                  <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {periods.map((period) => (
-                  <TableRow key={period.id}>
+                  <TableRow key={period.id} className="hover:bg-secondary">
                     <TableCell>
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                      <GripVertical className="h-4 w-4 text-muted-foreground/70 cursor-grab" />
                     </TableCell>
-                    <TableCell className="font-medium">{period.label}</TableCell>
-                    <TableCell>{formatDuration(period.durationMinutes)}</TableCell>
+                    <TableCell className="font-semibold text-foreground">{period.label}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{formatDuration(period.durationMinutes)}</TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={period.isActive ? "default" : "outline"}>
+                      <Badge variant={period.isActive ? "success" : "neutral"}>
                         {period.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
@@ -1170,16 +1193,16 @@ function TimePeriodsTab() {
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          size="icon-sm"
+                          className="text-muted-foreground/70"
                           onClick={() => openEditForm(period)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          size="icon-sm"
+                          className="text-muted-foreground/70 hover:text-destructive"
                           onClick={() => deleteMutation.mutate({ id: period.id })}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -1208,7 +1231,9 @@ function TimePeriodsTab() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="periodLabel">Label *</Label>
+              <Label htmlFor="periodLabel" className="text-[12.5px] font-semibold text-secondary-foreground">
+                Label <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="periodLabel"
                 value={formData.label}
@@ -1218,7 +1243,7 @@ function TimePeriodsTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="duration">Duration (minutes)</Label>
+              <Label htmlFor="duration" className="text-[12.5px] font-semibold text-secondary-foreground">Duration (minutes)</Label>
               <Input
                 id="duration"
                 type="number"
@@ -1228,7 +1253,7 @@ function TimePeriodsTab() {
                   setFormData({ ...formData, durationMinutes: parseInt(e.target.value) || 60 })
                 }
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11.5px] text-muted-foreground">
                 {formatDuration(formData.durationMinutes)}
               </p>
             </div>
@@ -1342,16 +1367,19 @@ function TierThresholdsTab() {
   if (tiers.length === 0) {
     return (
       <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium">Tier Thresholds</h3>
-          <p className="text-sm text-muted-foreground">
-            Define score ranges that map to each tier for auto-calculation.
-          </p>
+        <div className="flex items-center gap-2">
+          <Sliders className="h-[17px] w-[17px] text-primary" />
+          <div>
+            <h3 className="text-[15px] font-bold text-foreground">Tier Thresholds</h3>
+            <p className="text-sm text-muted-foreground">
+              Define score ranges that map to each tier for auto-calculation.
+            </p>
+          </div>
         </div>
         <Card>
           <CardContent className="py-12 text-center">
-            <Sliders className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h4 className="text-lg font-medium mb-2">Configure Tiers First</h4>
+            <Sliders className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+            <h4 className="text-lg font-medium text-foreground mb-2">Configure Tiers First</h4>
             <p className="text-sm text-muted-foreground">
               You need tier definitions before configuring thresholds.
             </p>
@@ -1364,11 +1392,14 @@ function TierThresholdsTab() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium">Tier Thresholds</h3>
-          <p className="text-sm text-muted-foreground">
-            Define score ranges that map aggregate scores to tier assignments.
-          </p>
+        <div className="flex items-center gap-2">
+          <Sliders className="h-[17px] w-[17px] text-primary" />
+          <div>
+            <h3 className="text-[15px] font-bold text-foreground">Tier Thresholds</h3>
+            <p className="text-sm text-muted-foreground">
+              Define score ranges that map aggregate scores to tier assignments.
+            </p>
+          </div>
         </div>
         {!isEditing && (
           <Button onClick={startEditing}>
@@ -1380,10 +1411,10 @@ function TierThresholdsTab() {
 
       <Card>
         <CardContent className="pt-6">
-          <div className="mb-4 p-4 bg-muted rounded-lg">
-            <p className="text-sm">
-              <span className="font-medium">Score Scale:</span> {config?.scoreScaleMin ?? 1} to{" "}
-              {config?.scoreScaleMax ?? 5}
+          <div className="mb-4 p-4 bg-secondary border border-border rounded-lg">
+            <p className="text-sm text-foreground">
+              <span className="font-medium">Score Scale:</span>{" "}
+              <span className="font-mono tabular-nums">{config?.scoreScaleMin ?? 1} to {config?.scoreScaleMax ?? 5}</span>
             </p>
           </div>
 
@@ -1391,29 +1422,29 @@ function TierThresholdsTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tier</TableHead>
-                  <TableHead className="text-center">Min Score</TableHead>
-                  <TableHead className="text-center">Max Score</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Tier</TableHead>
+                  <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Min Score</TableHead>
+                  <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Max Score</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tiers.map((tier) => {
                   const threshold = savedThresholds.find((t) => t.tierId === tier.id);
                   return (
-                    <TableRow key={tier.id}>
+                    <TableRow key={tier.id} className="hover:bg-secondary">
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: tier.colorHex }}
                           />
-                          <span className="font-medium">{tier.name}</span>
+                          <span className="font-semibold text-foreground">{tier.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center font-mono tabular-nums">
                         {threshold?.minScore ?? "—"}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center font-mono tabular-nums">
                         {threshold?.maxScore ?? "—"}
                       </TableCell>
                     </TableRow>
@@ -1426,23 +1457,23 @@ function TierThresholdsTab() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tier</TableHead>
-                    <TableHead className="text-center">Min Score</TableHead>
-                    <TableHead className="text-center">Max Score</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Tier</TableHead>
+                    <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Min Score</TableHead>
+                    <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Max Score</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {thresholds.map((threshold, index) => {
                     const tier = tiers.find((t) => t.id === threshold.tierId);
                     return (
-                      <TableRow key={threshold.tierId}>
+                      <TableRow key={threshold.tierId} className="hover:bg-secondary">
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div
                               className="w-3 h-3 rounded-full"
                               style={{ backgroundColor: tier?.colorHex ?? "#888" }}
                             />
-                            <span className="font-medium">{tier?.name}</span>
+                            <span className="font-semibold text-foreground">{tier?.name}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -1509,40 +1540,55 @@ export function BIAConfigClient() {
     <AppLayout breadcrumbs={[{ label: "Administration" }, { label: "BIA Configuration" }]}>
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-            <Settings className="h-6 w-6" />
-            BIA Configuration
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Customize your organization's Business Impact Assessment methodology.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="ADMINISTRATION"
+          title="BIA Configuration"
+          icon={<Settings />}
+          description="Customize your organization's Business Impact Assessment methodology."
+        />
 
         {/* Tabs */}
-        <Tabs defaultValue="categories" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="categories" className="flex items-center gap-2">
+        <Tabs defaultValue="categories" className="space-y-6 mt-8">
+          <TabsList className="inline-flex h-auto w-full justify-start gap-0.5 p-1 rounded-lg border border-border bg-secondary">
+            <TabsTrigger
+              value="categories"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-md text-[13px] font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-sm"
+            >
               <Layers className="h-4 w-4" />
               <span className="hidden sm:inline">Categories</span>
             </TabsTrigger>
-            <TabsTrigger value="scale" className="flex items-center gap-2">
+            <TabsTrigger
+              value="scale"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-md text-[13px] font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-sm"
+            >
               <Sliders className="h-4 w-4" />
               <span className="hidden sm:inline">Scale</span>
             </TabsTrigger>
-            <TabsTrigger value="tiers" className="flex items-center gap-2">
+            <TabsTrigger
+              value="tiers"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-md text-[13px] font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-sm"
+            >
               <Activity className="h-4 w-4" />
               <span className="hidden sm:inline">Tiers</span>
             </TabsTrigger>
-            <TabsTrigger value="criteria" className="flex items-center gap-2">
+            <TabsTrigger
+              value="criteria"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-md text-[13px] font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-sm"
+            >
               <Grid3X3 className="h-4 w-4" />
               <span className="hidden sm:inline">Criteria</span>
             </TabsTrigger>
-            <TabsTrigger value="periods" className="flex items-center gap-2">
+            <TabsTrigger
+              value="periods"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-md text-[13px] font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-sm"
+            >
               <Clock className="h-4 w-4" />
               <span className="hidden sm:inline">Periods</span>
             </TabsTrigger>
-            <TabsTrigger value="thresholds" className="flex items-center gap-2">
+            <TabsTrigger
+              value="thresholds"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-md text-[13px] font-semibold text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-border data-[state=active]:shadow-sm"
+            >
               <Sliders className="h-4 w-4" />
               <span className="hidden sm:inline">Thresholds</span>
             </TabsTrigger>

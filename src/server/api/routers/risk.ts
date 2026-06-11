@@ -31,6 +31,7 @@ import {
   AuditAction,
   RiskOrgControlRole,
   RiskDiscoveryStatus,
+  RiskControlLinkType,
   AssessmentProjectStatus,
   Prisma
 } from "@prisma/client";
@@ -6443,6 +6444,385 @@ export const riskRouter = createTRPCRouter({
           VendorAssessment: { select: { id: true, identifier: true, title: true } },
         },
         orderBy: { createdAt: "desc" },
+      });
+    }),
+
+  /**
+   * Create a lightweight risk from within a compliance assessment workspace.
+   *
+   * Mirrors finding.create's inline flow: spawns a risk tied to a specific
+   * control via Risk.sourceComplianceAssessmentId (+ optional RiskControlLink),
+   * and optionally links an originating finding (spawnedFromFindingId).
+   * Keeps the input minimal — no template / project / impact fields required.
+   */
+  createForAssessment: organizationProcedure
+    .use(requireRole(RISK_CREATE_ROLES))
+    .input(
+      z.object({
+        title: z.string().min(1, "Title is required").max(500),
+        description: z.string().min(1, "Description is required").max(10000),
+        severity: z.nativeEnum(Severity),
+        complianceAssessmentId: z.string().min(1),
+        controlId: z.string().optional(),
+        // A risk MUST be tied to one or more findings from this assessment.
+        linkedFindingIds: z
+          .array(z.string().min(1))
+          .min(1, "At least one finding is required"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      // Validate the compliance assessment belongs to this org.
+      const assessment = await ctx.db.complianceAssessment.findFirst({
+        where: { id: input.complianceAssessmentId, organizationId },
+        select: { id: true },
+      });
+      if (!assessment) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid compliance assessment — must be in same organization",
+        });
+      }
+
+      // De-duplicate ids, preserving order (first = primary/origin).
+      const findingIds = Array.from(new Set(input.linkedFindingIds));
+
+      // Every risk must be tied to findings RAISED IN THIS ASSESSMENT.
+      const findings = await ctx.db.finding.findMany({
+        where: {
+          id: { in: findingIds },
+          organizationId,
+          sourceComplianceAssessmentId: input.complianceAssessmentId,
+        },
+        select: { id: true },
+      });
+      if (findings.length !== findingIds.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Every linked finding must be a finding from this assessment.",
+        });
+      }
+
+      // First id is the denormalized primary/origin finding.
+      const primaryFindingId = findingIds[0]!;
+
+      // Generate risk identifier (RISK-YYYY-NNNN format).
+      const identifier = await generateIdentifier(organizationId, "RISK");
+
+      const risk = await ctx.db.risk.create({
+        data: {
+          identifier,
+          title: input.title,
+          description: input.description,
+          severity: input.severity,
+          status: RiskStatus.OPEN,
+          createdById: userId,
+          organizationId,
+          assetCriticality: "MEDIUM",
+          sourceComplianceAssessmentId: input.complianceAssessmentId,
+          spawnedFromFindingId: primaryFindingId,
+          // Surface the source in the register filters.
+          findingSource: RiskFindingSource.COMPLIANCE_ASSESSMENT,
+        },
+        select: { id: true, identifier: true, title: true },
+      });
+
+      // Source of truth: create a RiskFindingLink for EACH linked finding.
+      await ctx.db.riskFindingLink.createMany({
+        data: findingIds.map((findingId) => ({
+          riskId: risk.id,
+          findingId,
+        })),
+        skipDuplicates: true,
+      });
+
+      // Auto-link to the compliance control when spawned from one (mirrors the
+      // finding side's auto-link). AFFECTED = the risk affects this control.
+      if (input.controlId) {
+        await ctx.db.riskControlLink.create({
+          data: {
+            organizationId,
+            riskId: risk.id,
+            controlId: input.controlId,
+            linkType: RiskControlLinkType.AFFECTED,
+            createdById: userId,
+          },
+        });
+      }
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: "CREATE_RISK",
+        entityType: "Risk",
+        entityId: risk.id,
+        changes: {
+          before: null,
+          after: {
+            identifier: risk.identifier,
+            title: risk.title,
+            severity: input.severity,
+            status: RiskStatus.OPEN,
+            sourceComplianceAssessmentId: input.complianceAssessmentId,
+            spawnedFromFindingId: primaryFindingId,
+            linkedFindingIds: findingIds,
+            controlId: input.controlId ?? null,
+          },
+        },
+        actorName: ctx.session!.user.name ?? "Unknown",
+        actorRole: ctx.session!.user.role,
+      });
+
+      void recalculateRiskImpact(risk.id, ctx.db);
+
+      return risk;
+    }),
+
+  /**
+   * List risks spawned from a specific compliance assessment.
+   * Mirrors finding.listForAssessment — used by the assessment's "Risks" tab.
+   * Each row includes ALL its linked findings (findingLinks).
+   */
+  listForAssessment: organizationProcedure
+    .input(
+      z.object({
+        assessmentId: z.string(),
+        // Full AssessmentKind set so the consulting wrapper (Exploitation
+        // Pathways / Action Plans pickers) works for every assessment kind.
+        assessmentType: z.enum([
+          "COMPLIANCE",
+          "MATURITY",
+          "VENDOR",
+          "RISK",
+          "BIA",
+        ]),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+
+      // Map each assessment kind to the Risk source field it lives under.
+      // - MATURITY: Risk has no maturity source field → no risks → [].
+      // - RISK: risk-assessment risks are embedded discoveredRisks, not picked
+      //   here → [] for now.
+      // - BIA: no Risk↔BIA linkage → [] for now.
+      // Short-circuit those before the DB call (keeps the picker working).
+      let where: Prisma.RiskWhereInput;
+      switch (input.assessmentType) {
+        case "COMPLIANCE":
+          where = { organizationId, sourceComplianceAssessmentId: input.assessmentId };
+          break;
+        case "VENDOR":
+          where = { organizationId, vendorAssessmentId: input.assessmentId };
+          break;
+        case "MATURITY":
+        case "RISK":
+        case "BIA":
+        default:
+          return [];
+      }
+
+      return ctx.db.risk.findMany({
+        where,
+        select: {
+          id: true,
+          identifier: true,
+          title: true,
+          severity: true,
+          inherentScoreLabel: true,
+          status: true,
+          createdAt: true,
+          CreatedBy: { select: { id: true, name: true, email: true } },
+          findingLinks: {
+            select: {
+              finding: {
+                select: { id: true, identifier: true, title: true },
+              },
+            },
+            orderBy: { createdAt: "asc" },
+          },
+          ControlLinks: {
+            select: {
+              control: { select: { id: true, controlId: true, title: true } },
+            },
+            take: 1,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }),
+
+  /**
+   * Add a finding to a risk (creates a RiskFindingLink if absent).
+   *
+   * The finding must belong to the SAME compliance assessment as the risk.
+   * After linking, spawnedFromFindingId is kept synced to the first
+   * (oldest) remaining link as the denormalized primary/origin finding.
+   * Org-scoped.
+   */
+  addFinding: organizationProcedure
+    .use(requireRole(RISK_UPDATE_ROLES))
+    .input(
+      z.object({
+        riskId: z.string().min(1),
+        findingId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      const risk = await ctx.db.risk.findFirst({
+        where: { id: input.riskId, organizationId },
+        select: { id: true, sourceComplianceAssessmentId: true },
+      });
+      if (!risk) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
+      }
+
+      // The finding must be in the SAME assessment as the risk.
+      const finding = await ctx.db.finding.findFirst({
+        where: {
+          id: input.findingId,
+          organizationId,
+          sourceComplianceAssessmentId: risk.sourceComplianceAssessmentId,
+        },
+        select: { id: true },
+      });
+      if (!finding) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The finding must be from the same assessment as the risk.",
+        });
+      }
+
+      // Idempotent: create the link only if it doesn't already exist.
+      await ctx.db.riskFindingLink.createMany({
+        data: [{ riskId: input.riskId, findingId: input.findingId }],
+        skipDuplicates: true,
+      });
+
+      // Keep spawnedFromFindingId synced to the first remaining link.
+      {
+        const first = await ctx.db.riskFindingLink.findFirst({
+          where: { riskId: input.riskId },
+          orderBy: { createdAt: "asc" },
+          select: { findingId: true },
+        });
+        await ctx.db.risk.update({
+          where: { id: input.riskId },
+          data: { spawnedFromFindingId: first?.findingId ?? null },
+        });
+      }
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: "UPDATE_RISK",
+        entityType: "Risk",
+        entityId: input.riskId,
+        changes: {
+          before: null,
+          after: { addedFindingId: input.findingId },
+        },
+        actorName: ctx.session!.user.name ?? "Unknown",
+        actorRole: ctx.session!.user.role,
+      });
+
+      return ctx.db.riskFindingLink.findMany({
+        where: { riskId: input.riskId },
+        select: {
+          finding: { select: { id: true, identifier: true, title: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }),
+
+  /**
+   * Remove a finding from a risk (deletes the RiskFindingLink).
+   *
+   * Refuses to remove the LAST remaining link — a risk must keep ≥1 finding.
+   * After removal, spawnedFromFindingId is re-synced to the first remaining
+   * link. Org-scoped.
+   */
+  removeFinding: organizationProcedure
+    .use(requireRole(RISK_UPDATE_ROLES))
+    .input(
+      z.object({
+        riskId: z.string().min(1),
+        findingId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      const risk = await ctx.db.risk.findFirst({
+        where: { id: input.riskId, organizationId },
+        select: { id: true },
+      });
+      if (!risk) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
+      }
+
+      const links = await ctx.db.riskFindingLink.findMany({
+        where: { riskId: input.riskId },
+        select: { id: true, findingId: true },
+      });
+
+      const target = links.find((l) => l.findingId === input.findingId);
+      if (!target) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "That finding is not linked to this risk.",
+        });
+      }
+
+      if (links.length <= 1) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "A risk must keep at least one finding — add another before removing this one.",
+        });
+      }
+
+      await ctx.db.riskFindingLink.delete({ where: { id: target.id } });
+
+      // Re-sync spawnedFromFindingId to the first remaining link.
+      {
+        const first = await ctx.db.riskFindingLink.findFirst({
+          where: { riskId: input.riskId },
+          orderBy: { createdAt: "asc" },
+          select: { findingId: true },
+        });
+        await ctx.db.risk.update({
+          where: { id: input.riskId },
+          data: { spawnedFromFindingId: first?.findingId ?? null },
+        });
+      }
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: "UPDATE_RISK",
+        entityType: "Risk",
+        entityId: input.riskId,
+        changes: {
+          before: { removedFindingId: input.findingId },
+          after: null,
+        },
+        actorName: ctx.session!.user.name ?? "Unknown",
+        actorRole: ctx.session!.user.role,
+      });
+
+      return ctx.db.riskFindingLink.findMany({
+        where: { riskId: input.riskId },
+        select: {
+          finding: { select: { id: true, identifier: true, title: true } },
+        },
+        orderBy: { createdAt: "asc" },
       });
     }),
 });

@@ -14,7 +14,7 @@
  */
 
 import { useState } from "react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -192,47 +192,33 @@ export function BusinessFunctionsClient() {
     <AppLayout breadcrumbs={[{ label: "Business Impact" }, { label: "Business Functions" }]}>
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-              <FolderTree className="h-6 w-6" />
-              Business Functions
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Organize business processes into logical function groups.
-            </p>
-          </div>
-          <Button onClick={openCreateForm} className="mt-4 sm:mt-0">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Function
-          </Button>
-        </div>
+        <PageHeader
+          eyebrow="BUSINESS IMPACT"
+          title="Business Functions"
+          icon={<FolderTree />}
+          description="Organize business processes into logical function groups."
+          actions={
+            <Button onClick={openCreateForm}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Function
+            </Button>
+          }
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Active Functions</p>
-                  <p className="text-2xl font-semibold text-green-600">{activeCount}</p>
-                </div>
-                <FolderTree className="h-8 w-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Processes</p>
-                  <p className="text-2xl font-semibold">{totalProcesses}</p>
-                </div>
-                <Activity className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="Active Functions"
+            value={activeCount}
+            icon={<FolderTree />}
+            tone="success"
+            accent
+          />
+          <StatTile
+            label="Total Processes"
+            value={totalProcesses}
+            icon={<Activity />}
+          />
         </div>
 
         {/* Table */}
@@ -280,19 +266,31 @@ export function BusinessFunctionsClient() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Identifier</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-center">Processes</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                      Identifier
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                      Name
+                    </TableHead>
+                    <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                      Description
+                    </TableHead>
+                    <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                      Processes
+                    </TableHead>
+                    <TableHead className="text-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {functions?.map((fn) => (
-                    <TableRow key={fn.id}>
-                      <TableCell className="font-mono text-sm">{fn.identifier}</TableCell>
-                      <TableCell className="font-medium">{fn.name}</TableCell>
+                    <TableRow key={fn.id} className="hover:bg-secondary">
+                      <TableCell className="font-mono text-sm text-muted-foreground">{fn.identifier}</TableCell>
+                      <TableCell className="font-semibold text-foreground">{fn.name}</TableCell>
                       <TableCell className="max-w-md">
                         <span className="text-muted-foreground line-clamp-2">
                           {fn.description ?? "—"}
@@ -304,14 +302,14 @@ export function BusinessFunctionsClient() {
                             href={`/bia/processes?functionId=${fn.id}`}
                             className="text-primary hover:underline"
                           >
-                            <Badge variant="secondary">{fn.processCount}</Badge>
+                            <Badge variant="info">{fn.processCount}</Badge>
                           </Link>
                         ) : (
                           <Badge variant="outline">0</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={fn.isActive ? "default" : "outline"}>
+                        <Badge variant={fn.isActive ? "success" : "neutral"}>
                           {fn.isActive ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
@@ -319,16 +317,16 @@ export function BusinessFunctionsClient() {
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
+                            size="icon-sm"
+                            className="text-muted-foreground/70"
                             onClick={() => openEditForm(fn)}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            size="icon-sm"
+                            className="text-muted-foreground/70 hover:text-destructive"
                             onClick={() => {
                               setDeletingFunction(fn);
                               setIsDeleteOpen(true);
@@ -363,7 +361,9 @@ export function BusinessFunctionsClient() {
 
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name" className="text-[12.5px] font-semibold text-secondary-foreground">
+                  Name <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -374,7 +374,9 @@ export function BusinessFunctionsClient() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description" className="text-[12.5px] font-semibold text-secondary-foreground">
+                  Description
+                </Label>
                 <Textarea
                   id="description"
                   value={formData.description}
@@ -408,7 +410,7 @@ export function BusinessFunctionsClient() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <AlertTriangle className="h-5 w-5 text-warning" />
                 Delete Business Function?
               </AlertDialogTitle>
               <AlertDialogDescription>

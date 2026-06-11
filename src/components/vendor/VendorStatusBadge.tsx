@@ -27,33 +27,33 @@ const STATUS_CONFIG: Record<
   VendorStatus,
   {
     label: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
+    variant: "success" | "neutral" | "warning" | "critical";
     className: string;
     icon: React.ComponentType<{ className?: string }>;
   }
 > = {
   ACTIVE: {
     label: "Active",
-    variant: "default",
-    className: "bg-green-100 text-green-800 hover:bg-green-100 border-green-200",
+    variant: "success",
+    className: "",
     icon: CheckCircle2,
   },
   INACTIVE: {
     label: "Inactive",
-    variant: "secondary",
-    className: "bg-gray-100 text-gray-800 hover:bg-gray-100 border-gray-200",
+    variant: "neutral",
+    className: "",
     icon: PauseCircle,
   },
   UNDER_REVIEW: {
     label: "Under Review",
-    variant: "outline",
-    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200",
+    variant: "warning",
+    className: "",
     icon: Search,
   },
   OFFBOARDED: {
     label: "Offboarded",
-    variant: "destructive",
-    className: "bg-red-100 text-red-800 hover:bg-red-100 border-red-200",
+    variant: "critical",
+    className: "",
     icon: XCircle,
   },
 };

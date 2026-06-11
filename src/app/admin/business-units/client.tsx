@@ -14,7 +14,7 @@
  */
 
 import { useState } from "react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -251,7 +251,7 @@ export function BusinessUnitsClient() {
     return (
       <div key={node.id}>
         <div
-          className="flex items-center gap-2 py-2 px-3 hover:bg-muted rounded-md group"
+          className="flex items-center gap-2 py-2 px-3 hover:bg-secondary rounded-md group"
           style={{ paddingLeft: `${depth * 24 + 12}px` }}
         >
           {/* Expand/Collapse */}
@@ -273,20 +273,20 @@ export function BusinessUnitsClient() {
           )}
 
           {/* Name */}
-          <Building2 className="h-4 w-4 text-muted-foreground" />
-          <span className="flex-1 font-medium">{node.name}</span>
+          <Building2 className="h-4 w-4 text-muted-foreground/70" />
+          <span className="flex-1 font-semibold text-foreground">{node.name}</span>
 
           {/* Code badge */}
           {node.code && (
-            <Badge variant="outline" className="font-mono text-xs">
+            <Badge variant="code">
               {node.code}
             </Badge>
           )}
 
           {/* User count */}
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Users className="h-3 w-3" />
-            <span>{node._count.users}</span>
+            <Users className="h-3 w-3 text-muted-foreground/70" />
+            <span className="tnum font-mono text-xs">{node._count.users}</span>
           </div>
 
           {/* Actions (visible on hover) */}
@@ -306,7 +306,7 @@ export function BusinessUnitsClient() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0"
+              className="h-7 w-7 p-0 text-muted-foreground/70"
               onClick={() => openEditForm(node)}
               title="Edit"
             >
@@ -315,7 +315,7 @@ export function BusinessUnitsClient() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+              className="h-7 w-7 p-0 text-muted-foreground/70 hover:text-destructive"
               onClick={() => openDeleteDialog(node)}
               title="Delete"
             >
@@ -350,68 +350,46 @@ export function BusinessUnitsClient() {
     <AppLayout breadcrumbs={[{ label: "Administration" }, { label: "Business Units" }]}>
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-              <FolderTree className="h-6 w-6" />
-              Business Unit Management
-            </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Manage your organizational hierarchy. Business units are used for
-            assignment routing and rollup reporting.
-          </p>
-        </div>
-        <Button onClick={() => openCreateForm()} className="mt-4 sm:mt-0">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Business Unit
-        </Button>
-      </div>
+        <PageHeader
+          eyebrow="ADMINISTRATION"
+          title="Business Unit Management"
+          icon={<FolderTree />}
+          description="Manage your organizational hierarchy. Business units are used for assignment routing and rollup reporting."
+          actions={
+            <Button onClick={() => openCreateForm()}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Business Unit
+            </Button>
+          }
+        />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Units</p>
-                <p className="text-2xl font-semibold">{data?.totalCount ?? 0}</p>
-              </div>
-              <Building2 className="h-8 w-8 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Root Units</p>
-                <p className="text-2xl font-semibold text-blue-600">
-                  {data?.tree.length ?? 0}
-                </p>
-              </div>
-              <FolderTree className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Max Depth</p>
-                <p className="text-2xl font-semibold text-muted-foreground">5 levels</p>
-              </div>
-              <div className="text-xs text-muted-foreground">Hierarchy limit</div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="Total Units"
+          value={data?.totalCount ?? 0}
+          icon={<Building2 />}
+          tone="primary"
+        />
+        <StatTile
+          label="Root Units"
+          value={data?.tree.length ?? 0}
+          icon={<FolderTree />}
+        />
+        <StatTile
+          label="Max Depth"
+          value="5 levels"
+          sub="Hierarchy limit"
+        />
       </div>
 
       {/* Tree View */}
       <Card>
         <CardHeader>
-          <CardTitle>Organization Hierarchy</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <FolderTree className="h-[17px] w-[17px] text-primary" />
+            Organization Hierarchy
+          </CardTitle>
           <CardDescription>
             Click on units to expand/collapse. Hover to see actions.
           </CardDescription>
@@ -423,8 +401,8 @@ export function BusinessUnitsClient() {
             </div>
           ) : data?.tree.length === 0 ? (
             <div className="text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
+              <Building2 className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 No business units defined
               </h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -460,7 +438,9 @@ export function BusinessUnitsClient() {
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">
+                Name <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id="name"
                 value={formData.name}

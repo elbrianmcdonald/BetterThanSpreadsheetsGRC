@@ -54,17 +54,17 @@ function interpolateColor(color1: [number, number, number], color2: [number, num
  */
 function getGradientColor(count: number, maxCount: number): string {
   if (maxCount === 0 || count === 0) {
-    return "rgb(240, 253, 244)"; // Very light green for empty cells
+    return "rgb(244, 245, 247)"; // Neutral secondary tint for empty cells
   }
 
   const ratio = Math.min(count / maxCount, 1);
 
-  // Color stops: light green -> yellow -> orange -> red
+  // Desaturated report tones: forest -> ochre -> burnt orange -> brick
   const colors: [number, number, number][] = [
-    [187, 247, 208], // Light green (rgb(187, 247, 208))
-    [254, 240, 138], // Yellow (rgb(254, 240, 138))
-    [253, 186, 116], // Orange (rgb(253, 186, 116))
-    [252, 129, 129], // Red (rgb(252, 129, 129))
+    [203, 219, 211], // forest (success) tint
+    [224, 211, 184], // ochre (warning) tint
+    [226, 200, 184], // burnt orange (severity-high) tint
+    [219, 191, 188], // brick (destructive) tint
   ];
 
   if (ratio <= 0.33) {
@@ -80,9 +80,9 @@ function getGradientColor(count: number, maxCount: number): string {
  * Get text color based on background brightness
  */
 function getTextColor(count: number, maxCount: number): string {
-  if (count === 0) return "rgb(156, 163, 175)"; // Gray for empty
+  if (count === 0) return "rgb(153, 160, 170)"; // Muted for empty
   const ratio = count / maxCount;
-  return ratio > 0.5 ? "rgb(55, 65, 81)" : "rgb(75, 85, 99)"; // Dark gray
+  return ratio > 0.5 ? "rgb(31, 39, 51)" : "rgb(54, 62, 74)"; // Dark foreground
 }
 
 export function RiskHeatmap() {
@@ -131,7 +131,7 @@ export function RiskHeatmap() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Grid3X3 className="h-5 w-5" />
+            <Grid3X3 className="h-[17px] w-[17px] text-primary" />
             Risk Severity Heatmap
           </CardTitle>
         </CardHeader>
@@ -147,7 +147,7 @@ export function RiskHeatmap() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Grid3X3 className="h-5 w-5" />
+            <Grid3X3 className="h-[17px] w-[17px] text-primary" />
             Risk Severity Heatmap
           </CardTitle>
         </CardHeader>
@@ -183,14 +183,14 @@ export function RiskHeatmap() {
           </div>
           {/* Gradient legend */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Fewer</span>
+            <span className="eyebrow">Fewer</span>
             <div
-              className="h-3 w-24 rounded-sm"
+              className="h-3 w-24 rounded-sm border border-border"
               style={{
-                background: "linear-gradient(to right, rgb(187, 247, 208), rgb(254, 240, 138), rgb(253, 186, 116), rgb(252, 129, 129))",
+                background: "linear-gradient(to right, rgb(203, 219, 211), rgb(224, 211, 184), rgb(226, 200, 184), rgb(219, 191, 188))",
               }}
             />
-            <span className="text-xs text-muted-foreground">More risks</span>
+            <span className="eyebrow">More risks</span>
           </div>
         </div>
       </CardHeader>
@@ -199,7 +199,7 @@ export function RiskHeatmap() {
           {/* Y-axis label */}
           <div className="flex flex-col justify-center pr-1">
             <div
-              className="text-xs font-medium text-muted-foreground tracking-wider"
+              className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
               style={{
                 writingMode: "vertical-rl",
                 textOrientation: "mixed",
@@ -218,7 +218,7 @@ export function RiskHeatmap() {
                 {["Very High", "High", "Medium", "Low", "Very Low"].map((level) => (
                   <div
                     key={level}
-                    className="h-14 flex items-center text-[11px] text-muted-foreground font-medium"
+                    className="h-14 flex items-center font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground"
                   >
                     {level}
                   </div>
@@ -229,8 +229,8 @@ export function RiskHeatmap() {
               <TooltipProvider delayDuration={100}>
                 <div className="flex-1">
                   <div
-                    className="grid grid-cols-5 gap-[2px] p-[2px] rounded-lg"
-                    style={{ backgroundColor: "rgb(229, 231, 235)" }}
+                    className="grid grid-cols-5 gap-px p-px rounded-md"
+                    style={{ backgroundColor: "var(--border)" }}
                   >
                     {grid.rows.map((row, rowIdx) =>
                       row.map((cell, colIdx) => {
@@ -244,8 +244,8 @@ export function RiskHeatmap() {
                                 className={`
                                   h-14 w-full transition-all duration-200
                                   flex items-center justify-center
-                                  font-bold text-lg
-                                  ${cell.count > 0 ? "cursor-pointer hover:scale-105 hover:shadow-lg hover:z-10" : "cursor-default"}
+                                  font-bold text-lg tabular-nums
+                                  ${cell.count > 0 ? "cursor-pointer hover:ring-1 hover:ring-inset hover:ring-foreground/20 hover:z-10" : "cursor-default"}
                                   ${rowIdx === 0 && colIdx === 0 ? "rounded-tl-md" : ""}
                                   ${rowIdx === 0 && colIdx === 4 ? "rounded-tr-md" : ""}
                                   ${rowIdx === 4 && colIdx === 0 ? "rounded-bl-md" : ""}
@@ -281,10 +281,10 @@ export function RiskHeatmap() {
                                           variant="outline"
                                           className={`mr-1 text-[10px] px-1 py-0 ${
                                             risk.severity === "HIGH"
-                                              ? "border-red-500 text-red-600"
+                                              ? "border-destructive/40 text-destructive"
                                               : risk.severity === "MEDIUM"
-                                              ? "border-amber-500 text-amber-600"
-                                              : "border-green-500 text-green-600"
+                                              ? "border-warning/40 text-warning"
+                                              : "border-success/40 text-success"
                                           }`}
                                         >
                                           {risk.severity}
@@ -319,7 +319,7 @@ export function RiskHeatmap() {
                       (level) => (
                         <div
                           key={level}
-                          className="text-[11px] text-muted-foreground font-medium text-center flex-1"
+                          className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground text-center flex-1"
                         >
                           {level}
                         </div>
@@ -328,7 +328,7 @@ export function RiskHeatmap() {
                   </div>
 
                   {/* X-axis label */}
-                  <div className="text-xs font-medium text-muted-foreground text-center mt-1 tracking-wider">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground text-center mt-1">
                     IMPACT
                   </div>
                 </div>

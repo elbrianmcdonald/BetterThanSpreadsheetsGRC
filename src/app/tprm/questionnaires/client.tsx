@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/trpc/react";
 import { useHasRole } from "@/hooks/useHasRole";
+import { PageHeader, StatTile } from "@/components/layout";
 
 /**
  * Roles that can create/edit questionnaire templates
@@ -130,68 +131,44 @@ export function QuestionnaireListClient() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-primary/10 p-3">
-            <FileQuestion className="h-8 w-8 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold">Questionnaire Templates</h1>
-            <p className="text-sm text-muted-foreground">
-              Manage questionnaire templates for vendor assessments
-            </p>
-          </div>
-        </div>
-        {canManageTemplates && (
-          <Link href="/tprm/questionnaires/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Template
-            </Button>
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="THIRD-PARTY RISK"
+        title="Questionnaire Templates"
+        icon={<FileQuestion />}
+        description="Manage questionnaire templates for vendor assessments"
+        actions={
+          canManageTemplates && (
+            <Link href="/tprm/questionnaires/new">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Template
+              </Button>
+            </Link>
+          )
+        }
+      />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>System Templates</CardDescription>
-            <CardTitle className="text-3xl">{systemTemplates.length}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4" />
-              Pre-built templates
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Custom Templates</CardDescription>
-            <CardTitle className="text-3xl">{customTemplates.length}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Building2 className="h-4 w-4" />
-              Organization templates
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Questions</CardDescription>
-            <CardTitle className="text-3xl">
-              {templates?.reduce((acc, t) => acc + t.questionCount, 0) || 0}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <FileQuestion className="h-4 w-4" />
-              Across all templates
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="SYSTEM TEMPLATES"
+          value={systemTemplates.length}
+          sub="Pre-built templates"
+          icon={<Shield />}
+          accent
+        />
+        <StatTile
+          label="CUSTOM TEMPLATES"
+          value={customTemplates.length}
+          sub="Organization templates"
+          icon={<Building2 />}
+        />
+        <StatTile
+          label="TOTAL QUESTIONS"
+          value={templates?.reduce((acc, t) => acc + t.questionCount, 0) || 0}
+          sub="Across all templates"
+          icon={<FileQuestion />}
+        />
       </div>
 
       {/* Search */}
@@ -227,9 +204,9 @@ export function QuestionnaireListClient() {
       {!isLoading && !error && systemTemplates.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-500" />
-            <h2 className="text-lg font-semibold">System Templates</h2>
-            <Badge variant="secondary">Pre-built</Badge>
+            <Shield className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">System Templates</h2>
+            <Badge variant="info">Pre-built</Badge>
           </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {systemTemplates.map((template) => (
@@ -248,8 +225,8 @@ export function QuestionnaireListClient() {
       {!isLoading && !error && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-green-500" />
-            <h2 className="text-lg font-semibold">Custom Templates</h2>
+            <Building2 className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-lg font-semibold text-foreground">Custom Templates</h2>
             <Badge variant="outline">Organization</Badge>
           </div>
           {customTemplates.length > 0 ? (
@@ -266,8 +243,8 @@ export function QuestionnaireListClient() {
           ) : (
             <Card>
               <CardContent className="p-8 text-center">
-                <FileQuestion className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                <h3 className="mt-4 text-lg font-semibold">No custom templates yet</h3>
+                <FileQuestion className="mx-auto h-12 w-12 text-muted-foreground/70" />
+                <h3 className="mt-4 text-lg font-semibold text-foreground">No custom templates yet</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Create your own questionnaire templates or copy a system template to customize it.
                 </p>
@@ -333,25 +310,26 @@ function TemplateCard({
   canManage: boolean;
 }) {
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card className="group transition-colors hover:border-primary/40">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <Link href={`/tprm/questionnaires/${template.id}`}>
-              <CardTitle className="text-lg hover:text-primary cursor-pointer">
+              <CardTitle className="text-lg text-foreground hover:text-primary cursor-pointer">
                 {template.name}
               </CardTitle>
             </Link>
             {template.isSystemTemplate && (
-              <Badge variant="secondary" className="mt-1">System</Badge>
+              <Badge variant="info" className="mt-1">System</Badge>
             )}
           </div>
           {canManage && (
             <Button
               variant="ghost"
-              size="icon"
+              size="icon-sm"
               onClick={onCopy}
               title="Copy template"
+              className="text-muted-foreground/70"
             >
               <Copy className="h-4 w-4" />
             </Button>
@@ -366,8 +344,8 @@ function TemplateCard({
       <CardContent>
         <div className="flex items-center justify-between">
           <div className="flex gap-4 text-sm text-muted-foreground">
-            <span>{template.sectionCount} sections</span>
-            <span>{template.questionCount} questions</span>
+            <span><span className="font-mono">{template.sectionCount}</span> sections</span>
+            <span><span className="font-mono">{template.questionCount}</span> questions</span>
           </div>
           <Link href={`/tprm/questionnaires/${template.id}`}>
             <Button variant="ghost" size="sm">

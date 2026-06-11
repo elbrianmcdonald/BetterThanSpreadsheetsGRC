@@ -128,7 +128,7 @@ export function CreateAssessmentProjectForm() {
           name="subject"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
+              <FormLabel className="text-[12.5px] font-semibold text-secondary-foreground">
                 Subject <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
@@ -138,7 +138,7 @@ export function CreateAssessmentProjectForm() {
                   {...field}
                 />
               </FormControl>
-              <FormDescription>
+              <FormDescription className="text-[11.5px]">
                 What is being assessed? This could be an application, process,
                 security finding, or any other subject requiring risk assessment.
               </FormDescription>
@@ -153,7 +153,9 @@ export function CreateAssessmentProjectForm() {
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description</FormLabel>
+              <FormLabel className="text-[12.5px] font-semibold text-secondary-foreground">
+                Description
+              </FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Describe the scope and objectives of this assessment..."
@@ -162,7 +164,7 @@ export function CreateAssessmentProjectForm() {
                   {...field}
                 />
               </FormControl>
-              <FormDescription>
+              <FormDescription className="text-[11.5px]">
                 Optional details about the assessment scope, objectives, or context.
               </FormDescription>
               <FormMessage />
@@ -176,7 +178,7 @@ export function CreateAssessmentProjectForm() {
           name="matrixVersionId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
+              <FormLabel className="text-[12.5px] font-semibold text-secondary-foreground">
                 Risk Matrix <span className="text-destructive">*</span>
               </FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
@@ -191,8 +193,8 @@ export function CreateAssessmentProjectForm() {
                     .map((template) => (
                       <SelectItem key={template.id} value={template.currentVersionId!}>
                         <div className="flex items-center gap-2">
-                          <span>{template.name}</span>
-                          <Badge variant="outline" className="text-xs">
+                          <span className="font-medium text-foreground">{template.name}</span>
+                          <Badge variant="code">
                             {template.gridSize}x{template.gridSize}
                           </Badge>
                         </div>
@@ -207,7 +209,7 @@ export function CreateAssessmentProjectForm() {
                   )}
                 </SelectContent>
               </Select>
-              <FormDescription>
+              <FormDescription className="text-[11.5px]">
                 All risks in this assessment will be scored using this matrix.
               </FormDescription>
               <FormMessage />
@@ -221,7 +223,7 @@ export function CreateAssessmentProjectForm() {
           name="dueDate"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>
+              <FormLabel className="text-[12.5px] font-semibold text-secondary-foreground">
                 Due Date <span className="text-destructive">*</span>
               </FormLabel>
               <Popover>
@@ -253,7 +255,7 @@ export function CreateAssessmentProjectForm() {
                   />
                 </PopoverContent>
               </Popover>
-              <FormDescription>
+              <FormDescription className="text-[11.5px]">
                 When should this assessment be completed? Past dates are not allowed.
               </FormDescription>
               <FormMessage />
@@ -266,7 +268,7 @@ export function CreateAssessmentProjectForm() {
           control={form.control}
           name="assignToSelf"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-border bg-secondary p-4">
               <FormControl>
                 <Checkbox
                   checked={field.value}
@@ -274,10 +276,10 @@ export function CreateAssessmentProjectForm() {
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel className="cursor-pointer">
+                <FormLabel className="cursor-pointer text-[12.5px] font-semibold text-secondary-foreground">
                   Assign to myself
                 </FormLabel>
-                <FormDescription>
+                <FormDescription className="text-[11.5px]">
                   {field.value
                     ? "You will be assigned to work on this assessment."
                     : "This assessment will be added to the backlog for someone else to claim."}

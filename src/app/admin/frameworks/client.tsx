@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { StatTile } from "@/components/layout";
 import {
   Dialog,
   DialogContent,
@@ -234,11 +236,11 @@ export function FrameworkManagementClient() {
   const getIssueSeverityIcon = (severity: "error" | "warning" | "info") => {
     switch (severity) {
       case "error":
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
+        return <AlertCircle className="h-4 w-4 text-destructive" />;
       case "warning":
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+        return <AlertTriangle className="h-4 w-4 text-warning" />;
       case "info":
-        return <Info className="h-4 w-4 text-blue-500" />;
+        return <Info className="h-4 w-4 text-primary" />;
     }
   };
 
@@ -347,35 +349,19 @@ export function FrameworkManagementClient() {
       {/* Story 12.2: Summary Statistics Cards (AC9-AC14) */}
       {healthData && (
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building2 className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Frameworks</p>
-                  <p className="text-2xl font-bold">{healthData.summary.totalFrameworks}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {healthData.summary.activeFrameworks} active
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Shield className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Controls</p>
-                  <p className="text-2xl font-bold">{healthData.summary.totalControls}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="Total Frameworks"
+            value={healthData.summary.totalFrameworks}
+            sub={`${healthData.summary.activeFrameworks} active`}
+            icon={<Building2 />}
+            tone="primary"
+            accent
+          />
+          <StatTile
+            label="Total Controls"
+            value={healthData.summary.totalControls}
+            icon={<Shield />}
+          />
         </div>
       )}
 
@@ -444,15 +430,15 @@ export function FrameworkManagementClient() {
 
             {importStep === "upload" && (
               <div className="space-y-4 py-4">
-                <div className="rounded-md border border-blue-100 bg-blue-50 p-3 text-sm">
-                  <p className="font-medium text-blue-900">New to OSCAL?</p>
-                  <p className="mt-1 text-blue-800">
+                <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-sm">
+                  <p className="font-medium text-foreground">New to OSCAL?</p>
+                  <p className="mt-1 text-muted-foreground">
                     Download a starter template to see the expected structure, then edit it for your framework.
                   </p>
                   <a
                     href="/oscal-catalog-template.json"
                     download="oscal-catalog-template.json"
-                    className="mt-2 inline-block text-sm font-medium text-blue-700 underline hover:text-blue-900"
+                    className="mt-2 inline-block text-sm font-medium text-primary underline hover:text-primary/80"
                   >
                     Download OSCAL template (JSON)
                   </a>
@@ -465,17 +451,17 @@ export function FrameworkManagementClient() {
                     accept=".json,.yaml,.yml"
                     onChange={handleFileChange}
                   />
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     Supported formats: JSON, YAML
                   </p>
                 </div>
 
                 {selectedFile && (
-                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                    <FileJson className="h-5 w-5 text-blue-500" />
+                  <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg">
+                    <FileJson className="h-5 w-5 text-primary" />
                     <div>
-                      <p className="font-medium">{selectedFile.name}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-foreground">{selectedFile.name}</p>
+                      <p className="text-sm text-muted-foreground">
                         {(selectedFile.size / 1024).toFixed(1)} KB
                       </p>
                     </div>
@@ -491,7 +477,7 @@ export function FrameworkManagementClient() {
                     placeholder="e.g., NIST-800-53, SOC2"
                     maxLength={50}
                   />
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     A unique identifier for this framework (e.g., NIST-800-53-R5)
                   </p>
                 </div>
@@ -500,58 +486,58 @@ export function FrameworkManagementClient() {
 
             {importStep === "preview" && preview && (
               <div className="space-y-4 py-4">
-                <div className="p-4 bg-gray-50 rounded-lg space-y-3">
-                  <h4 className="font-medium">Framework Metadata</h4>
+                <div className="p-4 bg-secondary rounded-lg space-y-3">
+                  <h4 className="font-medium text-foreground">Framework Metadata</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-gray-500">Title:</span>{" "}
-                      <span className="font-medium">{preview.metadata.title}</span>
+                      <span className="text-muted-foreground">Title:</span>{" "}
+                      <span className="font-medium text-foreground">{preview.metadata.title}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Version:</span>{" "}
-                      <span className="font-medium">{preview.metadata.version}</span>
+                      <span className="text-muted-foreground">Version:</span>{" "}
+                      <span className="font-medium text-foreground">{preview.metadata.version}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">OSCAL Version:</span>{" "}
-                      <span className="font-medium">{preview.metadata.oscalVersion ?? "N/A"}</span>
+                      <span className="text-muted-foreground">OSCAL Version:</span>{" "}
+                      <span className="font-medium text-foreground">{preview.metadata.oscalVersion ?? "N/A"}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Controls:</span>{" "}
-                      <span className="font-medium">{preview.controlCount}</span>
+                      <span className="text-muted-foreground">Controls:</span>{" "}
+                      <span className="font-medium text-foreground">{preview.controlCount}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Groups:</span>{" "}
-                      <span className="font-medium">{preview.groupCount}</span>
+                      <span className="text-muted-foreground">Groups:</span>{" "}
+                      <span className="font-medium text-foreground">{preview.groupCount}</span>
                     </div>
                   </div>
                   {preview.metadata.description && (
-                    <p className="text-sm text-gray-600">{preview.metadata.description}</p>
+                    <p className="text-sm text-muted-foreground">{preview.metadata.description}</p>
                   )}
                 </div>
 
                 {preview.topLevelControls.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Sample Controls</h4>
+                    <h4 className="font-medium text-foreground">Sample Controls</h4>
                     <div className="max-h-40 overflow-y-auto space-y-1">
                       {preview.topLevelControls.slice(0, 10).map((control) => (
                         <div
                           key={control.id}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+                          className="flex items-center justify-between p-2 bg-secondary rounded text-sm"
                         >
                           <span>
-                            <span className="font-mono">{control.id}</span>
+                            <span className="font-mono text-muted-foreground">{control.id}</span>
                             <span className="mx-2">-</span>
-                            <span className="text-gray-600">{control.title}</span>
+                            <span className="text-foreground">{control.title}</span>
                           </span>
                           {control.childCount > 0 && (
-                            <span className="text-xs text-gray-500">
+                            <span className="font-mono text-xs text-muted-foreground">
                               +{control.childCount} enhancements
                             </span>
                           )}
                         </div>
                       ))}
                       {preview.topLevelControls.length > 10 && (
-                        <p className="text-sm text-gray-500 text-center">
+                        <p className="text-sm text-muted-foreground text-center">
                           ...and {preview.topLevelControls.length - 10} more controls
                         </p>
                       )}
@@ -561,29 +547,29 @@ export function FrameworkManagementClient() {
 
                 {preview.issues.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-medium">Validation Issues</h4>
+                    <h4 className="font-medium text-foreground">Validation Issues</h4>
                     <div className="max-h-32 overflow-y-auto space-y-1">
                       {preview.issues.map((issue, i) => (
                         <div
                           key={i}
-                          className="flex items-start gap-2 p-2 bg-gray-50 rounded text-sm"
+                          className="flex items-start gap-2 p-2 bg-secondary rounded text-sm"
                         >
                           {getIssueSeverityIcon(issue.severity)}
-                          <span>{issue.message}</span>
+                          <span className="text-foreground">{issue.message}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <div className={`p-3 rounded-lg ${preview.isValid ? "bg-green-50" : "bg-red-50"}`}>
+                <div className={`p-3 rounded-lg ${preview.isValid ? "bg-success/10" : "bg-destructive/10"}`}>
                   {preview.isValid ? (
-                    <div className="flex items-center gap-2 text-green-700">
+                    <div className="flex items-center gap-2 text-success">
                       <CheckCircle2 className="h-5 w-5" />
                       <span>Validation passed - Ready to import</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-red-700">
+                    <div className="flex items-center gap-2 text-destructive">
                       <AlertCircle className="h-5 w-5" />
                       <span>Validation failed - Cannot import</span>
                     </div>
@@ -594,8 +580,8 @@ export function FrameworkManagementClient() {
 
             {importStep === "importing" && (
               <div className="py-12 flex flex-col items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                <p className="mt-4 text-gray-600">Importing framework...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">Importing framework...</p>
               </div>
             )}
 
@@ -652,11 +638,11 @@ export function FrameworkManagementClient() {
         <CardContent>
           {isLoadingFrameworks || isLoadingHealth ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/70" />
             </div>
           ) : filteredFrameworks?.length === 0 && hasActiveFilters ? (
-            <div className="text-center py-8 text-gray-500">
-              <Filter className="mx-auto h-12 w-12 text-gray-400" />
+            <div className="text-center py-8 text-muted-foreground">
+              <Filter className="mx-auto h-12 w-12 text-muted-foreground/70" />
               <p className="mt-2">No frameworks match your filters</p>
               <Button
                 variant="outline"
@@ -671,8 +657,8 @@ export function FrameworkManagementClient() {
               </Button>
             </div>
           ) : allRows.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <FileJson className="mx-auto h-12 w-12 text-gray-400" />
+            <div className="text-center py-8 text-muted-foreground">
+              <FileJson className="mx-auto h-12 w-12 text-muted-foreground/70" />
               <p className="mt-2">No frameworks imported yet</p>
               <p className="text-sm">Import an OSCAL catalog to get started</p>
             </div>
@@ -681,43 +667,31 @@ export function FrameworkManagementClient() {
               {filteredFrameworks?.map((framework) => (
                 <div
                   key={`${framework.kind}-${framework.id}`}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-secondary transition-colors"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium">{framework.name}</h3>
+                      <h3 className="font-semibold text-foreground">{framework.name}</h3>
                       {/* Type badge — distinguishes compliance frameworks
                           (NIST 800-53, ISO 27001) from maturity frameworks
                           (NIST CSF, C2M2) at a glance. */}
                       {framework.kind === "compliance" ? (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                          Compliance
-                        </span>
+                        <Badge variant="info">Compliance</Badge>
                       ) : (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 rounded">
-                          Maturity
-                        </span>
+                        <Badge variant="neutral">Maturity</Badge>
                       )}
-                      <span className="px-2 py-0.5 text-xs font-mono bg-gray-100 rounded">
-                        {framework.code}
-                      </span>
-                      <span className="text-sm text-gray-500">v{framework.version}</span>
+                      <Badge variant="code">{framework.code}</Badge>
+                      <span className="font-mono text-xs text-muted-foreground">v{framework.version}</span>
                       {framework.isActive ? (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded">
-                          Active
-                        </span>
+                        <Badge variant="success">Active</Badge>
                       ) : (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded">
-                          Inactive
-                        </span>
+                        <Badge variant="neutral">Inactive</Badge>
                       )}
                       {framework.kind === "maturity" && framework.isSystemTemplate && (
-                        <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded">
-                          System Template
-                        </span>
+                        <Badge variant="warning">System Template</Badge>
                       )}
                     </div>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {framework.kind === "compliance"
                         ? `${framework.controlCount} controls`
                         : "Maturity framework"}
@@ -766,7 +740,7 @@ export function FrameworkManagementClient() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleDelete(framework.id, framework.name)}
                           disabled={deleteMutation.isPending}
                         >

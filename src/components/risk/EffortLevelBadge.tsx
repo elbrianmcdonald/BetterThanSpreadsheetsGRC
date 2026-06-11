@@ -39,9 +39,9 @@ const effortLevelConfig: Record<
   }
 > = {
   LOW: {
-    color: "text-green-700 dark:text-green-400",
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-    borderColor: "border-green-200 dark:border-green-800",
+    color: "text-success",
+    bgColor: "bg-success/10",
+    borderColor: "border-transparent",
     icon: Zap,
     label: "Low",
     timeframe: "< 1 week",
@@ -49,9 +49,9 @@ const effortLevelConfig: Record<
       "Quick implementation. Minimal resources required. Can be completed within a few days.",
   },
   MEDIUM: {
-    color: "text-amber-700 dark:text-amber-400",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    borderColor: "border-amber-200 dark:border-amber-800",
+    color: "text-warning",
+    bgColor: "bg-warning/10",
+    borderColor: "border-transparent",
     icon: Clock,
     label: "Medium",
     timeframe: "1-4 weeks",
@@ -59,9 +59,9 @@ const effortLevelConfig: Record<
       "Moderate effort. Requires planning and some dedicated resources. Typical project timeline.",
   },
   HIGH: {
-    color: "text-orange-700 dark:text-orange-400",
-    bgColor: "bg-orange-100 dark:bg-orange-900/30",
-    borderColor: "border-orange-200 dark:border-orange-800",
+    color: "text-severity-high",
+    bgColor: "bg-severity-high/10",
+    borderColor: "border-transparent",
     icon: Calendar,
     label: "High",
     timeframe: "1-3 months",
@@ -69,9 +69,9 @@ const effortLevelConfig: Record<
       "Significant effort. Requires substantial resources, coordination, and project management.",
   },
   VERY_HIGH: {
-    color: "text-red-700 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    borderColor: "border-red-200 dark:border-red-800",
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+    borderColor: "border-transparent",
     icon: AlertTriangle,
     label: "Very High",
     timeframe: "> 3 months",

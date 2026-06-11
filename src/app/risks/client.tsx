@@ -75,7 +75,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import {
   RiskFilterPanel,
   type RiskFilters,
@@ -118,30 +118,30 @@ const CAN_ASSIGN_ASSESSMENT_ROLES: UserRole[] = [
   UserRole.ORG_ADMIN,
 ];
 
-/** Severity badge colors */
+/** Severity badge variants */
 const severityConfig = {
-  HIGH: { color: "bg-red-100 text-red-800 border-red-200", label: "High" },
-  MEDIUM: { color: "bg-amber-100 text-amber-800 border-amber-200", label: "Medium" },
-  LOW: { color: "bg-green-100 text-green-800 border-green-200", label: "Low" },
+  HIGH: { variant: "high" as const, label: "High" },
+  MEDIUM: { variant: "warning" as const, label: "Medium" },
+  LOW: { variant: "success" as const, label: "Low" },
 };
 
-/** Status badge colors */
+/** Status badge variants */
 const statusConfig = {
-  DRAFT: { color: "bg-slate-100 text-slate-800", label: "Draft", icon: Clock },
-  PENDING_REVIEW: { color: "bg-amber-100 text-amber-800", label: "Pending Review", icon: Clock },
-  OPEN: { color: "bg-blue-100 text-blue-800", label: "Open", icon: AlertTriangle },
-  ASSIGNED: { color: "bg-purple-100 text-purple-800", label: "Assigned", icon: Clock },
-  REMEDIATED: { color: "bg-green-100 text-green-800", label: "Remediated", icon: CheckCircle },
-  CLOSED: { color: "bg-gray-100 text-gray-800", label: "Closed", icon: XCircle },
+  DRAFT: { variant: "neutral" as const, label: "Draft", icon: Clock },
+  PENDING_REVIEW: { variant: "warning" as const, label: "Pending Review", icon: Clock },
+  OPEN: { variant: "info" as const, label: "Open", icon: AlertTriangle },
+  ASSIGNED: { variant: "info" as const, label: "Assigned", icon: Clock },
+  REMEDIATED: { variant: "success" as const, label: "Remediated", icon: CheckCircle },
+  CLOSED: { variant: "neutral" as const, label: "Closed", icon: XCircle },
 };
 
 /** Impact score color based on value */
 function getImpactScoreColor(score: number | null): string {
-  if (score === null) return "text-gray-400";
-  if (score >= 75) return "text-red-600";
-  if (score >= 50) return "text-amber-600";
-  if (score >= 25) return "text-yellow-600";
-  return "text-green-600";
+  if (score === null) return "text-muted-foreground/70";
+  if (score >= 75) return "text-destructive";
+  if (score >= 50) return "text-severity-high";
+  if (score >= 25) return "text-warning";
+  return "text-success";
 }
 
 /** Format date for display */
@@ -312,9 +312,11 @@ function DraggableTableHeader({
           {...listeners}
           className="cursor-grab opacity-0 group-hover:opacity-100 transition-opacity"
         >
-          <GripVertical className="h-4 w-4 text-gray-400" />
+          <GripVertical className="h-4 w-4 text-muted-foreground/70" />
         </span>
-        {children}
+        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+          {children}
+        </span>
       </div>
     </TableHead>
   );
@@ -475,7 +477,7 @@ export function RiskRegistryClient() {
         accessorKey: "identifier",
         header: "ID",
         cell: ({ row }) => (
-          <span className="font-mono text-sm text-blue-600">
+          <span className="font-mono text-sm text-muted-foreground">
             {row.original.identifier ?? "—"}
           </span>
         ),
@@ -487,8 +489,8 @@ export function RiskRegistryClient() {
         header: "Title",
         cell: ({ row }) => (
           <div className="min-w-[200px] max-w-[350px]">
-            <p className="font-medium text-gray-900 truncate">{row.original.title}</p>
-            <p className="text-sm text-gray-500 truncate">
+            <p className="font-semibold text-foreground truncate">{row.original.title}</p>
+            <p className="text-sm text-muted-foreground truncate">
               {truncateText(row.original.description, 80)}
             </p>
           </div>
@@ -502,7 +504,7 @@ export function RiskRegistryClient() {
         cell: ({ row }) => {
           const severityStyle = severityConfig[row.original.severity as keyof typeof severityConfig];
           return (
-            <Badge className={severityStyle?.color}>
+            <Badge variant={severityStyle?.variant}>
               {severityStyle?.label}
             </Badge>
           );
@@ -513,7 +515,7 @@ export function RiskRegistryClient() {
         accessorKey: "impactScore",
         header: "Impact",
         cell: ({ row }) => (
-          <span className={`font-semibold ${getImpactScoreColor(row.original.impactScore)}`}>
+          <span className={`font-mono font-semibold tabular-nums ${getImpactScoreColor(row.original.impactScore)}`}>
             {row.original.impactScore ?? "—"}
           </span>
         ),
@@ -526,7 +528,7 @@ export function RiskRegistryClient() {
           const statusStyle = statusConfig[row.original.status as keyof typeof statusConfig];
           const StatusIcon = statusStyle?.icon;
           return (
-            <Badge variant="outline" className={statusStyle?.color}>
+            <Badge variant={statusStyle?.variant}>
               {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
               {statusStyle?.label}
             </Badge>
@@ -538,7 +540,7 @@ export function RiskRegistryClient() {
         accessorKey: "createdAt",
         header: "Created",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formatDate(row.original.createdAt)}
           </span>
         ),
@@ -548,7 +550,7 @@ export function RiskRegistryClient() {
         accessorKey: "updatedAt",
         header: "Updated",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formatDate(row.original.updatedAt)}
           </span>
         ),
@@ -558,7 +560,7 @@ export function RiskRegistryClient() {
         accessorKey: "description",
         header: "Description",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-600 max-w-[300px] truncate block">
+          <span className="text-sm text-muted-foreground max-w-[300px] truncate block">
             {truncateText(row.original.description, 100)}
           </span>
         ),
@@ -588,7 +590,7 @@ export function RiskRegistryClient() {
         accessorKey: "discoveryDate",
         header: "Discovery Date",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formatDate(row.original.discoveryDate)}
           </span>
         ),
@@ -628,7 +630,7 @@ export function RiskRegistryClient() {
         accessorKey: "assignedAt",
         header: "Assigned Date",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formatDate(row.original.assignedAt)}
           </span>
         ),
@@ -648,7 +650,7 @@ export function RiskRegistryClient() {
         accessorKey: "nextAuditDate",
         header: "Next Audit",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formatDate(row.original.nextAuditDate)}
           </span>
         ),
@@ -680,7 +682,7 @@ export function RiskRegistryClient() {
         accessorKey: "businessImpactStatement",
         header: "Business Impact",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-600 max-w-[200px] truncate block">
+          <span className="text-sm text-muted-foreground max-w-[200px] truncate block">
             {truncateText(row.original.businessImpactStatement, 80)}
           </span>
         ),
@@ -690,7 +692,7 @@ export function RiskRegistryClient() {
         accessorKey: "technicalDetails",
         header: "Technical Details",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-600 max-w-[200px] truncate block">
+          <span className="text-sm text-muted-foreground max-w-[200px] truncate block">
             {truncateText(row.original.technicalDetails, 80)}
           </span>
         ),
@@ -700,7 +702,7 @@ export function RiskRegistryClient() {
         accessorKey: "affectedSystems",
         header: "Affected Systems",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-600 max-w-[200px] truncate block">
+          <span className="text-sm text-muted-foreground max-w-[200px] truncate block">
             {truncateText(row.original.affectedSystems, 80)}
           </span>
         ),
@@ -710,7 +712,7 @@ export function RiskRegistryClient() {
         accessorKey: "assessmentDueDate",
         header: "Assessment Due",
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
             {formatDate(row.original.assessmentDueDate)}
           </span>
         ),
@@ -776,116 +778,84 @@ export function RiskRegistryClient() {
     <AppLayout breadcrumbs={[{ label: "Risk Register" }]}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-              <ShieldAlert className="h-6 w-6" />
-              Risk Register
-            </h1>
-            <p className="mt-2 text-sm text-gray-700">
-              Track and manage security risks across your organization.
-            </p>
-          </div>
-          <div className="mt-4 sm:mt-0 flex gap-2">
-            {/* Link to Dashboard */}
-            <Button variant="outline" asChild>
-              <Link href="/risks/dashboard">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Dashboard
-              </Link>
-            </Button>
-            {/* Story 5.6 AC1-AC3: Export to CSV button */}
-            {canExportRisks && (
-              <Button
-                variant="outline"
-                onClick={handleExport}
-                disabled={exportMutation.isPending}
-              >
-                {exportMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Export to CSV
-              </Button>
-            )}
-            {/* Risk Assessment Assignment button for managers */}
-            {canAssignAssessments && (
-              <AssignAssessmentDialog />
-            )}
-            {canCreateRisk && (
-              <Button asChild>
-                <Link href="/risks/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Risk
+        <PageHeader
+          eyebrow="RISK MANAGEMENT"
+          title="Risk Register"
+          icon={<ShieldAlert />}
+          description="Track and manage security risks across your organization."
+          actions={
+            <>
+              {/* Link to Dashboard */}
+              <Button variant="outline" asChild>
+                <Link href="/risks/dashboard">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Dashboard
                 </Link>
               </Button>
-            )}
-          </div>
-        </div>
+              {/* Story 5.6 AC1-AC3: Export to CSV button */}
+              {canExportRisks && (
+                <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  disabled={exportMutation.isPending}
+                >
+                  {exportMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Export to CSV
+                </Button>
+              )}
+              {/* Risk Assessment Assignment button for managers */}
+              {canAssignAssessments && (
+                <AssignAssessmentDialog />
+              )}
+              {canCreateRisk && (
+                <Button asChild>
+                  <Link href="/risks/new">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Risk
+                  </Link>
+                </Button>
+              )}
+            </>
+          }
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Risks</p>
-                  <p className="text-2xl font-semibold">{data?.total ?? 0}</p>
-                </div>
-                <ShieldAlert className="h-8 w-8 text-gray-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">High Severity</p>
-                  <p className="text-2xl font-semibold text-red-600">
-                    {data?.risks.filter((r) => r.severity === "HIGH").length ?? 0}
-                  </p>
-                </div>
-                <AlertTriangle className="h-8 w-8 text-red-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Open</p>
-                  <p className="text-2xl font-semibold text-blue-600">
-                    {data?.risks.filter((r) => r.status === "OPEN").length ?? 0}
-                  </p>
-                </div>
-                <Clock className="h-8 w-8 text-blue-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Remediated</p>
-                  <p className="text-2xl font-semibold text-green-600">
-                    {data?.risks.filter((r) => r.status === "REMEDIATED" || r.status === "CLOSED").length ?? 0}
-                  </p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="TOTAL RISKS"
+            value={data?.total ?? 0}
+            icon={<ShieldAlert />}
+            tone="primary"
+            accent
+          />
+          <StatTile
+            label="HIGH SEVERITY"
+            value={data?.risks.filter((r) => r.severity === "HIGH").length ?? 0}
+            icon={<AlertTriangle />}
+            tone="critical"
+          />
+          <StatTile
+            label="OPEN"
+            value={data?.risks.filter((r) => r.status === "OPEN").length ?? 0}
+            icon={<Clock />}
+          />
+          <StatTile
+            label="REMEDIATED"
+            value={data?.risks.filter((r) => r.status === "REMEDIATED" || r.status === "CLOSED").length ?? 0}
+            icon={<CheckCircle />}
+            tone="success"
+          />
         </div>
 
         {/* Search and Filters */}
         <div className="space-y-4">
           {/* Search Input */}
           <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
             <Input
               placeholder="Search by title or description..."
               value={search}
@@ -911,7 +881,10 @@ export function RiskRegistryClient() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Risks</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldAlert className="h-[17px] w-[17px] text-primary" />
+                  Risks
+                </CardTitle>
                 <CardDescription>
                   Click on a risk to view details and manage remediation options.
                 </CardDescription>
@@ -945,18 +918,18 @@ export function RiskRegistryClient() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
               </div>
             ) : error ? (
               <div className="text-center py-12">
-                <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-                <p className="text-red-600">{error.message}</p>
+                <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                <p className="text-destructive">{error.message}</p>
               </div>
             ) : data?.risks.length === 0 ? (
               <div className="text-center py-12">
-                <ShieldAlert className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No risks found</h3>
-                <p className="text-gray-500 mb-4">
+                <ShieldAlert className="h-12 w-12 text-muted-foreground/70 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No risks found</h3>
+                <p className="text-muted-foreground mb-4">
                   {search || filters.severity.length > 0 || filters.status.length > 0 || filters.findingSource.length > 0 || filters.frameworkId || filters.itOwnerId || filters.businessOwnerId
                     ? "Try adjusting your filters"
                     : "Create your first risk to get started"}
@@ -972,7 +945,7 @@ export function RiskRegistryClient() {
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto rounded-md border">
+                <div className="overflow-x-auto rounded-md border border-border">
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -1005,7 +978,7 @@ export function RiskRegistryClient() {
                         {table.getRowModel().rows.map((row) => (
                           <TableRow
                             key={row.id}
-                            className="cursor-pointer hover:bg-gray-50"
+                            className="cursor-pointer hover:bg-secondary"
                             onClick={() => router.push(`/risks/${row.original.id}`)}
                           >
                             {row.getVisibleCells().map((cell) => (
@@ -1026,7 +999,7 @@ export function RiskRegistryClient() {
                 {/* Pagination */}
                 {data && data.totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground tabular-nums">
                       Showing {(page - 1) * pageSize + 1} to{" "}
                       {Math.min(page * pageSize, data.total)} of {data.total} risks
                     </p>

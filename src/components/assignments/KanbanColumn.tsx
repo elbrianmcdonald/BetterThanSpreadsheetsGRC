@@ -32,18 +32,19 @@ export function KanbanColumn({ id, title, count, color, children, taskIds }: Kan
     <div
       ref={setNodeRef}
       className={cn(
-        "flex flex-col min-h-[500px] bg-gray-50 rounded-lg",
-        isOver && "ring-2 ring-blue-400 bg-blue-50/50"
+        "flex min-h-[500px] flex-col rounded-lg border border-border bg-secondary/40",
+        isOver && "ring-2 ring-primary/30 bg-accent"
       )}
     >
       {/* Column Header */}
-      <div className={cn("px-4 py-3 rounded-t-lg", color)}>
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-white">{title}</h3>
-          <span className="bg-white/20 text-white text-sm px-2 py-0.5 rounded-full">
-            {count}
-          </span>
-        </div>
+      <div className="flex items-center justify-between rounded-t-lg border-b border-border px-4 py-3">
+        <h3 className="flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground">
+          <span className={cn("size-1.5 rounded-full", color)} />
+          {title}
+        </h3>
+        <span className="rounded border border-border bg-card px-2 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+          {count}
+        </span>
       </div>
 
       {/* Column Content */}

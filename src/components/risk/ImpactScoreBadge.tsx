@@ -119,9 +119,9 @@ export function ImpactScoreDot({
     <span
       className={cn(
         "inline-block h-2 w-2 rounded-full",
-        score >= 70 && "bg-red-500",
-        score >= 40 && score < 70 && "bg-amber-500",
-        score < 40 && "bg-green-500",
+        score >= 70 && "bg-destructive",
+        score >= 40 && score < 70 && "bg-warning",
+        score < 40 && "bg-success",
         className
       )}
       title={`Impact Score: ${score}/100 (${colors.label})`}

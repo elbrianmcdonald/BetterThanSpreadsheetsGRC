@@ -77,24 +77,24 @@ function getCoverageColorClasses(level: "high" | "medium" | "low") {
   switch (level) {
     case "high":
       return {
-        border: "border-green-200 dark:border-green-800",
-        bg: "bg-green-50 dark:bg-green-950/30",
-        text: "text-green-700 dark:text-green-400",
-        progressBg: "bg-green-500",
+        border: "border-border",
+        bg: "bg-card",
+        text: "text-success",
+        progressBg: "bg-success",
       };
     case "medium":
       return {
-        border: "border-yellow-200 dark:border-yellow-800",
-        bg: "bg-yellow-50 dark:bg-yellow-950/30",
-        text: "text-yellow-700 dark:text-yellow-400",
-        progressBg: "bg-yellow-500",
+        border: "border-border",
+        bg: "bg-card",
+        text: "text-warning",
+        progressBg: "bg-warning",
       };
     case "low":
       return {
-        border: "border-red-200 dark:border-red-800",
-        bg: "bg-red-50 dark:bg-red-950/30",
-        text: "text-red-700 dark:text-red-400",
-        progressBg: "bg-red-500",
+        border: "border-border",
+        bg: "bg-card",
+        text: "text-destructive",
+        progressBg: "bg-destructive",
       };
   }
 }
@@ -138,9 +138,9 @@ function TrendIndicator({
 
   const iconColor =
     direction === "up"
-      ? "text-green-600"
+      ? "text-success"
       : direction === "down"
-        ? "text-red-600"
+        ? "text-destructive"
         : "text-muted-foreground";
 
   const tooltipText =
@@ -157,7 +157,7 @@ function TrendIndicator({
           <div className={cn("flex items-center gap-1", iconColor)}>
             <Icon className="h-4 w-4" />
             {direction !== "stable" && (
-              <span className="text-xs font-medium">
+              <span className="font-mono text-xs font-medium tabular-nums">
                 {direction === "up" ? "+" : ""}
                 {change.toFixed(1)}%
               </span>
@@ -213,7 +213,7 @@ export function FrameworkCoverageCard({
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-lg">{frameworkName}</CardTitle>
-              <CardDescription>
+              <CardDescription className="font-mono text-xs">
                 {frameworkCode} v{frameworkVersion}
               </CardDescription>
             </div>
@@ -256,14 +256,14 @@ export function FrameworkCoverageCard({
         <CardContent>
           {/* Large coverage percentage */}
           <div className="flex items-baseline gap-2 mb-3">
-            <span className={cn("text-4xl font-bold", colors.text)}>
+            <span className={cn("text-4xl font-bold tabular-nums", colors.text)}>
               {coveragePercentage.toFixed(1)}%
             </span>
             <span className="text-sm text-muted-foreground">coverage</span>
           </div>
 
           {/* Progress bar */}
-          <div className="h-2 bg-muted rounded-full overflow-hidden mb-3">
+          <div className="h-2 bg-secondary rounded-sm overflow-hidden mb-3 border border-border">
             <div
               className={cn("h-full transition-all", colors.progressBg)}
               style={{ width: `${Math.min(100, coveragePercentage)}%` }}
@@ -272,10 +272,10 @@ export function FrameworkCoverageCard({
 
           {/* Controls count */}
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
+            <span className="text-muted-foreground tabular-nums">
               {satisfiedControlsCount} / {totalControlsCount} controls
             </span>
-            <span className="text-xs text-muted-foreground">
+            <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70">
               Updated {formatRelativeTime(lastUpdated)}
             </span>
           </div>

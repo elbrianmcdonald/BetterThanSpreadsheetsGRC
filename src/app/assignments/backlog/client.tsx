@@ -65,7 +65,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,19 +110,19 @@ const ADMIN_ASSIGN_ROLES: UserRole[] = [
 
 /** Assessment type configuration */
 const assessmentTypeConfig: Record<UnifiedAssessmentType, { label: string; icon: React.ElementType; color: string }> = {
-  RISK_DISCOVERY: { label: "Risk Discovery", icon: Search, color: "bg-blue-100 text-blue-800 border-blue-200" },
-  RISK_ASSESSMENT: { label: "Risk Assessment", icon: Shield, color: "bg-purple-100 text-purple-800 border-purple-200" },
-  FINDING_CREATION: { label: "Finding Creation", icon: AlertTriangle, color: "bg-amber-100 text-amber-800 border-amber-200" },
-  VENDOR_ASSESSMENT: { label: "Vendor Assessment", icon: Building2, color: "bg-green-100 text-green-800 border-green-200" },
-  BIA_ASSESSMENT: { label: "BIA Assessment", icon: Activity, color: "bg-cyan-100 text-cyan-800 border-cyan-200" },
-  COMPLIANCE_ASSESSMENT: { label: "Compliance", icon: FileText, color: "bg-indigo-100 text-indigo-800 border-indigo-200" },
+  RISK_DISCOVERY: { label: "Risk Discovery", icon: Search, color: "border-transparent bg-primary/10 text-primary" },
+  RISK_ASSESSMENT: { label: "Risk Assessment", icon: Shield, color: "border-transparent bg-primary/10 text-primary" },
+  FINDING_CREATION: { label: "Finding Creation", icon: AlertTriangle, color: "border-transparent bg-warning/10 text-warning" },
+  VENDOR_ASSESSMENT: { label: "Vendor Assessment", icon: Building2, color: "border-transparent bg-success/10 text-success" },
+  BIA_ASSESSMENT: { label: "BIA Assessment", icon: Activity, color: "border-transparent bg-muted text-secondary-foreground" },
+  COMPLIANCE_ASSESSMENT: { label: "Compliance", icon: FileText, color: "border-transparent bg-primary/10 text-primary" },
 };
 
 /** Priority badge colors */
 const priorityConfig = {
-  HIGH: { color: "bg-red-100 text-red-800 border-red-200", label: "High" },
-  MEDIUM: { color: "bg-amber-100 text-amber-800 border-amber-200", label: "Medium" },
-  LOW: { color: "bg-green-100 text-green-800 border-green-200", label: "Low" },
+  HIGH: { color: "border-transparent bg-destructive/10 text-destructive", label: "High" },
+  MEDIUM: { color: "border-transparent bg-warning/10 text-warning", label: "Medium" },
+  LOW: { color: "border-transparent bg-success/10 text-success", label: "Low" },
 };
 
 export function BacklogClient() {
@@ -386,82 +386,56 @@ export function BacklogClient() {
     <AppLayout breadcrumbs={[{ label: "Assignments", href: "/assignments" }, { label: "Backlog" }]}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-              <ClipboardList className="h-6 w-6" />
-              Assignment Backlog
-            </h1>
-            <p className="mt-2 text-sm text-gray-700">
-              View and assign unassigned assessment tasks across all modules.
-            </p>
-          </div>
-          {canCreateTask && (
-            <div className="mt-4 sm:mt-0">
+        <PageHeader
+          eyebrow="ASSIGNMENTS"
+          title="Assignment Backlog"
+          icon={<ClipboardList />}
+          description="View and assign unassigned assessment tasks across all modules."
+          actions={
+            canCreateTask ? (
               <Button onClick={() => setCreateDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Task
               </Button>
-            </div>
-          )}
-        </div>
+            ) : undefined
+          }
+        />
 
         {/* Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Unassigned</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics?.total ?? 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Tasks awaiting assignment
-              </p>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="Total Unassigned"
+            value={metrics?.total ?? 0}
+            sub="Tasks awaiting assignment"
+            icon={<ClipboardList />}
+            tone="primary"
+          />
 
-          <Card className={metrics?.overdue && metrics.overdue > 0 ? "border-destructive" : ""}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-              <AlertTriangle
-                className={`h-4 w-4 ${metrics?.overdue && metrics.overdue > 0 ? "text-destructive" : "text-muted-foreground"}`}
-              />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${metrics?.overdue && metrics.overdue > 0 ? "text-destructive" : ""}`}>
-                {metrics?.overdue ?? 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Past due date
-              </p>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="Overdue"
+            value={metrics?.overdue ?? 0}
+            sub="Past due date"
+            icon={<AlertTriangle />}
+            tone={metrics?.overdue && metrics.overdue > 0 ? "critical" : "default"}
+          />
+
+          <StatTile
+            label="High Priority"
+            value={metrics?.byPriority?.HIGH ?? 0}
+            sub="Require immediate attention"
+            icon={<Target />}
+            tone="critical"
+          />
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">High Priority</CardTitle>
-              <Target className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {metrics?.byPriority?.HIGH ?? 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Require immediate attention
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">By Type</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="eyebrow">By Type</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground/70" />
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-1">
                 {Object.entries(metrics?.byType ?? {}).map(([type, count]) => (
-                  <Badge key={type} variant="outline" className="text-xs">
+                  <Badge key={type} variant="code">
                     {assessmentTypeConfig[type as UnifiedAssessmentType]?.label.split(" ")[0]}: {count}
                   </Badge>
                 ))}
@@ -472,12 +446,12 @@ export function BacklogClient() {
 
         {/* Bulk Actions Toolbar */}
         {selectedTaskIds.length > 0 && canAssignOthers && (
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className="border-primary/30 bg-primary/5">
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <CheckSquare className="h-5 w-5 text-blue-600" />
-                  <span className="font-medium text-blue-900">
+                  <CheckSquare className="h-5 w-5 text-primary" />
+                  <span className="font-medium text-foreground">
                     {selectedTaskIds.length} task{selectedTaskIds.length !== 1 ? "s" : ""} selected
                   </span>
                 </div>
@@ -506,8 +480,8 @@ export function BacklogClient() {
         <Card>
           <CardHeader className="py-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="h-5 w-5" />
+              <CardTitle className="text-[15px] font-bold flex items-center gap-2">
+                <Filter className="h-[17px] w-[17px] text-primary" />
                 Filters
                 {activeFiltersCount > 0 && (
                   <Badge variant="secondary" className="ml-2">
@@ -537,7 +511,7 @@ export function BacklogClient() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
                   <Input
                     placeholder="Search by title..."
                     value={search}
@@ -614,7 +588,7 @@ export function BacklogClient() {
         {/* Tasks Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Unassigned Tasks</CardTitle>
+            <CardTitle className="text-[15px] font-bold">Unassigned Tasks</CardTitle>
             <CardDescription>
               {data?.total ?? 0} unassigned task{(data?.total ?? 0) !== 1 ? "s" : ""} in the backlog
             </CardDescription>
@@ -622,26 +596,26 @@ export function BacklogClient() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
               </div>
             ) : error ? (
               <div className="text-center py-12">
-                <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-                <p className="text-red-600">{error.message}</p>
+                <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                <p className="text-destructive">{error.message}</p>
               </div>
             ) : data?.tasks.length === 0 ? (
               <div className="text-center py-12">
-                <ClipboardList className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <ClipboardList className="h-12 w-12 text-success mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
                   No unassigned tasks
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-muted-foreground">
                   All tasks have been assigned. Great job!
                 </p>
               </div>
             ) : (
               <>
-                <div className="overflow-hidden rounded-md border">
+                <div className="overflow-hidden rounded-md border border-border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -658,13 +632,13 @@ export function BacklogClient() {
                             />
                           </TableHead>
                         )}
-                        <TableHead>Task</TableHead>
-                        <TableHead className="w-[140px]">Type</TableHead>
-                        <TableHead className="w-[100px]">Priority</TableHead>
-                        <TableHead className="w-[130px]">Business Unit</TableHead>
-                        <TableHead className="w-[120px]">Due Date</TableHead>
-                        <TableHead className="w-[130px]">Created By</TableHead>
-                        <TableHead className="w-[120px]">Action</TableHead>
+                        <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Task</TableHead>
+                        <TableHead className="w-[140px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Type</TableHead>
+                        <TableHead className="w-[100px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Priority</TableHead>
+                        <TableHead className="w-[130px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Business Unit</TableHead>
+                        <TableHead className="w-[120px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Due Date</TableHead>
+                        <TableHead className="w-[130px] font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Created By</TableHead>
+                        <TableHead className="w-[120px] text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -678,7 +652,7 @@ export function BacklogClient() {
                         return (
                           <TableRow
                             key={task.id}
-                            className={isSelected ? "bg-blue-50" : isOverdue ? "bg-red-50/50" : "hover:bg-gray-50"}
+                            className={isSelected ? "bg-primary/5" : isOverdue ? "bg-destructive/5" : "hover:bg-secondary"}
                           >
                             {canAssignOthers && (
                               <TableCell>
@@ -691,10 +665,10 @@ export function BacklogClient() {
                             )}
                             <TableCell>
                               <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground font-mono">
+                                <span className="text-[10.5px] text-muted-foreground font-mono uppercase tracking-[0.04em]">
                                   {task.identifier}
                                 </span>
-                                <span className="font-medium">{task.title}</span>
+                                <span className="font-semibold text-foreground">{task.title}</span>
                                 {task.description && (
                                   <span className="text-xs text-muted-foreground line-clamp-1">
                                     {task.description}
@@ -703,20 +677,20 @@ export function BacklogClient() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge className={typeConfig?.color}>
+                              <Badge variant="neutral" className={typeConfig?.color}>
                                 <TypeIcon className="h-3 w-3 mr-1" />
                                 {typeConfig?.label.split(" ")[0]}
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge className={priorityStyle?.color}>
+                              <Badge variant="neutral" className={priorityStyle?.color}>
                                 {priorityStyle?.label}
                               </Badge>
                             </TableCell>
                             <TableCell>
                               {task.businessUnit ? (
-                                <div className="flex items-center gap-1 text-sm">
-                                  <Building2 className="h-3 w-3" />
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Building2 className="h-3 w-3 text-muted-foreground/70" />
                                   {task.businessUnit.name}
                                 </div>
                               ) : (
@@ -726,8 +700,8 @@ export function BacklogClient() {
                             <TableCell>
                               {task.dueDate ? (
                                 <div className="flex items-center gap-1">
-                                  <Calendar className={`h-3 w-3 ${isOverdue ? "text-destructive" : "text-muted-foreground"}`} />
-                                  <span className={isOverdue ? "text-destructive font-medium" : ""}>
+                                  <Calendar className={`h-3 w-3 ${isOverdue ? "text-destructive" : "text-muted-foreground/70"}`} />
+                                  <span className={`font-mono text-xs ${isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                                     {format(new Date(task.dueDate), "MMM d, yyyy")}
                                   </span>
                                 </div>
@@ -735,10 +709,10 @@ export function BacklogClient() {
                                 <span className="text-muted-foreground">-</span>
                               )}
                             </TableCell>
-                            <TableCell className="text-sm">
+                            <TableCell className="text-sm text-muted-foreground">
                               {task.assignedBy?.name ?? task.assignedBy?.email ?? "Unknown"}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-right">
                               {canSelfAssign && (
                                 <Button
                                   size="sm"
@@ -760,7 +734,7 @@ export function BacklogClient() {
                 {/* Pagination */}
                 {data && data.total > pageSize && (
                   <div className="flex items-center justify-between mt-4">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Showing {page * pageSize + 1} to{" "}
                       {Math.min((page + 1) * pageSize, data.total)} of {data.total} tasks
                     </p>

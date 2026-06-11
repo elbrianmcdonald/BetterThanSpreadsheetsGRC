@@ -72,18 +72,18 @@ function CustomTooltip({
   }
 
   return (
-    <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
+    <div className="bg-background border border-border rounded-md shadow-sm p-3 text-sm">
       <p className="font-medium mb-1">
         {formattedDate || "Unknown date"}
       </p>
       {payload.map((entry, index) => (
         <div key={index} className="flex items-center gap-2">
           <div
-            className="w-3 h-3 rounded-full"
+            className="w-3 h-3 rounded-sm"
             style={{ backgroundColor: entry.color }}
           />
           <span className="text-muted-foreground">{entry.name}:</span>
-          <span className="font-medium">{entry.value}</span>
+          <span className="font-medium tabular-nums">{entry.value}</span>
         </div>
       ))}
     </div>
@@ -187,22 +187,22 @@ export function RiskTrendChart({
           {/* Trend indicator - AC17: Visualize remediation velocity */}
           <div
             className={cn(
-              "flex items-center gap-1 text-sm font-medium px-2 py-1 rounded",
-              trend.direction === "down" && "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400",
-              trend.direction === "up" && "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400",
-              trend.direction === "stable" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+              "flex items-center gap-1 text-sm font-medium px-2 py-1 rounded-md",
+              trend.direction === "down" && "bg-success/10 text-success",
+              trend.direction === "up" && "bg-destructive/10 text-destructive",
+              trend.direction === "stable" && "bg-secondary text-muted-foreground"
             )}
           >
             {trend.direction === "down" && (
               <>
                 <TrendingDown className="h-4 w-4" />
-                <span>-{trend.change}</span>
+                <span className="tabular-nums">-{trend.change}</span>
               </>
             )}
             {trend.direction === "up" && (
               <>
                 <TrendingUp className="h-4 w-4" />
-                <span>+{trend.change}</span>
+                <span className="tabular-nums">+{trend.change}</span>
               </>
             )}
             {trend.direction === "stable" && (
@@ -225,11 +225,11 @@ export function RiskTrendChart({
             <div className="flex gap-6 mb-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Period:</span>{" "}
-                <span className="font-medium">30 days</span>
+                <span className="font-medium tabular-nums">30 days</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Closed this month:</span>{" "}
-                <span className="font-medium text-green-600">{totalClosed}</span>
+                <span className="font-medium tabular-nums text-success">{totalClosed}</span>
               </div>
             </div>
 
@@ -240,24 +240,24 @@ export function RiskTrendChart({
                   data={chartData}
                   margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis
                     dataKey="displayDate"
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}
                     tickLine={false}
-                    axisLine={false}
+                    axisLine={{ stroke: "var(--border)" }}
                     interval="preserveStartEnd"
                   />
                   <YAxis
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}
                     tickLine={false}
-                    axisLine={false}
+                    axisLine={{ stroke: "var(--border)" }}
                     allowDecimals={false}
                   />
                   {/* AC16: Hover tooltip shows exact count */}
                   <Tooltip
                     content={<CustomTooltip />}
-                    cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+                    cursor={{ fill: "var(--muted)", opacity: 0.3 }}
                   />
                   <Legend
                     wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}
@@ -266,16 +266,17 @@ export function RiskTrendChart({
                   <Bar
                     dataKey="closedRisks"
                     name="Closed (weekly)"
-                    fill="hsl(142, 76%, 36%)"
+                    fill="var(--success)"
                     opacity={0.7}
                     barSize={20}
+                    radius={[2, 2, 0, 0]}
                   />
                   {/* AC14: Open risks count per day as line */}
                   <Line
                     type="monotone"
                     dataKey="openRisks"
                     name="Open Risks"
-                    stroke="hsl(24, 94%, 50%)"
+                    stroke="var(--severity-high)"
                     strokeWidth={2}
                     dot={false}
                     activeDot={{ r: 5 }}

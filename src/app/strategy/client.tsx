@@ -30,7 +30,7 @@ import { UserRole, StrategyStatus } from "@prisma/client";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -77,11 +77,14 @@ const CAN_MANAGE_STRATEGY_ROLES: UserRole[] = [
 ];
 
 /** Status badge configuration */
-const statusConfig: Record<StrategyStatus, { color: string; label: string }> = {
-  DRAFT: { color: "bg-slate-100 text-slate-700 border-slate-200", label: "Draft" },
-  ACTIVE: { color: "bg-blue-100 text-blue-700 border-blue-200", label: "Active" },
-  COMPLETED: { color: "bg-green-100 text-green-700 border-green-200", label: "Completed" },
-  ARCHIVED: { color: "bg-gray-100 text-gray-500 border-gray-200", label: "Archived" },
+const statusConfig: Record<
+  StrategyStatus,
+  { variant: "neutral" | "info" | "success"; label: string }
+> = {
+  DRAFT: { variant: "neutral", label: "Draft" },
+  ACTIVE: { variant: "info", label: "Active" },
+  COMPLETED: { variant: "success", label: "Completed" },
+  ARCHIVED: { variant: "neutral", label: "Archived" },
 };
 
 /** Get current fiscal year */
@@ -224,18 +227,13 @@ export function StrategyListClient() {
     <AppLayout breadcrumbs={[{ label: "Strategy" }]}>
       <div className="container mx-auto px-4 py-8 space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Target className="h-8 w-8" />
-              Security Strategy
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your organization&apos;s security strategies and goals
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
+        <PageHeader
+          eyebrow="GOVERNANCE"
+          title="Security Strategy"
+          icon={<Target />}
+          description="Manage your organization's security strategies and goals"
+          actions={
+            <div className="flex items-center gap-3">
             {/* Status Filter (AC2) */}
             <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
               <SelectTrigger className="w-[160px]">
@@ -351,53 +349,44 @@ export function StrategyListClient() {
                 </DialogContent>
               </Dialog>
             )}
-          </div>
-        </div>
+            </div>
+          }
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Strategies</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pagination?.totalCount ?? 0}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{activeCount}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">In Draft</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{draftCount}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Page</CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{strategies.length}</div>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="Total Strategies"
+            value={pagination?.totalCount ?? 0}
+            icon={<Target />}
+            tone="primary"
+            accent
+          />
+          <StatTile
+            label="Active"
+            value={activeCount}
+            icon={<TrendingUp />}
+            tone="primary"
+          />
+          <StatTile
+            label="In Draft"
+            value={draftCount}
+            icon={<Calendar />}
+          />
+          <StatTile
+            label="This Page"
+            value={strategies.length}
+            icon={<User />}
+          />
         </div>
 
         {/* Strategy Table (AC1) */}
         <Card>
           <CardHeader>
-            <CardTitle>Strategies</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-[15px] font-bold">
+              <Target className="h-[17px] w-[17px] text-primary" />
+              Strategies
+            </CardTitle>
             <CardDescription>
               {pagination?.totalCount === 0
                 ? "No strategies found"
@@ -411,8 +400,8 @@ export function StrategyListClient() {
               </div>
             ) : strategies.length === 0 ? (
               <div className="text-center py-12">
-                <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">No Strategies Found</h3>
+                <Target className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+                <h3 className="text-lg font-medium text-foreground">No Strategies Found</h3>
                 <p className="text-muted-foreground mt-1">
                   {statusFilter === "ALL"
                     ? "Get started by creating your first security strategy."
@@ -433,12 +422,12 @@ export function StrategyListClient() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Fiscal Year</TableHead>
-                      <TableHead>Progress</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>Updated</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Title</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Fiscal Year</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Progress</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Owner</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Updated</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -451,12 +440,12 @@ export function StrategyListClient() {
                       return (
                         <TableRow
                           key={strategy.id}
-                          className="cursor-pointer hover:bg-muted/50"
+                          className="cursor-pointer hover:bg-secondary"
                           onClick={() => handleRowClick(strategy.id)}
                         >
                           <TableCell>
                             <div className="flex flex-col">
-                              <span className="font-medium">{strategy.title}</span>
+                              <span className="font-semibold text-foreground">{strategy.title}</span>
                               {strategy.description && (
                                 <span className="text-xs text-muted-foreground line-clamp-1">
                                   {strategy.description}
@@ -465,13 +454,13 @@ export function StrategyListClient() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={config.color}>
+                            <Badge variant={config.variant}>
                               {config.label}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1 text-sm">
-                              <Calendar className="h-3 w-3" />
+                            <div className="flex items-center gap-1 font-mono text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3 text-muted-foreground/70" />
                               {strategy.fiscalYearStart === strategy.fiscalYearEnd
                                 ? `FY${strategy.fiscalYearStart}`
                                 : `FY${strategy.fiscalYearStart}-${strategy.fiscalYearEnd}`}
@@ -480,28 +469,28 @@ export function StrategyListClient() {
                           <TableCell>
                             <div className="flex items-center gap-2 min-w-[100px]">
                               <Progress value={progress} className="h-2 flex-1" />
-                              <span className="text-xs text-muted-foreground w-8">
+                              <span className="tnum font-mono text-xs text-muted-foreground w-8">
                                 {progress}%
                               </span>
                             </div>
                           </TableCell>
                           <TableCell>
                             {strategy.owner ? (
-                              <div className="flex items-center gap-1 text-sm">
-                                <User className="h-3 w-3" />
+                              <div className="flex items-center gap-1 text-sm text-foreground">
+                                <User className="h-3 w-3 text-muted-foreground/70" />
                                 {strategy.owner.name || strategy.owner.email}
                               </div>
                             ) : (
-                              <span className="text-slate-500 text-sm italic">Unassigned</span>
+                              <span className="text-muted-foreground text-sm italic">Unassigned</span>
                             )}
                           </TableCell>
                           <TableCell>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="font-mono text-sm text-muted-foreground">
                               {format(new Date(strategy.updatedAt), "MMM d, yyyy")}
                             </span>
                           </TableCell>
                           <TableCell>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
                           </TableCell>
                         </TableRow>
                       );
@@ -511,8 +500,8 @@ export function StrategyListClient() {
 
                 {/* Pagination */}
                 {pagination && pagination.totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                    <p className="font-mono text-sm text-muted-foreground">
                       Page {pagination.page} of {pagination.totalPages}
                     </p>
                     <div className="flex items-center gap-2">

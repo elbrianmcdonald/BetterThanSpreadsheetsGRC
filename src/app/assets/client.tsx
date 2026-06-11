@@ -65,12 +65,15 @@ const ASSET_TYPE_CONFIG: Record<
   ENDPOINT: { label: "Endpoint", icon: <Monitor className="h-4 w-4" /> },
 };
 
-// Status colors
-const STATUS_COLORS: Record<AssetStatus, string> = {
-  ACTIVE: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  INACTIVE: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
-  DECOMMISSIONED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-  UNDER_MAINTENANCE: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+// Status tones — soft "report" Badge variants (never solid/candy)
+const STATUS_VARIANTS: Record<
+  AssetStatus,
+  "success" | "neutral" | "critical" | "warning"
+> = {
+  ACTIVE: "success",
+  INACTIVE: "neutral",
+  DECOMMISSIONED: "critical",
+  UNDER_MAINTENANCE: "warning",
 };
 
 const STATUS_LABELS: Record<AssetStatus, string> = {
@@ -142,7 +145,7 @@ export function AssetListClient() {
   if (error) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">Error loading assets: {error.message}</p>
+        <p className="text-destructive">Error loading assets: {error.message}</p>
       </div>
     );
   }
@@ -229,9 +232,9 @@ export function AssetListClient() {
 
       {/* Empty State */}
       {!data?.items.length ? (
-        <div className="text-center py-12 border rounded-lg bg-muted/20">
-          <Server className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Assets Found</h3>
+        <div className="text-center py-12 border border-border rounded-lg bg-secondary">
+          <Server className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">No Assets Found</h3>
           <p className="text-sm text-muted-foreground mb-4">
             {hasFilters
               ? "No assets match your filters. Try adjusting your search."
@@ -249,33 +252,47 @@ export function AssetListClient() {
       ) : (
         <>
           {/* Table */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border border-border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Identifier</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Tier</TableHead>
-                  <TableHead>Processes</TableHead>
-                  <TableHead>Owner</TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                    Identifier
+                  </TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                    Name
+                  </TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                    Type
+                  </TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                    Tier
+                  </TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground text-right">
+                    Processes
+                  </TableHead>
+                  <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                    Owner
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.items.map((asset) => (
                   <TableRow
                     key={asset.id}
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer hover:bg-secondary"
                     onClick={() => window.location.href = `/assets/${asset.id}`}
                   >
-                    <TableCell className="font-mono text-sm">
+                    <TableCell className="font-mono text-sm text-muted-foreground">
                       {asset.identifier}
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-semibold text-foreground">
                       <Link
                         href={`/assets/${asset.id}`}
-                        className="hover:underline"
+                        className="hover:text-primary hover:underline"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {asset.name}
@@ -288,7 +305,7 @@ export function AssetListClient() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Badge className={STATUS_COLORS[asset.status]}>
+                      <Badge variant={STATUS_VARIANTS[asset.status]}>
                         {STATUS_LABELS[asset.status]}
                       </Badge>
                     </TableCell>
@@ -308,8 +325,8 @@ export function AssetListClient() {
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <span className="text-sm">
+                    <TableCell className="text-right">
+                      <span className="font-mono text-sm tabular-nums text-foreground">
                         {asset._count?.businessProcessLinks || 0}
                       </span>
                     </TableCell>
@@ -328,8 +345,19 @@ export function AssetListClient() {
           {data.totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Showing {(page - 1) * 25 + 1} to{" "}
-                {Math.min(page * 25, data.total)} of {data.total} assets
+                Showing{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {(page - 1) * 25 + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {Math.min(page * 25, data.total)}
+                </span>{" "}
+                of{" "}
+                <span className="font-mono tabular-nums text-foreground">
+                  {data.total}
+                </span>{" "}
+                assets
               </p>
               <div className="flex items-center gap-2">
                 <Button
@@ -340,8 +368,15 @@ export function AssetListClient() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm">
-                  Page {page} of {data.totalPages}
+                <span className="text-sm text-muted-foreground">
+                  Page{" "}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {page}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {data.totalPages}
+                  </span>
                 </span>
                 <Button
                   variant="outline"

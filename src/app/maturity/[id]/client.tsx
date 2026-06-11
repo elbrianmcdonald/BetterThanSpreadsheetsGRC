@@ -38,6 +38,8 @@ import {
   HelpCircle,
   TrendingUp,
   AlertTriangle,
+  ClipboardCheck,
+  BarChart3,
 } from "lucide-react";
 import {
   MaturityFrameworkType,
@@ -54,6 +56,12 @@ import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
 import { AssessmentEvidencePanel } from "@/components/evidence/AssessmentEvidencePanel";
 import { AppLayout } from "@/components/layout/AppLayout";
+import {
+  WRAPPER_TAB_DEFS,
+  WrapperTabPanel,
+} from "@/components/engagement/WrapperTabs";
+import type { AssessmentKind } from "@/components/engagement/types";
+import { ExecutiveSummaryTab } from "@/components/deliverable/ExecutiveSummaryTab";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -1867,6 +1875,25 @@ interface MaturityAssessmentDetailClientProps {
   assessmentId: string;
 }
 
+// Top-level workspace tabs: the native "Assessment" view plus the shared
+// consulting wrapper tabs (Schedule / Stakeholders / Evidence / Exploitation
+// Pathways / Action Plans).
+type MaturityTab =
+  | "assessment"
+  | "summary"
+  | (typeof WRAPPER_TAB_DEFS)[number]["id"];
+
+const MATURITY_TABS: Array<{
+  id: MaturityTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: "assessment", label: "Assessment", icon: ClipboardCheck },
+  // Exploitation Pathways is not relevant to maturity assessments — exclude it.
+  ...WRAPPER_TAB_DEFS.filter((t) => t.id !== "pathways"),
+  { id: "summary", label: "Executive Summary", icon: BarChart3 },
+];
+
 export function MaturityAssessmentDetailClient({
   assessmentId,
 }: MaturityAssessmentDetailClientProps) {
@@ -1875,6 +1902,7 @@ export function MaturityAssessmentDetailClient({
   const utils = api.useUtils();
 
   const [isMounted, setIsMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<MaturityTab>("assessment");
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [snapshotDialogOpen, setSnapshotDialogOpen] = useState(false);
@@ -2125,6 +2153,62 @@ export function MaturityAssessmentDetailClient({
           Back to Assessments
         </Button>
 
+        {/* Top-level workspace tab nav — underline style (matches the
+            compliance/risk workspaces). The "Assessment" tab shows the native
+            maturity scoring UI; the remaining tabs are the shared consulting
+            wrapper. */}
+        <div className="border-b overflow-x-auto" role="tablist">
+          <nav className="flex -mb-px min-w-max">
+            {MATURITY_TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-medium transition-colors whitespace-nowrap",
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Executive Summary (shared deliverable) */}
+        {activeTab === "summary" && (
+          <div role="tabpanel">
+            <ExecutiveSummaryTab
+              assessmentKind="MATURITY"
+              assessmentId={assessmentId}
+            />
+          </div>
+        )}
+
+        {/* Consulting wrapper tabs */}
+        {activeTab !== "assessment" && activeTab !== "summary" && (
+          <div role="tabpanel">
+            <WrapperTabPanel
+              tab={activeTab}
+              assessmentKind={"MATURITY" as AssessmentKind}
+              assessmentId={assessmentId}
+              clientName={assessment.name}
+            />
+          </div>
+        )}
+
+        {/* ---- Assessment (native maturity scoring UI) ---- */}
+        {activeTab === "assessment" && (
+        <>
         {/* Header Card */}
         <Card>
           <CardHeader>
@@ -2656,6 +2740,8 @@ export function MaturityAssessmentDetailClient({
           assessmentId={assessmentId}
           assessmentType="MATURITY"
         />
+        </>
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}

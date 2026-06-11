@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/trpc/react";
+import { PageHeader, StatTile } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -52,28 +53,28 @@ import {
 } from "@/components/ui/select";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 
-/** Severity badge colors */
+/** Severity badge variants */
 const severityConfig = {
-  HIGH: { color: "bg-red-100 text-red-800 border-red-200", label: "High" },
-  MEDIUM: { color: "bg-amber-100 text-amber-800 border-amber-200", label: "Medium" },
-  LOW: { color: "bg-green-100 text-green-800 border-green-200", label: "Low" },
+  HIGH: { variant: "high" as const, label: "High" },
+  MEDIUM: { variant: "warning" as const, label: "Medium" },
+  LOW: { variant: "success" as const, label: "Low" },
 };
 
-/** Status badge colors */
+/** Status badge variants */
 const statusConfig = {
-  OPEN: { color: "bg-blue-100 text-blue-800", label: "Open", icon: AlertTriangle },
-  ASSIGNED: { color: "bg-purple-100 text-purple-800", label: "Pending Decision", icon: Clock },
-  REMEDIATED: { color: "bg-green-100 text-green-800", label: "Approved", icon: CheckCircle },
-  CLOSED: { color: "bg-gray-100 text-gray-800", label: "Closed", icon: XCircle },
+  OPEN: { variant: "info" as const, label: "Open", icon: AlertTriangle },
+  ASSIGNED: { variant: "info" as const, label: "Pending Decision", icon: Clock },
+  REMEDIATED: { variant: "success" as const, label: "Approved", icon: CheckCircle },
+  CLOSED: { variant: "neutral" as const, label: "Closed", icon: XCircle },
 };
 
 /** Impact score color based on value */
 function getImpactScoreColor(score: number | null): string {
-  if (score === null) return "text-gray-400";
-  if (score >= 75) return "text-red-600";
-  if (score >= 50) return "text-amber-600";
-  if (score >= 25) return "text-yellow-600";
-  return "text-green-600";
+  if (score === null) return "text-muted-foreground/70";
+  if (score >= 75) return "text-destructive";
+  if (score >= 50) return "text-severity-high";
+  if (score >= 25) return "text-warning";
+  return "text-success";
 }
 
 /** Extract first paragraph of business impact for preview */
@@ -142,25 +143,25 @@ export function DecisionsClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
+      <nav className="border-b border-border bg-card">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 justify-between">
             <div className="flex">
               <div className="flex flex-shrink-0 items-center">
-                <Link href="/" className="text-xl font-bold text-gray-900">
+                <Link href="/" className="text-xl font-bold text-foreground">
                   BetterThanSpreadsheetsGRC
                 </Link>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                <Link href="/risks/decisions" className="inline-flex items-center border-b-2 border-blue-500 px-1 pt-1 text-sm font-medium text-gray-900">
+                <Link href="/risks/decisions" className="inline-flex items-center border-b-2 border-primary px-1 pt-1 text-sm font-medium text-foreground">
                   Decisions Pending
                 </Link>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-muted-foreground">
                 {session?.user?.name} ({session?.user?.role})
               </span>
               <SignOutButton />
@@ -174,16 +175,16 @@ export function DecisionsClient() {
         <nav className="flex" aria-label="Breadcrumb">
           <ol className="flex items-center space-x-2">
             <li>
-              <Link href="/" className="text-gray-400 hover:text-gray-500">
+              <Link href="/" className="text-muted-foreground/70 hover:text-muted-foreground">
                 Home
               </Link>
             </li>
             <li>
               <div className="flex items-center">
-                <svg className="h-5 w-5 flex-shrink-0 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="h-5 w-5 flex-shrink-0 text-muted-foreground/70" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
                 </svg>
-                <span className="ml-2 text-sm font-medium text-gray-500">
+                <span className="ml-2 text-sm font-medium text-muted-foreground">
                   Decisions Pending
                 </span>
               </div>
@@ -195,69 +196,42 @@ export function DecisionsClient() {
       {/* Main Content */}
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
-              <FileText className="h-6 w-6" />
-              Risks Requiring Your Decision
-            </h1>
-            <p className="mt-2 text-sm text-gray-700">
-              Review security risks and approve or reject remediation plans. Your decisions help prioritize security investments.
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="DECISIONS"
+          title="Risks Requiring Your Decision"
+          icon={<FileText />}
+          description="Review security risks and approve or reject remediation plans. Your decisions help prioritize security investments."
+        />
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Risks</p>
-                  <p className="text-2xl font-semibold">{data?.total ?? 0}</p>
-                </div>
-                <ShieldAlert className="h-8 w-8 text-gray-400" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="TOTAL RISKS"
+            value={data?.total ?? 0}
+            icon={<ShieldAlert />}
+            accent
+          />
 
-          <Card className={pendingCount > 0 ? "border-purple-200 bg-purple-50" : ""}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Pending Decision</p>
-                  <p className="text-2xl font-semibold text-purple-600">{pendingCount}</p>
-                </div>
-                <Clock className="h-8 w-8 text-purple-400" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="PENDING DECISION"
+            value={pendingCount}
+            tone="primary"
+            icon={<Clock />}
+            filled={pendingCount > 0}
+          />
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Approved</p>
-                  <p className="text-2xl font-semibold text-green-600">{approvedCount}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="APPROVED"
+            value={approvedCount}
+            tone="success"
+            icon={<CheckCircle />}
+          />
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Highest Impact</p>
-                  <p className={`text-2xl font-semibold ${getImpactScoreColor(highestImpact)}`}>
-                    {highestImpact}
-                  </p>
-                </div>
-                <Gauge className="h-8 w-8 text-amber-400" />
-              </div>
-            </CardContent>
-          </Card>
+          <StatTile
+            label="HIGHEST IMPACT"
+            value={<span className={getImpactScoreColor(highestImpact)}>{highestImpact}</span>}
+            icon={<Gauge />}
+          />
         </div>
 
         {/* Filters */}
@@ -289,21 +263,21 @@ export function DecisionsClient() {
         {/* Risk Cards */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
           </div>
         ) : error ? (
           <div className="text-center py-12">
-            <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-            <p className="text-red-600">{error.message}</p>
+            <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <p className="text-destructive">{error.message}</p>
           </div>
         ) : data?.risks.length === 0 ? (
           /* AC35: Empty state for Business Stakeholder with no assigned risks */
           <Card className="border-dashed">
             <CardContent className="py-12">
               <div className="text-center">
-                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No decisions pending</h3>
-                <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                <FileText className="h-12 w-12 text-muted-foreground/70 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">No decisions pending</h3>
+                <p className="text-muted-foreground mb-4 max-w-md mx-auto">
                   {decisionFilter !== "all"
                     ? "No risks match the selected filter. Try adjusting your filter."
                     : "You currently have no risks requiring your business decision. When security findings need your approval, they will appear here with full business impact analysis."}
@@ -328,8 +302,8 @@ export function DecisionsClient() {
                 return (
                   <Card
                     key={risk.id}
-                    className={`cursor-pointer hover:shadow-md transition-shadow ${
-                      needsDecision ? "border-purple-200 bg-purple-50/30" : ""
+                    className={`cursor-pointer transition-colors hover:bg-secondary ${
+                      needsDecision ? "border-l-2 border-l-primary" : ""
                     }`}
                     onClick={() => router.push(`/risks/${risk.id}`)}
                   >
@@ -339,15 +313,15 @@ export function DecisionsClient() {
                           <div className="flex items-center gap-2 mb-1">
                             {/* AC9: Highlight risks requiring business decision */}
                             {needsDecision && (
-                              <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">
+                              <Badge variant="info">
                                 <AlertCircle className="h-3 w-3 mr-1" />
                                 Decision Required
                               </Badge>
                             )}
-                            <Badge className={severityStyle?.color}>
+                            <Badge variant={severityStyle?.variant}>
                               {severityStyle?.label}
                             </Badge>
-                            <Badge variant="outline" className={statusStyle?.color}>
+                            <Badge variant={statusStyle?.variant}>
                               {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
                               {statusStyle?.label}
                             </Badge>
@@ -359,8 +333,8 @@ export function DecisionsClient() {
                           </CardDescription>
                         </div>
                         <div className="text-right ml-4">
-                          <div className="text-sm text-muted-foreground">Impact Score</div>
-                          <div className={`text-2xl font-bold ${getImpactScoreColor(risk.impactScore)}`}>
+                          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Impact Score</div>
+                          <div className={`tnum text-2xl font-bold ${getImpactScoreColor(risk.impactScore)}`}>
                             {risk.impactScore ?? "N/A"}
                           </div>
                         </div>
@@ -374,7 +348,7 @@ export function DecisionsClient() {
                           <FileText className="h-4 w-4" />
                           Business Impact
                         </div>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           {getBusinessImpactPreview(risk.businessImpactStatement)}
                         </p>
                       </div>
@@ -394,7 +368,7 @@ export function DecisionsClient() {
             {/* Pagination */}
             {data && data.totalPages > 1 && (
               <div className="flex items-center justify-between mt-6">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Showing {(page - 1) * pageSize + 1} to{" "}
                   {Math.min(page * pageSize, data.total)} of {data.total} risks
                 </p>

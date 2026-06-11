@@ -334,6 +334,8 @@ model Organization {
   RiskTemplate                   RiskTemplate[]
   // Story 4.5: Remediation options for organization
   RemediationOption              RemediationOption[]
+  // Action plan initiatives (remediation roadmap, per assessment)
+  actionPlanItems                ActionPlanItem[]
   // Story 4.10: Risk status history for organization
   RiskStatusHistory              RiskStatusHistory[]
   // Story 4.11: Risk comments for organization (AC5)
@@ -428,6 +430,11 @@ model Organization {
 
   // Enterprise Risk: top-level rollup risks for organization
   EnterpriseRisk EnterpriseRisk[]
+
+  // Epic 18: Consulting Engagement wrapper
+  Engagement Engagement[]
+  // Epic 19: Exploitation Pathway
+  Pathway Pathway[]
 
   @@index([active])
   @@index([slug])
@@ -886,6 +893,7 @@ model Person {
   treatmentAssignments RiskTreatment[]         @relation("TreatmentAssignee")
   riskAssessmentOwner  RiskAssessment[]        @relation("AssessmentRiskOwner")
   projectRiskOwner     RiskAssessmentProject[] @relation("ProjectRiskOwner")
+  actionPlanItemsOwned ActionPlanItem[]        @relation("ActionPlanItemOwner")
 
   // Ownership relationships (IT Owner / Business Owner)
   vendorsAsITOwner            Vendor[]                        @relation("VendorITOwner")
@@ -1034,6 +1042,9 @@ model Risk {
   spawnedFromFindingId String? // Link to original finding if risk was spawned
   spawnReason          RiskSpawnReason? // Why the risk was spawned
 
+  // Risk raised within a compliance assessment (mirrors Finding.sourceComplianceAssessmentId).
+  sourceComplianceAssessmentId String?
+
   // ============================================================================
   // Story 15.2: Business Unit Association
   // ============================================================================
@@ -1120,6 +1131,14 @@ model Risk {
   // Story 15.10: Spawned from finding relationship
   SpawnedFromFinding Finding? @relation("RiskSpawnedFromFinding", fields: [spawnedFromFindingId], references: [id], onDelete: SetNull)
 
+  // Multiple findings can roll up into one risk (within an assessment). The
+  // join is the source of truth; spawnedFromFindingId stays as the primary/origin.
+  findingLinks       RiskFindingLink[]   @relation("RiskFindingLinks")
+  pathwayStepMembers PathwayStepMember[] @relation("PathwayStepMemberRisk")
+
+  // Risk raised within a compliance assessment (mirrors Finding compliance source)
+  sourceComplianceAssessment ComplianceAssessment? @relation("RiskComplianceSource", fields: [sourceComplianceAssessmentId], references: [id], onDelete: SetNull)
+
   // Story 15.2: Business unit relationship
   BusinessUnit BusinessUnit? @relation(fields: [businessUnitId], references: [id], onDelete: SetNull)
 
@@ -1156,6 +1175,10 @@ model Risk {
 
   // BIA Module: Business Processes linked to this risk (FR35)
   businessProcessLinks BusinessProcessRisk[]
+
+  // Epic 19: Exploitation Pathway — toxic flag + pathway-step references
+  isToxic      Boolean       @default(false)
+  pathwaySteps PathwayStep[] @relation("PathwayStepRisk")
 
   // Risk identifier
   @@unique([organizationId, identifier])
@@ -1565,6 +1588,9 @@ model User {
   BusinessProcessAssetsCreated BusinessProcessAsset[] @relation("BusinessProcessAssetCreator")
   AssetOwnersCreated           AssetOwner[]           @relation("AssetOwnerCreator")
 
+  // Epic 18: Consulting Engagements led by this user (analyst)
+  EngagementsLed Engagement[] @relation("EngagementAnalyst")
+
   @@index([email])
   @@index([organizationId])
   // Story 7.0.2: Index for BU-based user queries (AC9)
@@ -1661,6 +1687,15 @@ enum AuditAction {
   EXPORT_FINDINGS
   // Story 5.7: PDF Evidence Package Export
   EXPORT_EVIDENCE_PACKAGE
+  // Story 17.1: Consulting deliverable PDF export
+  EXPORT_DELIVERABLE
+  // Epic 18: Consulting Engagement wrapper
+  ENGAGEMENT_CREATED
+  ENGAGEMENT_UPDATED
+  ENGAGEMENT_DELIVERED
+  // Epic 19: Exploitation Pathway
+  TOXIC_CHAIN_CREATED
+  TOXIC_CHAIN_DELETED
   // Story 7.0.8: Finding assignment audit actions
   ASSIGN_FINDING
   REASSIGN_FINDING
@@ -2224,6 +2259,12 @@ model Finding {
   // findings and risks share the same qualitative vocabulary.
   severityLabel   String? // e.g. "Critical", "High", "Medium", "Low" — the matrix threshold label
   matrixVersionId String? // RiskMatrixVersion locked at create-time for traceability
+  // Matrix-based scoring (mirrors Risk.inherent*) — the L×I(×E) values picked
+  // against the org's configured matrix. exposure is set only for 3D matrices.
+  inherentLikelihood Decimal? @db.Decimal(10, 4)
+  inherentImpact     Decimal? @db.Decimal(10, 4)
+  inherentExposure   Decimal? @db.Decimal(10, 4) // For 3D (L×I×E) matrices
+  inherentScore      Decimal? @db.Decimal(10, 4) // Computed score via calculateInherentScore
   status         FindingStatus @default(NEW) // AC3: NEW → TRIAGED → ACCEPTED
 
   // Array fields for related data
@@ -2278,6 +2319,11 @@ model Finding {
   // Story 15.10: Risks spawned from this finding
   spawnedRisks Risk[] @relation("RiskSpawnedFromFinding")
 
+  // A finding can roll up into multiple risks, and appear in multiple pathway steps.
+  riskLinks          RiskFindingLink[]       @relation("FindingRiskLinks")
+  pathwayStepMembers PathwayStepMember[]     @relation("PathwayStepMemberFinding")
+  actionPlanLinks    ActionPlanItemFinding[] @relation("ActionPlanItemFinding")
+
   // ============================================================================
   // Epic 5: Vendor Risk & Finding Integration (FR45-FR50)
   // Links findings to vendors, assessments, and questionnaire responses
@@ -2320,6 +2366,10 @@ model Finding {
   sourceComplianceAssessment     ComplianceAssessment?   @relation("FindingComplianceSource", fields: [sourceComplianceAssessmentId], references: [id], onDelete: SetNull)
   sourceRiskAssessmentQuestion   RiskAssessmentQuestion? @relation("FindingSourceRiskAssessmentQuestion", fields: [sourceRiskAssessmentQuestionId], references: [id], onDelete: SetNull)
   DiscoveryProject               RiskAssessmentProject?  @relation("ProjectDiscoveredFindings", fields: [discoveryProjectId], references: [id], onDelete: SetNull)
+
+  // Epic 19: Exploitation Pathway — toxic flag + pathway-step references
+  isToxic      Boolean       @default(false)
+  pathwaySteps PathwayStep[] @relation("PathwayStepFinding")
 
   @@unique([organizationId, identifier]) // AC10: Unique identifier per organization
   @@index([organizationId, id])
@@ -3948,6 +3998,8 @@ model ComplianceAssessment {
   controlScores ControlAssessmentScore[]
   // Findings spawned from inside this compliance assessment
   findings      Finding[]                @relation("FindingComplianceSource")
+  // Risks raised from inside this compliance assessment
+  risks         Risk[]                   @relation("RiskComplianceSource")
 
   @@unique([organizationId, identifier])
   @@index([organizationId, status])
@@ -5165,4 +5217,269 @@ model ContingencyRecoveryPriority {
   bia SystemContingencyBIA @relation(fields: [biaId], references: [id], onDelete: Cascade)
 
   @@index([biaId])
+}
+
+// ============================================================================
+// Epic 18: Consulting Engagement wrapper
+// Wraps an existing Maturity OR Compliance assessment with a guided 6-step
+// consulting workflow. Additive only — existing assessment tables unchanged.
+// ============================================================================
+enum AssessmentKind {
+  COMPLIANCE
+  VENDOR
+  RISK
+  MATURITY
+  BIA
+}
+
+enum EngagementStatus {
+  SCOPING
+  SCHEDULED
+  FIELDWORK
+  REVIEW
+  DELIVERED
+}
+
+enum EngagementPhase {
+  setup
+  schedule
+  stakeholders
+  evidence
+  interviews
+  review
+}
+
+enum RaciRole {
+  R
+  A
+  C
+  I
+}
+
+enum EngagementEvidenceStatus {
+  REQUESTED
+  PARTIAL
+  RECEIVED
+}
+
+model Engagement {
+  id               String           @id @default(cuid())
+  organizationId   String
+  identifier       String // ENG-YYYY-NNNN
+  clientName       String
+  sector           String?
+  size             String?
+  engagementWindow String?
+  consultancy      String?
+  analystId        String?
+  status           EngagementStatus @default(SCOPING)
+  phase            EngagementPhase  @default(setup)
+  inScopeDomains   String[]         @default([])
+
+  // Polymorphic link to ONE existing assessment (app-enforced FK). The
+  // engagement wraps it with schedule/stakeholders/evidence/review — the
+  // assessment keeps its own native interviews/scoring.
+  assessmentKind AssessmentKind
+  assessmentId   String
+
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deliveredAt DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  analyst      User?        @relation("EngagementAnalyst", fields: [analystId], references: [id], onDelete: SetNull)
+
+  sessions         EngagementSession[]
+  stakeholders     EngagementStakeholder[]
+  evidenceRequests EngagementEvidenceRequest[]
+
+  @@unique([organizationId, identifier])
+  @@unique([organizationId, assessmentKind, assessmentId]) // one engagement per assessment
+  @@index([organizationId, status])
+  @@index([organizationId, assessmentKind, assessmentId])
+}
+
+model EngagementSession {
+  id           String   @id @default(cuid())
+  engagementId String
+  name         String
+  purpose      String?  @db.Text
+  week         String?
+  duration     String?
+  attendees    String[] @default([])
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  engagement Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+
+  @@index([engagementId])
+}
+
+model EngagementStakeholder {
+  id           String    @id @default(cuid())
+  engagementId String
+  name         String
+  role         String?
+  domain       String?
+  raci         RaciRole?
+  isReviewer   Boolean   @default(false)
+  isApprover   Boolean   @default(false)
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  engagement Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+
+  @@index([engagementId])
+}
+
+model EngagementEvidenceRequest {
+  id           String                   @id @default(cuid())
+  engagementId String
+  item         String
+  domain       String?
+  status       EngagementEvidenceStatus @default(REQUESTED)
+  sortOrder    Int                      @default(0)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  engagement Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+
+  @@index([engagementId])
+}
+
+// ============================================================================
+// Epic 19: Exploitation Pathway (toxic chain / MITRE ATT&CK)
+// ============================================================================
+// A named exploitation pathway scoped to ONE assessment (polymorphic). An
+// assessment may have many pathways; a finding/risk may appear in many pathways
+// (many-to-many via PathwayStep across pathway records).
+model Pathway {
+  id             String         @id @default(cuid())
+  organizationId String
+  assessmentKind AssessmentKind
+  assessmentId   String
+  name           String
+  verdict        String?        @db.Text
+  narrative      String?        @db.Text
+  blastRadius    String?        @db.Text
+  createdById    String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  steps        PathwayStep[]
+
+  @@index([organizationId])
+  @@index([organizationId, assessmentKind, assessmentId])
+}
+
+model PathwayStep {
+  id        String   @id @default(cuid())
+  pathwayId String
+  order     Int
+  tactic    String
+  technique String
+  mitreTid  String?
+  // Each step references a finding OR a risk from the assessment.
+  findingId String?
+  riskId    String?
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pathway Pathway  @relation(fields: [pathwayId], references: [id], onDelete: Cascade)
+  finding Finding? @relation("PathwayStepFinding", fields: [findingId], references: [id], onDelete: SetNull)
+  risk    Risk?    @relation("PathwayStepRisk", fields: [riskId], references: [id], onDelete: SetNull)
+
+  // A step can reference multiple findings AND risks. The members join is the
+  // source of truth; findingId/riskId stay as the primary member (denormalized).
+  members PathwayStepMember[]
+
+  @@index([pathwayId])
+  @@index([findingId])
+  @@index([riskId])
+}
+
+// A finding contributing to a risk (many findings → one risk). Within an assessment.
+model RiskFindingLink {
+  id        String   @id @default(cuid())
+  riskId    String
+  findingId String
+  createdAt DateTime @default(now())
+
+  risk    Risk    @relation("RiskFindingLinks", fields: [riskId], references: [id], onDelete: Cascade)
+  finding Finding @relation("FindingRiskLinks", fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@unique([riskId, findingId])
+  @@index([riskId])
+  @@index([findingId])
+}
+
+// A remediation-roadmap initiative for an assessment. Sequenced by phase, it
+// closes one or more findings and may break the exploitation pathway.
+model ActionPlanItem {
+  id               String         @id @default(cuid())
+  organizationId   String
+  identifier       String // AP-YYYY-NNNN
+  assessmentKind   AssessmentKind
+  assessmentId     String
+  title            String         @db.VarChar(200)
+  detail           String?        @db.Text
+  ownerTeam        String? // e.g. "IT Security", "Infrastructure"
+  ownerId          String? // Person accountable for executing this initiative
+  effort           EffortLevel    @default(MEDIUM)
+  // Cost is either quantitative (a dollar costEstimate) or qualitative (a
+  // costBand 1=Low / 2=Medium / 3=High). When costBand is set it wins; otherwise
+  // the band is derived from costEstimate.
+  costEstimate     Decimal?       @db.Decimal(12, 2)
+  costBand         Int? // 1=Low, 2=Medium, 3=High (qualitative)
+  // Free-text timeline mapped to a phase ("0–30 days" | "30–90 days" | "1–2 quarters").
+  timelineEstimate String         @default("0–30 days")
+  riskReduction    Int            @default(3) // 1–5 risk-reduction impact
+  breaksPathway    Boolean        @default(false) // flame-marked: breaks the exploitation pathway
+  createdById      String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  organization Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Owner        Person?                  @relation("ActionPlanItemOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  findingLinks ActionPlanItemFinding[]
+
+  @@unique([organizationId, identifier])
+  @@index([organizationId, assessmentKind, assessmentId])
+}
+
+// A finding closed by an action-plan initiative (many findings per initiative).
+model ActionPlanItemFinding {
+  id               String   @id @default(cuid())
+  actionPlanItemId String
+  findingId        String
+  createdAt        DateTime @default(now())
+
+  actionPlanItem ActionPlanItem @relation(fields: [actionPlanItemId], references: [id], onDelete: Cascade)
+  finding        Finding        @relation("ActionPlanItemFinding", fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@unique([actionPlanItemId, findingId])
+  @@index([actionPlanItemId])
+  @@index([findingId])
+}
+
+// A finding OR risk attached to a pathway step (many findings & risks per step).
+model PathwayStepMember {
+  id        String   @id @default(cuid())
+  stepId    String
+  findingId String?
+  riskId    String?
+  createdAt DateTime @default(now())
+
+  step    PathwayStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  finding Finding?    @relation("PathwayStepMemberFinding", fields: [findingId], references: [id], onDelete: Cascade)
+  risk    Risk?       @relation("PathwayStepMemberRisk", fields: [riskId], references: [id], onDelete: Cascade)
+
+  @@index([stepId])
+  @@index([findingId])
+  @@index([riskId])
 }

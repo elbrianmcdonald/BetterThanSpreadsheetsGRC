@@ -167,7 +167,7 @@ function TimelineBar({
             />
             {/* Label on bar if wide enough */}
             {width > 15 && (
-              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium text-white mix-blend-difference truncate px-1">
+              <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] font-medium text-white mix-blend-difference truncate px-1">
                 {item.progress}%
               </span>
             )}
@@ -175,16 +175,16 @@ function TimelineBar({
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1">
-            <p className="font-medium">{item.title}</p>
+            <p className="font-semibold text-foreground">{item.title}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
-              <span>
+              <span className="font-mono">
                 {format(item.startDate, "MMM d, yyyy")} →{" "}
                 {item.endDate ? format(item.endDate, "MMM d, yyyy") : "Ongoing"}
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs">
-              <span>Progress: {item.progress}%</span>
+              <span>Progress: <span className="font-mono tnum">{item.progress}%</span></span>
               {item.status && (
                 <Badge
                   variant="outline"
@@ -202,16 +202,16 @@ function TimelineBar({
         <Tooltip>
           <TooltipTrigger asChild>
             <div
-              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-6 bg-red-500 z-10 cursor-pointer"
+              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-6 bg-destructive z-10 cursor-pointer"
               style={{ left: `${dueDatePosition}%` }}
             >
-              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-red-500 rotate-45" />
+              <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-destructive rotate-45" />
             </div>
           </TooltipTrigger>
           <TooltipContent side="top" className="text-xs">
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span>Due: {format(item.endDate!, "MMM d, yyyy")}</span>
+              <span className="font-mono">Due: {format(item.endDate!, "MMM d, yyyy")}</span>
             </div>
           </TooltipContent>
         </Tooltip>
@@ -242,10 +242,10 @@ function TodayMarker({
 
   return (
     <div
-      className="absolute top-0 bottom-0 w-px bg-red-500 z-10 pointer-events-none"
+      className="absolute top-0 bottom-0 w-px bg-destructive z-10 pointer-events-none"
       style={{ left: `${left}%` }}
     >
-      <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] px-1 rounded">
+      <div className="absolute -top-5 left-1/2 -translate-x-1/2 bg-destructive text-destructive-foreground font-mono text-[10px] px-1 rounded">
         Today
       </div>
     </div>
@@ -337,13 +337,13 @@ function GoalRow({
           <Flag className="h-4 w-4 text-primary shrink-0" />
           <button
             onClick={() => onGoalClick?.(goal.id)}
-            className="text-sm font-medium truncate text-left hover:text-primary transition-colors"
+            className="text-sm font-semibold text-foreground truncate text-left hover:text-primary transition-colors"
             title={goal.title}
           >
             {goal.title}
           </button>
           {objectiveCount > 0 && (
-            <Badge variant="secondary" className="ml-auto text-[10px] shrink-0">
+            <Badge variant="secondary" className="ml-auto font-mono tnum text-[10px] shrink-0">
               {objectiveCount}
             </Badge>
           )}
@@ -375,10 +375,10 @@ function GoalRow({
               className="shrink-0 flex items-center gap-2 px-3 pl-10 border-r bg-background"
               style={{ width: LEFT_PANEL_WIDTH, height: OBJECTIVE_ROW_HEIGHT }}
             >
-              <Target className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <Target className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
               <button
                 onClick={() => onObjectiveClick?.(objective.id)}
-                className="text-xs truncate text-left hover:text-primary transition-colors"
+                className="text-xs text-foreground truncate text-left hover:text-primary transition-colors"
                 title={objective.title}
               >
                 {objective.title}
@@ -465,8 +465,8 @@ export function StrategyTimelineChart({
       <Card>
         <CardContent className="py-12">
           <div className="text-center">
-            <GanttChart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No Goals to Display</h3>
+            <GanttChart className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+            <h3 className="text-lg font-medium text-foreground">No Goals to Display</h3>
             <p className="text-muted-foreground mt-1">
               Add goals to see them on the timeline.
             </p>
@@ -482,10 +482,10 @@ export function StrategyTimelineChart({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <GanttChart className="h-5 w-5 text-muted-foreground" />
-            <span className="font-medium">Timeline View</span>
+            <GanttChart className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-foreground">Timeline View</span>
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="font-mono text-sm text-muted-foreground">
             {format(timelineStart, "MMM yyyy")} - {format(timelineEnd, "MMM yyyy")}
           </div>
         </div>
@@ -503,14 +503,14 @@ export function StrategyTimelineChart({
       {/* Summary */}
       <div className="flex items-center gap-4 text-sm">
         <div className="flex items-center gap-1.5">
-          <Flag className="h-3.5 w-3.5 text-muted-foreground" />
+          <Flag className="h-3.5 w-3.5 text-muted-foreground/70" />
           <span className="text-muted-foreground">Goals:</span>
-          <Badge variant="secondary">{totalGoals}</Badge>
+          <Badge variant="secondary" className="font-mono tnum">{totalGoals}</Badge>
         </div>
         <div className="flex items-center gap-1.5">
-          <Target className="h-3.5 w-3.5 text-muted-foreground" />
+          <Target className="h-3.5 w-3.5 text-muted-foreground/70" />
           <span className="text-muted-foreground">Objectives:</span>
-          <Badge variant="secondary">{totalObjectives}</Badge>
+          <Badge variant="secondary" className="font-mono tnum">{totalObjectives}</Badge>
         </div>
       </div>
 
@@ -568,26 +568,26 @@ export function StrategyTimelineChart({
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <span className="font-medium">Progress:</span>
         <div className="flex items-center gap-1.5">
-          <div className="w-8 h-3 rounded bg-muted border">
-            <div className="h-full w-1/4 rounded-l bg-red-500" />
+          <div className="w-8 h-3 rounded bg-muted border border-border">
+            <div className="h-full w-1/4 rounded-l bg-destructive" />
           </div>
-          <span>0-33%</span>
+          <span className="font-mono">0-33%</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-8 h-3 rounded bg-muted border">
-            <div className="h-full w-1/2 rounded-l bg-amber-500" />
+          <div className="w-8 h-3 rounded bg-muted border border-border">
+            <div className="h-full w-1/2 rounded-l bg-warning" />
           </div>
-          <span>34-66%</span>
+          <span className="font-mono">34-66%</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-8 h-3 rounded bg-muted border">
-            <div className="h-full w-3/4 rounded-l bg-green-500" />
+          <div className="w-8 h-3 rounded bg-muted border border-border">
+            <div className="h-full w-3/4 rounded-l bg-success" />
           </div>
-          <span>67-100%</span>
+          <span className="font-mono">67-100%</span>
         </div>
         <span className="mx-2">|</span>
         <div className="flex items-center gap-1.5">
-          <div className="w-px h-4 bg-red-500" />
+          <div className="w-px h-4 bg-destructive" />
           <span>Today</span>
         </div>
       </div>

@@ -51,22 +51,22 @@ export interface ComplianceSummaryWidgetProps {
 function getScoreColorClasses(score: number) {
   if (score >= 90) {
     return {
-      bg: "bg-green-100 dark:bg-green-950/50",
-      text: "text-green-700 dark:text-green-400",
-      ring: "ring-green-500/20",
+      bg: "bg-success/10",
+      text: "text-success",
+      ring: "ring-success/20",
     };
   }
   if (score >= 70) {
     return {
-      bg: "bg-yellow-100 dark:bg-yellow-950/50",
-      text: "text-yellow-700 dark:text-yellow-400",
-      ring: "ring-yellow-500/20",
+      bg: "bg-warning/10",
+      text: "text-warning",
+      ring: "ring-warning/20",
     };
   }
   return {
-    bg: "bg-red-100 dark:bg-red-950/50",
-    text: "text-red-700 dark:text-red-400",
-    ring: "ring-red-500/20",
+    bg: "bg-destructive/10",
+    text: "text-destructive",
+    ring: "ring-destructive/20",
   };
 }
 
@@ -122,10 +122,10 @@ export function ComplianceSummaryWidget({
               scoreColors.ring
             )}
           >
-            <span className={cn("text-5xl font-bold", scoreColors.text)}>
+            <span className={cn("text-5xl font-bold tabular-nums", scoreColors.text)}>
               {overallScore.toFixed(1)}%
             </span>
-            <span className="text-sm text-muted-foreground mt-1">
+            <span className="eyebrow mt-1">
               Overall Score
             </span>
           </div>
@@ -133,11 +133,11 @@ export function ComplianceSummaryWidget({
           {/* Stats Grid */}
           <div className="flex flex-col justify-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-muted">
+              <div className="p-2 rounded-md bg-secondary">
                 <Shield className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <div className="text-2xl font-semibold">{totalFrameworks}</div>
+                <div className="text-2xl font-semibold tabular-nums">{totalFrameworks}</div>
                 <div className="text-sm text-muted-foreground">
                   Total Frameworks
                 </div>
@@ -147,11 +147,11 @@ export function ComplianceSummaryWidget({
 
           <div className="flex flex-col justify-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-950/50">
-                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <div className="p-2 rounded-md bg-success/10">
+                <CheckCircle2 className="h-5 w-5 text-success" />
               </div>
               <div>
-                <div className="text-2xl font-semibold">{readyForAudit}</div>
+                <div className="text-2xl font-semibold tabular-nums">{readyForAudit}</div>
                 <div className="text-sm text-muted-foreground">
                   Ready for Audit
                 </div>
@@ -162,11 +162,11 @@ export function ComplianceSummaryWidget({
 
           <div className="flex flex-col justify-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/50">
-                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <div className="p-2 rounded-md bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
               <div>
-                <div className="text-2xl font-semibold">{needsAttention}</div>
+                <div className="text-2xl font-semibold tabular-nums">{needsAttention}</div>
                 <div className="text-sm text-muted-foreground">
                   Needs Attention
                 </div>

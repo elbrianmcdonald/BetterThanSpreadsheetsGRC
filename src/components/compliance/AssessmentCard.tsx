@@ -76,50 +76,50 @@ const statusConfig: Record<
 > = {
   DRAFT: {
     label: "Draft",
-    color: "text-gray-700",
-    bgColor: "bg-gray-100",
+    color: "text-secondary-foreground",
+    bgColor: "bg-muted border-transparent",
     icon: FileText,
   },
   IN_PROGRESS: {
     label: "In Progress",
-    color: "text-blue-700",
-    bgColor: "bg-blue-100",
+    color: "text-primary",
+    bgColor: "bg-primary/10 border-transparent",
     icon: Clock,
   },
   IN_REVIEW: {
     label: "In Review",
-    color: "text-amber-700",
-    bgColor: "bg-amber-100",
+    color: "text-warning",
+    bgColor: "bg-warning/10 border-transparent",
     icon: AlertCircle,
   },
   COMPLETED: {
     label: "Completed",
-    color: "text-green-700",
-    bgColor: "bg-green-100",
+    color: "text-success",
+    bgColor: "bg-success/10 border-transparent",
     icon: CheckCircle2,
   },
   ARCHIVED: {
     label: "Archived",
-    color: "text-slate-500",
-    bgColor: "bg-slate-100",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted border-transparent",
     icon: FileText,
   },
 };
 
 function getScoreColor(score: number | null): string {
-  if (score === null) return "text-gray-500";
-  if (score >= 80) return "text-green-600";
-  if (score >= 60) return "text-lime-600";
-  if (score >= 40) return "text-amber-600";
-  return "text-red-600";
+  if (score === null) return "text-muted-foreground";
+  if (score >= 80) return "text-success";
+  if (score >= 60) return "text-success";
+  if (score >= 40) return "text-warning";
+  return "text-destructive";
 }
 
 function getScoreBgColor(score: number | null): string {
-  if (score === null) return "bg-gray-100";
-  if (score >= 80) return "bg-green-100";
-  if (score >= 60) return "bg-lime-100";
-  if (score >= 40) return "bg-amber-100";
-  return "bg-red-100";
+  if (score === null) return "bg-muted";
+  if (score >= 80) return "bg-success/10";
+  if (score >= 60) return "bg-success/10";
+  if (score >= 40) return "bg-warning/10";
+  return "bg-destructive/10";
 }
 
 export function AssessmentCard({
@@ -149,12 +149,12 @@ export function AssessmentCard({
   const gapCount = nonCompliantCount + partialCount;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="transition-colors hover:bg-secondary/40">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className="font-mono text-xs">
+              <Badge variant="code">
                 {frameworkCode}
               </Badge>
               <Badge className={cn(config.color, config.bgColor)}>
@@ -178,10 +178,10 @@ export function AssessmentCard({
             "text-center px-3 py-2 rounded-lg",
             getScoreBgColor(complianceScore)
           )}>
-            <div className={cn("text-xl font-bold", getScoreColor(complianceScore))}>
+            <div className={cn("text-xl font-bold tabular-nums", getScoreColor(complianceScore))}>
               {complianceScore !== null ? `${complianceScore.toFixed(0)}%` : "—"}
             </div>
-            <div className="text-xs text-muted-foreground">Score</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Score</div>
           </div>
         </div>
       </CardHeader>
@@ -190,28 +190,28 @@ export function AssessmentCard({
         <div className="space-y-1">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">{assessedCount}/{totalControls} controls</span>
+            <span className="font-medium tabular-nums">{assessedCount}/{totalControls} controls</span>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
 
         {/* Status Summary */}
         <div className="grid grid-cols-4 gap-2 text-xs">
-          <div className="text-center p-2 bg-green-50 rounded">
-            <div className="font-bold text-green-700">{compliantCount}</div>
-            <div className="text-green-600">Compliant</div>
+          <div className="text-center p-2 bg-success/10 rounded-sm">
+            <div className="font-bold tabular-nums text-success">{compliantCount}</div>
+            <div className="text-success">Compliant</div>
           </div>
-          <div className="text-center p-2 bg-amber-50 rounded">
-            <div className="font-bold text-amber-700">{partialCount}</div>
-            <div className="text-amber-600">Partial</div>
+          <div className="text-center p-2 bg-warning/10 rounded-sm">
+            <div className="font-bold tabular-nums text-warning">{partialCount}</div>
+            <div className="text-warning">Partial</div>
           </div>
-          <div className="text-center p-2 bg-red-50 rounded">
-            <div className="font-bold text-red-700">{nonCompliantCount}</div>
-            <div className="text-red-600">Non-Compl.</div>
+          <div className="text-center p-2 bg-destructive/10 rounded-sm">
+            <div className="font-bold tabular-nums text-destructive">{nonCompliantCount}</div>
+            <div className="text-destructive">Non-Compl.</div>
           </div>
-          <div className="text-center p-2 bg-gray-50 rounded">
-            <div className="font-bold text-gray-700">{notAssessedCount}</div>
-            <div className="text-gray-600">Unscored</div>
+          <div className="text-center p-2 bg-secondary rounded-sm">
+            <div className="font-bold tabular-nums text-foreground">{notAssessedCount}</div>
+            <div className="text-muted-foreground">Unscored</div>
           </div>
         </div>
 
@@ -225,12 +225,12 @@ export function AssessmentCard({
           )}
           <div className="flex items-center gap-3">
             {gapCount > 0 && (
-              <div className="flex items-center gap-1 text-amber-600">
+              <div className="flex items-center gap-1 text-warning">
                 <AlertTriangle className="h-3 w-3" />
-                <span>{gapCount} gaps</span>
+                <span className="tabular-nums">{gapCount} gaps</span>
               </div>
             )}
-            <span>{format(new Date(createdAt), "MMM d, yyyy")}</span>
+            <span className="font-mono tabular-nums">{format(new Date(createdAt), "MMM d, yyyy")}</span>
           </div>
         </div>
 

@@ -15,6 +15,43 @@ const prisma = new PrismaClient({ adapter });
 // Default password for all test users: Admin123!@#
 const DEFAULT_PASSWORD_HASH = '$2b$10$jDC2qxxxP6CLnU9xz.eMNuQIIR68cDhkyRa5S6GW..TrLbPSiA6Oa';
 
+/**
+ * Advance each IdentifierSequence counter up to the max identifier actually
+ * used by seeded rows, per (organizationId, prefix, year). The demo seed writes
+ * explicit identifiers (e.g. FND-2026-0007) but does NOT touch IdentifierSequence,
+ * so without this the generator would re-issue FND-2026-0001 and collide on the
+ * next create. Run AFTER all rows are seeded. Never lowers an existing counter
+ * (so app-created rows beyond the seed are preserved across re-seeds).
+ */
+async function syncIdentifierSequences(db: PrismaClient) {
+  const specs: { prefix: string; rows: () => Promise<{ organizationId: string; identifier: string | null }[]> }[] = [
+    { prefix: 'FND', rows: () => db.finding.findMany({ select: { organizationId: true, identifier: true } }) },
+    { prefix: 'RISK', rows: () => db.risk.findMany({ select: { organizationId: true, identifier: true } }) },
+    { prefix: 'RSK', rows: () => db.riskAssessment.findMany({ select: { organizationId: true, identifier: true } }) },
+  ];
+  for (const { prefix, rows } of specs) {
+    const maxByKey = new Map<string, { org: string; year: number; seq: number }>();
+    for (const r of await rows()) {
+      const m = /^[A-Z]+-(\d{4})-(\d+)$/.exec(r.identifier ?? '');
+      if (!m) continue;
+      const year = parseInt(m[1]!, 10);
+      const seq = parseInt(m[2]!, 10);
+      const key = `${r.organizationId}|${year}`;
+      const cur = maxByKey.get(key);
+      if (!cur || seq > cur.seq) maxByKey.set(key, { org: r.organizationId, year, seq });
+    }
+    for (const { org, year, seq } of maxByKey.values()) {
+      const where = { organizationId_prefix_year: { organizationId: org, prefix, year } };
+      const existing = await db.identifierSequence.findUnique({ where });
+      if (!existing) {
+        await db.identifierSequence.create({ data: { organizationId: org, prefix, year, lastSequence: seq } });
+      } else if (existing.lastSequence < seq) {
+        await db.identifierSequence.update({ where, data: { lastSequence: seq } });
+      }
+    }
+  }
+}
+
 async function main() {
   console.log('🌱 Starting database seed...\n');
 
@@ -1075,6 +1112,11 @@ async function main() {
 
   // Seed demo data for all features (BUs, People, Strategy, Findings, etc.)
   await seedDemoData(prisma);
+
+  // Durable fix: advance identifier counters past the seeded rows so the next
+  // create (finding/risk/assessment) doesn't collide on a re-issued identifier.
+  await syncIdentifierSequences(prisma);
+  console.log('✅ Synced identifier sequences\n');
 
   console.log('🎉 Database seed completed successfully!\n');
   console.log('Summary:');

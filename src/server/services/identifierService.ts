@@ -29,7 +29,7 @@ import { db } from "@/server/db";
 /**
  * Valid identifier prefixes
  */
-export type IdentifierPrefix = "FND" | "RSK" | "RR" | "RISK" | "VND" | "VA" | "BF" | "BP" | "AST";
+export type IdentifierPrefix = "FND" | "RSK" | "RR" | "RISK" | "VND" | "VA" | "BF" | "BP" | "AST" | "ENG" | "AP";
 
 /**
  * Generates a sequential identifier for the given organization and prefix.
@@ -145,7 +145,7 @@ export function parseIdentifier(identifier: string): {
   year: number;
   sequence: number;
 } | null {
-  const match = identifier.match(/^(FND|RSK|RR|RISK|VND|VA|BF|BP|AST)-(\d{4})-(\d+)$/);
+  const match = identifier.match(/^(FND|RSK|RR|RISK|VND|VA|BF|BP|AST|ENG)-(\d{4})-(\d+)$/);
 
   if (!match) {
     return null;
@@ -165,5 +165,5 @@ export function parseIdentifier(identifier: string): {
  * @returns True if valid format, false otherwise
  */
 export function isValidIdentifier(identifier: string): boolean {
-  return /^(FND|RSK|RR|RISK|VND|VA|BF|BP|AST)-\d{4}-\d{4,}$/.test(identifier);
+  return /^(FND|RSK|RR|RISK|VND|VA|BF|BP|AST|ENG)-\d{4}-\d{4,}$/.test(identifier);
 }

@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
+  "inline-flex items-center justify-center rounded-md border px-2 py-1 text-[11.5px] leading-none font-semibold w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1.5 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden",
   {
     variants: {
       variant: {
@@ -17,6 +17,15 @@ const badgeVariants = cva(
           "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
+        // Soft "report" tones — tinted bg + colored text (the redesign default for status)
+        critical: "border-transparent bg-destructive/10 text-destructive",
+        high: "border-transparent bg-severity-high/10 text-severity-high",
+        warning: "border-transparent bg-warning/10 text-warning",
+        success: "border-transparent bg-success/10 text-success",
+        info: "border-transparent bg-primary/10 text-primary",
+        neutral: "border-transparent bg-muted text-secondary-foreground",
+        // Mono outline pill — IDs, framework codes, weights (e.g. ISO27001, 30%)
+        code: "border-input bg-card font-mono text-[10.5px] font-medium tracking-[0.04em] text-secondary-foreground",
       },
     },
     defaultVariants: {

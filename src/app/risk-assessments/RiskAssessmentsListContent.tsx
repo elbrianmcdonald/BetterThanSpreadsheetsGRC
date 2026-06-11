@@ -71,7 +71,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api } from "@/trpc/react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader } from "@/components/layout";
 import { AssessmentProjectStatusBadge } from "@/components/risk-assessment-project/AssessmentProjectStatusBadge";
 import {
   AssessmentFilters,
@@ -302,11 +302,11 @@ export function RiskAssessmentsListContent() {
     const now = new Date();
 
     if (isPast(date)) {
-      return "text-red-600 font-medium";
+      return "text-destructive font-medium";
     }
 
     if (isWithinInterval(date, { start: now, end: addDays(now, 7) })) {
-      return "text-amber-600 font-medium";
+      return "text-warning font-medium";
     }
 
     return "text-muted-foreground";
@@ -320,12 +320,12 @@ export function RiskAssessmentsListContent() {
     const now = new Date();
 
     if (isPast(date)) {
-      return { label: "OVERDUE", variant: "destructive" as const, isWarning: false };
+      return { label: "OVERDUE", variant: "critical" as const, isWarning: false };
     }
 
     // Due within 30 days
     if (isWithinInterval(date, { start: now, end: addDays(now, 30) })) {
-      return { label: "Due Soon", variant: "default" as const, isWarning: true };
+      return { label: "Due Soon", variant: "warning" as const, isWarning: true };
     }
 
     return null;
@@ -396,20 +396,20 @@ export function RiskAssessmentsListContent() {
       <AppLayout breadcrumbs={[{ label: "Risk Assessments" }]}>
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Risk Assessments</h1>
-              <p className="text-muted-foreground">
-                Manage risk assessment projects for your organization
-              </p>
-            </div>
-            <Button asChild>
-              <Link href="/risk-assessments/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Assessment
-              </Link>
-            </Button>
-          </div>
+          <PageHeader
+            eyebrow="RISK PROGRAM"
+            title="Risk Assessments"
+            icon={<FileSearch />}
+            description="Manage risk assessment projects for your organization"
+            actions={
+              <Button asChild>
+                <Link href="/risk-assessments/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Assessment
+                </Link>
+              </Button>
+            }
+          />
 
           {/* Story 3.1: Tab Navigation */}
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -507,20 +507,20 @@ export function RiskAssessmentsListContent() {
     <AppLayout breadcrumbs={[{ label: "Risk Assessments" }]}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Risk Assessments</h1>
-            <p className="text-muted-foreground">
-              Manage risk assessment projects for your organization
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/risk-assessments/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Assessment
-            </Link>
-          </Button>
-        </div>
+        <PageHeader
+          eyebrow="RISK PROGRAM"
+          title="Risk Assessments"
+          icon={<FileSearch />}
+          description="Manage risk assessment projects for your organization"
+          actions={
+            <Button asChild>
+              <Link href="/risk-assessments/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Assessment
+              </Link>
+            </Button>
+          }
+        />
 
         {/* Story 3.1: Tab Navigation */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -555,7 +555,7 @@ export function RiskAssessmentsListContent() {
             <Card
               key={assessment.id}
               className={cn(
-                "transition-shadow hover:shadow-md",
+                "transition-colors hover:border-primary/40",
                 isMyInProgressAssessment(assessment) && "border-primary/50"
               )}
             >
@@ -584,13 +584,7 @@ export function RiskAssessmentsListContent() {
                       const status = getReassessmentStatus(assessment.reassessmentDueDate);
                       if (status) {
                         return (
-                          <Badge
-                            variant={status.variant}
-                            className={cn(
-                              "ml-1",
-                              status.isWarning && "bg-amber-500 hover:bg-amber-600 text-white"
-                            )}
-                          >
+                          <Badge variant={status.variant} className="ml-1">
                             {status.label}
                           </Badge>
                         );
@@ -740,7 +734,7 @@ export function RiskAssessmentsListContent() {
 
         {/* Pagination */}
         {data.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t pt-4">
+          <div className="flex items-center justify-between border-t border-border pt-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Rows per page:</span>
               <Select value={String(pageSize)} onValueChange={handlePageSizeChange}>
@@ -756,7 +750,7 @@ export function RiskAssessmentsListContent() {
             </div>
 
             <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground tabular-nums">
                 Page {page} of {data.totalPages} ({data.total} total)
               </span>
               <div className="flex gap-1">

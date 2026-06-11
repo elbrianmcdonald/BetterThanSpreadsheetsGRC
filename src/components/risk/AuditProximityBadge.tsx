@@ -37,9 +37,9 @@ function getAuditProximityTier(daysUntilAudit: number | null): {
 } {
   if (daysUntilAudit === null) {
     return {
-      color: "text-gray-600 dark:text-gray-400",
-      bgColor: "bg-gray-100 dark:bg-gray-800/50",
-      borderColor: "border-gray-200 dark:border-gray-700",
+      color: "text-muted-foreground",
+      bgColor: "bg-muted",
+      borderColor: "border-transparent",
       icon: Calendar,
       label: "No Audit",
       description: "No audit date scheduled",
@@ -49,9 +49,9 @@ function getAuditProximityTier(daysUntilAudit: number | null): {
 
   if (daysUntilAudit < 0) {
     return {
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-100 dark:bg-purple-900/30",
-      borderColor: "border-purple-200 dark:border-purple-800",
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+      borderColor: "border-transparent",
       icon: CheckCircle,
       label: "Past",
       description: "Audit date has passed",
@@ -61,9 +61,9 @@ function getAuditProximityTier(daysUntilAudit: number | null): {
 
   if (daysUntilAudit < 30) {
     return {
-      color: "text-red-700 dark:text-red-400",
-      bgColor: "bg-red-100 dark:bg-red-900/30",
-      borderColor: "border-red-200 dark:border-red-800",
+      color: "text-destructive",
+      bgColor: "bg-destructive/10",
+      borderColor: "border-transparent",
       icon: AlertTriangle,
       label: "Urgent",
       description: "Less than 30 days until audit",
@@ -73,9 +73,9 @@ function getAuditProximityTier(daysUntilAudit: number | null): {
 
   if (daysUntilAudit < 60) {
     return {
-      color: "text-orange-700 dark:text-orange-400",
-      bgColor: "bg-orange-100 dark:bg-orange-900/30",
-      borderColor: "border-orange-200 dark:border-orange-800",
+      color: "text-severity-high",
+      bgColor: "bg-severity-high/10",
+      borderColor: "border-transparent",
       icon: Clock,
       label: "Soon",
       description: "30-60 days until audit",
@@ -85,9 +85,9 @@ function getAuditProximityTier(daysUntilAudit: number | null): {
 
   if (daysUntilAudit < 90) {
     return {
-      color: "text-amber-700 dark:text-amber-400",
-      bgColor: "bg-amber-100 dark:bg-amber-900/30",
-      borderColor: "border-amber-200 dark:border-amber-800",
+      color: "text-warning",
+      bgColor: "bg-warning/10",
+      borderColor: "border-transparent",
       icon: Calendar,
       label: "Upcoming",
       description: "60-90 days until audit",
@@ -96,9 +96,9 @@ function getAuditProximityTier(daysUntilAudit: number | null): {
   }
 
   return {
-    color: "text-green-700 dark:text-green-400",
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-    borderColor: "border-green-200 dark:border-green-800",
+    color: "text-success",
+    bgColor: "bg-success/10",
+    borderColor: "border-transparent",
     icon: Calendar,
     label: "Planned",
     description: "More than 90 days until audit",

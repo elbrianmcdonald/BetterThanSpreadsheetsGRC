@@ -48,8 +48,8 @@ import {
   MessageSquare,
   Shield,
   User,
-  Wrench,
   Loader2,
+  BarChart3,
 } from "lucide-react";
 import { AssessmentProjectStatus } from "@prisma/client";
 
@@ -57,6 +57,7 @@ import { api, type RouterOutputs } from "@/trpc/react";
 import { IdentifiedRisksEditor } from "@/components/risk-assessment-project/IdentifiedRisksEditor";
 import { AssessmentFindingsTab } from "@/components/risk-assessment-project/AssessmentFindingsTab";
 import { QuestionnaireTab } from "@/components/risk-assessment-project/QuestionnaireTab";
+import { ExecutiveSummaryTab } from "@/components/deliverable/ExecutiveSummaryTab";
 import { ClipboardList } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,11 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import {
+  WRAPPER_TAB_DEFS,
+  WrapperTabPanel,
+  type WrapperTabId,
+} from "@/components/engagement/WrapperTabs";
 
 interface AssessmentWorkspaceClientProps {
   projectId: string;
@@ -80,11 +86,12 @@ type Tab =
   | "identified-risks"
   | "findings"
   | "controls"
-  | "evidence"
-  | "remediation"
+  | "evidence-rollup"
   | "comments"
   | "audit-trail"
-  | "history";
+  | "history"
+  | "summary"
+  | WrapperTabId;
 
 interface TabConfig {
   id: Tab;
@@ -99,11 +106,14 @@ const TABS: TabConfig[] = [
   { id: "identified-risks", label: "Identified Risks", icon: ListTree, countKey: "identifiedRisksCount" },
   { id: "findings", label: "Findings", icon: Bug, countKey: "findingsCount" },
   { id: "controls", label: "Controls", icon: Shield },
-  { id: "evidence", label: "Evidence", icon: FolderOpen },
-  { id: "remediation", label: "Remediation", icon: Wrench },
+  { id: "evidence-rollup", label: "Evidence Roll-up", icon: FolderOpen },
   { id: "comments", label: "Comments", icon: MessageSquare },
   { id: "audit-trail", label: "Audit Trail", icon: History },
   { id: "history", label: "History", icon: Calendar },
+  // Consulting wrapper tabs (Schedule / Stakeholders / Evidence /
+  // Exploitation Pathways / Action Plans) — shared module.
+  ...WRAPPER_TAB_DEFS,
+  { id: "summary", label: "Executive Summary", icon: BarChart3 },
 ];
 
 const STATUS_BADGE: Record<AssessmentProjectStatus, string> = {
@@ -265,11 +275,28 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
           />
         )}
         {activeTab === "controls" && <ControlsAggregateTab projectId={projectId} />}
-        {activeTab === "evidence" && <EvidenceAggregateTab projectId={projectId} />}
-        {activeTab === "remediation" && <RemediationAggregateTab projectId={projectId} />}
+        {activeTab === "evidence-rollup" && <EvidenceAggregateTab projectId={projectId} />}
         {activeTab === "comments" && <CommentsTab projectId={projectId} />}
         {activeTab === "audit-trail" && <AuditTrailTab projectId={projectId} />}
         {activeTab === "history" && <HistoryTab project={project} />}
+        {activeTab === "summary" && (
+          <ExecutiveSummaryTab assessmentKind="RISK" assessmentId={projectId} />
+        )}
+
+        {/* Consulting wrapper tabs (Schedule / Stakeholders / Evidence /
+            Exploitation Pathways / Action Plans) — shared module. */}
+        {(activeTab === "schedule" ||
+          activeTab === "stakeholders" ||
+          activeTab === "evidence" ||
+          activeTab === "pathways" ||
+          activeTab === "action-plans") && (
+          <WrapperTabPanel
+            tab={activeTab}
+            assessmentKind="RISK"
+            assessmentId={projectId}
+            clientName={project.subject ?? "this assessment"}
+          />
+        )}
       </div>
     </div>
   );
@@ -595,12 +622,6 @@ function EvidenceAggregateTab({ projectId }: { projectId: string }) {
   );
 }
 
-const TREATMENT_BADGE: Record<string, string> = {
-  REMEDIATE: "bg-green-100 text-green-800 border-green-300",
-  ACCEPT: "bg-blue-100 text-blue-800 border-blue-300",
-  TRANSFER: "bg-purple-100 text-purple-800 border-purple-300",
-  AVOID: "bg-orange-100 text-orange-800 border-orange-300",
-};
 
 function EditableAssessmentDetails({ project }: { project: ProjectData }) {
   const { data: session } = useSession();
@@ -873,92 +894,6 @@ function TreatmentProgressCard({ projectId }: { projectId: string }) {
   );
 }
 
-function RemediationAggregateTab({ projectId }: { projectId: string }) {
-  const { data, isLoading } = api.riskAssessmentProject.getRemediationAggregate.useQuery({
-    projectId,
-  });
-  if (isLoading) return <Skeleton className="h-32 w-full" />;
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border border-dashed rounded-lg">
-        <Wrench className="h-8 w-8 mb-2 opacity-50" />
-        <p className="text-sm">No identified risks yet.</p>
-      </div>
-    );
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Treatment Roll-up</CardTitle>
-        <CardDescription>
-          Treatment decision and progress for every identified risk.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <table className="w-full text-sm">
-          <thead className="text-xs text-muted-foreground uppercase">
-            <tr className="border-b">
-              <th className="text-left py-2 font-medium">Risk</th>
-              <th className="text-left py-2 font-medium">Treatment</th>
-              <th className="text-left py-2 font-medium">Plan / Justification</th>
-              <th className="text-left py-2 font-medium">Due / Review</th>
-              <th className="text-left py-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row) => (
-              <tr key={row.riskId} className="border-b last:border-0 align-top">
-                <td className="py-2">
-                  {row.riskIdentifier && (
-                    <Link href={`/risks/${row.riskId}`} className="hover:underline text-primary text-xs font-mono">
-                      {row.riskIdentifier}
-                    </Link>
-                  )}
-                  <div className="font-medium">{row.riskTitle}</div>
-                </td>
-                <td className="py-2">
-                  {row.treatmentType ? (
-                    <Badge
-                      variant="outline"
-                      className={cn("font-medium", TREATMENT_BADGE[row.treatmentType] ?? "")}
-                    >
-                      {row.treatmentType}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground italic">No decision</span>
-                  )}
-                </td>
-                <td className="py-2 text-muted-foreground max-w-md">
-                  {row.plan ? (
-                    <span className="line-clamp-2">{row.plan}</span>
-                  ) : (
-                    <span className="italic">—</span>
-                  )}
-                </td>
-                <td className="py-2 text-muted-foreground">
-                  {row.dueDate ? format(new Date(row.dueDate), "PP") : "—"}
-                </td>
-                <td className="py-2">
-                  {row.completedAt ? (
-                    <Badge className="bg-green-600 text-white">Completed</Badge>
-                  ) : row.slaBreached ? (
-                    <Badge className="bg-red-600 text-white">SLA Breached</Badge>
-                  ) : row.actionStatus ? (
-                    <span className="text-xs text-muted-foreground">
-                      {row.actionStatus.replace(/_/g, " ").toLowerCase()}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground italic">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </CardContent>
-    </Card>
-  );
-}
 
 function WorkflowActions({ project }: { project: ProjectData }) {
   const { data: session } = useSession();

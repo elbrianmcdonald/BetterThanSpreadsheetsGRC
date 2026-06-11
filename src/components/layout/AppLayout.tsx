@@ -10,7 +10,7 @@
 import type { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { AppTopBar } from "./AppTopBar";
-import { AppBreadcrumb, type BreadcrumbItem } from "./AppBreadcrumb";
+import { type BreadcrumbItem } from "./AppBreadcrumb";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
@@ -33,30 +33,20 @@ export function AppLayout({
   showBreadcrumbs = true,
 }: AppLayoutProps) {
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       {/* Sidebar Navigation */}
       <AppSidebar />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar */}
-        <AppTopBar />
-
-        {/* Breadcrumbs */}
-        {showBreadcrumbs && breadcrumbs.length > 0 && (
-          <div className={cn(
-            "px-6 py-4 bg-white border-b",
-            !fullWidth && "max-w-7xl"
-          )}>
-            <AppBreadcrumb items={breadcrumbs} />
-          </div>
-        )}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Top Bar (breadcrumbs live here) */}
+        <AppTopBar breadcrumbs={showBreadcrumbs ? breadcrumbs : []} />
 
         {/* Page Content */}
         <main
           className={cn(
-            "flex-1 px-6 py-6",
-            !fullWidth && "max-w-7xl",
+            "flex-1 px-9 pb-16 pt-[30px]",
+            fullWidth ? "w-full" : "mx-auto w-full max-w-[1240px]",
             className
           )}
         >

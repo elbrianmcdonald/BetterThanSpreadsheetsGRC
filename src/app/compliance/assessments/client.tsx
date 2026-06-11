@@ -13,7 +13,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { api } from "@/trpc/react";
 import {
   Card,
@@ -57,12 +57,15 @@ const STATUS_LABELS: Record<string, string> = {
   ARCHIVED: "Archived",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  IN_PROGRESS: "bg-blue-100 text-blue-700",
-  IN_REVIEW: "bg-amber-100 text-amber-700",
-  COMPLETED: "bg-green-100 text-green-700",
-  ARCHIVED: "bg-slate-100 text-slate-600",
+const STATUS_VARIANTS: Record<
+  string,
+  "neutral" | "info" | "warning" | "success"
+> = {
+  DRAFT: "neutral",
+  IN_PROGRESS: "info",
+  IN_REVIEW: "warning",
+  COMPLETED: "success",
+  ARCHIVED: "neutral",
 };
 
 export function CoverageDashboardClient() {
@@ -211,8 +214,8 @@ export function CoverageDashboardClient() {
       <AppLayout breadcrumbs={[{ label: "Compliance" }, { label: "Assessments" }]}>
         <div className="flex items-center justify-center py-16">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <p className="text-gray-500">Loading compliance data...</p>
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading compliance data...</p>
           </div>
         </div>
       </AppLayout>
@@ -223,124 +226,94 @@ export function CoverageDashboardClient() {
     <AppLayout breadcrumbs={[{ label: "Compliance" }, { label: "Assessments" }]}>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <ClipboardCheck className="h-7 w-7" />
-              Compliance Assessments
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage frameworks and track compliance assessments
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Refreshing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh
-              </>
-            )}
-          </Button>
-        </div>
+        <PageHeader
+          eyebrow="COMPLIANCE"
+          title="Compliance Assessments"
+          icon={<ClipboardCheck />}
+          description="Manage frameworks and track compliance assessments"
+          actions={
+            <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Refresh
+                </>
+              )}
+            </Button>
+          }
+        />
 
         {/* Summary Statistics \u2014 each card is a clickable Link to the
             relevant filtered list. */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Link href="/admin/frameworks?status=active" className="block">
-            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-              <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
-                <p className="text-sm font-medium">Active Frameworks</p>
-                <Shield className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="p-6 pt-0">
-                <div className="text-2xl font-bold">{summary?.activeFrameworks ?? 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {summary?.totalControls ?? 0} total controls
-                </p>
-              </div>
-            </Card>
+            <StatTile
+              label="ACTIVE FRAMEWORKS"
+              value={summary?.activeFrameworks ?? 0}
+              sub={`${summary?.totalControls ?? 0} total controls`}
+              icon={<Shield />}
+              tone="primary"
+              accent
+            />
           </Link>
 
           <Link href="/compliance/assessments?tab=assessments&status=IN_PROGRESS,IN_REVIEW" className="block">
-            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-              <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
-                <p className="text-sm font-medium">Active Assessments</p>
-                <FileText className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="p-6 pt-0">
-                <div className="text-2xl font-bold">{activeAssessments.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  {draftAssessments.length} draft, {completedAssessments.length} completed
-                </p>
-              </div>
-            </Card>
+            <StatTile
+              label="ACTIVE ASSESSMENTS"
+              value={activeAssessments.length}
+              sub={`${draftAssessments.length} draft, ${completedAssessments.length} completed`}
+              icon={<FileText />}
+            />
           </Link>
 
           <Link href="/compliance/dashboard" className="block">
-            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-              <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
-                <p className="text-sm font-medium">Avg. Compliance</p>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="p-6 pt-0">
-                {(() => {
-                  const scoredAssessments = assessments.filter(
-                    (a) => a.complianceScore !== null && a.status !== "DRAFT"
-                  );
-                  const avgScore =
-                    scoredAssessments.length > 0
-                      ? scoredAssessments.reduce(
-                          (sum, a) => sum + Number(a.complianceScore ?? 0),
-                          0
-                        ) / scoredAssessments.length
-                      : null;
-                  return (
-                    <>
-                      <div className="text-2xl font-bold">
-                        {avgScore !== null ? `${avgScore.toFixed(0)}%` : "\u2014"}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Across {scoredAssessments.length} scored assessments
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-            </Card>
+            {(() => {
+              const scoredAssessments = assessments.filter(
+                (a) => a.complianceScore !== null && a.status !== "DRAFT"
+              );
+              const avgScore =
+                scoredAssessments.length > 0
+                  ? scoredAssessments.reduce(
+                      (sum, a) => sum + Number(a.complianceScore ?? 0),
+                      0
+                    ) / scoredAssessments.length
+                  : null;
+              return (
+                <StatTile
+                  label="AVG. COMPLIANCE"
+                  value={avgScore !== null ? `${avgScore.toFixed(0)}%` : "\u2014"}
+                  sub={`Across ${scoredAssessments.length} scored assessments`}
+                  icon={<TrendingUp />}
+                />
+              );
+            })()}
           </Link>
 
           <Link href="/compliance/assessments?tab=assessments&gaps=open" className="block">
-            <Card className="hover:bg-muted/50 hover:border-primary/40 transition-colors cursor-pointer">
-              <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
-                <p className="text-sm font-medium">Open Gaps</p>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="p-6 pt-0">
-                {(() => {
-                  const totalGaps = activeAssessments.reduce(
-                    (sum, a) => sum + a.nonCompliantCount + a.partialCount,
-                    0
-                  );
-                  return (
-                    <>
-                      <div className="text-2xl font-bold">{totalGaps}</div>
-                      <p className="text-xs text-muted-foreground">
-                        Non-compliant or partial controls
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-            </Card>
+            {(() => {
+              const totalGaps = activeAssessments.reduce(
+                (sum, a) => sum + a.nonCompliantCount + a.partialCount,
+                0
+              );
+              return (
+                <StatTile
+                  label="OPEN GAPS"
+                  value={totalGaps}
+                  sub="Non-compliant or partial controls"
+                  icon={<AlertTriangle />}
+                  tone={totalGaps > 0 ? "warning" : "default"}
+                />
+              );
+            })()}
           </Link>
         </div>
 
@@ -433,11 +406,11 @@ export function CoverageDashboardClient() {
             {filteredAssessments.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <ClipboardCheck className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-4 text-lg font-medium">
+                  <ClipboardCheck className="mx-auto h-12 w-12 text-muted-foreground/70" />
+                  <h3 className="mt-4 text-lg font-medium text-foreground">
                     {assessments.length === 0 ? "No Assessments Yet" : "No Matching Assessments"}
                   </h3>
-                  <p className="mt-2 text-gray-500">
+                  <p className="mt-2 text-muted-foreground">
                     {assessments.length === 0
                       ? "Start a compliance assessment from one of your active frameworks."
                       : "Try adjusting your filters."}
@@ -467,14 +440,14 @@ export function CoverageDashboardClient() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Assessment</TableHead>
-                      <TableHead>Framework</TableHead>
-                      <TableHead>Business Unit</TableHead>
-                      <TableHead>Assessor</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Compliance</TableHead>
-                      <TableHead className="text-right">Progress</TableHead>
-                      <TableHead>Due Date</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Assessment</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Framework</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Business Unit</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Assessor</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Compliance</TableHead>
+                      <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Progress</TableHead>
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Due Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -485,18 +458,18 @@ export function CoverageDashboardClient() {
                         : 0;
 
                       return (
-                        <TableRow key={a.id}>
+                        <TableRow key={a.id} className="hover:bg-secondary">
                           <TableCell>
                             <Link
                               href={`/compliance/assessments/${a.id}`}
-                              className="font-medium text-primary hover:underline"
+                              className="font-semibold text-foreground hover:text-primary hover:underline"
                             >
                               {a.name}
                             </Link>
-                            <div className="text-xs text-muted-foreground">{a.identifier}</div>
+                            <div className="font-mono text-xs text-muted-foreground">{a.identifier}</div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{a.framework.code}</Badge>
+                            <Badge variant="code">{a.framework.code}</Badge>
                           </TableCell>
                           <TableCell className="text-sm">
                             {a.businessUnit?.name ?? <span className="text-muted-foreground">&mdash;</span>}
@@ -505,29 +478,29 @@ export function CoverageDashboardClient() {
                             {a.assessor?.name ?? a.assessor?.email ?? <span className="text-muted-foreground">&mdash;</span>}
                           </TableCell>
                           <TableCell>
-                            <Badge className={STATUS_COLORS[a.status] ?? ""} variant="secondary">
+                            <Badge variant={STATUS_VARIANTS[a.status] ?? "neutral"}>
                               {STATUS_LABELS[a.status] ?? a.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right font-medium tnum">
                             {a.complianceScore !== null
                               ? `${Number(a.complianceScore).toFixed(0)}%`
                               : "\u2014"}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div className="w-16 bg-secondary rounded-full h-2">
                                 <div
-                                  className="bg-blue-500 h-2 rounded-full"
+                                  className="bg-primary h-2 rounded-full"
                                   style={{ width: `${progressPct}%` }}
                                 />
                               </div>
-                              <span className="text-xs text-muted-foreground w-8 text-right">
+                              <span className="font-mono text-xs text-muted-foreground w-8 text-right">
                                 {progressPct}%
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="font-mono text-sm text-muted-foreground">
                             {a.dueDate
                               ? format(new Date(a.dueDate), "MMM d, yyyy")
                               : <span className="text-muted-foreground">&mdash;</span>}
@@ -544,16 +517,16 @@ export function CoverageDashboardClient() {
           {/* Frameworks Tab */}
           <TabsContent value="frameworks" className="space-y-6">
             <div>
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-foreground">
+                <Shield className="h-5 w-5 text-primary" />
                 Active Frameworks
               </h2>
               {coverageData?.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center">
-                    <Shield className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-4 text-gray-500">No active frameworks found</p>
-                    <p className="text-sm text-gray-400">
+                    <Shield className="mx-auto h-12 w-12 text-muted-foreground/70" />
+                    <p className="mt-4 text-muted-foreground">No active frameworks found</p>
+                    <p className="text-sm text-muted-foreground/70">
                       Activate frameworks in Administration to see them here
                     </p>
                     <Link href="/admin/frameworks">

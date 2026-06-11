@@ -32,6 +32,7 @@ import {
   Mail,
   Eye,
   Clock,
+  BarChart3,
 } from "lucide-react";
 
 import {
@@ -87,6 +88,13 @@ import {
   AssessmentRecommendationBadge,
 } from "@/components/assessment";
 import { VendorRiskTierBadge } from "@/components/vendor";
+import { cn } from "@/lib/utils";
+import {
+  WRAPPER_TAB_DEFS,
+  WrapperTabPanel,
+  type WrapperTabId,
+} from "@/components/engagement/WrapperTabs";
+import { ExecutiveSummaryTab } from "@/components/deliverable/ExecutiveSummaryTab";
 
 /**
  * Roles that can manage assessments
@@ -113,6 +121,13 @@ export function AssessmentDetailClient({ assessmentId }: AssessmentDetailClientP
   const router = useRouter();
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // Top-level tab: "assessment" shows the existing workspace; the rest are the
+  // shared consulting wrapper tabs (Schedule / Stakeholders / Evidence /
+  // Exploitation Pathways / Action Plans).
+  const [activeTab, setActiveTab] = useState<
+    "assessment" | "summary" | WrapperTabId
+  >("assessment");
 
   // Questionnaire state
   const [addQuestionnaireOpen, setAddQuestionnaireOpen] = useState(false);
@@ -302,6 +317,13 @@ export function AssessmentDetailClient({ assessmentId }: AssessmentDetailClientP
     assessment.status !== VendorAssessmentStatus.COMPLETED &&
     new Date(assessment.dueDate) < new Date();
 
+  // Tabs: "Assessment" (existing workspace) + shared consulting wrapper tabs.
+  const TABS = [
+    { id: "assessment" as const, label: "Assessment", icon: ClipboardCheck },
+    ...WRAPPER_TAB_DEFS,
+    { id: "summary" as const, label: "Executive Summary", icon: BarChart3 },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -365,6 +387,52 @@ export function AssessmentDetailClient({ assessmentId }: AssessmentDetailClientP
         </div>
       </div>
 
+      {/* Top-level tab nav — underline style (matches compliance/risk workspace) */}
+      <div className="border-b overflow-x-auto" role="tablist">
+        <nav className="flex -mb-px min-w-max">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-medium transition-colors whitespace-nowrap",
+                  isActive
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Executive Summary (shared deliverable) */}
+      {activeTab === "summary" && (
+        <ExecutiveSummaryTab assessmentKind="VENDOR" assessmentId={assessmentId} />
+      )}
+
+      {/* Wrapper tabs (Schedule / Stakeholders / Evidence / Pathways / Action Plans) */}
+      {activeTab !== "assessment" && activeTab !== "summary" && (
+        <WrapperTabPanel
+          tab={activeTab}
+          assessmentKind="VENDOR"
+          assessmentId={assessmentId}
+          clientName={assessment.title}
+        />
+      )}
+
+      {/* ---- Assessment tab: the full existing workspace, unchanged ---- */}
+      {activeTab === "assessment" && (
+        <>
       {/* Overdue Warning */}
       {isOverdue && (
         <Card className="border-destructive bg-destructive/5">
@@ -824,6 +892,8 @@ export function AssessmentDetailClient({ assessmentId }: AssessmentDetailClientP
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   );
 }

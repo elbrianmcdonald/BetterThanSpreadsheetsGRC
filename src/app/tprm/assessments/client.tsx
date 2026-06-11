@@ -43,10 +43,10 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHeader, StatTile } from "@/components/layout";
 import {
   Table,
   TableBody,
@@ -159,7 +159,7 @@ export function AssessmentListClient() {
         cell: ({ row }) => (
           <Link
             href={`/tprm/assessments/${row.original.id}`}
-            className="font-medium text-primary hover:underline"
+            className="font-mono text-primary hover:underline"
           >
             {row.getValue("identifier")}
           </Link>
@@ -186,7 +186,7 @@ export function AssessmentListClient() {
         cell: ({ row }) => (
           <Link
             href={`/tprm/assessments/${row.original.id}`}
-            className="hover:underline"
+            className="font-semibold text-foreground hover:underline"
           >
             {row.getValue("title")}
           </Link>
@@ -242,11 +242,11 @@ export function AssessmentListClient() {
           const daysUntil = differenceInDays(date, new Date());
           return (
             <div className="flex items-center gap-2">
-              <span className={isOverdue ? "text-destructive" : daysUntil <= 7 && daysUntil >= 0 ? "text-yellow-600" : ""}>
+              <span className={`font-mono ${isOverdue ? "text-destructive" : daysUntil <= 7 && daysUntil >= 0 ? "text-warning" : ""}`}>
                 {format(date, "MMM d, yyyy")}
               </span>
               {isOverdue && <AlertTriangle className="h-4 w-4 text-destructive" />}
-              {!isOverdue && daysUntil <= 7 && daysUntil >= 0 && <Clock className="h-4 w-4 text-yellow-600" />}
+              {!isOverdue && daysUntil <= 7 && daysUntil >= 0 && <Clock className="h-4 w-4 text-warning" />}
             </div>
           );
         },
@@ -296,8 +296,11 @@ export function AssessmentListClient() {
             )}
           </Button>
         ),
-        cell: ({ row }) =>
-          format(new Date(row.getValue("createdAt")), "MMM d, yyyy"),
+        cell: ({ row }) => (
+          <span className="font-mono text-muted-foreground">
+            {format(new Date(row.getValue("createdAt")), "MMM d, yyyy")}
+          </span>
+        ),
       },
     ],
     []
@@ -319,72 +322,52 @@ export function AssessmentListClient() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <ClipboardCheck className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              Vendor Assessments
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Track and manage vendor assessment workflow
-            </p>
-          </div>
-        </div>
-        {canManageAssessments && (
-          <Link href="/tprm/assessments/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Assessment
-            </Button>
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="THIRD-PARTY RISK"
+        title="Vendor Assessments"
+        icon={<ClipboardCheck />}
+        description="Track and manage vendor assessment workflow"
+        actions={
+          canManageAssessments && (
+            <Link href="/tprm/assessments/new">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Assessment
+              </Button>
+            </Link>
+          )
+        }
+      />
 
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 md:grid-cols-5">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Assessments</CardDescription>
-              <CardTitle className="text-2xl">{stats.totalCount}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Draft</CardDescription>
-              <CardTitle className="text-2xl text-gray-600">
-                {stats.statusDistribution?.DRAFT ?? 0}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>In Progress</CardDescription>
-              <CardTitle className="text-2xl text-blue-600">
-                {stats.statusDistribution?.IN_PROGRESS ?? 0}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>In Review</CardDescription>
-              <CardTitle className="text-2xl text-yellow-600">
-                {stats.statusDistribution?.IN_REVIEW ?? 0}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className={stats.overdueCount > 0 ? "border-destructive" : ""}>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1">
-                <AlertTriangle className={`h-3 w-3 ${stats.overdueCount > 0 ? "text-destructive" : ""}`} />
-                Overdue
-              </CardDescription>
-              <CardTitle className={`text-2xl ${stats.overdueCount > 0 ? "text-destructive" : ""}`}>
-                {stats.overdueCount}
-              </CardTitle>
-            </CardHeader>
-          </Card>
+          <StatTile
+            label="TOTAL ASSESSMENTS"
+            value={stats.totalCount}
+            icon={<ClipboardCheck />}
+            accent
+          />
+          <StatTile
+            label="DRAFT"
+            value={stats.statusDistribution?.DRAFT ?? 0}
+          />
+          <StatTile
+            label="IN PROGRESS"
+            value={stats.statusDistribution?.IN_PROGRESS ?? 0}
+            tone="primary"
+          />
+          <StatTile
+            label="IN REVIEW"
+            value={stats.statusDistribution?.IN_REVIEW ?? 0}
+            tone="warning"
+          />
+          <StatTile
+            label="OVERDUE"
+            value={stats.overdueCount}
+            icon={<AlertTriangle />}
+            tone={stats.overdueCount > 0 ? "critical" : "default"}
+          />
         </div>
       )}
 
@@ -470,7 +453,10 @@ export function AssessmentListClient() {
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
+                      <TableHead
+                        key={header.id}
+                        className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground"
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -484,7 +470,7 @@ export function AssessmentListClient() {
               </TableHeader>
               <TableBody>
                 {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} className="hover:bg-secondary">
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {flexRender(
@@ -502,11 +488,11 @@ export function AssessmentListClient() {
 
         {/* Pagination */}
         {data && data.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-4 py-4">
+          <div className="flex items-center justify-between border-t border-border px-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Showing {(page - 1) * 25 + 1} to{" "}
-              {Math.min(page * 25, data.totalCount)} of {data.totalCount}{" "}
-              assessments
+              Showing <span className="font-mono">{(page - 1) * 25 + 1}</span> to{" "}
+              <span className="font-mono">{Math.min(page * 25, data.totalCount)}</span> of{" "}
+              <span className="font-mono">{data.totalCount}</span> assessments
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -518,7 +504,7 @@ export function AssessmentListClient() {
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
-              <span className="text-sm">
+              <span className="font-mono text-sm">
                 Page {page} of {data.totalPages}
               </span>
               <Button

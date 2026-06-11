@@ -92,7 +92,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/trpc/react";
 import { useHasRole } from "@/hooks/useHasRole";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 
 import {
   FindingFilters,
@@ -295,7 +295,7 @@ function DraggableTableHeader({
           {...listeners}
           className="cursor-grab opacity-0 group-hover:opacity-100 transition-opacity"
         >
-          <GripVertical className="h-4 w-4 text-gray-400" />
+          <GripVertical className="h-4 w-4 text-muted-foreground/70" />
         </span>
         {children}
       </div>
@@ -317,7 +317,7 @@ function SortableHeader({
     <Button
       variant="ghost"
       size="sm"
-      className="-ml-3 h-8 data-[state=open]:bg-accent"
+      className="-ml-3 h-8 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground data-[state=open]:bg-accent"
       onClick={(e) => {
         e.stopPropagation();
         column.toggleSorting();
@@ -556,7 +556,7 @@ export function FindingsListContent() {
         cell: ({ row }) => (
           <Link
             href={`/findings/${row.original.id}`}
-            className="font-medium text-primary hover:underline"
+            className="font-mono text-sm font-medium text-primary hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
             {row.getValue("identifier")}
@@ -571,7 +571,7 @@ export function FindingsListContent() {
           <SortableHeader column={column}>Title</SortableHeader>
         ),
         cell: ({ row }) => (
-          <span className="line-clamp-1 max-w-[300px]" title={row.getValue("title")}>
+          <span className="line-clamp-1 max-w-[300px] font-semibold text-foreground" title={row.getValue("title")}>
             {row.getValue("title")}
           </span>
         ),
@@ -579,7 +579,11 @@ export function FindingsListContent() {
       {
         id: "source",
         accessorKey: "source",
-        header: "Source",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Source
+          </span>
+        ),
         cell: ({ row }) => (
           <FindingSourceBadge source={row.getValue("source")} size="sm" />
         ),
@@ -616,7 +620,7 @@ export function FindingsListContent() {
           <SortableHeader column={column}>Created</SortableHeader>
         ),
         cell: ({ row }) => (
-          <span className="text-muted-foreground text-sm">
+          <span className="font-mono text-muted-foreground text-sm">
             {formatRelativeTime(row.getValue("createdAt"))}
           </span>
         ),
@@ -624,9 +628,13 @@ export function FindingsListContent() {
       {
         id: "updatedAt",
         accessorKey: "updatedAt",
-        header: "Updated",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Updated
+          </span>
+        ),
         cell: ({ row }) => (
-          <span className="text-muted-foreground text-sm">
+          <span className="font-mono text-muted-foreground text-sm">
             {formatRelativeTime(row.getValue("updatedAt"))}
           </span>
         ),
@@ -634,9 +642,13 @@ export function FindingsListContent() {
       {
         id: "description",
         accessorKey: "description",
-        header: "Description",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Description
+          </span>
+        ),
         cell: ({ row }) => (
-          <span className="text-sm text-gray-600 max-w-[250px] truncate block">
+          <span className="text-sm text-muted-foreground max-w-[250px] truncate block">
             {truncateText(row.getValue("description"), 80)}
           </span>
         ),
@@ -644,7 +656,11 @@ export function FindingsListContent() {
       {
         id: "assignee",
         accessorFn: (row) => row.assignee?.name ?? row.assignee?.email,
-        header: "Assignee",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Assignee
+          </span>
+        ),
         cell: ({ row }) => (
           <span className="text-sm">
             {row.original.assignee?.name ?? row.original.assignee?.email ?? "—"}
@@ -654,7 +670,11 @@ export function FindingsListContent() {
       {
         id: "creator",
         accessorFn: (row) => row.creator?.name ?? row.creator?.email,
-        header: "Creator",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Creator
+          </span>
+        ),
         cell: ({ row }) => (
           <span className="text-sm">
             {row.original.creator?.name ?? row.original.creator?.email ?? "—"}
@@ -664,7 +684,11 @@ export function FindingsListContent() {
       {
         id: "triager",
         accessorFn: (row) => row.triager?.name ?? row.triager?.email,
-        header: "Triaged By",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Triaged By
+          </span>
+        ),
         cell: ({ row }) => (
           <span className="text-sm">
             {row.original.triager?.name ?? row.original.triager?.email ?? "—"}
@@ -674,7 +698,11 @@ export function FindingsListContent() {
       {
         id: "accepter",
         accessorFn: (row) => row.accepter?.name ?? row.accepter?.email,
-        header: "Accepted By",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Accepted By
+          </span>
+        ),
         cell: ({ row }) => (
           <span className="text-sm">
             {row.original.accepter?.name ?? row.original.accepter?.email ?? "—"}
@@ -684,9 +712,13 @@ export function FindingsListContent() {
       {
         id: "triagedAt",
         accessorKey: "triagedAt",
-        header: "Triaged Date",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Triaged Date
+          </span>
+        ),
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-sm text-muted-foreground">
             {formatDate(row.getValue("triagedAt"))}
           </span>
         ),
@@ -694,9 +726,13 @@ export function FindingsListContent() {
       {
         id: "acceptedAt",
         accessorKey: "acceptedAt",
-        header: "Accepted Date",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Accepted Date
+          </span>
+        ),
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-sm text-muted-foreground">
             {formatDate(row.getValue("acceptedAt"))}
           </span>
         ),
@@ -704,9 +740,13 @@ export function FindingsListContent() {
       {
         id: "dueDate",
         accessorKey: "dueDate",
-        header: "Due Date",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Due Date
+          </span>
+        ),
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-sm text-muted-foreground">
             {formatDate(row.getValue("dueDate"))}
           </span>
         ),
@@ -714,9 +754,13 @@ export function FindingsListContent() {
       {
         id: "closedAt",
         accessorKey: "closedAt",
-        header: "Closed Date",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Closed Date
+          </span>
+        ),
         cell: ({ row }) => (
-          <span className="text-sm text-gray-500">
+          <span className="font-mono text-sm text-muted-foreground">
             {formatDate(row.getValue("closedAt"))}
           </span>
         ),
@@ -724,22 +768,30 @@ export function FindingsListContent() {
       {
         id: "slaBreached",
         accessorKey: "slaBreached",
-        header: "SLA Breached",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            SLA Breached
+          </span>
+        ),
         cell: ({ row }) => (
           row.getValue("slaBreached") ? (
-            <Badge variant="destructive" className="text-xs">Breached</Badge>
+            <Badge variant="critical" className="text-xs">Breached</Badge>
           ) : (
-            <span className="text-sm text-gray-400">—</span>
+            <span className="text-sm text-muted-foreground/70">—</span>
           )
         ),
       },
       {
         id: "affectedAssets",
         accessorKey: "affectedAssets",
-        header: "Affected Assets",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Affected Assets
+          </span>
+        ),
         cell: ({ row }) => {
           const assets = row.original.affectedAssets ?? [];
-          if (assets.length === 0) return <span className="text-sm text-gray-400">—</span>;
+          if (assets.length === 0) return <span className="text-sm text-muted-foreground/70">—</span>;
           return (
             <span className="text-sm" title={assets.join(", ")}>
               {assets.length} asset{assets.length !== 1 ? "s" : ""}
@@ -750,10 +802,14 @@ export function FindingsListContent() {
       {
         id: "affectedBusinessUnits",
         accessorFn: (row) => row.affectedBusinessUnits?.map((bu) => bu.name).join(", "),
-        header: "Business Units",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Business Units
+          </span>
+        ),
         cell: ({ row }) => {
           const bus = row.original.affectedBusinessUnits ?? [];
-          if (bus.length === 0) return <span className="text-sm text-gray-400">—</span>;
+          if (bus.length === 0) return <span className="text-sm text-muted-foreground/70">—</span>;
           return (
             <span className="text-sm" title={bus.map((bu) => bu.name).join(", ")}>
               {bus.length} unit{bus.length !== 1 ? "s" : ""}
@@ -764,9 +820,13 @@ export function FindingsListContent() {
       {
         id: "controlLinksCount",
         accessorFn: (row) => row._count?.ControlLinks ?? 0,
-        header: "Control Links",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Control Links
+          </span>
+        ),
         cell: ({ row }) => (
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="code" className="text-xs">
             {row.original._count?.ControlLinks ?? 0}
           </Badge>
         ),
@@ -774,9 +834,13 @@ export function FindingsListContent() {
       {
         id: "commentsCount",
         accessorFn: (row) => row._count?.comments ?? 0,
-        header: "Comments",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Comments
+          </span>
+        ),
         cell: ({ row }) => (
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="code" className="text-xs">
             {row.original._count?.comments ?? 0}
           </Badge>
         ),
@@ -784,9 +848,13 @@ export function FindingsListContent() {
       {
         id: "evidenceCount",
         accessorFn: (row) => row._count?.evidenceLinks ?? 0,
-        header: "Evidence",
+        header: () => (
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Evidence
+          </span>
+        ),
         cell: ({ row }) => (
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="code" className="text-xs">
             {row.original._count?.evidenceLinks ?? 0}
           </Badge>
         ),
@@ -795,7 +863,7 @@ export function FindingsListContent() {
         id: "actions",
         header: "",
         cell: ({ row }) => (
-          <Button asChild size="sm" variant="ghost" onClick={(e) => e.stopPropagation()}>
+          <Button asChild size="sm" variant="ghost" className="text-muted-foreground/70 hover:text-foreground" onClick={(e) => e.stopPropagation()}>
             <Link href={`/findings/${row.original.id}`}>
               <Eye className="h-4 w-4 mr-1" />
               View
@@ -916,135 +984,108 @@ export function FindingsListContent() {
   return (
     <AppLayout breadcrumbs={[{ label: "Findings" }]} fullWidth>
       {/* Header with title and action buttons */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Findings</h1>
-          <p className="text-muted-foreground">
-            Manage security findings from audits, pentests, and other sources.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {/* Export button */}
-          {canExportFindings && (
-            <Button
-              variant="outline"
-              onClick={handleExport}
-              disabled={exportMutation.isPending}
-            >
-              {exportMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              Export CSV
-            </Button>
-          )}
-          {/* AC4: "New Finding" button (role-based visibility) */}
-          {canCreateFinding && (
-            <Button asChild>
-              <Link href="/findings/new">
-                <Plus className="mr-2 h-4 w-4" />
-                New Finding
-              </Link>
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="FINDINGS REGISTER"
+        title="Findings"
+        icon={<FileSearch />}
+        description="Manage security findings from audits, pentests, and other sources."
+        actions={
+          <>
+            {/* Export button */}
+            {canExportFindings && (
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={exportMutation.isPending}
+              >
+                {exportMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Export CSV
+              </Button>
+            )}
+            {/* AC4: "New Finding" button (role-based visibility) */}
+            {canCreateFinding && (
+              <Button asChild>
+                <Link href="/findings/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Finding
+                </Link>
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Open Findings */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Open Findings</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            {isStatsLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold">{stats?.openCount ?? 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Awaiting triage or resolution
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <StatTile
+          label="OPEN FINDINGS"
+          value={
+            isStatsLoading ? <Skeleton className="h-8 w-16" /> : (stats?.openCount ?? 0)
+          }
+          sub="Awaiting triage or resolution"
+          icon={<AlertTriangle />}
+          tone="primary"
+          accent
+        />
 
         {/* By Severity */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">By Severity</CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            {isStatsLoading ? (
+        <StatTile
+          label="BY SEVERITY"
+          icon={<AlertCircle />}
+          value={
+            isStatsLoading ? (
               <Skeleton className="h-8 w-full" />
             ) : (
               <div className="flex gap-4 text-sm">
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-red-500" />
-                  <span className="font-medium">{stats?.severityDistribution.HIGH ?? 0}</span>
+                  <div className="w-2 h-2 rounded-full bg-severity-high" />
+                  <span className="tnum font-medium text-foreground">{stats?.severityDistribution.HIGH ?? 0}</span>
                   <span className="text-muted-foreground">High</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                  <span className="font-medium">{stats?.severityDistribution.MEDIUM ?? 0}</span>
+                  <div className="w-2 h-2 rounded-full bg-warning" />
+                  <span className="tnum font-medium text-foreground">{stats?.severityDistribution.MEDIUM ?? 0}</span>
                   <span className="text-muted-foreground">Med</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="font-medium">{stats?.severityDistribution.LOW ?? 0}</span>
+                  <div className="w-2 h-2 rounded-full bg-primary" />
+                  <span className="tnum font-medium text-foreground">{stats?.severityDistribution.LOW ?? 0}</span>
                   <span className="text-muted-foreground">Low</span>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            )
+          }
+        />
 
         {/* Accepted */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Accepted</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            {isStatsLoading ? (
-              <Skeleton className="h-8 w-16" />
-            ) : (
-              <>
-                <div className="text-2xl font-bold">{stats?.statusDistribution.ACCEPTED ?? 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  Converted to risk assessments
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <StatTile
+          label="ACCEPTED"
+          value={
+            isStatsLoading ? <Skeleton className="h-8 w-16" /> : (stats?.statusDistribution.ACCEPTED ?? 0)
+          }
+          sub="Converted to risk assessments"
+          icon={<CheckCircle2 />}
+          tone="success"
+        />
 
         {/* Closed */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Closed</CardTitle>
-            <XCircle className="h-4 w-4 text-slate-500" />
-          </CardHeader>
-          <CardContent>
-            {isStatsLoading ? (
+        <StatTile
+          label="CLOSED"
+          value={
+            isStatsLoading ? (
               <Skeleton className="h-8 w-16" />
             ) : (
-              <>
-                <div className="text-2xl font-bold">
-                  {(stats?.statusDistribution.REJECTED ?? 0) + (stats?.statusDistribution.DUPLICATE ?? 0)}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Rejected or duplicate
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              (stats?.statusDistribution.REJECTED ?? 0) + (stats?.statusDistribution.DUPLICATE ?? 0)
+            )
+          }
+          sub="Rejected or duplicate"
+          icon={<XCircle />}
+        />
       </div>
 
       {/* Filters */}
@@ -1093,7 +1134,7 @@ export function FindingsListContent() {
             <CardContent>
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-md border">

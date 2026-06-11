@@ -38,6 +38,13 @@ import {
   Shield,
   Building2,
   AlertTriangle,
+  Bug,
+  Users,
+  FolderOpen,
+  Network,
+  BarChart3,
+  ShieldAlert,
+  ListChecks,
 } from "lucide-react";
 import { ComplianceStatus, ComplianceAssessmentStatus } from "@prisma/client";
 import { toast } from "sonner";
@@ -58,6 +65,8 @@ import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
+import { CreateRiskDialog } from "@/components/risk/CreateRiskDialog";
+import { AssessmentRisksList } from "@/components/risk/AssessmentRisksList";
 import { AssessmentEvidencePanel } from "@/components/evidence/AssessmentEvidencePanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -103,6 +112,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { WrapperTabPanel } from "@/components/engagement/WrapperTabs";
+import { ExecutiveSummaryTab } from "@/components/deliverable/ExecutiveSummaryTab";
 
 // =============================================================================
 // Types
@@ -280,6 +291,7 @@ function ControlScoringItem({
   isSaving,
   isEditable,
   onCreateFinding,
+  onCreateRisk,
 }: {
   score: ControlScore;
   assessmentId: string;
@@ -287,6 +299,7 @@ function ControlScoringItem({
   isSaving: boolean;
   isEditable: boolean;
   onCreateFinding?: () => void;
+  onCreateRisk?: () => void;
 }) {
   const level = getStatusLevel(score.status);
   const isScored = score.status !== ComplianceStatus.NOT_ASSESSED;
@@ -331,18 +344,32 @@ function ControlScoringItem({
           </div>
           <p className="text-sm font-medium">{score.control.title}</p>
         </div>
-        {onCreateFinding && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 gap-1 shrink-0 text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50"
-            onClick={onCreateFinding}
-            title="Create finding linked to this control"
-          >
-            <AlertTriangle className="h-3 w-3" />
-            Finding
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {onCreateFinding && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 shrink-0 text-amber-700 hover:text-amber-800 border-amber-200 hover:bg-amber-50"
+              onClick={onCreateFinding}
+              title="Create finding linked to this control"
+            >
+              <AlertTriangle className="h-3 w-3" />
+              Finding
+            </Button>
+          )}
+          {onCreateRisk && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 shrink-0 text-red-700 hover:text-red-800 border-red-200 hover:bg-red-50"
+              onClick={onCreateRisk}
+              title="Raise risk linked to this control"
+            >
+              <ShieldAlert className="h-3 w-3" />
+              Risk
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Control Description - Collapsible */}
@@ -536,6 +563,7 @@ function ControlGroupCard({
   isSaving,
   isEditable,
   onCreateFinding,
+  onCreateRisk,
 }: {
   group: ControlGroup;
   assessmentId: string;
@@ -545,6 +573,7 @@ function ControlGroupCard({
   isSaving: boolean;
   isEditable: boolean;
   onCreateFinding?: (score: ControlScore) => void;
+  onCreateRisk?: (score: ControlScore) => void;
 }) {
   const stats = calculateGroupCompliance(group.children);
   const scoredCount = stats.total - stats.notAssessed;
@@ -663,6 +692,11 @@ function ControlGroupCard({
                 onCreateFinding={
                   onCreateFinding
                     ? () => onCreateFinding(childScore)
+                    : undefined
+                }
+                onCreateRisk={
+                  onCreateRisk
+                    ? () => onCreateRisk(childScore)
                     : undefined
                 }
               />
@@ -866,6 +900,39 @@ function ActionsCard({
 }
 
 // =============================================================================
+// Tabbed-workspace scaffolding
+// =============================================================================
+
+type AssessmentTab =
+  | "overview"
+  | "controls"
+  | "findings"
+  | "risks"
+  | "schedule"
+  | "stakeholders"
+  | "evidence"
+  | "pathways"
+  | "action-plans"
+  | "summary";
+
+const TABS: Array<{
+  id: AssessmentTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}> = [
+  { id: "overview", label: "Overview", icon: FileText },
+  { id: "controls", label: "Controls", icon: Shield },
+  { id: "findings", label: "Findings", icon: Bug },
+  { id: "risks", label: "Risks", icon: ShieldAlert },
+  { id: "schedule", label: "Schedule", icon: Calendar },
+  { id: "stakeholders", label: "Stakeholders", icon: Users },
+  { id: "evidence", label: "Evidence", icon: FolderOpen },
+  { id: "pathways", label: "Exploitation Pathways", icon: Network },
+  { id: "action-plans", label: "Action Plans", icon: ListChecks },
+  { id: "summary", label: "Executive Summary", icon: BarChart3 },
+];
+
+// =============================================================================
 // Main Component
 // =============================================================================
 
@@ -880,6 +947,7 @@ export function ComplianceAssessmentDetailClient({
   const utils = api.useUtils();
 
   const [isMounted, setIsMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<AssessmentTab>("overview");
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ComplianceStatus | "ALL">(
     "ALL"
@@ -888,6 +956,14 @@ export function ComplianceAssessmentDetailClient({
   // Inline finding creation state — captures which control the dialog is for
   const [findingDialogOpen, setFindingDialogOpen] = useState(false);
   const [findingContext, setFindingContext] = useState<{
+    controlId: string;
+    controlCode: string;
+    controlTitle: string;
+    controlDescription: string | null;
+  } | null>(null);
+  // Inline risk creation state — mirrors findingContext.
+  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
+  const [riskContext, setRiskContext] = useState<{
     controlId: string;
     controlCode: string;
     controlTitle: string;
@@ -1124,313 +1200,394 @@ export function ComplianceAssessmentDetailClient({
           Back to Assessments
         </Button>
 
-        {/* Header Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <Badge variant="outline">
-                    {assessment.framework.name}
-                  </Badge>
-                  <Badge className={statusConfig.color}>
-                    <StatusIcon className="h-3 w-3 mr-1" />
-                    {statusConfig.label}
-                  </Badge>
-                  {assessment.businessUnit && (
-                    <Badge variant="secondary">
-                      <Building2 className="h-3 w-3 mr-1" />
-                      {assessment.businessUnit.code || assessment.businessUnit.name}
-                    </Badge>
+        {/* Tab nav — underline style (matches risk workspace) */}
+        <div className="border-b overflow-x-auto" role="tablist">
+          <nav className="flex -mb-px min-w-max">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-medium transition-colors whitespace-nowrap",
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
                   )}
-                </div>
-                <CardTitle className="text-2xl">{assessment.name}</CardTitle>
-                <CardDescription>
-                  {assessment.identifier} | {assessment.framework.code} v{assessment.framework.version}
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={`/api/compliance/assessments/${assessmentId}/pdf`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Export PDF
-                  </a>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeleteDialogOpen(true)}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6">
-                  <AvatarFallback className="text-xs">
-                    {getInitials(assessment.owner.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span>{assessment.owner.name || assessment.owner.email}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                <span>Created {format(new Date(assessment.createdAt), "MMM d, yyyy")}</span>
-              </div>
-              {assessment.dueDate && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Due {format(new Date(assessment.dueDate), "MMM d, yyyy")}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  <Icon className="h-4 w-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Control Groups Section */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Control Assessments ({filteredControlGroups.length}
-                {statusFilter !== "ALL" && ` of ${controlGroups.length}`}{" "}
-                groups)
-              </h2>
-              {assessment.status === ComplianceAssessmentStatus.DRAFT && (
-                <Button onClick={handleStart} disabled={startMutation.isPending}>
-                  {startMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-2" />
-                  )}
-                  Start Assessment
-                </Button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Label className="text-sm text-muted-foreground shrink-0">
-                Filter by status:
-              </Label>
-              <Select
-                value={statusFilter}
-                onValueChange={(v) =>
-                  setStatusFilter(v as ComplianceStatus | "ALL")
-                }
-              >
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All ({controlGroups.length})</SelectItem>
-                  {COMPLIANCE_LEVELS.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      {level.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-3">
-              {filteredControlGroups.length === 0 ? (
-                <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No controls match the selected status.
-                </div>
-              ) : (
-                filteredControlGroups.map((group) => (
-                  <ControlGroupCard
-                    key={group.parent.id}
-                    group={group}
-                    assessmentId={assessmentId}
-                    isExpanded={expandedGroup === group.parent.id}
-                    onToggle={() =>
-                      setExpandedGroup(
-                        expandedGroup === group.parent.id
-                          ? null
-                          : group.parent.id
-                      )
-                    }
-                    onUpdate={handleUpdateControl}
-                    isSaving={updateControlMutation.isPending}
-                    isEditable={isEditable}
-                    onCreateFinding={(childScore) => {
-                      setFindingContext({
-                        controlId: childScore.control.id,
-                        controlCode: childScore.control.controlId,
-                        controlTitle: childScore.control.title,
-                        controlDescription: childScore.control.description,
-                      });
-                      setFindingDialogOpen(true);
-                    }}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4">
-            <OverallScoreCard
-              score={complianceScore}
-              compliant={assessment.compliantCount}
-              partial={assessment.partialCount}
-              nonCompliant={assessment.nonCompliantCount}
-              notApplicable={assessment.notApplicableCount}
-              notAssessed={assessment.notAssessedCount}
-              total={assessment.totalControls}
-            />
-
-            <ActionsCard
-              status={assessment.status}
-              onStart={handleStart}
-              onSubmit={() => submitMutation.mutate({ id: assessmentId })}
-              onApprove={() => approveMutation.mutate({ id: assessmentId })}
-              isStarting={startMutation.isPending}
-              isSubmitting={submitMutation.isPending}
-              isApproving={approveMutation.isPending}
-              canSubmit={assessment.notAssessedCount === 0}
-            />
-
-            {/* Baseline Info */}
-            {assessment.baseline && (
+        {/* Tab content */}
+        <div role="tabpanel">
+          {/* ---- Overview ---- */}
+          {activeTab === "overview" && (
+            <div className="space-y-6">
+              {/* Header Card */}
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Baseline
-                  </CardTitle>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <Badge variant="outline">
+                          {assessment.framework.name}
+                        </Badge>
+                        <Badge className={statusConfig.color}>
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {statusConfig.label}
+                        </Badge>
+                        {assessment.businessUnit && (
+                          <Badge variant="secondary">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {assessment.businessUnit.code || assessment.businessUnit.name}
+                          </Badge>
+                        )}
+                      </div>
+                      <CardTitle className="text-2xl">{assessment.name}</CardTitle>
+                      <CardDescription>
+                        {assessment.identifier} | {assessment.framework.code} v{assessment.framework.version}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <a
+                          href={`/api/compliance/assessments/${assessmentId}/pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Export PDF
+                        </a>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteDialogOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <Badge variant="outline">
-                    {assessment.baseline.charAt(0) + assessment.baseline.slice(1).toLowerCase()} Baseline
-                  </Badge>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Assessment Info */}
-            {assessment.assessor && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Assessor
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {getInitials(assessment.assessor.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">
-                      {assessment.assessor.name || assessment.assessor.email}
-                    </span>
+                  <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-xs">
+                          {getInitials(assessment.owner.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{assessment.owner.name || assessment.owner.email}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>Created {format(new Date(assessment.createdAt), "MMM d, yyyy")}</span>
+                    </div>
+                    {assessment.dueDate && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        <span>Due {format(new Date(assessment.dueDate), "MMM d, yyyy")}</span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            )}
-          </div>
-        </div>
 
-        {/* Bar Chart */}
-        {barData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Compliance by Control Group
-              </CardTitle>
-              <CardDescription>
-                Visual overview of compliance across control groups
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const hasData = barData.some(d => d.compliance > 0);
+              {/* Score / stats summary + actions */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-4">
+                  {/* Bar Chart */}
+                  {barData.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Target className="h-4 w-4" />
+                          Compliance by Control Group
+                        </CardTitle>
+                        <CardDescription>
+                          Visual overview of compliance across control groups
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {(() => {
+                          const hasData = barData.some(d => d.compliance > 0);
 
-                if (!hasData) {
-                  return (
-                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                      <div className="text-center">
-                        <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p>No compliance data yet</p>
-                        <p className="text-sm mt-1">Score controls to see the chart</p>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="h-[350px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={barData}
-                        layout="vertical"
-                        margin={{ top: 10, right: 30, left: 60, bottom: 10 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                        <XAxis
-                          type="number"
-                          domain={[0, 100]}
-                          tickFormatter={(value) => `${value}%`}
-                          tick={{ fontSize: 11 }}
-                        />
-                        <YAxis
-                          type="category"
-                          dataKey="code"
-                          tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }}
-                          width={50}
-                        />
-                        <ReferenceLine x={80} stroke="#22c55e" strokeDasharray="3 3" label={{ value: "Target", fontSize: 10, fill: "#22c55e" }} />
-                        <RechartsTooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null;
-                            const data = payload[0]?.payload as { name: string; code: string; compliance: number; fill: string };
+                          if (!hasData) {
                             return (
-                              <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
-                                <p className="font-medium mb-1">{data.name}</p>
-                                <p className="text-xs text-muted-foreground">{data.code}</p>
-                                <div className="mt-2 flex items-center gap-2">
-                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill }} />
-                                  <span>Compliance: {data.compliance.toFixed(0)}%</span>
+                              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                                <div className="text-center">
+                                  <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                  <p>No compliance data yet</p>
+                                  <p className="text-sm mt-1">Score controls to see the chart</p>
                                 </div>
                               </div>
                             );
-                          }}
-                        />
-                        <Bar dataKey="compliance" radius={[0, 4, 4, 0]}>
-                          {barData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                );
-              })()}
-            </CardContent>
-          </Card>
-        )}
+                          }
 
-        {/* Findings entered from this assessment (linked via
-            Finding.sourceComplianceAssessmentId) */}
-        <AssessmentFindingsList
-          assessmentId={assessmentId}
-          assessmentType="COMPLIANCE"
-        />
+                          return (
+                            <div className="h-[350px]">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                  data={barData}
+                                  layout="vertical"
+                                  margin={{ top: 10, right: 30, left: 60, bottom: 10 }}
+                                >
+                                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                                  <XAxis
+                                    type="number"
+                                    domain={[0, 100]}
+                                    tickFormatter={(value) => `${value}%`}
+                                    tick={{ fontSize: 11 }}
+                                  />
+                                  <YAxis
+                                    type="category"
+                                    dataKey="code"
+                                    tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }}
+                                    width={50}
+                                  />
+                                  <ReferenceLine x={80} stroke="#22c55e" strokeDasharray="3 3" label={{ value: "Target", fontSize: 10, fill: "#22c55e" }} />
+                                  <RechartsTooltip
+                                    content={({ active, payload }) => {
+                                      if (!active || !payload?.length) return null;
+                                      const data = payload[0]?.payload as { name: string; code: string; compliance: number; fill: string };
+                                      return (
+                                        <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
+                                          <p className="font-medium mb-1">{data.name}</p>
+                                          <p className="text-xs text-muted-foreground">{data.code}</p>
+                                          <div className="mt-2 flex items-center gap-2">
+                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.fill }} />
+                                            <span>Compliance: {data.compliance.toFixed(0)}%</span>
+                                          </div>
+                                        </div>
+                                      );
+                                    }}
+                                  />
+                                  <Bar dataKey="compliance" radius={[0, 4, 4, 0]}>
+                                    {barData.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                  </Bar>
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Sidebar */}
+                <div className="space-y-4">
+                  <OverallScoreCard
+                    score={complianceScore}
+                    compliant={assessment.compliantCount}
+                    partial={assessment.partialCount}
+                    nonCompliant={assessment.nonCompliantCount}
+                    notApplicable={assessment.notApplicableCount}
+                    notAssessed={assessment.notAssessedCount}
+                    total={assessment.totalControls}
+                  />
+
+                  <ActionsCard
+                    status={assessment.status}
+                    onStart={handleStart}
+                    onSubmit={() => submitMutation.mutate({ id: assessmentId })}
+                    onApprove={() => approveMutation.mutate({ id: assessmentId })}
+                    isStarting={startMutation.isPending}
+                    isSubmitting={submitMutation.isPending}
+                    isApproving={approveMutation.isPending}
+                    canSubmit={assessment.notAssessedCount === 0}
+                  />
+
+                  {/* Baseline Info */}
+                  {assessment.baseline && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          Baseline
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Badge variant="outline">
+                          {assessment.baseline.charAt(0) + assessment.baseline.slice(1).toLowerCase()} Baseline
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Assessment Info */}
+                  {assessment.assessor && (
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Assessor
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {getInitials(assessment.assessor.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            {assessment.assessor.name || assessment.assessor.email}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ---- Controls ---- */}
+          {activeTab === "controls" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Control Assessments ({filteredControlGroups.length}
+                  {statusFilter !== "ALL" && ` of ${controlGroups.length}`}{" "}
+                  groups)
+                </h2>
+                {assessment.status === ComplianceAssessmentStatus.DRAFT && (
+                  <Button onClick={handleStart} disabled={startMutation.isPending}>
+                    {startMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Start Assessment
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Label className="text-sm text-muted-foreground shrink-0">
+                  Filter by status:
+                </Label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v) =>
+                    setStatusFilter(v as ComplianceStatus | "ALL")
+                  }
+                >
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All ({controlGroups.length})</SelectItem>
+                    {COMPLIANCE_LEVELS.map((level) => (
+                      <SelectItem key={level.value} value={level.value}>
+                        {level.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                {filteredControlGroups.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+                    No controls match the selected status.
+                  </div>
+                ) : (
+                  filteredControlGroups.map((group) => (
+                    <ControlGroupCard
+                      key={group.parent.id}
+                      group={group}
+                      assessmentId={assessmentId}
+                      isExpanded={expandedGroup === group.parent.id}
+                      onToggle={() =>
+                        setExpandedGroup(
+                          expandedGroup === group.parent.id
+                            ? null
+                            : group.parent.id
+                        )
+                      }
+                      onUpdate={handleUpdateControl}
+                      isSaving={updateControlMutation.isPending}
+                      isEditable={isEditable}
+                      onCreateFinding={(childScore) => {
+                        setFindingContext({
+                          controlId: childScore.control.id,
+                          controlCode: childScore.control.controlId,
+                          controlTitle: childScore.control.title,
+                          controlDescription: childScore.control.description,
+                        });
+                        setFindingDialogOpen(true);
+                      }}
+                      onCreateRisk={(childScore) => {
+                        setRiskContext({
+                          controlId: childScore.control.id,
+                          controlCode: childScore.control.controlId,
+                          controlTitle: childScore.control.title,
+                          controlDescription: childScore.control.description,
+                        });
+                        setRiskDialogOpen(true);
+                      }}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ---- Findings ---- */}
+          {activeTab === "findings" && (
+            <AssessmentFindingsList
+              assessmentId={assessmentId}
+              assessmentType="COMPLIANCE"
+            />
+          )}
+
+          {/* ---- Risks ---- */}
+          {activeTab === "risks" && (
+            <AssessmentRisksList
+              assessmentId={assessmentId}
+              assessmentType="COMPLIANCE"
+            />
+          )}
+
+          {/* ---- Consulting wrapper tabs (Schedule / Stakeholders / Evidence /
+                  Exploitation Pathways / Action Plans) — shared module ---- */}
+          {(activeTab === "schedule" ||
+            activeTab === "stakeholders" ||
+            activeTab === "evidence" ||
+            activeTab === "pathways" ||
+            activeTab === "action-plans") && (
+            <WrapperTabPanel
+              tab={activeTab}
+              assessmentKind="COMPLIANCE"
+              assessmentId={assessmentId}
+              clientName={assessment.name}
+            />
+          )}
+
+          {/* ---- Executive Summary (deliverable inline) ---- */}
+          {activeTab === "summary" && (
+            <ExecutiveSummaryTab
+              assessmentKind="COMPLIANCE"
+              assessmentId={assessmentId}
+            />
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -1473,6 +1630,24 @@ export function ComplianceAssessmentDetailClient({
           }
           contextLabel={`Linked to ${findingContext.controlCode} — ${findingContext.controlTitle}`}
           controlId={findingContext.controlId}
+          complianceAssessmentId={assessment.id}
+        />
+      )}
+
+      {/* Inline "Create Risk" dialog — mirrors the finding dialog, context
+          swapped per control via riskContext state. */}
+      {riskContext && (
+        <CreateRiskDialog
+          open={riskDialogOpen}
+          onOpenChange={setRiskDialogOpen}
+          initialTitle={`${riskContext.controlCode} — ${riskContext.controlTitle}`}
+          initialDescription={
+            riskContext.controlDescription
+              ? `Raised during assessment "${assessment.name}" (${assessment.identifier}):\n\n${riskContext.controlDescription}`
+              : `Raised during assessment "${assessment.name}" (${assessment.identifier}) against ${riskContext.controlCode} — ${riskContext.controlTitle}.`
+          }
+          contextLabel={`Linked to ${riskContext.controlCode} — ${riskContext.controlTitle}`}
+          controlId={riskContext.controlId}
           complianceAssessmentId={assessment.id}
         />
       )}

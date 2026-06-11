@@ -39,7 +39,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import type { Threshold } from "@/lib/matrix/types";
+import { ScaleLevelSelector } from "@/components/assessment/ScaleLevelSelector";
+import {
+  calculateInherentScore,
+  isScoreResult,
+} from "@/lib/matrix/scoring";
+import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 
 const SOURCE_OPTIONS: { value: FindingSource; label: string }[] = [
   { value: "AUDIT", label: "Audit" },
@@ -88,6 +93,19 @@ function severityForThresholdIndex(index: number, total: number): Severity {
   return "MEDIUM";
 }
 
+/**
+ * Coarse Severity enum from a matrix threshold label. Mirrors the server
+ * (finding.ts `severityFromLabel`): Critical/High → HIGH, Low → LOW, else
+ * MEDIUM. Used for the live preview only; the server recomputes authoritatively.
+ */
+function severityFromLabel(label: string | null | undefined): Severity {
+  if (!label) return "MEDIUM";
+  const upper = label.toUpperCase();
+  if (upper === "CRITICAL" || upper === "HIGH") return "HIGH";
+  if (upper === "LOW") return "LOW";
+  return "MEDIUM";
+}
+
 function buildSeverityOptions(thresholds: Threshold[] | null | undefined): SeverityOption[] {
   if (!thresholds || thresholds.length === 0) return FALLBACK_SEVERITY_OPTIONS;
   // Sort ascending by sortOrder so position-based mapping is predictable,
@@ -133,13 +151,42 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
   // threshold the user picked even when several tiers map to the same enum.
   const [severityKey, setSeverityKey] = useState<string | null>(null);
 
-  // Pull the org's default risk matrix so the severity dropdown can use the
-  // matrix-defined thresholds (Critical/High/Medium/Low etc.) — keeps the
-  // qualitative vocabulary consistent between findings and risks.
+  // Matrix L×I(×E) scoring inputs. Null until the user picks each axis.
+  const [likelihood, setLikelihood] = useState<number | null>(null);
+  const [impact, setImpact] = useState<number | null>(null);
+  const [exposure, setExposure] = useState<number | null>(null);
+
+  // Pull the org's default risk matrix. When it has `scales`, we score the
+  // finding via L×I(×E); otherwise we fall back to the categorical severity
+  // dropdown so the dialog still works with no configured matrix.
   const { data: defaultMatrix } = api.riskMatrix.getDefault.useQuery(
     undefined,
     { enabled: props.open }
   );
+
+  const scales = (defaultMatrix?.scales ?? null) as MatrixScales | null;
+  // 3D when the matrix declares dimensionCount 3 AND ships an exposure scale.
+  const is3D =
+    defaultMatrix?.dimensionCount === 3 && !!scales?.exposure && scales.exposure.length > 0;
+  // Use matrix scoring only when scales are present; else categorical fallback.
+  const useMatrixScoring = !!scales && scales.likelihood.length > 0 && scales.impact.length > 0;
+
+  // Live inherent score from the picked L/I/(E). The same calculateInherentScore
+  // the server uses — this preview must stay advisory (server is authoritative).
+  const liveScore = useMemo(() => {
+    if (!useMatrixScoring || !scales || !defaultMatrix) return null;
+    if (likelihood == null || impact == null) return null;
+    if (is3D && exposure == null) return null;
+    const result = calculateInherentScore(
+      scales,
+      (defaultMatrix.thresholds ?? []) as Threshold[],
+      defaultMatrix.outputScaleMax,
+      likelihood,
+      impact,
+      is3D ? exposure : undefined
+    );
+    return isScoreResult(result) ? result : null;
+  }, [useMatrixScoring, scales, defaultMatrix, likelihood, impact, exposure, is3D]);
 
   const severityOptions = useMemo(
     () => buildSeverityOptions(defaultMatrix?.thresholds ?? null),
@@ -165,6 +212,10 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
           severityOptions[Math.floor(severityOptions.length / 2)]?.key ??
           null
       );
+      // Reset the matrix axes each time the dialog opens for a fresh finding.
+      setLikelihood(null);
+      setImpact(null);
+      setExposure(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open, props.initialTitle, props.initialDescription, severityOptions]);
@@ -205,11 +256,39 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
 
   const descLen = description.trim().length;
   const titleLen = title.trim().length;
+  // When the matrix is configured, require a complete score before submitting;
+  // otherwise the categorical dropdown always has a value so no extra gate.
+  const hasMatrixScore = !useMatrixScoring || liveScore !== null;
   const canSubmit =
-    titleLen >= 5 && titleLen <= 500 && descLen >= 20 && !createMutation.isPending;
+    titleLen >= 5 &&
+    titleLen <= 500 &&
+    descLen >= 20 &&
+    hasMatrixScore &&
+    !createMutation.isPending;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
+    if (useMatrixScoring && liveScore) {
+      // Matrix scoring path: send L/I/(E) + the version id. The server recomputes
+      // the score, derives severity/severityLabel, and stores inherent values.
+      createMutation.mutate({
+        title: title.trim(),
+        description: description.trim(),
+        source,
+        // Advisory severity from the live preview; server overrides it.
+        severity: severityFromLabel(liveScore.label),
+        likelihood: likelihood ?? undefined,
+        impact: impact ?? undefined,
+        exposure: is3D ? exposure ?? undefined : undefined,
+        matrixVersionId: defaultMatrix?.currentVersionId ?? undefined,
+        controlId: props.controlId,
+        complianceAssessmentId: props.complianceAssessmentId,
+        maturityAssessmentId: props.maturityAssessmentId,
+        maturityDomainId: props.maturityDomainId,
+      });
+      return;
+    }
+    // Categorical fallback (no configured matrix scales).
     createMutation.mutate({
       title: title.trim(),
       description: description.trim(),
@@ -280,25 +359,96 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Source</Label>
-              <Select
-                value={source}
-                onValueChange={(v) => setSource(v as FindingSource)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SOURCE_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div>
+            <Label>Source</Label>
+            <Select
+              value={source}
+              onValueChange={(v) => setSource(v as FindingSource)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SOURCE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {useMatrixScoring && scales ? (
+            // Matrix scoring: L × I (× E) selectors + live score preview.
+            <div className="space-y-4">
+              <div>
+                <Label className="mb-2 block">
+                  Likelihood <span className="text-destructive">*</span>
+                </Label>
+                <ScaleLevelSelector
+                  levels={scales.likelihood}
+                  value={likelihood}
+                  onChange={setLikelihood}
+                  variant="compact"
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block">
+                  Impact <span className="text-destructive">*</span>
+                </Label>
+                <ScaleLevelSelector
+                  levels={scales.impact}
+                  value={impact}
+                  onChange={setImpact}
+                  variant="compact"
+                />
+              </div>
+              {is3D && scales.exposure ? (
+                <div>
+                  <Label className="mb-2 block">
+                    Exposure <span className="text-destructive">*</span>
+                  </Label>
+                  <ScaleLevelSelector
+                    levels={scales.exposure}
+                    value={exposure}
+                    onChange={setExposure}
+                    variant="compact"
+                  />
+                </div>
+              ) : null}
+
+              {/* Live score + threshold label/color, or a hint to finish picking. */}
+              {liveScore ? (
+                <div
+                  className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <span
+                    aria-hidden
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: liveScore.color }}
+                  />
+                  <span className="font-medium">
+                    Score {Number(liveScore.normalizedScore.toFixed(2))}
+                  </span>
+                  <span className="text-muted-foreground">· {liveScore.label}</span>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Select {is3D ? "likelihood, impact, and exposure" : "likelihood and impact"} to
+                  compute the score
+                  {defaultMatrix?.name ? (
+                    <>
+                      {" "}
+                      from <span className="font-medium">{defaultMatrix.name}</span>
+                    </>
+                  ) : null}
+                  .
+                </p>
+              )}
             </div>
+          ) : (
+            // Fallback: categorical severity dropdown (no configured matrix).
             <div>
               <Label>Severity</Label>
               <Select
@@ -330,7 +480,7 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
                 </p>
               )}
             </div>
-          </div>
+          )}
         </div>
 
         <DialogFooter>

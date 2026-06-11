@@ -207,6 +207,20 @@ const ALLOWLIST_TABLES = new Set([
   "EnterpriseRiskReview",
   // Deployment-wide changelog — not organization-scoped. ORG_ADMIN-gated at the tRPC layer.
   "ReleaseVersion",
+  // Epic 19: Exploitation Pathway — PathwayStep has no organizationId; isolation
+  // is via the Pathway relation (which has organizationId and stays filtered).
+  "PathwayStep",
+  // PathwayStepMember / RiskFindingLink: join tables with no organizationId;
+  // isolation is via their parent relations (step→pathway, risk/finding).
+  "PathwayStepMember",
+  "RiskFindingLink",
+  // ActionPlanItemFinding: join table; isolation via ActionPlanItem (has org).
+  "ActionPlanItemFinding",
+  // Epic 18: Engagement child tables have no organizationId; isolation is via
+  // the parent Engagement relation (which has organizationId and stays filtered).
+  "EngagementSession",
+  "EngagementStakeholder",
+  "EngagementEvidenceRequest",
 ]);
 
 /**

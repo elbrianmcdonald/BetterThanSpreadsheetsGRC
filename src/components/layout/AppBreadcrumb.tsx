@@ -56,8 +56,10 @@ function BreadcrumbLabel({
   const labelElement = (
     <span
       className={cn(
-        "ml-2 text-sm font-medium",
-        isLink ? "text-gray-500 hover:text-gray-700" : "text-gray-700"
+        "ml-2 text-[12.5px]",
+        isLink
+          ? "text-muted-foreground hover:text-foreground"
+          : "font-semibold text-foreground"
       )}
     >
       {truncated}
@@ -86,19 +88,19 @@ function BreadcrumbLabel({
 export function AppBreadcrumb({ items, className, maxLength = 30 }: AppBreadcrumbProps) {
   return (
     <nav className={cn("flex", className)} aria-label="Breadcrumb">
-      <ol className="flex items-center space-x-2">
+      <ol className="flex items-center gap-2">
         <li>
           <Link
             href="/"
-            className="text-gray-400 hover:text-gray-500 flex items-center"
+            className="flex items-center text-muted-foreground/70 hover:text-foreground"
           >
-            <Home className="h-4 w-4" />
+            <Home className="h-3.5 w-3.5" />
             <span className="sr-only">Home</span>
           </Link>
         </li>
         {items.map((item, index) => (
           <li key={index} className="flex items-center">
-            <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400" />
+            <ChevronRight className="h-3 w-3 flex-shrink-0 text-input" />
             {item.href ? (
               <Link href={item.href} className="flex items-center">
                 <BreadcrumbLabel label={item.label} maxLength={maxLength} isLink={true} />

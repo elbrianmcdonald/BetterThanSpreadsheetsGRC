@@ -24,7 +24,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -357,61 +357,45 @@ export function RiskMatricesClient() {
     <AppLayout breadcrumbs={[{ label: "Administration" }, { label: "Risk Matrices" }]}>
       <div className="px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="sm:flex sm:items-center sm:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-              <Grid3X3 className="h-6 w-6" />
-              Risk Matrix Management
-            </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Define risk scoring matrices for different assessment types (2D or 3D).
-          </p>
-        </div>
-        <Button onClick={openCreateForm} className="mt-4 sm:mt-0">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Matrix
-        </Button>
-      </div>
+        <PageHeader
+          eyebrow="ADMINISTRATION"
+          title="Risk Matrix Management"
+          icon={<Grid3X3 />}
+          description="Define risk scoring matrices for different assessment types (2D or 3D)."
+          actions={
+            <Button onClick={openCreateForm}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Matrix
+            </Button>
+          }
+        />
 
       {/* Summary Cards - Story 11.8: Include Default Matrix info */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active Matrices</p>
-                <p className="text-2xl font-semibold text-green-600">{activeCount}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="Active Matrices"
+          value={activeCount}
+          tone="success"
+          icon={<CheckCircle />}
+        />
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">With Published Versions</p>
-                <p className="text-2xl font-semibold text-blue-600">{publishedCount}</p>
-              </div>
-              <Layers className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="With Published Versions"
+          value={publishedCount}
+          tone="primary"
+          icon={<Layers />}
+        />
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Default Matrix</p>
-                <p className="text-lg font-semibold text-amber-600 truncate">
-                  {defaultMatrix?.name ?? "Not set"}
-                </p>
-              </div>
-              <Star className="h-8 w-8 text-amber-500 fill-amber-500" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          label="Default Matrix"
+          value={
+            <span className="block truncate text-[20px]">
+              {defaultMatrix?.name ?? "Not set"}
+            </span>
+          }
+          tone="warning"
+          icon={<Star className="fill-warning" />}
+        />
       </div>
 
       {/* Filter */}
@@ -464,18 +448,18 @@ export function RiskMatricesClient() {
                   <div className="flex items-center gap-2">
                     {/* Story 11.8 AC4/AC14: Star icon for default */}
                     {template.isDefault && (
-                      <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                      <Star className="h-4 w-4 text-warning fill-warning" />
                     )}
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
+                    <CardTitle className="text-base font-bold text-foreground">{template.name}</CardTitle>
                   </div>
                   {/* AC20: Status indicator */}
                   <div className="flex items-center gap-2">
                     {template.isDefault && (
-                      <Badge variant="outline" className="text-amber-600 border-amber-600">
+                      <Badge variant="warning">
                         Default
                       </Badge>
                     )}
-                    <Badge variant={template.hasPublishedVersion ? "default" : "secondary"}>
+                    <Badge variant={template.hasPublishedVersion ? "success" : "neutral"}>
                       {template.hasPublishedVersion ? "Published" : "Draft"}
                     </Badge>
                   </div>
@@ -489,23 +473,23 @@ export function RiskMatricesClient() {
                   {/* Story 11.2: Combined grid size and dimension display (AC11) */}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Grid:</span>
-                    <span className="font-medium">
+                    <span className="tnum font-mono text-foreground">
                       {template.gridSize ?? 5}×{template.gridSize ?? 5}{" "}
                       {template.dimensionCount === 2 ? "2D" : "3D"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Max Score:</span>
-                    <span className="font-medium">{template.outputScaleMax}</span>
+                    <span className="tnum font-mono text-foreground">{template.outputScaleMax}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Versions:</span>
-                    <span className="font-medium">{template.versionCount}</span>
+                    <span className="tnum font-mono text-foreground">{template.versionCount}</span>
                   </div>
                 </div>
 
                 {/* Actions - Story 11.8: Quick actions dropdown */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                   <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
@@ -716,7 +700,7 @@ export function RiskMatricesClient() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-amber-500" />
+              <Star className="h-5 w-5 text-warning" />
               Set as Default Matrix?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -725,7 +709,7 @@ export function RiskMatricesClient() {
                   <strong>{setDefaultTemplate?.name}</strong> will become the default risk matrix for your organization.
                 </p>
                 {currentDefault && currentDefault.id !== setDefaultTemplate?.id && (
-                  <p className="text-amber-600">
+                  <p className="text-warning">
                     This will replace <strong>{currentDefault.name}</strong> as the default matrix.
                   </p>
                 )}
@@ -757,7 +741,7 @@ export function RiskMatricesClient() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-warning" />
               Deactivate {toggleTemplate?.name}?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -768,7 +752,7 @@ export function RiskMatricesClient() {
                   </p>
                 ) : deactivateCheck?.activeAssessmentCount && deactivateCheck.activeAssessmentCount > 0 ? (
                   <>
-                    <p className="text-amber-600">
+                    <p className="text-warning">
                       Warning: {deactivateCheck.activeAssessmentCount} active assessment(s) use this matrix.
                     </p>
                     <p>

@@ -34,19 +34,19 @@ import { cn } from "@/lib/utils";
 
 /** Assessment type configuration */
 const assessmentTypeConfig: Record<UnifiedAssessmentType, { label: string; icon: React.ElementType; color: string }> = {
-  RISK_DISCOVERY: { label: "Risk Discovery", icon: Search, color: "bg-blue-100 text-blue-800" },
-  RISK_ASSESSMENT: { label: "Risk Assessment", icon: Shield, color: "bg-purple-100 text-purple-800" },
-  FINDING_CREATION: { label: "Finding", icon: AlertTriangle, color: "bg-amber-100 text-amber-800" },
-  VENDOR_ASSESSMENT: { label: "Vendor", icon: Building2, color: "bg-green-100 text-green-800" },
-  BIA_ASSESSMENT: { label: "BIA", icon: Activity, color: "bg-cyan-100 text-cyan-800" },
-  COMPLIANCE_ASSESSMENT: { label: "Compliance", icon: FileText, color: "bg-indigo-100 text-indigo-800" },
+  RISK_DISCOVERY: { label: "Risk Discovery", icon: Search, color: "border-transparent bg-primary/10 text-primary" },
+  RISK_ASSESSMENT: { label: "Risk Assessment", icon: Shield, color: "border-transparent bg-primary/10 text-primary" },
+  FINDING_CREATION: { label: "Finding", icon: AlertTriangle, color: "border-transparent bg-warning/10 text-warning" },
+  VENDOR_ASSESSMENT: { label: "Vendor", icon: Building2, color: "border-transparent bg-success/10 text-success" },
+  BIA_ASSESSMENT: { label: "BIA", icon: Activity, color: "border-transparent bg-primary/10 text-primary" },
+  COMPLIANCE_ASSESSMENT: { label: "Compliance", icon: FileText, color: "border-transparent bg-primary/10 text-primary" },
 };
 
-/** Priority badge colors */
+/** Priority badge colors — muted report tones */
 const priorityConfig = {
-  HIGH: { color: "bg-red-100 text-red-700", label: "High" },
-  MEDIUM: { color: "bg-amber-100 text-amber-700", label: "Medium" },
-  LOW: { color: "bg-green-100 text-green-700", label: "Low" },
+  HIGH: { color: "border-transparent bg-destructive/10 text-destructive", label: "High" },
+  MEDIUM: { color: "border-transparent bg-warning/10 text-warning", label: "Medium" },
+  LOW: { color: "border-transparent bg-success/10 text-success", label: "Low" },
 };
 
 interface KanbanCardProps {
@@ -148,8 +148,8 @@ export function KanbanCard({ task, onStart, onComplete, isLoading }: KanbanCardP
     >
       <Card
         className={cn(
-          "cursor-pointer hover:shadow-md transition-shadow",
-          isOverdue && task.status !== AssessmentTaskStatus.COMPLETED && "border-red-300 bg-red-50/30"
+          "cursor-pointer transition-colors hover:border-primary/30",
+          isOverdue && task.status !== AssessmentTaskStatus.COMPLETED && "border-destructive/30 bg-destructive/5"
         )}
         onClick={handleCardClick}
       >
@@ -160,7 +160,7 @@ export function KanbanCard({ task, onStart, onComplete, isLoading }: KanbanCardP
               <button
                 {...attributes}
                 {...listeners}
-                className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600"
+                className="cursor-grab text-muted-foreground/70 hover:text-foreground active:cursor-grabbing"
                 onClick={(e) => e.stopPropagation()}
               >
                 <GripVertical className="h-4 w-4" />
@@ -169,7 +169,7 @@ export function KanbanCard({ task, onStart, onComplete, isLoading }: KanbanCardP
                 {task.identifier}
               </span>
             </div>
-            <Badge className={cn("text-xs", typeConfig?.color)}>
+            <Badge variant="outline" className={cn("text-xs", typeConfig?.color)}>
               <TypeIcon className="h-3 w-3 mr-1" />
               {typeConfig?.label}
             </Badge>
@@ -177,7 +177,7 @@ export function KanbanCard({ task, onStart, onComplete, isLoading }: KanbanCardP
         </CardHeader>
         <CardContent className="p-3 pt-0 space-y-2">
           {/* Title */}
-          <h4 className="font-medium text-sm line-clamp-2">{task.title}</h4>
+          <h4 className="text-sm font-semibold text-foreground line-clamp-2">{task.title}</h4>
 
           {/* Meta info row */}
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -200,7 +200,7 @@ export function KanbanCard({ task, onStart, onComplete, isLoading }: KanbanCardP
             <div className={cn(
               "flex items-center gap-1 text-xs",
               isOverdue && task.status !== AssessmentTaskStatus.COMPLETED
-                ? "text-red-600 font-medium"
+                ? "text-destructive font-medium"
                 : "text-muted-foreground"
             )}>
               <Clock className="h-3 w-3" />

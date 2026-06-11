@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { ContingencyBIAStatus, HasBCP } from "@prisma/client";
 import { api } from "@/trpc/react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -105,53 +105,9 @@ function formatDate(d: Date | string | null | undefined) {
 
 function bcpBadge(v: HasBCP | null | undefined) {
   if (!v) return <span className="text-muted-foreground text-sm">—</span>;
-  if (v === HasBCP.YES)
-    return (
-      <Badge className="bg-green-100 text-green-800 border-green-200">
-        Yes
-      </Badge>
-    );
-  if (v === HasBCP.NO)
-    return (
-      <Badge className="bg-red-100 text-red-800 border-red-200">No</Badge>
-    );
+  if (v === HasBCP.YES) return <Badge variant="success">Yes</Badge>;
+  if (v === HasBCP.NO) return <Badge variant="critical">No</Badge>;
   return <Badge variant="outline">N/A</Badge>;
-}
-
-function StatCard(props: {
-  label: string;
-  value: number | string;
-  hint?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tone?: "default" | "amber" | "red";
-}) {
-  const Icon = props.icon;
-  const toneBg =
-    props.tone === "amber"
-      ? "bg-amber-50 text-amber-700"
-      : props.tone === "red"
-        ? "bg-red-50 text-red-700"
-        : "bg-primary/10 text-primary";
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              {props.label}
-            </p>
-            <p className="text-3xl font-bold mt-1">{props.value}</p>
-            {props.hint && (
-              <p className="text-xs text-muted-foreground mt-1">{props.hint}</p>
-            )}
-          </div>
-          <div className={`p-2 rounded-md ${toneBg}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 export function BiaRegisterClient() {
@@ -221,69 +177,64 @@ export function BiaRegisterClient() {
       breadcrumbs={[{ label: "Business Impact" }, { label: "BIA Register" }]}
     >
       <div className="container max-w-7xl mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <FileText className="h-6 w-6" />
-              BIA Register
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              All Business Impact Analyses across your assets and business
-              processes.
-            </p>
-          </div>
-          <Button asChild>
-            <Link href="/bia/system-contingency/new">
-              <Plus className="h-4 w-4 mr-2" />
-              New BIA
-            </Link>
-          </Button>
-        </div>
+        <PageHeader
+          eyebrow="BUSINESS IMPACT"
+          title="BIA Register"
+          icon={<FileText />}
+          description="All Business Impact Analyses across your assets and business processes."
+          actions={
+            <Button asChild>
+              <Link href="/bia/system-contingency/new">
+                <Plus className="h-4 w-4 mr-2" />
+                New BIA
+              </Link>
+            </Button>
+          }
+        />
 
         {/* Summary stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
+          <StatTile
             label="Total BIAs"
             value={stats?.total ?? "—"}
-            hint={
+            sub={
               stats
                 ? `${stats.byStatus.final} finalized · ${stats.byStatus.draft} draft`
                 : "Loading…"
             }
-            icon={ClipboardList}
+            icon={<ClipboardList />}
+            accent
           />
-          <StatCard
+          <StatTile
             label="BCP Documented"
-            value={
-              stats ? `${stats.byBCP.yes} / ${stats.total}` : "—"
-            }
-            hint={
+            value={stats ? `${stats.byBCP.yes} / ${stats.total}` : "—"}
+            sub={
               stats
                 ? `${stats.byBCP.no} missing · ${stats.byBCP.unset} not evaluated`
                 : "Loading…"
             }
-            icon={ShieldCheck}
+            icon={<ShieldCheck />}
           />
-          <StatCard
+          <StatTile
             label="Anchor mix"
             value={
               stats
                 ? `${stats.byAnchor.asset} / ${stats.byAnchor.process}`
                 : "—"
             }
-            hint="Asset / Process"
-            icon={Activity}
+            sub="Asset / Process"
+            icon={<Activity />}
           />
-          <StatCard
+          <StatTile
             label={`Stale (>${stats?.staleCutoffDays ?? 90}d)`}
             value={stats?.staleCount ?? "—"}
-            hint="Not updated recently — review"
-            icon={Clock}
+            sub="Not updated recently — review"
+            icon={<Clock />}
             tone={
               stats && stats.staleCount > 0
                 ? stats.staleCount > 5
-                  ? "red"
-                  : "amber"
+                  ? "critical"
+                  : "warning"
                 : "default"
             }
           />
@@ -294,7 +245,7 @@ export function BiaRegisterClient() {
           <CardContent className="pt-6">
             <div className="flex flex-wrap items-end gap-3">
               <div className="relative flex-1 min-w-[240px] max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/70" />
                 <Input
                   placeholder="Search by anchor, overview, or description…"
                   value={search}
@@ -304,7 +255,7 @@ export function BiaRegisterClient() {
               </div>
 
               <div>
-                <Label className="text-xs uppercase">Status</Label>
+                <Label className="text-[12.5px] font-semibold text-secondary-foreground">Status</Label>
                 <Select
                   value={status}
                   onValueChange={(v) =>
@@ -327,7 +278,7 @@ export function BiaRegisterClient() {
               </div>
 
               <div>
-                <Label className="text-xs uppercase">Anchor</Label>
+                <Label className="text-[12.5px] font-semibold text-secondary-foreground">Anchor</Label>
                 <Select
                   value={anchor}
                   onValueChange={(v) =>
@@ -346,7 +297,7 @@ export function BiaRegisterClient() {
               </div>
 
               <div>
-                <Label className="text-xs uppercase">BCP</Label>
+                <Label className="text-[12.5px] font-semibold text-secondary-foreground">BCP</Label>
                 <Select
                   value={bcp}
                   onValueChange={(v) =>
@@ -458,13 +409,41 @@ export function BiaRegisterClient() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {visibility.anchor && <TableHead>Anchor</TableHead>}
-                    {visibility.status && <TableHead>Status</TableHead>}
-                    {visibility.bcp && <TableHead>BCP?</TableHead>}
-                    {visibility.completion && <TableHead>Completion</TableHead>}
-                    {visibility.processes && <TableHead>Processes</TableHead>}
-                    {visibility.resources && <TableHead>Resources</TableHead>}
-                    {visibility.updated && <TableHead>Updated</TableHead>}
+                    {visibility.anchor && (
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                        Anchor
+                      </TableHead>
+                    )}
+                    {visibility.status && (
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                        Status
+                      </TableHead>
+                    )}
+                    {visibility.bcp && (
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                        BCP?
+                      </TableHead>
+                    )}
+                    {visibility.completion && (
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                        Completion
+                      </TableHead>
+                    )}
+                    {visibility.processes && (
+                      <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                        Processes
+                      </TableHead>
+                    )}
+                    {visibility.resources && (
+                      <TableHead className="text-right font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                        Resources
+                      </TableHead>
+                    )}
+                    {visibility.updated && (
+                      <TableHead className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                        Updated
+                      </TableHead>
+                    )}
                     <TableHead className="w-[120px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -487,24 +466,24 @@ export function BiaRegisterClient() {
                         : "—";
 
                     return (
-                      <TableRow key={bia.id}>
+                      <TableRow key={bia.id} className="hover:bg-secondary">
                         {visibility.anchor && (
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {anchorType}
-                              </Badge>
+                              <Badge variant="code">{anchorType}</Badge>
                               {anchorHref ? (
                                 <Link
                                   href={anchorHref}
-                                  className="text-sm hover:underline inline-flex items-center gap-1"
+                                  className="text-sm font-semibold text-foreground hover:underline inline-flex items-center gap-1"
                                   title={`Open ${anchorType.toLowerCase()} detail`}
                                 >
                                   {anchorLabel}
-                                  <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                                  <ExternalLink className="h-3 w-3 text-muted-foreground/70" />
                                 </Link>
                               ) : (
-                                <span className="text-sm">{anchorLabel}</span>
+                                <span className="text-sm font-semibold text-foreground">
+                                  {anchorLabel}
+                                </span>
                               )}
                             </div>
                           </TableCell>
@@ -514,8 +493,8 @@ export function BiaRegisterClient() {
                             <Badge
                               variant={
                                 bia.status === ContingencyBIAStatus.FINAL
-                                  ? "default"
-                                  : "outline"
+                                  ? "success"
+                                  : "neutral"
                               }
                             >
                               {bia.status}
@@ -526,26 +505,26 @@ export function BiaRegisterClient() {
                           <TableCell>{bcpBadge(bia.hasBCP)}</TableCell>
                         )}
                         {visibility.completion && (
-                          <TableCell className="text-sm">
+                          <TableCell className="font-mono text-[13px] text-muted-foreground">
                             {formatDate(bia.completionDate)}
                           </TableCell>
                         )}
                         {visibility.processes && (
-                          <TableCell className="text-sm">
+                          <TableCell className="text-right tnum text-sm">
                             {bia._count.processes}
                           </TableCell>
                         )}
                         {visibility.resources && (
-                          <TableCell className="text-sm">
+                          <TableCell className="text-right tnum text-sm">
                             {bia._count.resources}
                           </TableCell>
                         )}
                         {visibility.updated && (
-                          <TableCell className="text-sm">
+                          <TableCell className="font-mono text-[13px] text-muted-foreground">
                             {formatDate(bia.updatedAt)}
                           </TableCell>
                         )}
-                        <TableCell>
+                        <TableCell className="text-right">
                           <Button variant="outline" size="sm" asChild>
                             <Link href={`/bia/system-contingency/${bia.id}`}>
                               Open BIA

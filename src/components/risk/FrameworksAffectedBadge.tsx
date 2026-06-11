@@ -33,29 +33,29 @@ function getFrameworksColor(count: number): {
 } {
   if (count >= 5) {
     return {
-      color: "text-red-700 dark:text-red-400",
-      bgColor: "bg-red-100 dark:bg-red-900/30",
-      borderColor: "border-red-200 dark:border-red-800",
+      color: "text-destructive",
+      bgColor: "bg-destructive/10",
+      borderColor: "border-transparent",
     };
   }
   if (count >= 3) {
     return {
-      color: "text-amber-700 dark:text-amber-400",
-      bgColor: "bg-amber-100 dark:bg-amber-900/30",
-      borderColor: "border-amber-200 dark:border-amber-800",
+      color: "text-warning",
+      bgColor: "bg-warning/10",
+      borderColor: "border-transparent",
     };
   }
   if (count >= 1) {
     return {
-      color: "text-blue-700 dark:text-blue-400",
-      bgColor: "bg-blue-100 dark:bg-blue-900/30",
-      borderColor: "border-blue-200 dark:border-blue-800",
+      color: "text-primary",
+      bgColor: "bg-primary/10",
+      borderColor: "border-transparent",
     };
   }
   return {
-    color: "text-gray-600 dark:text-gray-400",
-    bgColor: "bg-gray-100 dark:bg-gray-800/50",
-    borderColor: "border-gray-200 dark:border-gray-700",
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+    borderColor: "border-transparent",
   };
 }
 
@@ -189,7 +189,7 @@ export function FrameworksAffectedList({
         <Badge
           key={i}
           variant="outline"
-          className="text-xs px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+          className="text-xs px-2 py-0.5 bg-primary/10 text-primary border-transparent"
         >
           <Shield className="h-3 w-3 mr-1" />
           {name}

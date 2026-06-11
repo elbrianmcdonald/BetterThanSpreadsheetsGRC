@@ -17,7 +17,7 @@ import {
   Database,
   RefreshCw,
 } from "lucide-react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -130,22 +130,18 @@ export function BackupsClient() {
       ]}
     >
       <div className="container max-w-4xl mx-auto py-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Database className="h-6 w-6" />
-            Backups
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Download a complete copy of your organization's data and uploaded evidence,
-            or restore from a previous backup archive.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="ADMINISTRATION"
+          title="Backups"
+          icon={<Database />}
+          description="Download a complete copy of your organization's data and uploaded evidence, or restore from a previous backup archive."
+        />
 
         {/* Download */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Download className="h-5 w-5" />
+              <Download className="h-[17px] w-[17px] text-primary" />
               Download backup
             </CardTitle>
             <CardDescription>
@@ -172,10 +168,10 @@ export function BackupsClient() {
         </Card>
 
         {/* Restore */}
-        <Card className="border-amber-200">
+        <Card className="border-warning/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
+              <Upload className="h-[17px] w-[17px] text-primary" />
               Restore from backup
             </CardTitle>
             <CardDescription>
@@ -185,7 +181,7 @@ export function BackupsClient() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">
+            <div className="flex items-start gap-2 rounded-md bg-warning/10 border border-warning/30 p-3 text-sm text-warning">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <div className="space-y-1">
                 <p className="font-medium">
@@ -263,7 +259,7 @@ export function BackupsClient() {
                   void handleRestore();
                 }}
                 disabled={isRestoring}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {isRestoring ? "Restoring..." : "Replace data now"}
               </AlertDialogAction>

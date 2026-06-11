@@ -53,7 +53,7 @@ import {
 import { ObjectiveStatus, StrategyStatus } from "@prisma/client";
 
 import { api } from "@/trpc/react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -110,17 +110,17 @@ const PRESET_LABELS: Record<DateRangePreset, string> = {
 
 /** Get color based on progress percentage (AC2) */
 function getProgressColor(progress: number): string {
-  if (progress < 33) return "hsl(0, 84%, 60%)"; // Red
-  if (progress < 67) return "hsl(45, 93%, 47%)"; // Amber
-  return "hsl(142, 76%, 36%)"; // Green
+  if (progress < 33) return "var(--destructive)"; // brick
+  if (progress < 67) return "var(--warning)"; // ochre
+  return "var(--success)"; // forest
 }
 
 /** Status colors for pie chart (AC3) */
 const STATUS_COLORS: Record<ObjectiveStatus, string> = {
-  NOT_STARTED: "hsl(220, 9%, 46%)", // Gray
-  IN_PROGRESS: "hsl(217, 91%, 60%)", // Blue
-  AT_RISK: "hsl(45, 93%, 47%)", // Amber
-  COMPLETED: "hsl(142, 76%, 36%)", // Green
+  NOT_STARTED: "var(--chart-5)", // faint
+  IN_PROGRESS: "var(--primary)", // navy
+  AT_RISK: "var(--warning)", // ochre
+  COMPLETED: "var(--success)", // forest
 };
 
 /** Status labels for display */
@@ -146,12 +146,12 @@ function BarChartTooltip({
   };
 
   return (
-    <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
-      <p className="font-medium mb-1">{data.title}</p>
+    <div className="rounded-md border border-border bg-card p-3 text-sm shadow-sm">
+      <p className="mb-1 font-semibold text-foreground">{data.title}</p>
       <div className="space-y-1 text-muted-foreground">
-        <p>Progress: <span className="font-medium text-foreground">{data.progress}%</span></p>
-        <p>Goals: <span className="font-medium text-foreground">{data.goalCount}</span></p>
-        <p>Objectives: <span className="font-medium text-foreground">{data.objectiveCount}</span></p>
+        <p>Progress: <span className="font-mono font-medium text-foreground tnum">{data.progress}%</span></p>
+        <p>Goals: <span className="font-mono font-medium text-foreground tnum">{data.goalCount}</span></p>
+        <p>Objectives: <span className="font-mono font-medium text-foreground tnum">{data.objectiveCount}</span></p>
       </div>
     </div>
   );
@@ -166,8 +166,8 @@ function PieChartTooltip({
 
   const data = payload[0];
   return (
-    <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
-      <p className="font-medium">{data?.name}: {data?.value}</p>
+    <div className="rounded-md border border-border bg-card p-3 text-sm shadow-sm">
+      <p className="font-medium text-foreground">{data?.name}: <span className="font-mono tnum">{data?.value}</span></p>
     </div>
   );
 }
@@ -189,18 +189,18 @@ function SummaryCard({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Icon
           className={cn(
             "h-4 w-4",
-            variant === "warning" && "text-amber-500",
-            variant === "success" && "text-green-500",
-            variant === "default" && "text-muted-foreground"
+            variant === "warning" && "text-warning",
+            variant === "success" && "text-success",
+            variant === "default" && "text-muted-foreground/70"
           )}
         />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold tnum text-foreground">{value}</div>
         {description && (
           <p className="text-xs text-muted-foreground">{description}</p>
         )}
@@ -239,7 +239,7 @@ function ProgressRing({ progress }: { progress: number }) {
           cy="24"
         />
       </svg>
-      <span className="absolute text-xs font-medium">{progress}%</span>
+      <span className="absolute font-mono text-xs font-medium tnum text-foreground">{progress}%</span>
     </div>
   );
 }
@@ -269,11 +269,11 @@ function OverdueObjectiveItem({
   return (
     <button
       onClick={() => router.push(`/strategy/${objective.strategyId}/objective/${objective.id}`)}
-      className="w-full text-left p-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 dark:border-red-900 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors"
+      className="w-full text-left p-3 rounded-md border border-destructive/20 bg-destructive/10 hover:bg-destructive/15 transition-colors"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{objective.title}</p>
+          <p className="font-semibold text-sm truncate text-foreground">{objective.title}</p>
           <p className="text-xs text-muted-foreground truncate">
             {objective.strategyTitle} &rarr; {objective.goalTitle}
           </p>
@@ -297,10 +297,10 @@ function OverdueObjectiveItem({
               )}
             </div>
           )}
-          <Badge variant="destructive" className="text-xs">
+          <Badge variant="critical" className="font-mono text-xs">
             {objective.daysOverdue}d overdue
           </Badge>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
         </div>
       </div>
     </button>
@@ -314,7 +314,7 @@ function EmptyState() {
       <div className="rounded-full bg-muted p-6 mb-4">
         <Target className="h-12 w-12 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-semibold mb-2">No strategies yet</h3>
+      <h3 className="text-lg font-semibold mb-2 text-foreground">No strategies yet</h3>
       <p className="text-muted-foreground text-center max-w-md mb-6">
         Create your first security strategy to start tracking goals and objectives
         for your organization.
@@ -425,15 +425,12 @@ export function StrategyDashboardClient() {
         ]}
       >
         <div className="container mx-auto py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <LayoutDashboard className="h-8 w-8" />
-              Strategy Dashboard
-            </h1>
-            <p className="text-muted-foreground">
-              Executive overview of security strategy progress
-            </p>
-          </div>
+          <PageHeader
+            eyebrow="STRATEGY"
+            title="Strategy Dashboard"
+            icon={<LayoutDashboard />}
+            description="Executive overview of security strategy progress"
+          />
           <EmptyState />
         </div>
       </AppLayout>
@@ -449,20 +446,16 @@ export function StrategyDashboardClient() {
     >
       <div className="container mx-auto py-8 space-y-6">
       {/* Header with filter (AC6) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <LayoutDashboard className="h-8 w-8" />
-            Strategy Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Executive overview of security strategy progress
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="STRATEGY"
+        title="Strategy Dashboard"
+        icon={<LayoutDashboard />}
+        description="Executive overview of security strategy progress"
+        actions={
         <div className="flex flex-wrap items-center gap-2">
           {/* Strategy Filter (AC6 from Story 5.2) */}
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Filter className="h-4 w-4 text-muted-foreground/70" />
             <Select
               value={selectedStrategyId ?? "all"}
               onValueChange={(value) => setSelectedStrategyId(value === "all" ? undefined : value)}
@@ -483,7 +476,7 @@ export function StrategyDashboardClient() {
 
           {/* Date Range Selector (Story 5.4 AC1) */}
           <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+            <CalendarDays className="h-4 w-4 text-muted-foreground/70" />
             <Select
               value={dateRangePreset}
               onValueChange={(value) => setDateRangePreset(value as DateRangePreset)}
@@ -540,7 +533,8 @@ export function StrategyDashboardClient() {
             </div>
           )}
         </div>
-      </div>
+        }
+      />
 
       {/* Summary Cards (AC1) */}
       {isLoading ? (
@@ -573,7 +567,7 @@ export function StrategyDashboardClient() {
           />
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Progress</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Average Progress</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
@@ -601,7 +595,10 @@ export function StrategyDashboardClient() {
         {/* Progress Bar Chart (AC2) */}
         <Card>
           <CardHeader>
-            <CardTitle>Strategy Progress</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-[17px] w-[17px] text-primary" />
+              Strategy Progress
+            </CardTitle>
             <CardDescription>
               Progress of active strategies
             </CardDescription>
@@ -609,7 +606,7 @@ export function StrategyDashboardClient() {
           <CardContent>
             {progressLoading ? (
               <div className="h-[300px] flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
               </div>
             ) : progressData?.strategies.length === 0 ? (
               <div className="h-[300px] flex items-center justify-center text-muted-foreground">
@@ -623,12 +620,19 @@ export function StrategyDashboardClient() {
                     layout="vertical"
                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
                   >
-                    <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                    <XAxis
+                      type="number"
+                      domain={[0, 100]}
+                      tickFormatter={(v) => `${v}%`}
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      stroke="var(--border)"
+                    />
                     <YAxis
                       type="category"
                       dataKey="title"
                       width={150}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+                      stroke="var(--border)"
                       tickFormatter={(value: string) =>
                         value.length > 20 ? `${value.substring(0, 20)}...` : value
                       }
@@ -649,7 +653,10 @@ export function StrategyDashboardClient() {
         {/* Status Pie Chart (AC3) */}
         <Card>
           <CardHeader>
-            <CardTitle>Objectives by Status</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-[17px] w-[17px] text-primary" />
+              Objectives by Status
+            </CardTitle>
             <CardDescription>
               Distribution of objectives across statuses
             </CardDescription>
@@ -657,7 +664,7 @@ export function StrategyDashboardClient() {
           <CardContent>
             {statusLoading ? (
               <div className="h-[300px] flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
               </div>
             ) : pieChartData.every((d) => d.value === 0) ? (
               <div className="h-[300px] flex items-center justify-center text-muted-foreground">
@@ -688,8 +695,8 @@ export function StrategyDashboardClient() {
                       verticalAlign="bottom"
                       height={36}
                       formatter={(value, entry) => (
-                        <span className="text-sm">
-                          {value} ({(entry.payload as { value: number }).value})
+                        <span className="text-sm text-muted-foreground">
+                          {value} (<span className="font-mono tnum">{(entry.payload as { value: number }).value}</span>)
                         </span>
                       )}
                     />
@@ -707,7 +714,7 @@ export function StrategyDashboardClient() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <AlertTriangle className="h-[17px] w-[17px] text-warning" />
                 Overdue Objectives
               </CardTitle>
               <CardDescription>
@@ -726,11 +733,11 @@ export function StrategyDashboardClient() {
         <CardContent>
           {overdueLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/70" />
             </div>
           ) : overdueData?.objectives.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <Calendar className="h-8 w-8 mx-auto mb-2 text-muted-foreground/70" />
               <p>No overdue objectives</p>
               <p className="text-sm">All objectives are on track!</p>
             </div>
@@ -749,37 +756,37 @@ export function StrategyDashboardClient() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-muted-foreground/70" />
               <span className="text-sm text-muted-foreground">Total Goals</span>
             </div>
-            <p className="text-2xl font-bold">{summaryData?.totalGoals ?? 0}</p>
+            <p className="text-2xl font-bold tnum text-foreground">{summaryData?.totalGoals ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-muted-foreground" />
+              <Target className="h-4 w-4 text-muted-foreground/70" />
               <span className="text-sm text-muted-foreground">Total Objectives</span>
             </div>
-            <p className="text-2xl font-bold">{summaryData?.totalObjectives ?? 0}</p>
+            <p className="text-2xl font-bold tnum text-foreground">{summaryData?.totalObjectives ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-green-500" />
+              <div className="h-3 w-3 rounded-full bg-success" />
               <span className="text-sm text-muted-foreground">Completed</span>
             </div>
-            <p className="text-2xl font-bold">{statusData?.objectives.COMPLETED ?? 0}</p>
+            <p className="text-2xl font-bold tnum text-foreground">{statusData?.objectives.COMPLETED ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
-              <div className="h-3 w-3 rounded-full bg-amber-500" />
+              <div className="h-3 w-3 rounded-full bg-warning" />
               <span className="text-sm text-muted-foreground">At Risk</span>
             </div>
-            <p className="text-2xl font-bold">{statusData?.objectives.AT_RISK ?? 0}</p>
+            <p className="text-2xl font-bold tnum text-foreground">{statusData?.objectives.AT_RISK ?? 0}</p>
           </CardContent>
         </Card>
       </div>

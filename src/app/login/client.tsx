@@ -10,6 +10,8 @@
 import { signIn } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Shield, Lock, Mail, Info, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function LoginFormClient() {
   const router = useRouter();
@@ -54,16 +56,26 @@ export function LoginFormClient() {
     }
   };
 
+  const Brand = (
+    <div className="mb-[26px] flex flex-col items-center">
+      <span className="grid size-[42px] place-items-center rounded-[10px] bg-primary text-primary-foreground">
+        <Shield className="h-[23px] w-[23px]" strokeWidth={2} />
+      </span>
+      <div className="mt-3.5 text-[19px] font-extrabold tracking-[-0.02em] text-foreground">
+        BetterThanSpreadsheets
+      </div>
+      <p className="eyebrow mt-1.5">Enterprise GRC Platform</p>
+    </div>
+  );
+
   // Show loading state until mounted to prevent hydration mismatch
   if (!isMounted) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-              BetterThanSpreadsheetsGRC
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">Loading...</p>
+      <div className="grid min-h-screen place-items-center bg-background p-6">
+        <div className="w-[392px]">
+          {Brand}
+          <div className="rounded-lg border bg-card p-7 text-center text-[13px] text-muted-foreground shadow-sm">
+            Loading…
           </div>
         </div>
       </div>
@@ -71,153 +83,108 @@ export function LoginFormClient() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        {/* Header */}
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-            BetterThanSpreadsheetsGRC
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Enterprise GRC Platform
-          </p>
-          <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      <div className="w-[392px]">
+        {/* Brand */}
+        {Brand}
+
+        {/* Card */}
+        <div className="rounded-lg border bg-card p-7 shadow-sm">
+          <h1 className="text-[19px] font-bold tracking-[-0.01em] text-foreground">
             Sign in to your account
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Enter your credentials to access the platform
+          </h1>
+          <p className="mt-1.5 text-[13px] text-muted-foreground">
+            Enter your credentials to access the platform.
           </p>
-        </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="rounded-md bg-red-50 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg
-                  className="h-5 w-5 text-red-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
+          {/* Error Message */}
+          {error && (
+            <div className="mt-5 flex items-start gap-2.5 rounded-md bg-destructive/10 px-3.5 py-3 text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p className="text-[13px]">{error}</p>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="space-y-4 rounded-md shadow-sm">
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="mt-5">
             {/* Email Input */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="eyebrow mb-1.5 block text-secondary-foreground"
+              >
                 Email address
               </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="user@example.com"
-              />
+              <div className="flex items-center gap-2.5 rounded-md border border-input bg-card px-3.5 py-2.5 transition focus-within:border-primary focus-within:ring-[3px] focus-within:ring-accent">
+                <Mail className="h-[15px] w-[15px] text-muted-foreground/70" />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground/70"
+                  placeholder="user@example.com"
+                />
+              </div>
             </div>
 
             {/* Password Input */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <div className="mt-4">
+              <label
+                htmlFor="password"
+                className="eyebrow mb-1.5 block text-secondary-foreground"
+              >
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="mt-1 block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                placeholder="Enter your password"
-              />
+              <div className="flex items-center gap-2.5 rounded-md border border-input bg-card px-3.5 py-2.5 transition focus-within:border-primary focus-within:ring-[3px] focus-within:ring-accent">
+                <Lock className="h-[15px] w-[15px] text-muted-foreground/70" />
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground/70"
+                  placeholder="Enter your password"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Submit Button */}
-          <div>
-            <button
-              type="submit"
-              disabled={isSigningIn}
-              className="group relative flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                <svg
-                  className="h-5 w-5 text-blue-500 group-hover:text-blue-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </span>
+            {/* Submit Button */}
+            <Button type="submit" disabled={isSigningIn} className="mt-[22px] h-11 w-full">
+              <Lock className="h-4 w-4" />
               {isSigningIn ? "Signing in..." : "Sign in"}
-            </button>
-          </div>
-        </form>
+            </Button>
+          </form>
 
-        {/* Help Section */}
-        <div className="mt-6 text-center space-y-2">
-          <p className="text-sm">
+          {/* Help Section */}
+          <div className="mt-[18px] space-y-2.5 text-center">
             <a
               href="/forgot-password"
-              className="font-medium text-blue-600 hover:text-blue-500"
+              className="text-[13px] font-semibold text-primary hover:text-primary/80"
             >
               Forgot your password?
             </a>
-          </p>
-          <p className="text-xs text-gray-500">
-            Don&apos;t have an account?{" "}
-            <span className="font-medium text-gray-700">
-              Contact your Organization Administrator
-            </span>
-          </p>
+            <p className="text-[12.5px] text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <span className="font-semibold text-foreground">
+                Contact your Organization Administrator
+              </span>
+            </p>
+          </div>
         </div>
 
         {/* Security Notice */}
-        <div className="mt-8 rounded-md bg-blue-50 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-blue-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3 flex-1">
-              <p className="text-sm text-blue-700">
-                Your password is securely hashed with bcrypt. Sessions expire after 24 hours of inactivity.
-              </p>
-            </div>
-          </div>
+        <div className="mt-4 flex items-start gap-2.5 rounded-md border border-border bg-accent px-3.5 py-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <p className="text-[12px] leading-[1.5] text-secondary-foreground">
+            Your password is securely hashed with bcrypt. Sessions expire after 24 hours of inactivity.
+          </p>
         </div>
       </div>
     </div>

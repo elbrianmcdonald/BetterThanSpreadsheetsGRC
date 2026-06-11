@@ -45,7 +45,7 @@ import {
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -113,11 +113,11 @@ const STATUS_CONFIG: Record<
   MaturityAssessmentStatus,
   { label: string; color: string; bgColor: string; icon: typeof Clock }
 > = {
-  DRAFT: { label: "Draft", color: "text-gray-700", bgColor: "bg-gray-100", icon: FileText },
-  IN_PROGRESS: { label: "In Progress", color: "text-blue-700", bgColor: "bg-blue-100", icon: Clock },
-  IN_REVIEW: { label: "In Review", color: "text-amber-700", bgColor: "bg-amber-100", icon: AlertCircle },
-  COMPLETED: { label: "Completed", color: "text-green-700", bgColor: "bg-green-100", icon: CheckCircle2 },
-  ARCHIVED: { label: "Archived", color: "text-slate-500", bgColor: "bg-slate-100", icon: FileText },
+  DRAFT: { label: "Draft", color: "text-muted-foreground", bgColor: "bg-secondary", icon: FileText },
+  IN_PROGRESS: { label: "In Progress", color: "text-primary", bgColor: "bg-primary/10", icon: Clock },
+  IN_REVIEW: { label: "In Review", color: "text-warning", bgColor: "bg-warning/10", icon: AlertCircle },
+  COMPLETED: { label: "Completed", color: "text-success", bgColor: "bg-success/10", icon: CheckCircle2 },
+  ARCHIVED: { label: "Archived", color: "text-muted-foreground", bgColor: "bg-secondary", icon: FileText },
 };
 
 const DEPTH_LABELS: Record<AssessmentDepth, string> = {
@@ -140,32 +140,32 @@ function getLevelLabel(type: MaturityFrameworkType, level: number | null): strin
 
 function getLevelColorClasses(level: number | null, maxLevel: number) {
   if (level === null || maxLevel === 0) {
-    return { bg: "bg-gray-100 dark:bg-gray-950/50", text: "text-gray-500 dark:text-gray-400", ring: "ring-gray-200", progress: "bg-gray-400" };
+    return { bg: "bg-secondary", text: "text-muted-foreground", ring: "ring-border", progress: "bg-muted-foreground/40" };
   }
   const pct = level / maxLevel;
   if (pct >= 0.75) {
-    return { bg: "bg-green-100 dark:bg-green-950/50", text: "text-green-700 dark:text-green-400", ring: "ring-green-500/20", progress: "bg-green-500" };
+    return { bg: "bg-success/10", text: "text-success", ring: "ring-success/20", progress: "bg-success" };
   }
   if (pct >= 0.5) {
-    return { bg: "bg-yellow-100 dark:bg-yellow-950/50", text: "text-yellow-700 dark:text-yellow-400", ring: "ring-yellow-500/20", progress: "bg-yellow-500" };
+    return { bg: "bg-warning/10", text: "text-warning", ring: "ring-warning/20", progress: "bg-warning" };
   }
-  return { bg: "bg-red-100 dark:bg-red-950/50", text: "text-red-700 dark:text-red-400", ring: "ring-red-500/20", progress: "bg-red-500" };
+  return { bg: "bg-destructive/10", text: "text-destructive", ring: "ring-destructive/20", progress: "bg-destructive" };
 }
 
 function getLevelScoreBg(level: number | null, maxLevel: number): string {
-  if (level === null || maxLevel === 0) return "bg-gray-100";
+  if (level === null || maxLevel === 0) return "bg-secondary";
   const pct = level / maxLevel;
-  if (pct >= 0.75) return "bg-green-100";
-  if (pct >= 0.5) return "bg-amber-100";
-  return "bg-red-100";
+  if (pct >= 0.75) return "bg-success/10";
+  if (pct >= 0.5) return "bg-warning/10";
+  return "bg-destructive/10";
 }
 
 function getLevelScoreText(level: number | null, maxLevel: number): string {
-  if (level === null || maxLevel === 0) return "text-gray-500";
+  if (level === null || maxLevel === 0) return "text-muted-foreground";
   const pct = level / maxLevel;
-  if (pct >= 0.75) return "text-green-600";
-  if (pct >= 0.5) return "text-amber-600";
-  return "text-red-600";
+  if (pct >= 0.75) return "text-success";
+  if (pct >= 0.5) return "text-warning";
+  return "text-destructive";
 }
 
 // ---------- Types ----------
@@ -200,15 +200,15 @@ function MaturityAssessmentCard({ assessment }: { assessment: AssessmentWithRela
   const domainsScored = assessment._count.domainScores;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="transition-shadow hover:shadow-sm">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className="font-mono text-xs">
+              <Badge variant="code">
                 {FRAMEWORK_LABELS[frameworkType]}
               </Badge>
-              <Badge className={cn(config.color, config.bgColor)}>
+              <Badge variant="outline" className={cn(config.color, config.bgColor)}>
                 <StatusIcon className="h-3 w-3 mr-1" />
                 {config.label}
               </Badge>
@@ -230,12 +230,12 @@ function MaturityAssessmentCard({ assessment }: { assessment: AssessmentWithRela
             getLevelScoreBg(assessment.overallLevel, maxLevel)
           )}>
             <div className={cn(
-              "text-xl font-bold",
+              "tnum text-xl font-bold",
               getLevelScoreText(assessment.overallLevel, maxLevel)
             )}>
               {levelLabel}
             </div>
-            <div className="text-xs text-muted-foreground">Level</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Level</div>
           </div>
         </div>
       </CardHeader>
@@ -256,25 +256,25 @@ function MaturityAssessmentCard({ assessment }: { assessment: AssessmentWithRela
 
         {/* Summary Grid */}
         <div className="grid grid-cols-3 gap-2 text-xs">
-          <div className="text-center p-2 bg-green-50 rounded">
-            <div className="font-bold text-green-700">
+          <div className="text-center p-2 bg-success/10 rounded">
+            <div className="tnum font-bold text-success">
               {assessment.overallLevel !== null
                 ? getLevelLabel(frameworkType, assessment.overallLevel)
                 : "\u2014"}
             </div>
-            <div className="text-green-600">Current</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Current</div>
           </div>
-          <div className="text-center p-2 bg-amber-50 rounded">
-            <div className="font-bold text-amber-700">
+          <div className="text-center p-2 bg-warning/10 rounded">
+            <div className="tnum font-bold text-warning">
               {assessment.targetLevel !== null
                 ? getLevelLabel(frameworkType, assessment.targetLevel)
                 : "\u2014"}
             </div>
-            <div className="text-amber-600">Target</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Target</div>
           </div>
-          <div className="text-center p-2 bg-gray-50 rounded">
-            <div className="font-bold text-gray-700">{domainsScored}</div>
-            <div className="text-gray-600">Scored</div>
+          <div className="text-center p-2 bg-secondary rounded">
+            <div className="tnum font-bold text-foreground">{domainsScored}</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Scored</div>
           </div>
         </div>
 
@@ -483,14 +483,12 @@ export function MaturityDashboardClient() {
   return (
     <AppLayout breadcrumbs={[{ label: "Maturity", href: "/maturity/dashboard" }, { label: "Dashboard" }]}>
       {/* Page Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Maturity Dashboard</h1>
-          <p className="text-muted-foreground">
-            Track and improve organizational maturity across security frameworks
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="GOVERNANCE"
+        title="Maturity Dashboard"
+        icon={<Gauge />}
+        description="Track and improve organizational maturity across security frameworks"
+      />
 
       {/* Maturity Overview Card */}
       {comparisonList.length === 0 ? (
@@ -577,7 +575,7 @@ export function MaturityDashboardClient() {
                           levelColors.ring
                         )}
                       >
-                        <span className={cn("text-4xl font-bold", levelColors.text)}>
+                        <span className={cn("tnum text-4xl font-bold", levelColors.text)}>
                           {selectedComparison.currentLevel !== null
                             ? getLevelLabel(selectedFrameworkType!, selectedComparison.currentLevel)
                             : "\u2014"}
@@ -589,14 +587,14 @@ export function MaturityDashboardClient() {
 
                       <Link
                         href={`${assessmentLink}?filter=scored`}
-                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-green-300 transition-all cursor-pointer"
+                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-secondary hover:bg-muted hover:ring-1 hover:ring-success/30 transition-all cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-green-100 dark:bg-green-950/50">
-                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          <div className="p-2 rounded-lg bg-success/10">
+                            <CheckCircle2 className="h-5 w-5 text-success" />
                           </div>
                           <div>
-                            <div className="text-2xl font-semibold">{domainsScored}</div>
+                            <div className="tnum text-2xl font-semibold text-foreground">{domainsScored}</div>
                             <div className="text-sm text-muted-foreground">Domains Scored</div>
                           </div>
                         </div>
@@ -604,14 +602,14 @@ export function MaturityDashboardClient() {
 
                       <Link
                         href={assessmentLink}
-                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-secondary hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg bg-muted">
                             <Shield className="h-5 w-5 text-muted-foreground" />
                           </div>
                           <div>
-                            <div className="text-2xl font-semibold">{totalDomains}</div>
+                            <div className="tnum text-2xl font-semibold text-foreground">{totalDomains}</div>
                             <div className="text-sm text-muted-foreground">Total Domains</div>
                           </div>
                         </div>
@@ -619,14 +617,14 @@ export function MaturityDashboardClient() {
 
                       <Link
                         href={`${assessmentLink}?filter=below-target`}
-                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-red-300 transition-all cursor-pointer"
+                        className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-secondary hover:bg-muted hover:ring-1 hover:ring-destructive/30 transition-all cursor-pointer"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/50">
-                            <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                          <div className="p-2 rounded-lg bg-destructive/10">
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
                           </div>
                           <div>
-                            <div className="text-2xl font-semibold">{domainsBelowTarget}</div>
+                            <div className="tnum text-2xl font-semibold text-foreground">{domainsBelowTarget}</div>
                             <div className="text-sm text-muted-foreground">Below Target</div>
                           </div>
                         </div>
@@ -639,7 +637,7 @@ export function MaturityDashboardClient() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Scoring Progress</span>
-                    <span className="font-medium">
+                    <span className="tnum font-medium text-foreground">
                       {domainsScored} / {totalDomains} domains
                     </span>
                   </div>
@@ -693,24 +691,24 @@ export function MaturityDashboardClient() {
         </div>
 
         <Tabs value={assessmentFilter} onValueChange={setAssessmentFilter} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="all" className="gap-2">
+          <TabsList className="inline-flex w-full max-w-md gap-0.5 rounded-lg border border-border bg-secondary p-1">
+            <TabsTrigger value="all" className="flex-1 gap-2 rounded-md px-3.5 py-1.5 text-[13px] font-semibold data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
               All
-              <span className="text-xs text-muted-foreground">
+              <span className="font-mono text-xs text-muted-foreground">
                 ({allAssessments.length})
               </span>
             </TabsTrigger>
-            <TabsTrigger value="in-progress" className="gap-2">
+            <TabsTrigger value="in-progress" className="flex-1 gap-2 rounded-md px-3.5 py-1.5 text-[13px] font-semibold data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
               <Clock className="h-3.5 w-3.5" />
               In Progress
-              <span className="text-xs text-muted-foreground">
+              <span className="font-mono text-xs text-muted-foreground">
                 ({activeAssessments.length})
               </span>
             </TabsTrigger>
-            <TabsTrigger value="completed" className="gap-2">
+            <TabsTrigger value="completed" className="flex-1 gap-2 rounded-md px-3.5 py-1.5 text-[13px] font-semibold data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Completed
-              <span className="text-xs text-muted-foreground">
+              <span className="font-mono text-xs text-muted-foreground">
                 ({completedAssessments.length})
               </span>
             </TabsTrigger>
@@ -1150,9 +1148,9 @@ function DomainTargetsBlock(props: {
         {domains.map((d) => (
           <div
             key={d.id}
-            className="flex items-center gap-2 rounded-md border p-2"
+            className="flex items-center gap-2 rounded-md border border-border p-2"
           >
-            <span className="font-mono text-xs text-blue-700 w-12 shrink-0 truncate">
+            <span className="font-mono text-xs text-primary w-12 shrink-0 truncate">
               {d.code}
             </span>
             <span className="text-sm flex-1 truncate" title={d.name}>

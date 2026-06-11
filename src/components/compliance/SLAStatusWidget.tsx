@@ -38,23 +38,23 @@ interface SLAStatusWidgetProps {
 const statusConfig = {
   onTrack: {
     label: "On Track",
-    color: "text-green-600",
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-    hoverColor: "hover:bg-green-50 dark:hover:bg-green-900/20",
+    color: "text-success",
+    bgColor: "bg-success/10",
+    hoverColor: "hover:bg-success/15",
     icon: CheckCircle,
   },
   atRisk: {
     label: "At Risk",
-    color: "text-amber-600",
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    hoverColor: "hover:bg-amber-50 dark:hover:bg-amber-900/20",
+    color: "text-warning",
+    bgColor: "bg-warning/10",
+    hoverColor: "hover:bg-warning/15",
     icon: AlertTriangle,
   },
   breached: {
     label: "Breached",
-    color: "text-red-600",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    hoverColor: "hover:bg-red-50 dark:hover:bg-red-900/20",
+    color: "text-destructive",
+    bgColor: "bg-destructive/10",
+    hoverColor: "hover:bg-destructive/15",
     icon: XCircle,
   },
 };
@@ -154,10 +154,10 @@ export function SLAStatusWidget({ className }: SLAStatusWidgetProps) {
             )}
           >
             <CheckCircle className={cn("h-5 w-5 mb-1", statusConfig.onTrack.color)} />
-            <span className={cn("text-2xl font-bold", statusConfig.onTrack.color)}>
+            <span className={cn("text-2xl font-bold tabular-nums", statusConfig.onTrack.color)}>
               {onTrack}
             </span>
-            <span className="text-xs text-muted-foreground">On Track</span>
+            <span className="eyebrow">On Track</span>
           </Link>
 
           {/* At Risk */}
@@ -170,10 +170,10 @@ export function SLAStatusWidget({ className }: SLAStatusWidgetProps) {
             )}
           >
             <AlertTriangle className={cn("h-5 w-5 mb-1", statusConfig.atRisk.color)} />
-            <span className={cn("text-2xl font-bold", statusConfig.atRisk.color)}>
+            <span className={cn("text-2xl font-bold tabular-nums", statusConfig.atRisk.color)}>
               {atRisk}
             </span>
-            <span className="text-xs text-muted-foreground">At Risk</span>
+            <span className="eyebrow">At Risk</span>
           </Link>
 
           {/* Breached */}
@@ -186,27 +186,27 @@ export function SLAStatusWidget({ className }: SLAStatusWidgetProps) {
             )}
           >
             <XCircle className={cn("h-5 w-5 mb-1", statusConfig.breached.color)} />
-            <span className={cn("text-2xl font-bold", statusConfig.breached.color)}>
+            <span className={cn("text-2xl font-bold tabular-nums", statusConfig.breached.color)}>
               {breached}
             </span>
-            <span className="text-xs text-muted-foreground">Breached</span>
+            <span className="eyebrow">Breached</span>
           </Link>
         </div>
 
         {/* Completed counter */}
         {completedLast30Days > 0 && (
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground border-t pt-3">
-            <TrendingUp className="h-4 w-4 text-green-600" />
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground border-t border-border pt-3">
+            <TrendingUp className="h-4 w-4 text-success" />
             <span>
-              <strong className="text-green-600">{completedLast30Days}</strong> completed in last 30 days
+              <strong className="text-success tabular-nums">{completedLast30Days}</strong> completed in last 30 days
             </span>
           </div>
         )}
 
         {/* At Risk List */}
         {atRiskRisks.length > 0 && (
-          <div className="border-t pt-3 space-y-2">
-            <h4 className="text-xs font-medium text-amber-600 uppercase tracking-wider flex items-center gap-1">
+          <div className="border-t border-border pt-3 space-y-2">
+            <h4 className="eyebrow text-warning flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
               Expiring Soon
             </h4>
@@ -214,10 +214,10 @@ export function SLAStatusWidget({ className }: SLAStatusWidgetProps) {
               <Link
                 key={risk.id}
                 href={`/risks/${risk.id}`}
-                className="flex items-center justify-between p-2 rounded hover:bg-muted/50 transition-colors text-sm"
+                className="flex items-center justify-between p-2 rounded-md hover:bg-secondary transition-colors text-sm"
               >
                 <span className="truncate flex-1 mr-2">{risk.title}</span>
-                <Badge variant="outline" className="text-amber-600 shrink-0">
+                <Badge variant="warning" className="shrink-0 font-mono tabular-nums">
                   {risk.daysRemaining}d left
                 </Badge>
               </Link>
@@ -227,8 +227,8 @@ export function SLAStatusWidget({ className }: SLAStatusWidgetProps) {
 
         {/* Breached List */}
         {breachedRisks.length > 0 && (
-          <div className="border-t pt-3 space-y-2">
-            <h4 className="text-xs font-medium text-red-600 uppercase tracking-wider flex items-center gap-1">
+          <div className="border-t border-border pt-3 space-y-2">
+            <h4 className="eyebrow text-destructive flex items-center gap-1">
               <XCircle className="h-3 w-3" />
               Overdue
             </h4>
@@ -236,10 +236,10 @@ export function SLAStatusWidget({ className }: SLAStatusWidgetProps) {
               <Link
                 key={risk.id}
                 href={`/risks/${risk.id}`}
-                className="flex items-center justify-between p-2 rounded hover:bg-muted/50 transition-colors text-sm"
+                className="flex items-center justify-between p-2 rounded-md hover:bg-secondary transition-colors text-sm"
               >
                 <span className="truncate flex-1 mr-2">{risk.title}</span>
-                <Badge variant="outline" className="text-red-600 shrink-0">
+                <Badge variant="critical" className="shrink-0 font-mono tabular-nums">
                   {risk.daysOverdue}d overdue
                 </Badge>
               </Link>

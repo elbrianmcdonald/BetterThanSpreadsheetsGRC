@@ -46,10 +46,10 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Settings, AlertCircle, Shield, CheckCircle2, AlertTriangle, RefreshCw, FileText, ChevronRight, Clock, ClipboardList } from "lucide-react";
+import { Settings, AlertCircle, Shield, CheckCircle2, AlertTriangle, RefreshCw, FileText, ChevronRight, Clock, ClipboardList, BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { BusinessUnitSelector } from "@/components/compliance/BusinessUnitSelector";
 import { AssessmentCard } from "@/components/compliance/AssessmentCard";
 import { cn } from "@/lib/utils";
@@ -60,25 +60,25 @@ import { cn } from "@/lib/utils";
 function getScoreColorClasses(score: number) {
   if (score >= 90) {
     return {
-      bg: "bg-green-100 dark:bg-green-950/50",
-      text: "text-green-700 dark:text-green-400",
-      ring: "ring-green-500/20",
-      progress: "bg-green-500",
+      bg: "bg-success/10",
+      text: "text-success",
+      ring: "ring-success/20",
+      progress: "bg-success",
     };
   }
   if (score >= 70) {
     return {
-      bg: "bg-yellow-100 dark:bg-yellow-950/50",
-      text: "text-yellow-700 dark:text-yellow-400",
-      ring: "ring-yellow-500/20",
-      progress: "bg-yellow-500",
+      bg: "bg-warning/10",
+      text: "text-warning",
+      ring: "ring-warning/20",
+      progress: "bg-warning",
     };
   }
   return {
-    bg: "bg-red-100 dark:bg-red-950/50",
-    text: "text-red-700 dark:text-red-400",
-    ring: "ring-red-500/20",
-    progress: "bg-red-500",
+    bg: "bg-destructive/10",
+    text: "text-destructive",
+    ring: "ring-destructive/20",
+    progress: "bg-destructive",
   };
 }
 
@@ -264,14 +264,12 @@ export function ComplianceDashboardClient() {
   return (
     <AppLayout breadcrumbs={[{ label: "Compliance", href: "/compliance/dashboard" }, { label: "Dashboard" }]}>
       {/* Page Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Compliance Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monitor framework coverage and compliance status
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="OVERVIEW"
+        title="Compliance Dashboard"
+        icon={<BarChart3 />}
+        description="Monitor framework coverage and compliance status"
+      />
 
       {/* Framework-Centric Overview Section */}
       {frameworks.length === 0 ? (
@@ -359,10 +357,10 @@ export function ComplianceDashboardClient() {
                       scoreColors.ring
                     )}
                   >
-                    <span className={cn("text-5xl font-bold", scoreColors.text)}>
+                    <span className={cn("tnum text-5xl font-bold tracking-[-0.02em]", scoreColors.text)}>
                       {selectedFramework.coveragePercentage.toFixed(1)}%
                     </span>
-                    <span className="text-sm text-muted-foreground mt-1">
+                    <span className="eyebrow mt-2">
                       Compliance Score
                     </span>
                   </Link>
@@ -370,14 +368,14 @@ export function ComplianceDashboardClient() {
                   {/* Controls Satisfied */}
                   <Link
                     href={`/admin/frameworks/${selectedFramework.frameworkId}?status=satisfied`}
-                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-secondary hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-green-100 dark:bg-green-950/50">
-                        <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      <div className="p-2 rounded-lg bg-success/10">
+                        <CheckCircle2 className="h-5 w-5 text-success" />
                       </div>
                       <div>
-                        <div className="text-2xl font-semibold">
+                        <div className="tnum text-2xl font-semibold text-foreground">
                           {selectedFramework.satisfiedControlsCount}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -390,14 +388,14 @@ export function ComplianceDashboardClient() {
                   {/* Total Controls */}
                   <Link
                     href={`/admin/frameworks/${selectedFramework.frameworkId}`}
-                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-secondary hover:bg-muted hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-muted">
                         <Shield className="h-5 w-5 text-muted-foreground" />
                       </div>
                       <div>
-                        <div className="text-2xl font-semibold">
+                        <div className="tnum text-2xl font-semibold text-foreground">
                           {selectedFramework.totalControlsCount}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -410,14 +408,14 @@ export function ComplianceDashboardClient() {
                   {/* Gaps */}
                   <Link
                     href={`/admin/frameworks/${selectedFramework.frameworkId}/gaps`}
-                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-muted/50 hover:bg-muted hover:ring-1 hover:ring-red-300 transition-all cursor-pointer"
+                    className="flex flex-col justify-center gap-2 p-4 rounded-lg bg-secondary hover:bg-muted hover:ring-1 hover:ring-destructive/30 transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/50">
-                        <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                      <div className="p-2 rounded-lg bg-destructive/10">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
                       </div>
                       <div>
-                        <div className="text-2xl font-semibold">
+                        <div className="tnum text-2xl font-semibold text-foreground">
                           {selectedFramework.totalControlsCount - selectedFramework.satisfiedControlsCount}
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -432,7 +430,7 @@ export function ComplianceDashboardClient() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Coverage Progress</span>
-                    <span className="font-medium">
+                    <span className="tnum font-medium text-foreground">
                       {selectedFramework.satisfiedControlsCount} / {selectedFramework.totalControlsCount} controls
                     </span>
                   </div>
@@ -486,32 +484,32 @@ export function ComplianceDashboardClient() {
                     scoreColors.ring
                   )}
                 >
-                  <span className={cn("text-5xl font-bold", scoreColors.text)}>
+                  <span className={cn("tnum text-5xl font-bold tracking-[-0.02em]", scoreColors.text)}>
                     {summary.overallScore.toFixed(1)}%
                   </span>
-                  <span className="text-sm text-muted-foreground mt-1">
+                  <span className="eyebrow mt-2">
                     Overall Score
                   </span>
                 </Link>
                 <Link
                   href="/admin/frameworks"
-                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-muted/50 hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-secondary hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
                 >
-                  <div className="text-2xl font-semibold">{summary.totalFrameworks}</div>
+                  <div className="tnum text-2xl font-semibold text-foreground">{summary.totalFrameworks}</div>
                   <div className="text-sm text-muted-foreground">Total Frameworks</div>
                 </Link>
                 <Link
                   href="/admin/frameworks?coverage=ready"
-                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-muted/50 hover:ring-1 hover:ring-green-300 transition-all cursor-pointer"
+                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-secondary hover:ring-1 hover:ring-success/30 transition-all cursor-pointer"
                 >
-                  <div className="text-2xl font-semibold text-green-600">{summary.readyForAudit}</div>
+                  <div className="tnum text-2xl font-semibold text-success">{summary.readyForAudit}</div>
                   <div className="text-sm text-muted-foreground">Ready for Audit (≥90%)</div>
                 </Link>
                 <Link
                   href="/admin/frameworks?coverage=needs-attention"
-                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-muted/50 hover:ring-1 hover:ring-red-300 transition-all cursor-pointer"
+                  className="flex flex-col justify-center p-4 rounded-lg hover:bg-secondary hover:ring-1 hover:ring-destructive/30 transition-all cursor-pointer"
                 >
-                  <div className="text-2xl font-semibold text-red-600">{summary.needsAttention}</div>
+                  <div className="tnum text-2xl font-semibold text-destructive">{summary.needsAttention}</div>
                   <div className="text-sm text-muted-foreground">Needs Attention (&lt;70%)</div>
                 </Link>
               </div>
@@ -524,8 +522,8 @@ export function ComplianceDashboardClient() {
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">Compliance Assessments</h2>
+            <ClipboardList className="h-[17px] w-[17px] text-primary" />
+            <h2 className="text-[15px] font-bold text-foreground">Compliance Assessments</h2>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -557,7 +555,7 @@ export function ComplianceDashboardClient() {
             <TabsTrigger value="all" className="gap-2">
               All
               {completedAssessmentsData?.summary && activeAssessmentsData?.summary && (
-                <span className="text-xs text-muted-foreground">
+                <span className="font-mono text-xs tabular-nums text-muted-foreground">
                   ({(completedAssessmentsData.summary.completed || 0) + (activeAssessmentsData.summary.inProgress || 0) + (activeAssessmentsData.summary.inReview || 0)})
                 </span>
               )}
@@ -566,7 +564,7 @@ export function ComplianceDashboardClient() {
               <Clock className="h-3.5 w-3.5" />
               In Progress
               {activeAssessmentsData?.summary && (
-                <span className="text-xs text-muted-foreground">
+                <span className="font-mono text-xs tabular-nums text-muted-foreground">
                   ({(activeAssessmentsData.summary.inProgress || 0) + (activeAssessmentsData.summary.inReview || 0)})
                 </span>
               )}
@@ -575,7 +573,7 @@ export function ComplianceDashboardClient() {
               <CheckCircle2 className="h-3.5 w-3.5" />
               Completed
               {completedAssessmentsData?.summary && (
-                <span className="text-xs text-muted-foreground">
+                <span className="font-mono text-xs tabular-nums text-muted-foreground">
                   ({completedAssessmentsData.summary.completed || 0})
                 </span>
               )}
