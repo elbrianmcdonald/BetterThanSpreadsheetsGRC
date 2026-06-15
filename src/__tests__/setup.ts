@@ -4,6 +4,23 @@
  * This file runs before all tests to set up the test environment.
  */
 
+// Polyfill TextEncoder/TextDecoder for the jsdom test environment. jsdom does
+// not provide them, but transitive deps of `@prisma/client` (@noble/hashes) need
+// TextEncoder at import time — without this, every `.tsx` (jsdom) suite that
+// imports anything from `@prisma/client` fails to load. Node already defines
+// them globally, so this is a no-op there.
+import { TextEncoder, TextDecoder } from "node:util";
+const globalForEncoding = globalThis as unknown as {
+  TextEncoder?: unknown;
+  TextDecoder?: unknown;
+};
+if (typeof globalForEncoding.TextEncoder === "undefined") {
+  globalForEncoding.TextEncoder = TextEncoder;
+}
+if (typeof globalForEncoding.TextDecoder === "undefined") {
+  globalForEncoding.TextDecoder = TextDecoder;
+}
+
 // Import jest-dom matchers for better assertions
 import '@testing-library/jest-dom';
 

@@ -22,6 +22,9 @@ let testOrg: { id: string; name: string };
 let testUserGRC: { id: string; email: string; name: string; role: UserRole; organizationId: string };
 let testUserIT: { id: string; email: string; name: string; role: UserRole; organizationId: string };
 let testUserBusiness: { id: string; email: string; name: string; role: UserRole; organizationId: string };
+// Risk owners are Person records (not Users) since the ownership redesign.
+let itOwnerPersonId: string;
+let bizOwnerPersonId: string;
 
 // Test risks
 let riskHighOpen: { id: string };
@@ -39,6 +42,7 @@ beforeAll(async () => {
   });
   if (existingOrg) {
     await db.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${existingOrg.id}`;
+    await db.$executeRaw`DELETE FROM "Person" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${existingOrg.id}`;
   }
@@ -114,6 +118,18 @@ beforeAll(async () => {
     },
   });
 
+  // Create Person owner records (risk owners are Persons, not Users).
+  itOwnerPersonId = randomUUID();
+  bizOwnerPersonId = randomUUID();
+  await db.$executeRaw`
+    INSERT INTO "Person" (id, "organizationId", name, "isActive", "createdAt", "updatedAt")
+    VALUES (${itOwnerPersonId}, ${testOrg.id}, 'IT Owner Person', true, NOW(), NOW())
+  `;
+  await db.$executeRaw`
+    INSERT INTO "Person" (id, "organizationId", name, "isActive", "createdAt", "updatedAt")
+    VALUES (${bizOwnerPersonId}, ${testOrg.id}, 'Business Owner Person', true, NOW(), NOW())
+  `;
+
   const now = new Date();
 
   // Create test risks using raw SQL to bypass organization middleware
@@ -163,7 +179,7 @@ beforeAll(async () => {
   const riskId6 = randomUUID();
   await db.$executeRaw`
     INSERT INTO "Risk" (id, "organizationId", title, description, severity, status, "findingSource", "impactScore", "itOwnerId", "createdAt", "updatedAt")
-    VALUES (${riskId6}, ${testOrg.id}, 'Risk with IT Owner', 'Test risk with IT owner assigned', 'MEDIUM', 'ASSIGNED', 'PENETRATION_TEST', 60, ${testUserIT.id}, ${now}, ${now})
+    VALUES (${riskId6}, ${testOrg.id}, 'Risk with IT Owner', 'Test risk with IT owner assigned', 'MEDIUM', 'ASSIGNED', 'PENETRATION_TEST', 60, ${itOwnerPersonId}, ${now}, ${now})
   `;
   riskWithITOwner = { id: riskId6 };
 
@@ -171,7 +187,7 @@ beforeAll(async () => {
   const riskId7 = randomUUID();
   await db.$executeRaw`
     INSERT INTO "Risk" (id, "organizationId", title, description, severity, status, "findingSource", "impactScore", "businessOwnerId", "createdAt", "updatedAt")
-    VALUES (${riskId7}, ${testOrg.id}, 'Risk with Business Owner', 'Test risk with Business owner assigned', 'HIGH', 'ASSIGNED', 'AUDIT_FINDING', 72, ${testUserBusiness.id}, ${now}, ${now})
+    VALUES (${riskId7}, ${testOrg.id}, 'Risk with Business Owner', 'Test risk with Business owner assigned', 'HIGH', 'ASSIGNED', 'AUDIT_FINDING', 72, ${bizOwnerPersonId}, ${now}, ${now})
   `;
   riskWithBusinessOwner = { id: riskId7 };
 });
@@ -179,6 +195,7 @@ beforeAll(async () => {
 afterAll(async () => {
   // Clean up test data using raw SQL to bypass organization middleware
   await db.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${testOrg.id}`;
+  await db.$executeRaw`DELETE FROM "Person" WHERE "organizationId" = ${testOrg.id}`;
   await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${testOrg.id}`;
   await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${testOrg.id}`;
 });
@@ -350,7 +367,7 @@ describe("Story 5.5: Risk Filtering UI (Multi-Select Filters)", () => {
       const caller = createCaller(testUserGRC);
 
       const result = await caller.risk.list({
-        itOwnerId: testUserIT.id,
+        itOwnerId: itOwnerPersonId,
         page: 1,
         pageSize: 50,
       });
@@ -358,7 +375,7 @@ describe("Story 5.5: Risk Filtering UI (Multi-Select Filters)", () => {
       // Should return risks with specified IT owner
       expect(result.risks.length).toBeGreaterThan(0);
       result.risks.forEach(risk => {
-        expect(risk.itOwnerId).toBe(testUserIT.id);
+        expect(risk.itOwnerId).toBe(itOwnerPersonId);
       });
     });
 
@@ -366,7 +383,7 @@ describe("Story 5.5: Risk Filtering UI (Multi-Select Filters)", () => {
       const caller = createCaller(testUserGRC);
 
       const result = await caller.risk.list({
-        businessOwnerId: testUserBusiness.id,
+        businessOwnerId: bizOwnerPersonId,
         page: 1,
         pageSize: 50,
       });
@@ -374,7 +391,7 @@ describe("Story 5.5: Risk Filtering UI (Multi-Select Filters)", () => {
       // Should return risks with specified Business owner
       expect(result.risks.length).toBeGreaterThan(0);
       result.risks.forEach(risk => {
-        expect(risk.businessOwnerId).toBe(testUserBusiness.id);
+        expect(risk.businessOwnerId).toBe(bizOwnerPersonId);
       });
     });
 
@@ -382,7 +399,7 @@ describe("Story 5.5: Risk Filtering UI (Multi-Select Filters)", () => {
       const caller = createCaller(testUserGRC);
 
       const result = await caller.risk.list({
-        itOwnerId: testUserIT.id,
+        itOwnerId: itOwnerPersonId,
         status: ["ASSIGNED"],
         page: 1,
         pageSize: 50,
@@ -390,7 +407,7 @@ describe("Story 5.5: Risk Filtering UI (Multi-Select Filters)", () => {
 
       // Should return risks with IT owner AND ASSIGNED status
       result.risks.forEach(risk => {
-        expect(risk.itOwnerId).toBe(testUserIT.id);
+        expect(risk.itOwnerId).toBe(itOwnerPersonId);
         expect(risk.status).toBe("ASSIGNED");
       });
     });

@@ -229,6 +229,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * AC1-AC3: Test OSCAL mapping calculation with single domain
    */
   it("should return framework controls for a single control domain", async () => {
+    setOrganizationContext(testOrg.id);
     const result = await evidenceMappingService.calculateFrameworkMappings({
       controlDomainIds: [controlDomains[0]!.id],
       organizationId: testOrg.id,
@@ -250,6 +251,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * AC1-AC3: Test mapping with multiple control domains (union of controls)
    */
   it("should return union of controls for multiple control domains", async () => {
+    setOrganizationContext(testOrg.id);
     const result = await evidenceMappingService.calculateFrameworkMappings({
       controlDomainIds: [controlDomains[0]!.id, controlDomains[1]!.id],
       organizationId: testOrg.id,
@@ -268,6 +270,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * AC4: Test controls grouped by framework
    */
   it("should group controls by framework", async () => {
+    setOrganizationContext(testOrg.id);
     const result = await evidenceMappingService.calculateFrameworkMappings({
       controlDomainIds: [controlDomains[0]!.id],
       organizationId: testOrg.id,
@@ -287,6 +290,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * AC5: Test mapping excludes inactive frameworks
    */
   it("should exclude controls from inactive frameworks", async () => {
+    setOrganizationContext(testOrg.id);
     // Create an inactive framework with controls
     const inactiveFramework = await db.framework.create({
       data: {
@@ -351,6 +355,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * AC6: Test empty framework groups are hidden
    */
   it("should hide frameworks with no matched controls", async () => {
+    setOrganizationContext(testOrg.id);
     // Use a control domain that has no mappings to our test framework
     // First, create a control domain with no mappings
     const emptyDomain = await db.controlDomain.create({
@@ -385,6 +390,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test empty input returns empty result
    */
   it("should return empty result for empty control domain array", async () => {
+    setOrganizationContext(testOrg.id);
     const result = await evidenceMappingService.calculateFrameworkMappings({
       controlDomainIds: [],
       organizationId: testOrg.id,
@@ -399,6 +405,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test control details include title and description
    */
   it("should include control title and description in results", async () => {
+    setOrganizationContext(testOrg.id);
     const result = await evidenceMappingService.calculateFrameworkMappings({
       controlDomainIds: [controlDomains[0]!.id],
       organizationId: testOrg.id,
@@ -417,6 +424,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test confidence scores are included
    */
   it("should include confidence scores for mapped controls", async () => {
+    setOrganizationContext(testOrg.id);
     const result = await evidenceMappingService.calculateFrameworkMappings({
       controlDomainIds: [controlDomains[0]!.id],
       organizationId: testOrg.id,
@@ -438,6 +446,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test calculateMappingsForEvidence method
    */
   it("should calculate mappings for evidence by ID", async () => {
+    setOrganizationContext(testOrg.id);
     // Create test evidence with control domains using raw SQL to bypass organization middleware
     const evidenceId = randomUUID();
     const now = new Date();
@@ -481,6 +490,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test calculateMappingsForEvidence returns null for non-existent evidence
    */
   it("should return null for non-existent evidence", async () => {
+    setOrganizationContext(testOrg.id);
     const result = await evidenceMappingService.calculateMappingsForEvidence({
       evidenceId: "00000000-0000-0000-0000-000000000000",
       organizationId: testOrg.id,
@@ -493,6 +503,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * AC21: Test performance (< 500ms for 5 control domains)
    */
   it("should complete mapping calculation within 500ms for 5 domains", async () => {
+    setOrganizationContext(testOrg.id);
     // Get 5 control domains
     const fiveDomains = controlDomains.slice(0, 5).map((d) => d.id);
 
@@ -517,6 +528,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test getControlCount method for lightweight counting
    */
   it("should return correct control count", async () => {
+    setOrganizationContext(testOrg.id);
     const count = await evidenceMappingService.getControlCount({
       controlDomainIds: [controlDomains[0]!.id, controlDomains[1]!.id],
       organizationId: testOrg.id,
@@ -530,6 +542,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test getControlCount returns 0 for empty input
    */
   it("should return 0 count for empty domain array", async () => {
+    setOrganizationContext(testOrg.id);
     const count = await evidenceMappingService.getControlCount({
       controlDomainIds: [],
       organizationId: testOrg.id,
@@ -542,6 +555,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test frameworks are sorted alphabetically
    */
   it("should sort frameworks alphabetically by name", async () => {
+    setOrganizationContext(testOrg.id);
     const result = await evidenceMappingService.calculateFrameworkMappings({
       controlDomainIds: [controlDomains[0]!.id],
       organizationId: testOrg.id,
@@ -557,6 +571,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
    * Test no duplicate controls when same control mapped from multiple domains
    */
   it("should not duplicate controls when mapped from multiple domains", async () => {
+    setOrganizationContext(testOrg.id);
     // Map a second domain to the same control
     await db.controlDomainMapping.create({
       data: {

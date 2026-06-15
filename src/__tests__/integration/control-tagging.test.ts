@@ -172,6 +172,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * AC13 & AC14: Test EvidenceControlDomain junction table structure
    */
   it("should store evidence-domain mapping in junction table with correct fields", async () => {
+    setOrganizationContext(testOrg.id);
     // Create evidence
     const evidence = await db.evidence.create({
       data: {
@@ -208,6 +209,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * AC15: Test many-to-many relationship with multiple tags
    */
   it("should allow evidence to have multiple control domain tags", async () => {
+    setOrganizationContext(testOrg.id);
     // Create evidence with 3 control domain tags
     const evidence = await db.evidence.create({
       data: {
@@ -248,6 +250,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * AC16: Test cascade delete when evidence is deleted
    */
   it("should cascade delete EvidenceControlDomain records when evidence is deleted", async () => {
+    setOrganizationContext(testOrg.id);
     // Create evidence with tags
     const evidence = await db.evidence.create({
       data: {
@@ -292,6 +295,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * AC17: Test control domain tag counts query
    */
   it("should return accurate evidence counts per control domain", async () => {
+    setOrganizationContext(testOrg.id);
     // Create 3 evidence records
     const evidence1 = await db.evidence.create({
       data: {
@@ -386,6 +390,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * AC22: Test validation for missing control domain selection
    */
   it("should fail when creating evidence without control domains (validation)", async () => {
+    setOrganizationContext(testOrg.id);
     // This test validates the Zod schema behavior
     // The actual validation happens in the tRPC router, so we test the schema directly
     const { z } = await import("zod");
@@ -407,6 +412,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * AC23: Test unique constraint prevents duplicate tags
    */
   it("should prevent duplicate tag selections (same domain twice)", async () => {
+    setOrganizationContext(testOrg.id);
     // Create evidence
     const evidence = await db.evidence.create({
       data: {
@@ -447,6 +453,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * AC24: Test invalid control domain IDs are rejected
    */
   it("should reject invalid control domain IDs with foreign key constraint", async () => {
+    setOrganizationContext(testOrg.id);
     // Create evidence
     const evidence = await db.evidence.create({
       data: {
@@ -478,6 +485,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * Test maximum of 5 control domains validation
    */
   it("should enforce maximum of 5 control domains per evidence (validation)", async () => {
+    setOrganizationContext(testOrg.id);
     const { z } = await import("zod");
 
     const controlDomainIdsSchema = z
@@ -503,6 +511,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * Test filtering evidence by control domain
    */
   it("should filter evidence by control domain ID", async () => {
+    setOrganizationContext(testOrg.id);
     // Create 2 evidence records with different tags
     const evidence1 = await db.evidence.create({
       data: {
@@ -584,6 +593,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * Test updating evidence tags
    */
   it("should allow updating evidence control domain tags", async () => {
+    setOrganizationContext(testOrg.id);
     // Create evidence with initial tags
     const evidence = await db.evidence.create({
       data: {
@@ -643,6 +653,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
    * Test control domains are organization-agnostic (AC4)
    */
   it("should share control domains across organizations (organization-agnostic)", async () => {
+    setOrganizationContext(testOrg.id);
     // Create a second test organization
     const testOrg2 = await db.organization.create({
       data: {

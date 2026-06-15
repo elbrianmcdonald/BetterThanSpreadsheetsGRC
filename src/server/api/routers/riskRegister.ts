@@ -208,6 +208,8 @@ export const riskRegisterRouter = createTRPCRouter({
                   identifier: true,
                   title: true,
                   source: true,
+                  // Epic 19: exploitation-pathway membership (drives the ⬡ indicator)
+                  isToxic: true,
                 },
               },
               // Story 16.5: Include business unit (AC17)
@@ -226,6 +228,8 @@ export const riskRegisterRouter = createTRPCRouter({
               title: true,
               severity: true,
               status: true,
+              // Epic 19: exploitation-pathway membership (drives the ⬡ indicator)
+              isToxic: true,
               BusinessUnit: { select: { id: true, name: true } },
             },
           },

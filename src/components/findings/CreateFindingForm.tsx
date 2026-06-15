@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -51,6 +51,10 @@ import {
 import { Label } from "@/components/ui/label";
 import { BusinessUnitPicker } from "@/components/business-unit/BusinessUnitPicker";
 import { AssigneePicker } from "@/components/assignment/AssigneePicker";
+import {
+  PathwayAttachSection,
+  type PathwayAttachState,
+} from "@/components/pathway/PathwayAttachSection";
 import { Plus } from "lucide-react";
 
 /**
@@ -165,19 +169,22 @@ export function CreateFindingForm() {
     });
   };
 
-  // Create mutation (AC17)
-  const createMutation = api.finding.create.useMutation({
-    onSuccess: (data) => {
-      // AC19: Success toast
-      toast.success(`Finding ${data.identifier} created successfully`);
-      // AC20: Redirect to finding detail page
-      router.push(`/findings/${data.id}`);
-    },
-    onError: (error) => {
-      // AC21: Server validation errors
-      toast.error(error.message || "Failed to create finding");
-    },
+  // Epic 19: exploitation-pathway attachment state (reported by the section).
+  const [pathwayState, setPathwayState] = useState<PathwayAttachState>({
+    enabled: false,
+    value: null,
   });
+  const handlePathwayChange = useCallback(
+    (s: PathwayAttachState) => setPathwayState(s),
+    [],
+  );
+  const [submitting, setSubmitting] = useState(false);
+
+  // Create mutation (AC17). Success/error handled in onSubmit so we can chain
+  // the pathway attach before redirecting.
+  const createMutation = api.finding.create.useMutation();
+  const createPathwayMutation = api.pathway.create.useMutation();
+  const addStepMutation = api.pathway.addStep.useMutation();
 
   // Form setup (AC13: validate on blur)
   const form = useForm<CreateFindingFormValues>({
@@ -195,7 +202,15 @@ export function CreateFindingForm() {
   });
 
   // Transform affected assets from string to array
-  const onSubmit = (values: CreateFindingFormValues) => {
+  const onSubmit = async (values: CreateFindingFormValues) => {
+    // Block submit when the pathway box is checked but its details are incomplete.
+    if (pathwayState.enabled && !pathwayState.value) {
+      toast.error(
+        "Complete the exploitation pathway details (assessment, pathway, and MITRE technique) or uncheck it.",
+      );
+      return;
+    }
+
     const affectedAssets = values.affectedAssets
       ? values.affectedAssets
           .split("\n")
@@ -203,15 +218,69 @@ export function CreateFindingForm() {
           .filter(Boolean)
       : [];
 
-    createMutation.mutate({
-      title: values.title,
-      description: values.description,
-      source: values.source,
-      severity: values.severity,
-      affectedAssets,
-      affectedBusinessUnitIds: values.affectedBusinessUnitIds,
-      assigneeId: values.assigneeId,
-    });
+    setSubmitting(true);
+    try {
+      // AC17: create the finding first.
+      let finding: { id: string; identifier: string };
+      try {
+        finding = await createMutation.mutateAsync({
+          title: values.title,
+          description: values.description,
+          source: values.source,
+          severity: values.severity,
+          affectedAssets,
+          affectedBusinessUnitIds: values.affectedBusinessUnitIds,
+          assigneeId: values.assigneeId,
+        });
+      } catch (error) {
+        // AC21: server validation errors
+        toast.error(error instanceof Error ? error.message : "Failed to create finding");
+        return;
+      }
+
+      // Epic 19: attach to an exploitation pathway if requested. The finding now
+      // exists, so a pathway failure is non-fatal — we warn and still navigate.
+      if (pathwayState.value) {
+        const v = pathwayState.value;
+        try {
+          let pathwayId = v.pathwayId;
+          if (!pathwayId && v.newPathwayName) {
+            const pathway = await createPathwayMutation.mutateAsync({
+              assessmentKind: v.assessmentKind,
+              assessmentId: v.assessmentId,
+              name: v.newPathwayName,
+            });
+            pathwayId = pathway.id;
+          }
+          if (pathwayId) {
+            await addStepMutation.mutateAsync({
+              pathwayId,
+              tactic: v.tactic,
+              technique: v.technique,
+              mitreTid: v.mitreTid,
+              findingIds: [finding.id],
+            });
+          }
+          toast.success(
+            `Finding ${finding.identifier} created and added to the exploitation pathway`,
+          );
+        } catch (error) {
+          toast.error(
+            `Finding ${finding.identifier} created, but adding it to the pathway failed: ${
+              error instanceof Error ? error.message : "unknown error"
+            }`,
+          );
+        }
+      } else {
+        // AC19: Success toast
+        toast.success(`Finding ${finding.identifier} created successfully`);
+      }
+
+      // AC20: Redirect to finding detail page
+      router.push(`/findings/${finding.id}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Watch BU selection for assignee suggestions (AC11)
@@ -428,18 +497,21 @@ export function CreateFindingForm() {
           )}
         />
 
+        {/* Epic 19: Exploitation pathway attachment */}
+        <PathwayAttachSection onChange={handlePathwayChange} />
+
         {/* Submit Button (AC17, AC18) */}
         <div className="flex justify-end gap-4">
           <Button
             type="button"
             variant="outline"
             onClick={() => router.back()}
-            disabled={createMutation.isPending}
+            disabled={submitting}
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={createMutation.isPending}>
-            {createMutation.isPending ? (
+          <Button type="submit" disabled={submitting}>
+            {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Creating Finding...

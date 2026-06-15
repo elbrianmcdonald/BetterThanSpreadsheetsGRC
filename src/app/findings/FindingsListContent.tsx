@@ -103,6 +103,7 @@ import { FindingsPagination } from "@/components/findings/FindingsPagination";
 import { FindingStatusBadge } from "@/components/findings/FindingStatusBadge";
 import { FindingSourceBadge } from "@/components/findings/FindingSourceBadge";
 import { SeverityBadge } from "@/components/risk/SeverityBadge";
+import { ToxicMark } from "@/components/pathway/ToxicMark";
 
 // localStorage keys for column persistence
 const COLUMN_VISIBILITY_KEY = "findings-table-column-visibility";
@@ -146,6 +147,7 @@ interface FindingListItem {
   dueDate: Date | string | null;
   closedAt: Date | string | null;
   slaBreached: boolean;
+  isToxic: boolean;
   duplicateOfId: string | null;
   creator?: { id: string; name: string | null; email: string | null } | null;
   assignee?: { id: string; name: string | null; email: string | null } | null;
@@ -554,13 +556,16 @@ export function FindingsListContent() {
           <SortableHeader column={column}>ID</SortableHeader>
         ),
         cell: ({ row }) => (
-          <Link
-            href={`/findings/${row.original.id}`}
-            className="font-mono text-sm font-medium text-primary hover:underline"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {row.getValue("identifier")}
-          </Link>
+          <span className="inline-flex items-center gap-1.5">
+            <Link
+              href={`/findings/${row.original.id}`}
+              className="font-mono text-sm font-medium text-primary hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {row.getValue("identifier")}
+            </Link>
+            {row.original.isToxic ? <ToxicMark size={12} /> : null}
+          </span>
         ),
         enableHiding: false,
       },

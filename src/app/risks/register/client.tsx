@@ -72,6 +72,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { RiskRegisterStatusDropdown } from "@/components/risk/RiskRegisterStatusDropdown";
+import { ToxicMark } from "@/components/pathway/ToxicMark";
 
 /** Status badge configuration */
 const statusConfig: Record<RiskRegisterStatus, { color: string; label: string; icon: typeof AlertTriangle }> = {
@@ -492,6 +493,10 @@ export function RiskRegisterClient() {
                         entry.assessment?.businessUnit?.name ??
                         entry.risk?.BusinessUnit?.name ??
                         null;
+                      // Epic 19: toxic if either side of the entry is on an exploitation pathway
+                      const isToxic =
+                        entry.risk?.isToxic === true ||
+                        entry.assessment?.finding?.isToxic === true;
 
                       return (
                         <TableRow
@@ -506,7 +511,10 @@ export function RiskRegisterClient() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-semibold text-foreground">{titleText}</p>
+                              <p className="inline-flex items-center gap-1.5 font-semibold text-foreground">
+                                {titleText}
+                                {isToxic ? <ToxicMark size={12} /> : null}
+                              </p>
                               {subIdentifier && (
                                 <p className="font-mono text-xs text-muted-foreground/70">
                                   {subIdentifier}

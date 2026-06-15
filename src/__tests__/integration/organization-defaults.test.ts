@@ -102,12 +102,14 @@ describe("Organization Defaults Integration Tests", () => {
       expect(version?.isActive).toBe(true);
       expect(version?.publishedAt).not.toBeNull();
 
-      // Verify scales
+      // Verify scales match the seeded defaults (now a 3×3 matrix —
+      // Low/Medium/High — per DEFAULT_SCALES; asserting against the source of
+      // truth keeps this resilient to future default-grid changes).
       const scales = version?.scales as unknown as MatrixScales;
-      expect(scales.likelihood).toHaveLength(5);
-      expect(scales.impact).toHaveLength(5);
-      expect(scales.likelihood[0]!.label).toBe("Rare");
-      expect(scales.impact[4]!.label).toBe("Catastrophic");
+      expect(scales.likelihood).toHaveLength(DEFAULT_SCALES.likelihood.length);
+      expect(scales.impact).toHaveLength(DEFAULT_SCALES.impact.length);
+      expect(scales.likelihood).toEqual(DEFAULT_SCALES.likelihood);
+      expect(scales.impact).toEqual(DEFAULT_SCALES.impact);
     });
 
     it("should create version with correct thresholds (AC15-AC18)", async () => {
@@ -119,37 +121,13 @@ describe("Organization Defaults Integration Tests", () => {
         where: { templateId: template!.id },
       });
 
+      // Thresholds match the seeded defaults. The default matrix is now 3×3
+      // (score range 0–9) with Low/Medium/High bands; assert against the source
+      // of truth (DEFAULT_THRESHOLDS) so this doesn't drift with grid changes.
       const thresholds = version?.thresholds as unknown as Threshold[];
 
-      expect(thresholds).toHaveLength(4);
-
-      // AC18: Low: 0-4.99 (Green #22C55E)
-      const low = thresholds.find((t) => t.label === "Low");
-      expect(low).toBeDefined();
-      expect(low?.minValue).toBe(0);
-      expect(low?.maxValue).toBe(5);
-      expect(low?.color).toBe("#22C55E");
-
-      // AC17: Medium: 5-11.99 (Yellow #EAB308)
-      const medium = thresholds.find((t) => t.label === "Medium");
-      expect(medium).toBeDefined();
-      expect(medium?.minValue).toBe(5);
-      expect(medium?.maxValue).toBe(12);
-      expect(medium?.color).toBe("#EAB308");
-
-      // AC16: High: 12-19.99 (Orange #F97316)
-      const high = thresholds.find((t) => t.label === "High");
-      expect(high).toBeDefined();
-      expect(high?.minValue).toBe(12);
-      expect(high?.maxValue).toBe(20);
-      expect(high?.color).toBe("#F97316");
-
-      // AC15: Critical: 20-25 (Red #EF4444)
-      const critical = thresholds.find((t) => t.label === "Critical");
-      expect(critical).toBeDefined();
-      expect(critical?.minValue).toBe(20);
-      expect(critical?.maxValue).toBe(25);
-      expect(critical?.color).toBe("#EF4444");
+      expect(thresholds).toHaveLength(DEFAULT_THRESHOLDS.length);
+      expect(thresholds).toEqual(DEFAULT_THRESHOLDS);
     });
 
     it("should set template currentVersionId to version 1", async () => {

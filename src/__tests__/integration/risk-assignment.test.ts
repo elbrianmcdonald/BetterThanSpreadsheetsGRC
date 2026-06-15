@@ -34,6 +34,13 @@ let testUserAuditor: { id: string; email: string; role: UserRole; organizationId
 let testUserOrg2IT: { id: string; email: string; role: UserRole; organizationId: string; name: string; assignedFrameworks: string[] };
 let testRisk: { id: string };
 let testRiskAssigned: { id: string };
+// Risk owners are Person records (not Users) since the ownership redesign.
+// Users above are still used for caller sessions + listUsersWithWorkload.
+let itPerson1: { id: string; name: string };
+let itPerson2: { id: string; name: string };
+let bizPerson1: { id: string; name: string };
+let bizPerson2: { id: string; name: string };
+let org2Person: { id: string; name: string };
 
 beforeAll(async () => {
   // Cleanup any residual data from previous failed runs
@@ -42,6 +49,7 @@ beforeAll(async () => {
   });
   if (existingOrg) {
     await db.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${existingOrg.id}`;
+    await db.$executeRaw`DELETE FROM "Person" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "AuditLog" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${existingOrg.id}`;
@@ -52,6 +60,7 @@ beforeAll(async () => {
   });
   if (existingOrg2) {
     await db.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${existingOrg2.id}`;
+    await db.$executeRaw`DELETE FROM "Person" WHERE "organizationId" = ${existingOrg2.id}`;
     await db.$executeRaw`DELETE FROM "AuditLog" WHERE "organizationId" = ${existingOrg2.id}`;
     await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${existingOrg2.id}`;
     await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${existingOrg2.id}`;
@@ -166,6 +175,25 @@ beforeAll(async () => {
     testOrg2.id
   );
 
+  // Create Person owner records (risk owners are Persons, not Users).
+  await runWithOrganizationContext(testOrg.id, async () => {
+    const mkPerson = async (name: string) =>
+      db.person.create({
+        data: { id: randomUUID(), organizationId: testOrg.id, name, updatedAt: new Date() },
+        select: { id: true, name: true },
+      });
+    itPerson1 = await mkPerson("IT Stakeholder 1");
+    itPerson2 = await mkPerson("IT Stakeholder 2");
+    bizPerson1 = await mkPerson("Business Stakeholder 1");
+    bizPerson2 = await mkPerson("Business Stakeholder 2");
+  });
+  await runWithOrganizationContext(testOrg2.id, async () => {
+    org2Person = await db.person.create({
+      data: { id: randomUUID(), organizationId: testOrg2.id, name: "IT Person Org2", updatedAt: new Date() },
+      select: { id: true, name: true },
+    });
+  });
+
   // Create test risks (wrapped in org context for middleware)
   await runWithOrganizationContext(testOrg.id, async () => {
     testRisk = await db.risk.create({
@@ -189,8 +217,8 @@ beforeAll(async () => {
         status: RiskStatus.ASSIGNED,
         organizationId: testOrg.id,
         createdById: testUserGRCAnalyst.id,
-        itOwnerId: testUserITStakeholder.id,
-        businessOwnerId: testUserBusinessStakeholder.id,
+        itOwnerId: itPerson1.id,
+        businessOwnerId: bizPerson1.id,
         assignedAt: new Date(),
         assignedById: testUserGRCAnalyst.id,
       },
@@ -201,11 +229,13 @@ beforeAll(async () => {
 afterAll(async () => {
   // Cleanup test data
   await db.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${testOrg.id}`;
+  await db.$executeRaw`DELETE FROM "Person" WHERE "organizationId" = ${testOrg.id}`;
   await db.$executeRaw`DELETE FROM "AuditLog" WHERE "organizationId" = ${testOrg.id}`;
   await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${testOrg.id}`;
   await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${testOrg.id}`;
 
   await db.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${testOrg2.id}`;
+  await db.$executeRaw`DELETE FROM "Person" WHERE "organizationId" = ${testOrg2.id}`;
   await db.$executeRaw`DELETE FROM "AuditLog" WHERE "organizationId" = ${testOrg2.id}`;
   await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${testOrg2.id}`;
   await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${testOrg2.id}`;
@@ -259,11 +289,11 @@ describe("Story 4.6: Risk Assignment", () => {
 
       const result = await caller.risk.assignRisk({
         riskId: newRisk.id,
-        itOwnerId: testUserITStakeholder.id,
+        itOwnerId: itPerson1.id,
       });
 
-      expect(result.itOwnerId).toBe(testUserITStakeholder.id);
-      expect(result.ITOwner?.id).toBe(testUserITStakeholder.id);
+      expect(result.itOwnerId).toBe(itPerson1.id);
+      expect(result.ITOwner?.id).toBe(itPerson1.id);
       expect(result.ITOwner?.name).toBe("IT Stakeholder 1");
       expect(result.businessOwnerId).toBeNull();
       expect(result.assignedAt).toBeDefined();
@@ -287,11 +317,11 @@ describe("Story 4.6: Risk Assignment", () => {
 
       const result = await caller.risk.assignRisk({
         riskId: newRisk.id,
-        businessOwnerId: testUserBusinessStakeholder.id,
+        businessOwnerId: bizPerson1.id,
       });
 
-      expect(result.businessOwnerId).toBe(testUserBusinessStakeholder.id);
-      expect(result.BusinessOwner?.id).toBe(testUserBusinessStakeholder.id);
+      expect(result.businessOwnerId).toBe(bizPerson1.id);
+      expect(result.BusinessOwner?.id).toBe(bizPerson1.id);
       expect(result.itOwnerId).toBeNull();
       expect(result.assignedAt).toBeDefined();
     });
@@ -313,7 +343,7 @@ describe("Story 4.6: Risk Assignment", () => {
 
       const result = await caller.risk.assignRisk({
         riskId: newRisk.id,
-        itOwnerId: testUserITStakeholder.id,
+        itOwnerId: itPerson1.id,
       });
 
       expect(result.status).toBe(RiskStatus.ASSIGNED);
@@ -336,10 +366,10 @@ describe("Story 4.6: Risk Assignment", () => {
 
       const result = await caller.risk.assignRisk({
         riskId: newRisk.id,
-        itOwnerId: testUserITStakeholder.id,
+        itOwnerId: itPerson1.id,
       });
 
-      expect(result.itOwnerId).toBe(testUserITStakeholder.id);
+      expect(result.itOwnerId).toBe(itPerson1.id);
     });
 
     it("AC8: should allow ORG_ADMIN to assign risks", async () => {
@@ -359,10 +389,10 @@ describe("Story 4.6: Risk Assignment", () => {
 
       const result = await caller.risk.assignRisk({
         riskId: newRisk.id,
-        businessOwnerId: testUserBusinessStakeholder.id,
+        businessOwnerId: bizPerson1.id,
       });
 
-      expect(result.businessOwnerId).toBe(testUserBusinessStakeholder.id);
+      expect(result.businessOwnerId).toBe(bizPerson1.id);
     });
 
     it("AC8: should deny IT_STAKEHOLDER from assigning risks", async () => {
@@ -371,7 +401,7 @@ describe("Story 4.6: Risk Assignment", () => {
       await expect(
         caller.risk.assignRisk({
           riskId: testRisk.id,
-          itOwnerId: testUserITStakeholder2.id,
+          itOwnerId: itPerson2.id,
         })
       ).rejects.toThrow(TRPCError);
     });
@@ -382,56 +412,15 @@ describe("Story 4.6: Risk Assignment", () => {
       await expect(
         caller.risk.assignRisk({
           riskId: testRisk.id,
-          itOwnerId: testUserITStakeholder.id,
+          itOwnerId: itPerson1.id,
         })
       ).rejects.toThrow(TRPCError);
     });
 
-    it("AC10: should reject IT owner without IT_STAKEHOLDER role", async () => {
-      const newRisk = await createRiskInOrg(testOrg.id, {
-        data: {
-          id: randomUUID(),
-          title: "Risk for Wrong Role Test",
-          description: "This is a test risk for wrong role assignment testing only.",
-          severity: Severity.HIGH,
-          status: RiskStatus.OPEN,
-          organizationId: testOrg.id,
-          createdById: testUserGRCAnalyst.id,
-        },
-      });
-
-      const caller = createCaller(testUserGRCAnalyst);
-
-      await expect(
-        caller.risk.assignRisk({
-          riskId: newRisk.id,
-          itOwnerId: testUserBusinessStakeholder.id, // Wrong role!
-        })
-      ).rejects.toThrow("IT Owner must have IT_STAKEHOLDER role");
-    });
-
-    it("AC11: should reject Business owner without BUSINESS_STAKEHOLDER role", async () => {
-      const newRisk = await createRiskInOrg(testOrg.id, {
-        data: {
-          id: randomUUID(),
-          title: "Risk for Wrong Business Role Test",
-          description: "This is a test risk for wrong business role assignment testing.",
-          severity: Severity.HIGH,
-          status: RiskStatus.OPEN,
-          organizationId: testOrg.id,
-          createdById: testUserGRCAnalyst.id,
-        },
-      });
-
-      const caller = createCaller(testUserGRCAnalyst);
-
-      await expect(
-        caller.risk.assignRisk({
-          riskId: newRisk.id,
-          businessOwnerId: testUserITStakeholder.id, // Wrong role!
-        })
-      ).rejects.toThrow("Business Owner must have BUSINESS_STAKEHOLDER role");
-    });
+    // NOTE: The former AC10/AC11 tests ("reject owner without IT_/BUSINESS_STAKEHOLDER
+    // role") were removed: risk owners are now Person records, which have no auth
+    // role, and assignRisk no longer performs owner-role validation. Cross-org and
+    // non-existent owners are still rejected (see "owner from different organization").
 
     it("should reject assignment if risk is already assigned", async () => {
       const caller = createCaller(testUserGRCAnalyst);
@@ -439,9 +428,9 @@ describe("Story 4.6: Risk Assignment", () => {
       await expect(
         caller.risk.assignRisk({
           riskId: testRiskAssigned.id,
-          itOwnerId: testUserITStakeholder2.id,
+          itOwnerId: itPerson2.id,
         })
-      ).rejects.toThrow("Risk is already assigned");
+      ).rejects.toThrow("already assigned");
     });
 
     it("AC9: should reject assignment of risk from different organization", async () => {
@@ -463,7 +452,7 @@ describe("Story 4.6: Risk Assignment", () => {
       await expect(
         caller.risk.assignRisk({
           riskId: org2Risk.id,
-          itOwnerId: testUserITStakeholder.id,
+          itOwnerId: itPerson1.id,
         })
       ).rejects.toThrow("Risk not found");
     });
@@ -486,7 +475,7 @@ describe("Story 4.6: Risk Assignment", () => {
       await expect(
         caller.risk.assignRisk({
           riskId: newRisk.id,
-          itOwnerId: testUserOrg2IT.id, // From different org!
+          itOwnerId: org2Person.id, // Person from different org!
         })
       ).rejects.toThrow("IT Owner not found in your organization");
     });
@@ -508,13 +497,13 @@ describe("Story 4.6: Risk Assignment", () => {
 
       const result = await caller.risk.reassignRisk({
         riskId: testRiskAssigned.id,
-        itOwnerId: testUserITStakeholder2.id,
+        itOwnerId: itPerson2.id,
       });
 
-      expect(result.itOwnerId).toBe(testUserITStakeholder2.id);
+      expect(result.itOwnerId).toBe(itPerson2.id);
       expect(result.ITOwner?.name).toBe("IT Stakeholder 2");
       // Business owner should remain unchanged
-      expect(result.businessOwnerId).toBe(testUserBusinessStakeholder.id);
+      expect(result.businessOwnerId).toBe(bizPerson1.id);
     });
 
     it("AC14: should allow reassigning Business owner", async () => {
@@ -522,10 +511,10 @@ describe("Story 4.6: Risk Assignment", () => {
 
       const result = await caller.risk.reassignRisk({
         riskId: testRiskAssigned.id,
-        businessOwnerId: testUserBusinessStakeholder2.id,
+        businessOwnerId: bizPerson2.id,
       });
 
-      expect(result.businessOwnerId).toBe(testUserBusinessStakeholder2.id);
+      expect(result.businessOwnerId).toBe(bizPerson2.id);
       expect(result.BusinessOwner?.name).toBe("Business Stakeholder 2");
     });
 
@@ -547,7 +536,7 @@ describe("Story 4.6: Risk Assignment", () => {
       await expect(
         caller.risk.reassignRisk({
           riskId: testRiskAssigned.id,
-          itOwnerId: testUserITStakeholder2.id,
+          itOwnerId: itPerson2.id,
         })
       ).rejects.toThrow(TRPCError);
     });
@@ -557,10 +546,10 @@ describe("Story 4.6: Risk Assignment", () => {
 
       const result = await caller.risk.reassignRisk({
         riskId: testRiskAssigned.id,
-        itOwnerId: testUserITStakeholder.id,
+        itOwnerId: itPerson1.id,
       });
 
-      expect(result.itOwnerId).toBe(testUserITStakeholder.id);
+      expect(result.itOwnerId).toBe(itPerson1.id);
     });
   });
 

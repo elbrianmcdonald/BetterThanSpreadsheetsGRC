@@ -22,7 +22,7 @@ import {
   AssessmentStatus,
   TreatmentType,
 } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
+import { Decimal } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 

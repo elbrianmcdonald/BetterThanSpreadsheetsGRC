@@ -368,6 +368,8 @@ export const findingRouter = createTRPCRouter({
           severity: true,
           severityLabel: true,
           status: true,
+          // Epic 19: exploitation-pathway membership (drives the ⬡ register indicator)
+          isToxic: true,
           // Array fields
           affectedAssets: true,
           // Date fields

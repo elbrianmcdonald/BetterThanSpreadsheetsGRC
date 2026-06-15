@@ -23,6 +23,9 @@ let testUserSecurityEngineer: { id: string; email: string; role: UserRole; organ
 let testUserITStakeholder: { id: string; email: string; role: UserRole; organizationId: string; name: string; assignedFrameworks: string[] };
 let testUserBusinessStakeholder: { id: string; email: string; role: UserRole; organizationId: string; name: string; assignedFrameworks: string[] };
 let testUserAuditor: { id: string; email: string; role: UserRole; organizationId: string; name: string; assignedFrameworks: string[] };
+// Risk owners are Person records (not Users) since the ownership redesign.
+let itOwnerPersonId: string;
+let bizOwnerPersonId: string;
 
 beforeAll(async () => {
   // Cleanup any residual data from previous failed runs
@@ -32,6 +35,7 @@ beforeAll(async () => {
   if (existingOrg) {
     await db.$executeRaw`DELETE FROM "RiskStatusHistory" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${existingOrg.id}`;
+    await db.$executeRaw`DELETE FROM "Person" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "AuditLog" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${existingOrg.id}`;
     await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${existingOrg.id}`;
@@ -109,6 +113,18 @@ beforeAll(async () => {
     testOrg.id
   );
 
+  // Create Person owner records (risk owners are Persons, not Users).
+  itOwnerPersonId = randomUUID();
+  bizOwnerPersonId = randomUUID();
+  await db.$executeRaw`
+    INSERT INTO "Person" (id, "organizationId", name, "isActive", "createdAt", "updatedAt")
+    VALUES (${itOwnerPersonId}, ${testOrg.id}, 'IT Owner Person', true, NOW(), NOW())
+  `;
+  await db.$executeRaw`
+    INSERT INTO "Person" (id, "organizationId", name, "isActive", "createdAt", "updatedAt")
+    VALUES (${bizOwnerPersonId}, ${testOrg.id}, 'Business Owner Person', true, NOW(), NOW())
+  `;
+
   // Create test risks (OPEN status for queue)
   testRisks = [];
   const riskData = [
@@ -134,6 +150,7 @@ afterAll(async () => {
   if (testOrg) {
     await db.$executeRaw`DELETE FROM "RiskStatusHistory" WHERE "organizationId" = ${testOrg.id}`;
     await db.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${testOrg.id}`;
+    await db.$executeRaw`DELETE FROM "Person" WHERE "organizationId" = ${testOrg.id}`;
     await db.$executeRaw`DELETE FROM "AuditLog" WHERE "organizationId" = ${testOrg.id}`;
     await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${testOrg.id}`;
     await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${testOrg.id}`;
@@ -269,13 +286,13 @@ describe("Story 4.13: Risk Assignment Queue", () => {
       // Assign the risk
       const assigned = await caller.risk.assignRisk({
         riskId: riskToAssign.id,
-        itOwnerId: testUserITStakeholder.id,
-        businessOwnerId: testUserBusinessStakeholder.id,
+        itOwnerId: itOwnerPersonId,
+        businessOwnerId: bizOwnerPersonId,
       });
 
       expect(assigned.status).toBe(RiskStatus.ASSIGNED);
-      expect(assigned.ITOwner?.id).toBe(testUserITStakeholder.id);
-      expect(assigned.BusinessOwner?.id).toBe(testUserBusinessStakeholder.id);
+      expect(assigned.ITOwner?.id).toBe(itOwnerPersonId);
+      expect(assigned.BusinessOwner?.id).toBe(bizOwnerPersonId);
 
       // Verify it's gone from queue
       const updatedQueue = await caller.risk.getAssignmentQueue({});
@@ -300,8 +317,8 @@ describe("Story 4.13: Risk Assignment Queue", () => {
 
       const result = await caller.risk.bulkAssignRisks({
         riskIds,
-        itOwnerId: testUserITStakeholder.id,
-        businessOwnerId: testUserBusinessStakeholder.id,
+        itOwnerId: itOwnerPersonId,
+        businessOwnerId: bizOwnerPersonId,
       });
 
       expect(result.assignedCount).toBe(riskIds.length);

@@ -366,6 +366,74 @@ export const pathwayRouter = createTRPCRouter({
     }),
 
   // -------------------------------------------------------------------------
+  // listAssessments — a unified, cross-kind list of the org's assessments for
+  // the creation-time pathway picker. Findings/risks can be created outside an
+  // assessment workspace (e.g. /findings/new), so the create forms let the user
+  // choose which assessment a new pathway should be scoped to. Returns a flat
+  // `{ kind, id, label }[]` so the client needn't juggle five query shapes.
+  // -------------------------------------------------------------------------
+  listAssessments: organizationProcedure
+    .use(requireRole(PATHWAY_READ_ROLES))
+    .query(async ({ ctx }) => {
+      const organizationId = ctx.organizationId!;
+      const [compliance, maturity, vendor, risk, bia] = await Promise.all([
+        ctx.db.complianceAssessment.findMany({
+          where: { organizationId },
+          select: { id: true, identifier: true, name: true },
+          orderBy: { identifier: "desc" },
+        }),
+        ctx.db.maturityAssessment.findMany({
+          where: { organizationId },
+          select: { id: true, identifier: true, name: true },
+          orderBy: { identifier: "desc" },
+        }),
+        ctx.db.vendorAssessment.findMany({
+          where: { organizationId },
+          select: { id: true, identifier: true, title: true },
+          orderBy: { identifier: "desc" },
+        }),
+        ctx.db.riskAssessment.findMany({
+          where: { organizationId },
+          select: { id: true, identifier: true, title: true },
+          orderBy: { identifier: "desc" },
+        }),
+        ctx.db.bIAAssessmentRequest.findMany({
+          where: { process: { organizationId } },
+          select: { id: true, process: { select: { name: true } } },
+          orderBy: { requestedAt: "desc" },
+        }),
+      ]);
+
+      return [
+        ...compliance.map((a) => ({
+          kind: AssessmentKind.COMPLIANCE,
+          id: a.id,
+          label: `${a.identifier} · ${a.name}`,
+        })),
+        ...maturity.map((a) => ({
+          kind: AssessmentKind.MATURITY,
+          id: a.id,
+          label: `${a.identifier} · ${a.name}`,
+        })),
+        ...risk.map((a) => ({
+          kind: AssessmentKind.RISK,
+          id: a.id,
+          label: `${a.identifier} · ${a.title}`,
+        })),
+        ...vendor.map((a) => ({
+          kind: AssessmentKind.VENDOR,
+          id: a.id,
+          label: `${a.identifier} · ${a.title}`,
+        })),
+        ...bia.map((a) => ({
+          kind: AssessmentKind.BIA,
+          id: a.id,
+          label: `BIA · ${a.process.name}`,
+        })),
+      ];
+    }),
+
+  // -------------------------------------------------------------------------
   // getById — pathway + ordered steps + finding/risk per step.
   // -------------------------------------------------------------------------
   getById: organizationProcedure

@@ -18,6 +18,8 @@ let testOrg: { id: string; slug: string };
 let testOrg2: { id: string; slug: string };
 let testUserGRC: { id: string; name: string; email: string; role: UserRole; organizationId: string };
 let testUserIT: { id: string; name: string; email: string; role: UserRole; organizationId: string };
+// Risk owners are Person records (not Users) since the ownership redesign.
+let itOwnerPersonId: string;
 let testUserOtherOrg: { id: string; name: string; email: string; role: UserRole; organizationId: string };
 let testRisk: { id: string; title: string };
 
@@ -86,6 +88,13 @@ beforeAll(async () => {
     role: UserRole.IT_STAKEHOLDER,
     organizationId: testOrg.id,
   };
+
+  // Create Person owner record (risk owners are Persons, not Users).
+  itOwnerPersonId = randomUUID();
+  await db.$executeRaw`
+    INSERT INTO "Person" (id, "organizationId", name, "isActive", "createdAt", "updatedAt")
+    VALUES (${itOwnerPersonId}, ${testOrg.id}, 'IT Owner Person', true, NOW(), NOW())
+  `;
 
   const otherOrgUserId = randomUUID();
   await db.$executeRaw`
@@ -191,7 +200,7 @@ describe("Story 4.12: Risk Audit Trail", () => {
       // Assign the risk
       await caller.risk.assignRisk({
         riskId: testRisk.id,
-        itOwnerId: testUserIT.id,
+        itOwnerId: itOwnerPersonId,
       });
 
       // Wait for async audit log
@@ -210,7 +219,7 @@ describe("Story 4.12: Risk Audit Trail", () => {
       const changes = auditLogs[0]!.changes as Record<string, unknown>;
       expect(changes.after).toBeDefined();
       const after = changes.after as Record<string, unknown>;
-      expect(after.itOwnerId).toBe(testUserIT.id);
+      expect(after.itOwnerId).toBe(itOwnerPersonId);
     });
 
     it("AC18: Status transitions logged with old/new status", async () => {

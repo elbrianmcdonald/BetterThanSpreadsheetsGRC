@@ -20,7 +20,7 @@ import { db } from "@/server/db";
 import { appRouter } from "@/server/api/root";
 import { randomUUID } from "crypto";
 import { UserRole } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
+import { Decimal } from "@prisma/client";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 
 describe("Risk Matrix Template Management - Story 7.8.2", () => {

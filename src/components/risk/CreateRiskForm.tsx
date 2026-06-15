@@ -98,6 +98,10 @@ import { MarkdownPreview } from "@/components/ui/markdown-preview";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { RiskControlsSection, useRiskControlsState } from "./RiskControlsSection";
+import {
+  PathwayAttachSection,
+  type PathwayAttachState,
+} from "@/components/pathway/PathwayAttachSection";
 
 /**
  * Finding source options (Story 4.3 AC18)
@@ -237,23 +241,22 @@ export function CreateRiskForm({ onSuccess, onCancel }: CreateRiskFormProps) {
   // Story 4.2: Fetch templates (AC22)
   const { data: templates, isLoading: isLoadingTemplates } = api.risk.listRiskTemplates.useQuery();
 
-  // Create mutation
-  const createMutation = api.risk.create.useMutation({
-    onSuccess: (data) => {
-      // AC7: Success message displayed with link to detail page
-      setCreatedRisk({ id: data.id, title: data.title });
-      toast.success("Risk created successfully");
-
-      // AC8: Reset form for creating multiple risks
-      form.reset();
-      setSelectedTemplateId(null);
-
-      onSuccess?.(data.id);
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
+  // Epic 19: exploitation-pathway attachment state (reported by the section).
+  const [pathwayState, setPathwayState] = useState<PathwayAttachState>({
+    enabled: false,
+    value: null,
   });
+  const handlePathwayChange = useCallback(
+    (s: PathwayAttachState) => setPathwayState(s),
+    [],
+  );
+  const [submitting, setSubmitting] = useState(false);
+
+  // Create mutation. Success/error handled in onSubmit so we can chain the
+  // pathway attach before showing the success screen.
+  const createMutation = api.risk.create.useMutation();
+  const createPathwayMutation = api.pathway.create.useMutation();
+  const addStepMutation = api.pathway.addStep.useMutation();
 
   // Form setup
   const form = useForm<CreateRiskFormValues>({
@@ -389,13 +392,74 @@ export function CreateRiskForm({ onSuccess, onCancel }: CreateRiskFormProps) {
   }, [templates, form]);
 
   // Handle form submission (AC6)
-  const onSubmit = (values: CreateRiskFormValues) => {
-    createMutation.mutate({
-      ...values,
-      // Include organizational control linkages
-      controlIdsInPlace: controlsInPlace.length > 0 ? controlsInPlace : undefined,
-      controlIdsNeeded: controlsNeeded.length > 0 ? controlsNeeded : undefined,
-    });
+  const onSubmit = async (values: CreateRiskFormValues) => {
+    // Block submit when the pathway box is checked but its details are incomplete.
+    if (pathwayState.enabled && !pathwayState.value) {
+      toast.error(
+        "Complete the exploitation pathway details (assessment, pathway, and MITRE technique) or uncheck it.",
+      );
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let risk: { id: string; title: string };
+      try {
+        risk = await createMutation.mutateAsync({
+          ...values,
+          // Include organizational control linkages
+          controlIdsInPlace: controlsInPlace.length > 0 ? controlsInPlace : undefined,
+          controlIdsNeeded: controlsNeeded.length > 0 ? controlsNeeded : undefined,
+        });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to create risk");
+        return;
+      }
+
+      // Epic 19: attach to an exploitation pathway if requested. The risk now
+      // exists, so a pathway failure is non-fatal — we warn and still continue.
+      if (pathwayState.value) {
+        const v = pathwayState.value;
+        try {
+          let pathwayId = v.pathwayId;
+          if (!pathwayId && v.newPathwayName) {
+            const pathway = await createPathwayMutation.mutateAsync({
+              assessmentKind: v.assessmentKind,
+              assessmentId: v.assessmentId,
+              name: v.newPathwayName,
+            });
+            pathwayId = pathway.id;
+          }
+          if (pathwayId) {
+            await addStepMutation.mutateAsync({
+              pathwayId,
+              tactic: v.tactic,
+              technique: v.technique,
+              mitreTid: v.mitreTid,
+              riskIds: [risk.id],
+            });
+          }
+          toast.success("Risk created and added to the exploitation pathway");
+        } catch (error) {
+          toast.error(
+            `Risk created, but adding it to the pathway failed: ${
+              error instanceof Error ? error.message : "unknown error"
+            }`,
+          );
+        }
+      } else {
+        // AC7: Success message displayed with link to detail page
+        toast.success("Risk created successfully");
+      }
+
+      // AC7/AC8: success screen + reset form for creating multiple risks
+      setCreatedRisk({ id: risk.id, title: risk.title });
+      form.reset();
+      setSelectedTemplateId(null);
+      onSuccess?.(risk.id);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Handle creating another risk
@@ -1028,6 +1092,9 @@ e.g.,
           onControlsChange={handleControlsChange}
         />
 
+        {/* Epic 19: Exploitation pathway attachment */}
+        <PathwayAttachSection onChange={handlePathwayChange} />
+
         {/* Severity Guide */}
         <Card className="bg-gray-50">
           <CardContent className="p-4">
@@ -1068,13 +1135,13 @@ e.g.,
               type="button"
               variant="outline"
               onClick={onCancel}
-              disabled={createMutation.isPending}
+              disabled={submitting}
             >
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={createMutation.isPending}>
-            {createMutation.isPending ? (
+          <Button type="submit" disabled={submitting}>
+            {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Creating Risk...
