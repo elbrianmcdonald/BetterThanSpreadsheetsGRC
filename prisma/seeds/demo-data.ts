@@ -25,6 +25,26 @@ const DEFAULT_3x3_THRESHOLDS = [
   { label: 'High', minValue: 6, maxValue: 9, color: '#EF4444', slaDays: 7 },
 ];
 
+// Deterministic id of the org's default published matrix version (created in
+// Layer 11 below). Risk/Finding.matrixVersionId is a plain traceability string
+// (no FK), so seeding it before the row exists in the same run is safe.
+const MATRIX_VERSION_ID = 'demo-default-matrix-v1';
+
+/**
+ * Score a likelihood×impact pair on the default 3×3 matrix. Normalized score =
+ * L×I (outputScaleMax 9 = maxL×maxI), banded by DEFAULT_3x3_THRESHOLDS with the
+ * lower band winning at a shared boundary (matches `thresholdForScore`).
+ */
+function scoreLI(
+  likelihood: number,
+  impact: number,
+): { score: number; label: string; severity: 'LOW' | 'MEDIUM' | 'HIGH' } {
+  const score = likelihood * impact;
+  if (score <= 3) return { score, label: 'Low', severity: 'LOW' };
+  if (score <= 6) return { score, label: 'Medium', severity: 'MEDIUM' };
+  return { score, label: 'High', severity: 'HIGH' };
+}
+
 // ============================================================================
 // Demo Data Seed Module
 // Populates realistic demo data for all features so dashboards aren't empty.
@@ -168,20 +188,52 @@ export async function seedDemoData(prisma: PrismaClient) {
   // ========================================================================
   // Layer 3B: Findings + Comments
   // ========================================================================
+  // Look up the seeded enterprise risks (created before demo data) so findings
+  // and risks can be tagged to them, populating the ER heatmaps/rollups.
+  const enterpriseRisks = await prisma.enterpriseRisk.findMany({
+    where: { organizationId: ORG_A },
+    select: { id: true, name: true },
+  });
+  const erByName: Record<string, string> = Object.fromEntries(
+    enterpriseRisks.map((e) => [e.name, e.id]),
+  );
+
   console.log('  Creating findings...');
+  // Each finding carries a matrix-anchored likelihood×impact (l/i) so it scores
+  // on the default 3×3 matrix and plots on the heatmaps. `er` (optional) tags it
+  // to an enterprise risk by name.
   const findingsData = [
-    { id: 'demo-find-001', identifier: 'FND-2026-0001', title: 'Outdated TLS 1.0 Configuration on Edge Servers',           source: 'SCANNER' as const, severity: 'HIGH' as const,   status: 'TRIAGED' as const,   description: 'Automated vulnerability scan detected TLS 1.0 still enabled on 3 edge servers. TLS 1.0 has known vulnerabilities (BEAST, POODLE) and should be disabled in favor of TLS 1.2+.' },
-    { id: 'demo-find-002', identifier: 'FND-2026-0002', title: 'Missing WAF on Public-Facing API Gateway',                  source: 'PENTEST' as const, severity: 'HIGH' as const,   status: 'ACCEPTED' as const,  description: 'External penetration test found no Web Application Firewall protecting the public API gateway. This leaves the API vulnerable to common web attacks including SQL injection and XSS.' },
-    { id: 'demo-find-003', identifier: 'FND-2026-0003', title: 'Excessive S3 Bucket Permissions in Production',             source: 'AUDIT' as const,   severity: 'MEDIUM' as const, status: 'TRIAGED' as const,   description: 'Internal audit revealed 12 S3 buckets with overly permissive IAM policies granting broad read/write access beyond what is needed for operational use.' },
-    { id: 'demo-find-004', identifier: 'FND-2026-0004', title: 'Unencrypted Database Backups in Secondary Region',          source: 'SCANNER' as const, severity: 'HIGH' as const,   status: 'NEW' as const,       description: 'Configuration scan detected that database backups replicated to the DR region are not encrypted at rest, potentially exposing sensitive customer data.' },
-    { id: 'demo-find-005', identifier: 'FND-2026-0005', title: 'Stale Service Accounts with Elevated Privileges',           source: 'AUDIT' as const,   severity: 'MEDIUM' as const, status: 'NEEDS_INFO' as const, description: '8 service accounts identified that have not been used in 90+ days but retain administrative privileges. Ownership and purpose need to be verified.' },
-    { id: 'demo-find-006', identifier: 'FND-2026-0006', title: 'Missing DMARC Policy on Corporate Email Domain',            source: 'MANUAL' as const,  severity: 'LOW' as const,    status: 'ACCEPTED' as const,  description: 'Corporate email domain acme-corp.com lacks a DMARC policy, making it susceptible to email spoofing and phishing attacks impersonating the organization.' },
+    { id: 'demo-find-001', identifier: 'FND-2026-0001', title: 'Outdated TLS 1.0 Configuration on Edge Servers',  source: 'SCANNER' as const, l: 2, i: 3, status: 'TRIAGED' as const,    er: 'System Compromise',              description: 'Automated vulnerability scan detected TLS 1.0 still enabled on 3 edge servers. TLS 1.0 has known vulnerabilities (BEAST, POODLE) and should be disabled in favor of TLS 1.2+.' },
+    { id: 'demo-find-002', identifier: 'FND-2026-0002', title: 'Missing WAF on Public-Facing API Gateway',         source: 'PENTEST' as const, l: 3, i: 3, status: 'ACCEPTED' as const,   er: 'System Compromise',              description: 'External penetration test found no Web Application Firewall protecting the public API gateway. This leaves the API vulnerable to common web attacks including SQL injection and XSS.' },
+    { id: 'demo-find-003', identifier: 'FND-2026-0003', title: 'Excessive S3 Bucket Permissions in Production',    source: 'AUDIT' as const,   l: 2, i: 2, status: 'TRIAGED' as const,    er: 'Data Breach / Privacy Incident', description: 'Internal audit revealed 12 S3 buckets with overly permissive IAM policies granting broad read/write access beyond what is needed for operational use.' },
+    { id: 'demo-find-004', identifier: 'FND-2026-0004', title: 'Unencrypted Database Backups in Secondary Region', source: 'SCANNER' as const, l: 2, i: 3, status: 'NEW' as const,        er: 'Data Breach / Privacy Incident', description: 'Configuration scan detected that database backups replicated to the DR region are not encrypted at rest, potentially exposing sensitive customer data.' },
+    { id: 'demo-find-005', identifier: 'FND-2026-0005', title: 'Stale Service Accounts with Elevated Privileges',  source: 'AUDIT' as const,   l: 2, i: 2, status: 'NEEDS_INFO' as const,  er: null,                             description: '8 service accounts identified that have not been used in 90+ days but retain administrative privileges. Ownership and purpose need to be verified.' },
+    { id: 'demo-find-006', identifier: 'FND-2026-0006', title: 'Missing DMARC Policy on Corporate Email Domain',   source: 'MANUAL' as const,  l: 1, i: 2, status: 'ACCEPTED' as const,   er: null,                             description: 'Corporate email domain acme-corp.com lacks a DMARC policy, making it susceptible to email spoofing and phishing attacks impersonating the organization.' },
+    { id: 'demo-find-007', identifier: 'FND-2026-0007', title: 'Hardcoded Secrets in Source Repository',           source: 'SCANNER' as const, l: 3, i: 3, status: 'NEW' as const,        er: 'System Compromise',              description: 'Secret scanning found AWS access keys and a database password committed to the application source repository, exposing production credentials.' },
+    { id: 'demo-find-008', identifier: 'FND-2026-0008', title: 'No Endpoint Detection & Response on Servers',      source: 'PENTEST' as const, l: 3, i: 2, status: 'TRIAGED' as const,    er: null,                             description: 'Production servers lack EDR tooling, leaving malware and lateral-movement activity undetected during the penetration test.' },
+    { id: 'demo-find-009', identifier: 'FND-2026-0009', title: 'RDP Exposed Directly to the Internet',             source: 'SCANNER' as const, l: 3, i: 3, status: 'NEW' as const,        er: 'System Compromise',              description: 'External scan identified Remote Desktop (3389/tcp) reachable from the public internet on two jump hosts — a common ransomware entry vector.' },
+    { id: 'demo-find-010', identifier: 'FND-2026-0010', title: 'Backups Reachable from Production Network',        source: 'AUDIT' as const,   l: 2, i: 3, status: 'NEW' as const,        er: 'Disruption of Critical IT Services', description: 'Backup repositories are not air-gapped and are reachable from the production network, so ransomware could encrypt both primary and backup data.' },
+    { id: 'demo-find-011', identifier: 'FND-2026-0011', title: 'Excessive Mailbox Delegation in O365',            source: 'AUDIT' as const,   l: 1, i: 2, status: 'TRIAGED' as const,    er: null,                             description: 'Audit of Microsoft 365 found 40+ mailboxes with full-access delegation to non-owners, exceeding least-privilege expectations.' },
+    { id: 'demo-find-012', identifier: 'FND-2026-0012', title: 'Unsupported Windows Server 2012 in Production',    source: 'SCANNER' as const, l: 2, i: 3, status: 'NEW' as const,        er: 'Disruption of Critical IT Services', description: 'Two production hosts still run Windows Server 2012, which is end-of-life and no longer receives security updates.' },
   ];
 
   for (const f of findingsData) {
+    const s = scoreLI(f.l, f.i);
     await prisma.finding.upsert({
       where: { organizationId_identifier: { organizationId: ORG_A, identifier: f.identifier } },
-      update: {},
+      update: {
+        title: f.title,
+        description: f.description,
+        source: f.source,
+        severity: s.severity,
+        severityLabel: s.label,
+        status: f.status,
+        inherentLikelihood: f.l,
+        inherentImpact: f.i,
+        inherentScore: s.score,
+        matrixVersionId: MATRIX_VERSION_ID,
+        enterpriseRiskId: f.er ? erByName[f.er] ?? null : null,
+      },
       create: {
         id: f.id,
         organizationId: ORG_A,
@@ -189,8 +241,14 @@ export async function seedDemoData(prisma: PrismaClient) {
         title: f.title,
         description: f.description,
         source: f.source,
-        severity: f.severity,
+        severity: s.severity,
+        severityLabel: s.label,
         status: f.status,
+        inherentLikelihood: f.l,
+        inherentImpact: f.i,
+        inherentScore: s.score,
+        matrixVersionId: MATRIX_VERSION_ID,
+        enterpriseRiskId: f.er ? erByName[f.er] ?? null : null,
         createdBy: BOB,
         assigneeId: BOB,
         ...(f.status === 'TRIAGED' || f.status === 'ACCEPTED' || f.status === 'NEEDS_INFO'
@@ -229,6 +287,63 @@ export async function seedDemoData(prisma: PrismaClient) {
   console.log(`  ✅ ${findingsData.length} findings, ${findingCommentsData.length} comments\n`);
 
   // ========================================================================
+  // Layer 3C: Scored Risk Register
+  // Fully matrix-scored risks (inherent + residual L×I on the default 3×3
+  // matrix) so the Risk Dashboard / Enterprise Risk heatmaps plot real data.
+  // A spread is tagged to enterprise risks (enterpriseRiskId) to populate the
+  // ER view heatmaps and the list-page rollup. Risks 0001/0002 already exist
+  // (seed.ts) — upserted here to add scoring; 0003-0012 are created fresh.
+  // ========================================================================
+  console.log('  Creating scored risks...');
+  const risksData = [
+    { id: RISK_A1, identifier: 'RISK-2026-0001', title: 'Unpatched SQL Server 2019',                  il: 3, ii: 3, rl: 2, ri: 3, status: 'ASSIGNED' as const,   er: 'System Compromise',                  description: 'Production SQL Server missing critical security patches, exposing known remote-code-execution CVEs.' },
+    { id: RISK_A2, identifier: 'RISK-2026-0002', title: 'Missing MFA on Admin Accounts',              il: 3, ii: 3, rl: 3, ri: 2, status: 'ASSIGNED' as const,   er: 'System Compromise',                  description: 'Administrative accounts do not enforce multi-factor authentication, enabling credential-based takeover.' },
+    { id: 'demo-risk-0003', identifier: 'RISK-2026-0003', title: 'Flat Network — IT and Plant OT Not Segmented', il: 2, ii: 3, rl: 2, ri: 2, status: 'OPEN' as const,        er: 'Disruption of Critical IT Services', description: 'Lack of network segmentation between corporate IT and OT increases blast radius of any intrusion.' },
+    { id: 'demo-risk-0004', identifier: 'RISK-2026-0004', title: 'Unencrypted Disaster-Recovery Backups',  il: 2, ii: 3, rl: 1, ri: 3, status: 'ASSIGNED' as const,   er: 'Data Breach / Privacy Incident',     description: 'DR-region database backups are not encrypted at rest, risking exposure of regulated customer data.' },
+    { id: 'demo-risk-0005', identifier: 'RISK-2026-0005', title: 'Over-Permissioned Production S3 Buckets',  il: 2, ii: 2, rl: 1, ri: 2, status: 'REMEDIATED' as const, er: 'Data Breach / Privacy Incident',     description: 'Several S3 buckets had broad IAM access; least-privilege policies have now been applied.' },
+    { id: 'demo-risk-0006', identifier: 'RISK-2026-0006', title: 'Stale Privileged Service Accounts',        il: 2, ii: 2, rl: 2, ri: 1, status: 'OPEN' as const,        er: 'System Compromise',                  description: 'Dormant service accounts retain administrative privileges and lack ownership, widening the attack surface.' },
+    { id: 'demo-risk-0007', identifier: 'RISK-2026-0007', title: 'Payment Gateway Single Point of Failure',  il: 3, ii: 3, rl: 2, ri: 3, status: 'OPEN' as const,        er: 'Loss of Payment Processing',         description: 'The payment authorization path depends on a single gateway with no automatic failover, threatening revenue continuity.' },
+    { id: 'demo-risk-0008', identifier: 'RISK-2026-0008', title: 'Vendor Data-Processing Oversight Gap',     il: 2, ii: 3, rl: 2, ri: 2, status: 'OPEN' as const,        er: 'Subsidiary & Business Partner Risk', description: 'Key data-processing vendors lack current security attestations and contractual breach-notification terms.' },
+    { id: 'demo-risk-0009', identifier: 'RISK-2026-0009', title: 'Workforce Phishing Susceptibility',        il: 3, ii: 2, rl: 2, ri: 2, status: 'ASSIGNED' as const,   er: 'Major Reputational Loss',            description: 'Phishing simulations show a high click-through rate, increasing the likelihood of credential compromise and brand damage.' },
+    { id: 'demo-risk-0010', identifier: 'RISK-2026-0010', title: 'Email Spoofing — No DMARC Enforcement',    il: 3, ii: 1, rl: 1, ri: 1, status: 'OPEN' as const,        er: 'Major Reputational Loss',            description: 'Absence of an enforced DMARC policy lets attackers spoof the corporate domain in phishing campaigns.' },
+    { id: 'demo-risk-0011', identifier: 'RISK-2026-0011', title: 'Wire-Transfer Fraud Control Gap',          il: 2, ii: 3, rl: 1, ri: 3, status: 'CLOSED' as const,      er: 'Financial Loss due to Fraud',        description: 'Dual-approval controls for high-value wire transfers were missing; a verification workflow has since been implemented.' },
+    { id: 'demo-risk-0012', identifier: 'RISK-2026-0012', title: 'Datacenter Power Redundancy Gap',          il: 1, ii: 3, rl: 1, ri: 2, status: 'OPEN' as const,        er: 'Disruption of Critical IT Services', description: 'A primary datacenter lacks N+1 power redundancy, risking an extended outage of critical services.' },
+  ];
+
+  for (const r of risksData) {
+    const inh = scoreLI(r.il, r.ii);
+    const res = scoreLI(r.rl, r.ri);
+    const scoring = {
+      title: r.title,
+      description: r.description,
+      severity: inh.severity,
+      status: r.status,
+      inherentLikelihood: r.il,
+      inherentImpact: r.ii,
+      inherentScore: inh.score,
+      inherentScoreLabel: inh.label,
+      residualLikelihood: r.rl,
+      residualImpact: r.ri,
+      residualScore: res.score,
+      residualScoreLabel: res.label,
+      matrixVersionId: MATRIX_VERSION_ID,
+      enterpriseRiskId: r.er ? erByName[r.er] ?? null : null,
+    };
+    await prisma.risk.upsert({
+      where: { id: r.id },
+      update: scoring,
+      create: {
+        id: r.id,
+        organizationId: ORG_A,
+        identifier: r.identifier,
+        updatedAt: new Date(),
+        ...scoring,
+      },
+    });
+  }
+  console.log(`  ✅ ${risksData.length} scored risks\n`);
+
+  // ========================================================================
   // Layer 4: Risk Assessments + Scenarios + Treatments + Comments
   // ========================================================================
   console.log('  Creating risk assessments...');
@@ -248,6 +363,22 @@ export async function seedDemoData(prisma: PrismaClient) {
       title: 'Public API Exposure Risk Assessment',
       findingId: 'demo-find-002',
       inherentScore: 0.85,
+      treatment: 'MITIGATE' as const,
+    },
+    {
+      id: 'demo-ra-003',
+      identifier: 'RSK-2026-0003',
+      title: 'DR Backup Encryption Risk Assessment',
+      findingId: 'demo-find-004',
+      inherentScore: 0.6,
+      treatment: 'MITIGATE' as const,
+    },
+    {
+      id: 'demo-ra-004',
+      identifier: 'RSK-2026-0004',
+      title: 'Source-Code Secret Exposure Risk Assessment',
+      findingId: 'demo-find-007',
+      inherentScore: 0.9,
       treatment: 'MITIGATE' as const,
     },
   ];
@@ -412,6 +543,14 @@ export async function seedDemoData(prisma: PrismaClient) {
       businessUnitId: businessUnits['ITO'],
       baseline: 'MODERATE',
     },
+    {
+      id: 'demo-ca-003',
+      identifier: 'COMP-2026-0003',
+      name: 'ISO 27001 Finance Unit Assessment',
+      frameworkId: FRAMEWORK_ISO27001,
+      status: 'COMPLETED' as const,
+      businessUnitId: businessUnits['FIN'],
+    },
   ];
 
   for (const ca of compAssessmentsData) {
@@ -493,6 +632,47 @@ export async function seedDemoData(prisma: PrismaClient) {
         partialCount: scoreStats.partial,
         notAssessedCount: scoreStats.notAssessed,
         complianceScore: Math.round(complianceScore * 100) / 100,
+      },
+    });
+  }
+
+  // Control Assessment Scores for CA-3 (ISO 27001 — Finance unit, COMPLETED) —
+  // higher-maturity distribution so the register shows a strong finished result.
+  const existingCa3ScoreCount = await prisma.controlAssessmentScore.count({
+    where: { assessmentId: 'demo-ca-003' },
+  });
+  if (existingCa3ScoreCount === 0 && isoControls.length > 0) {
+    const stats3 = { compliant: 0, partial: 0, nonCompliant: 0, notAssessed: 0 };
+    for (let i = 0; i < isoControls.length; i++) {
+      // ~80% COMPLIANT, ~12% PARTIALLY, ~8% NON_COMPLIANT, 0% unassessed (completed).
+      const r = ((i * 7 + 3) % isoControls.length) / isoControls.length;
+      const st =
+        r < 0.8 ? 'COMPLIANT' as const
+        : r < 0.92 ? 'PARTIALLY_COMPLIANT' as const
+        : 'NON_COMPLIANT' as const;
+      if (st === 'COMPLIANT') stats3.compliant++;
+      else if (st === 'PARTIALLY_COMPLIANT') stats3.partial++;
+      else stats3.nonCompliant++;
+      await prisma.controlAssessmentScore.create({
+        data: {
+          assessmentId: 'demo-ca-003',
+          controlId: isoControls[i]!.id,
+          status: st,
+          assessedById: BOB,
+          assessedAt: new Date('2026-03-05'),
+        },
+      });
+    }
+    const score3 = ((stats3.compliant + stats3.partial * 0.5) / isoControls.length) * 100;
+    await prisma.complianceAssessment.update({
+      where: { id: 'demo-ca-003' },
+      data: {
+        totalControls: isoControls.length,
+        compliantCount: stats3.compliant,
+        nonCompliantCount: stats3.nonCompliant,
+        partialCount: stats3.partial,
+        notAssessedCount: stats3.notAssessed,
+        complianceScore: Math.round(score3 * 100) / 100,
       },
     });
   }
@@ -874,15 +1054,15 @@ export async function seedDemoData(prisma: PrismaClient) {
     lastSequence: number;
   }> = [
     // Org A (Acme Corp) — demo-data.ts + seed.ts seeded identifiers
-    { organizationId: ORG_A,    prefix: 'FND',  year: 2026, lastSequence: 6 },
-    { organizationId: ORG_A,    prefix: 'RSK',  year: 2026, lastSequence: 2 },
-    { organizationId: ORG_A,    prefix: 'COMP', year: 2026, lastSequence: 2 },
+    { organizationId: ORG_A,    prefix: 'FND',  year: 2026, lastSequence: 12 },
+    { organizationId: ORG_A,    prefix: 'RSK',  year: 2026, lastSequence: 4 },
+    { organizationId: ORG_A,    prefix: 'COMP', year: 2026, lastSequence: 3 },
     { organizationId: ORG_A,    prefix: 'VND',  year: 2026, lastSequence: 4 },
     { organizationId: ORG_A,    prefix: 'VA',   year: 2026, lastSequence: 2 },
     { organizationId: ORG_A,    prefix: 'AST',  year: 2026, lastSequence: 6 },
     { organizationId: ORG_A,    prefix: 'BP',   year: 2026, lastSequence: 4 },
     { organizationId: ORG_A,    prefix: 'BF',   year: 2026, lastSequence: 2 },
-    { organizationId: ORG_A,    prefix: 'RISK', year: 2026, lastSequence: 2 },
+    { organizationId: ORG_A,    prefix: 'RISK', year: 2026, lastSequence: 12 },
     // Org B (Globex) — seed.ts seeds RISK-2026-0001/-0002
     { organizationId: ORG_B_ID, prefix: 'RISK', year: 2026, lastSequence: 2 },
   ];

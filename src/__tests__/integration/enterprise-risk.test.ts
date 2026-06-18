@@ -31,6 +31,7 @@ async function purgeOrg(slug: string) {
   await rawPrisma.$executeRaw`DELETE FROM "EnterpriseRiskSeveritySnapshot" WHERE "enterpriseRiskId" IN (SELECT id FROM "EnterpriseRisk" WHERE "organizationId" = ${existing.id})`;
   await rawPrisma.$executeRaw`DELETE FROM "EnterpriseRisk" WHERE "organizationId" = ${existing.id}`;
   await rawPrisma.$executeRaw`DELETE FROM "Risk" WHERE "organizationId" = ${existing.id}`;
+  await rawPrisma.$executeRaw`DELETE FROM "Finding" WHERE "organizationId" = ${existing.id}`;
   await rawPrisma.$executeRaw`DELETE FROM "AuditLog" WHERE "organizationId" = ${existing.id}`;
   await rawPrisma.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${existing.id}`;
   await rawPrisma.$executeRaw`DELETE FROM "Organization" WHERE id = ${existing.id}`;
@@ -215,6 +216,56 @@ describe("Enterprise Risk", () => {
       const b = await rawPrisma.enterpriseRisk.findUnique({ where: { id: erB.id } });
       expect(a?.effectiveScore).toBeNull();
       expect(b?.effectiveScore?.toString()).toBe("20");
+    });
+  });
+
+  describe("Child finding alignment", () => {
+    it("assignChildFinding tags and untags a finding; byId returns childFindings", async () => {
+      const caller = createCaller(analyst);
+      const er = await caller.enterpriseRisk.create({ name: "Finding Tag Parent" });
+
+      const finding = await runWithOrganizationContext(testOrg.id, async () => {
+        return await db.finding.create({
+          data: {
+            organizationId: testOrg.id,
+            identifier: "FND-ER-0001",
+            title: "Taggable Finding",
+            description: "Finding for enterprise-risk tagging test",
+            source: "MANUAL",
+            severity: Severity.HIGH,
+            createdBy: analyst.id,
+          },
+        });
+      });
+
+      await caller.enterpriseRisk.assignChildFinding({ findingId: finding.id, enterpriseRiskId: er.id });
+      let detail = await caller.enterpriseRisk.byId({ id: er.id });
+      expect(detail.childFindings.map((f) => f.id)).toContain(finding.id);
+
+      await caller.enterpriseRisk.assignChildFinding({ findingId: finding.id, enterpriseRiskId: null });
+      detail = await caller.enterpriseRisk.byId({ id: er.id });
+      expect(detail.childFindings.map((f) => f.id)).not.toContain(finding.id);
+    });
+
+    it("AUDITOR cannot tag findings", async () => {
+      const caller = createCaller(auditor);
+      await expect(
+        caller.enterpriseRisk.assignChildFinding({ findingId: "nonexistent", enterpriseRiskId: null }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("Heatmap", () => {
+    it("returns one row per enterprise risk with child counts", async () => {
+      const caller = createCaller(analyst);
+      const result = await caller.enterpriseRisk.heatmap();
+      const erCount = await rawPrisma.enterpriseRisk.count({ where: { organizationId: testOrg.id } });
+      expect(result.rows).toHaveLength(erCount);
+      for (const row of result.rows) {
+        expect(row).toHaveProperty("id");
+        expect(row).toHaveProperty("name");
+        expect(row).toHaveProperty("childCount");
+      }
     });
   });
 

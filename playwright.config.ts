@@ -8,7 +8,9 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    // Override with PW_BASE_URL to point at a running instance, e.g. the
+    // Docker app on port 80: PW_BASE_URL=http://127.0.0.1 npx playwright test smoke
+    baseURL: process.env.PW_BASE_URL ?? 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'on',
   },

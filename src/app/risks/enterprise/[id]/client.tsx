@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Loader2, ChevronLeft, Save, ClipboardCheck } from "lucide-react";
+import { Loader2, ChevronLeft, Save, ClipboardCheck, Pencil, X, Tags } from "lucide-react";
 import { UserRole } from "@prisma/client";
 import toast from "react-hot-toast";
 
@@ -19,7 +19,11 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MatrixSelector } from "@/components/assessment/MatrixSelector";
+import { RiskScoreHeatmap, type HeatmapItem } from "@/components/risk/RiskScoreHeatmap";
+import { TagItemsDialog } from "@/components/enterprise-risk/TagItemsDialog";
 import { calculateInherentScore, isScoreResult } from "@/lib/matrix/scoring";
+import { score2D, thresholdForScore } from "@/lib/matrix/heatmap";
 
 const WRITE_ROLES: UserRole[] = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER];
 
@@ -73,36 +77,35 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
   const { data, isLoading, refetch } = api.enterpriseRisk.byId.useQuery({ id });
   const personList = api.person.getAll.useQuery(undefined, { enabled: !!canWrite });
 
-  // Prefer the org's default published matrix; fall back to any active template (default-first ordering).
-  const defaultMatrix = api.riskMatrix.getOrgPublishedMatrix.useQuery();
-  const allTemplates = api.riskMatrix.getTemplatesWithVersions.useQuery(undefined, {
-    enabled: !defaultMatrix.isLoading && !defaultMatrix.data,
-  });
-  const fallbackVersionId = !defaultMatrix.data ? allTemplates.data?.[0]?.versionId : undefined;
-  const fallbackTemplateName = !defaultMatrix.data ? allTemplates.data?.[0]?.name : undefined;
-  const fallbackVersion = api.riskMatrix.getVersionForAssessment.useQuery(
-    { id: fallbackVersionId ?? "" },
-    { enabled: !!fallbackVersionId },
-  );
-  const matrix = defaultMatrix.data
-    ? defaultMatrix.data
-    : fallbackVersion.data
-    ? {
-        versionId: fallbackVersion.data.id,
-        templateName: fallbackTemplateName ?? fallbackVersion.data.template.name,
-        scales: fallbackVersion.data.scales,
-        thresholds: fallbackVersion.data.thresholds,
-        outputScaleMax: fallbackVersion.data.template.outputScaleMax,
-      }
-    : null;
-
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [matrixVersionId, setMatrixVersionId] = useState<string | null>(null);
   const [useManualScore, setUseManualScore] = useState(false);
   const [manualLikelihood, setManualLikelihood] = useState<number | null>(null);
   const [manualImpact, setManualImpact] = useState<number | null>(null);
   const [reviewIntervalDays, setReviewIntervalDays] = useState<string>("");
+  const [editing, setEditing] = useState(false);
+  const [tagOpen, setTagOpen] = useState(false);
+
+  // Org's default published matrix — used to pre-select when a risk has none yet.
+  const defaultMatrix = api.riskMatrix.getOrgPublishedMatrix.useQuery();
+
+  // Resolve scales/thresholds for the currently-selected matrix version so the
+  // L/I selectors and the live score preview reflect the chosen matrix.
+  const selectedVersion = api.riskMatrix.getVersionForAssessment.useQuery(
+    { id: matrixVersionId ?? "" },
+    { enabled: !!matrixVersionId },
+  );
+  const matrix = selectedVersion.data
+    ? {
+        versionId: selectedVersion.data.id,
+        templateName: selectedVersion.data.template.name,
+        scales: selectedVersion.data.scales,
+        thresholds: selectedVersion.data.thresholds,
+        outputScaleMax: selectedVersion.data.template.outputScaleMax,
+      }
+    : null;
 
   useEffect(() => {
     if (!data) return;
@@ -110,11 +113,19 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
     setName(er.name);
     setDescription(er.description ?? "");
     setOwnerId(er.ownerId ?? null);
+    setMatrixVersionId(er.matrixVersionId ?? null);
     setUseManualScore(er.useManualScore);
     setManualLikelihood(er.manualLikelihood ? Number(er.manualLikelihood) : null);
     setManualImpact(er.manualImpact ? Number(er.manualImpact) : null);
     setReviewIntervalDays(er.reviewIntervalDays ? String(er.reviewIntervalDays) : "");
   }, [data]);
+
+  // When the risk has no matrix selected yet, default to the org's published matrix.
+  useEffect(() => {
+    if (matrixVersionId === null && data && !data.enterpriseRisk.matrixVersionId && defaultMatrix.data) {
+      setMatrixVersionId(defaultMatrix.data.versionId);
+    }
+  }, [matrixVersionId, data, defaultMatrix.data]);
 
   // Live-compute manual score using the org's published matrix
   const manualScorePreview = useMemo(() => {
@@ -130,9 +141,58 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
     return result;
   }, [matrix, manualLikelihood, manualImpact]);
 
+  // Tagged child risks plotted on the view heatmap (risks only, per spec).
+  // Position by residual ?? inherent L/I against the ER's resolved view matrix.
+  const viewMatrix = data?.viewMatrix ?? null;
+  const riskHeatmapRows: HeatmapItem[] = useMemo(() => {
+    if (!data) return [];
+    return data.childRisks.map((r) => {
+      const lRaw = r.residualLikelihood ?? r.inherentLikelihood;
+      const iRaw = r.residualImpact ?? r.inherentImpact;
+      const likelihood = lRaw !== null && lRaw !== undefined ? Number(lRaw) : null;
+      const impact = iRaw !== null && iRaw !== undefined ? Number(iRaw) : null;
+      let score: number | null = null;
+      let scoreLabel: string | null = r.residualScoreLabel ?? r.inherentScoreLabel ?? null;
+      let color = "#CCCCCC";
+      if (viewMatrix && likelihood !== null && impact !== null) {
+        score = score2D(likelihood, impact, viewMatrix.scales, viewMatrix.outputScaleMax);
+        const band = thresholdForScore(score, viewMatrix.thresholds);
+        if (band) {
+          scoreLabel = band.label;
+          color = band.color;
+        }
+      }
+      return {
+        id: r.id,
+        label: r.identifier,
+        title: r.title,
+        likelihood,
+        impact,
+        score,
+        scoreLabel,
+        color,
+        href: `/risks/${r.id}`,
+      };
+    });
+  }, [data, viewMatrix]);
+
+  const resetForm = () => {
+    if (!data) return;
+    const er = data.enterpriseRisk;
+    setName(er.name);
+    setDescription(er.description ?? "");
+    setOwnerId(er.ownerId ?? null);
+    setMatrixVersionId(er.matrixVersionId ?? null);
+    setUseManualScore(er.useManualScore);
+    setManualLikelihood(er.manualLikelihood ? Number(er.manualLikelihood) : null);
+    setManualImpact(er.manualImpact ? Number(er.manualImpact) : null);
+    setReviewIntervalDays(er.reviewIntervalDays ? String(er.reviewIntervalDays) : "");
+  };
+
   const update = api.enterpriseRisk.update.useMutation({
     onSuccess: () => {
       toast.success("Saved");
+      setEditing(false);
       void refetch();
     },
     onError: (err) => toast.error(err.message),
@@ -148,7 +208,7 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
     );
   }
   if (!data) return null;
-  const { enterpriseRisk: er, snapshots, reviews, childRisks } = data;
+  const { enterpriseRisk: er, snapshots, reviews, childRisks, childFindings } = data;
   const overdue = er.nextReviewDue && new Date(er.nextReviewDue) < new Date();
 
   return (
@@ -173,9 +233,23 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
               {overdue && <Badge variant="destructive">Review overdue</Badge>}
             </div>
           </div>
-          {canWrite && <RecordReviewButton id={id} onRecorded={() => void refetch()} />}
+          <div className="flex items-center gap-2">
+            {canWrite && !editing && (
+              <Button variant="outline" onClick={() => setEditing(true)}>
+                <Pencil className="h-4 w-4 mr-2" /> Edit
+              </Button>
+            )}
+            {canWrite && editing && (
+              <Button variant="outline" onClick={() => { resetForm(); setEditing(false); }}>
+                <X className="h-4 w-4 mr-2" /> Cancel
+              </Button>
+            )}
+            {canWrite && <RecordReviewButton id={id} onRecorded={() => void refetch()} />}
+          </div>
         </div>
 
+        {editing ? (
+        <>
         <Card>
           <CardHeader>
             <CardTitle>Editable Fields</CardTitle>
@@ -225,6 +299,19 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
                         {useManualScore ? "Manual" : "Calculated"}
                       </span>
                     </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="matrix">Risk Matrix</Label>
+                    <MatrixSelector
+                      value={matrixVersionId}
+                      onChange={(v) => {
+                        setMatrixVersionId(v);
+                        // Reset L/I since a different matrix may have different scales.
+                        setManualLikelihood(null);
+                        setManualImpact(null);
+                      }}
+                      placeholder="Select a risk matrix..."
+                    />
                   </div>
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -321,7 +408,7 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
                         name: name.trim() || undefined,
                         description: description.trim() || null,
                         ownerId: ownerId,
-                        matrixVersionId: matrix?.versionId ?? null,
+                        matrixVersionId: matrixVersionId,
                         useManualScore,
                         manualLikelihood,
                         manualImpact,
@@ -338,14 +425,93 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle>Tagged Risks &amp; Findings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {childRisks.length} risk{childRisks.length === 1 ? "" : "s"} · {childFindings.length} finding
+              {childFindings.length === 1 ? "" : "s"} tagged to this enterprise risk.
+            </p>
+            {canWrite && (
+              <Button variant="outline" onClick={() => setTagOpen(true)}>
+                <Tags className="h-4 w-4 mr-2" /> Tag risks &amp; findings
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+        </>
+        ) : (
+        <>
+        <Card>
+          <CardHeader>
+            <CardTitle>Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
+            <div>
+              <p className="eyebrow mb-0.5">Owner</p>
+              <p>{er.Owner?.name ?? "—"}{er.Owner?.jobTitle ? ` (${er.Owner.jobTitle})` : ""}</p>
+            </div>
+            <div>
+              <p className="eyebrow mb-0.5">Effective Score</p>
+              <p>
+                {er.effectiveScore !== null && er.effectiveScore !== undefined
+                  ? Number(er.effectiveScore).toFixed(2)
+                  : "—"}
+                {er.effectiveScoreLabel && (
+                  <Badge variant="outline" className="ml-2">{er.effectiveScoreLabel}</Badge>
+                )}
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <p className="eyebrow mb-0.5">Description</p>
+              <p className="whitespace-pre-wrap">{er.description || "—"}</p>
+            </div>
+            <div>
+              <p className="eyebrow mb-0.5">Risk Matrix</p>
+              <p>{viewMatrix?.templateName ?? "—"}</p>
+            </div>
+            <div>
+              <p className="eyebrow mb-0.5">Review cadence</p>
+              <p>
+                {er.reviewIntervalDays ? `Every ${er.reviewIntervalDays} days` : "No schedule"}
+                {er.nextReviewDue && (
+                  <span className="text-muted-foreground"> · next {new Date(er.nextReviewDue).toLocaleDateString()}</span>
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {viewMatrix ? (
+          <RiskScoreHeatmap
+            matrix={{
+              scales: viewMatrix.scales,
+              thresholds: viewMatrix.thresholds,
+              outputScaleMax: viewMatrix.outputScaleMax,
+            }}
+            rows={riskHeatmapRows}
+            title="Risk Heatmap"
+            subtitle={`Tagged risks plotted on ${viewMatrix.templateName}`}
+            emptyLabel="No risks tagged to this enterprise risk yet."
+          />
+        ) : (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted-foreground">
+              No published risk matrix — set one up under Admin → Risk Matrices to see the heatmap.
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid md:grid-cols-2 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>Child Risks ({childRisks.length})</CardTitle>
+              <CardTitle>Tagged Risks ({childRisks.length})</CardTitle>
             </CardHeader>
             <CardContent>
               {childRisks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No child risks aligned yet.</p>
+                <p className="text-sm text-muted-foreground">No risks tagged yet.</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -379,43 +545,92 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
 
           <Card>
             <CardHeader>
+              <CardTitle>Tagged Findings ({childFindings.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {childFindings.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No findings tagged yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Finding</TableHead>
+                      <TableHead>Severity</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {childFindings.map((f) => (
+                      <TableRow key={f.id}>
+                        <TableCell>
+                          <Link href={`/findings/${f.id}`} className="hover:underline text-sm">
+                            {f.identifier ?? f.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{f.severityLabel ?? f.severity}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">{f.status}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
               <CardTitle>Severity Trend</CardTitle>
             </CardHeader>
             <CardContent>
               <TrendChart snapshots={snapshots} />
             </CardContent>
           </Card>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Review History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {reviews.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No reviews recorded yet.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Reviewer</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reviews.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-sm">{new Date(r.reviewedAt).toLocaleString()}</TableCell>
-                      <TableCell className="text-sm">{r.Reviewer?.name ?? r.Reviewer?.email ?? "—"}</TableCell>
-                      <TableCell className="text-sm whitespace-pre-wrap">{r.notes ?? "—"}</TableCell>
+          <Card>
+            <CardHeader>
+              <CardTitle>Review History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {reviews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No reviews recorded yet.</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Reviewer</TableHead>
+                      <TableHead>Notes</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {reviews.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="text-sm">{new Date(r.reviewedAt).toLocaleString()}</TableCell>
+                        <TableCell className="text-sm">{r.Reviewer?.name ?? r.Reviewer?.email ?? "—"}</TableCell>
+                        <TableCell className="text-sm whitespace-pre-wrap">{r.notes ?? "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        </>
+        )}
+
+        {tagOpen && (
+          <TagItemsDialog
+            enterpriseRiskId={id}
+            open={tagOpen}
+            onOpenChange={setTagOpen}
+            onChanged={() => void refetch()}
+          />
+        )}
       </div>
     </AppLayout>
   );

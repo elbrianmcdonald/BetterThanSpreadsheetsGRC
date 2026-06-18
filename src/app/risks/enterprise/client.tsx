@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Loader2, Plus, ShieldAlert, AlertCircle, ChevronRight } from "lucide-react";
@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { MatrixSelector } from "@/components/assessment/MatrixSelector";
+import { RiskScoreHeatmap, type HeatmapItem } from "@/components/risk/RiskScoreHeatmap";
 
 const WRITE_ROLES: UserRole[] = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER];
 
@@ -48,7 +50,20 @@ export function EnterpriseRisksClient() {
   const canWrite = userRole && WRITE_ROLES.includes(userRole);
 
   const { data: items, isLoading, refetch } = api.enterpriseRisk.list.useQuery();
+  const heatmap = api.enterpriseRisk.heatmap.useQuery();
   const [createOpen, setCreateOpen] = useState(false);
+
+  const heatmapRows: HeatmapItem[] = (heatmap.data?.rows ?? []).map((r) => ({
+    id: r.id,
+    label: null,
+    title: r.name,
+    likelihood: r.likelihood,
+    impact: r.impact,
+    score: r.score,
+    scoreLabel: r.scoreLabel,
+    color: r.color,
+    href: `/risks/enterprise/${r.id}`,
+  }));
 
   return (
     <AppLayout>
@@ -77,6 +92,20 @@ export function EnterpriseRisksClient() {
             )
           }
         />
+
+        {heatmap.data?.matrix && (
+          <RiskScoreHeatmap
+            matrix={{
+              scales: heatmap.data.matrix.scales,
+              thresholds: heatmap.data.matrix.thresholds,
+              outputScaleMax: heatmap.data.matrix.outputScaleMax,
+            }}
+            rows={heatmapRows}
+            title="Enterprise Risk Heatmap"
+            subtitle={`All enterprise risks plotted on ${heatmap.data.matrix.templateName}`}
+            emptyLabel="No scored enterprise risks yet."
+          />
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -149,7 +178,16 @@ export function EnterpriseRisksClient() {
 function CreateEnterpriseRiskDialog({ onCreated }: { onCreated: () => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [matrixVersionId, setMatrixVersionId] = useState<string | null>(null);
   const [reviewIntervalDays, setReviewIntervalDays] = useState<string>("");
+
+  // Pre-select the org's default published matrix.
+  const defaultMatrix = api.riskMatrix.getOrgPublishedMatrix.useQuery();
+  useEffect(() => {
+    if (matrixVersionId === null && defaultMatrix.data) {
+      setMatrixVersionId(defaultMatrix.data.versionId);
+    }
+  }, [matrixVersionId, defaultMatrix.data]);
 
   const create = api.enterpriseRisk.create.useMutation({
     onSuccess: () => {
@@ -177,6 +215,14 @@ function CreateEnterpriseRiskDialog({ onCreated }: { onCreated: () => void }) {
           <Textarea id="description" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <div className="space-y-1">
+          <Label htmlFor="matrix">Risk Matrix</Label>
+          <MatrixSelector
+            value={matrixVersionId}
+            onChange={setMatrixVersionId}
+            placeholder="Select a risk matrix..."
+          />
+        </div>
+        <div className="space-y-1">
           <Label htmlFor="interval">Review interval (days)</Label>
           <Input
             id="interval"
@@ -194,6 +240,7 @@ function CreateEnterpriseRiskDialog({ onCreated }: { onCreated: () => void }) {
             create.mutate({
               name: name.trim(),
               description: description.trim() || undefined,
+              matrixVersionId: matrixVersionId,
               reviewIntervalDays: reviewIntervalDays ? Number(reviewIntervalDays) : null,
             })
           }

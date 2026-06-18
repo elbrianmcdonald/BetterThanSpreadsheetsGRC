@@ -1373,6 +1373,7 @@ model EnterpriseRisk {
   Owner         Person?                          @relation("EnterpriseRiskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   MatrixVersion RiskMatrixVersion?               @relation("EnterpriseRiskMatrixVersion", fields: [matrixVersionId], references: [id], onDelete: SetNull)
   ChildRisks    Risk[]                           @relation("EnterpriseRiskChildren")
+  ChildFindings Finding[]                        @relation("EnterpriseRiskChildFindings")
   Snapshots     EnterpriseRiskSeveritySnapshot[]
   Reviews       EnterpriseRiskReview[]
 
@@ -2280,6 +2281,9 @@ model Finding {
   // Duplicate tracking (AC9)
   duplicateOfId String?
 
+  // Enterprise risk alignment — a finding can be tagged to one rollup EnterpriseRisk.
+  enterpriseRiskId String?
+
   // Frozen snapshot when finding is accepted (AC6)
   lockedSnapshot Json?
 
@@ -2300,6 +2304,7 @@ model Finding {
   assignee     User?        @relation("FindingAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   duplicateOf  Finding?     @relation("FindingDuplicates", fields: [duplicateOfId], references: [id], onDelete: SetNull)
   duplicates   Finding[]    @relation("FindingDuplicates")
+  EnterpriseRisk EnterpriseRisk? @relation("EnterpriseRiskChildFindings", fields: [enterpriseRiskId], references: [id], onDelete: SetNull)
 
   // Story 14.7: SLA Tracking fields
   dueDate     DateTime? // SLA due date for remediation
@@ -2388,6 +2393,7 @@ model Finding {
   @@index([sourceComplianceAssessmentId])
   @@index([sourceRiskAssessmentQuestionId])
   @@index([discoveryProjectId])
+  @@index([enterpriseRiskId])
 }
 
 // Story 7.5: Risk Assessment model (AC1-AC15)
