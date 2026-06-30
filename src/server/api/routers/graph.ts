@@ -46,4 +46,10 @@ export const graphRouter = createTRPCRouter({
       });
       return techniques;
     }),
+
+  techniqueExposure: organizationProcedure
+    .input(z.object({ riskId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return graphService.techniqueExposure(input.riskId, ctx.organizationId!);
+    }),
 });

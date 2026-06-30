@@ -54,3 +54,22 @@ describe("COUNTERS edges (Control -> global Technique)", () => {
     expect(after).toBe(0);
   });
 });
+
+describe("techniqueExposure traversal", () => {
+  it("returns techniques reachable from a risk via mitigating controls", async () => {
+    const riskId = randomUUID();
+    const now = new Date();
+    await db.$executeRaw`INSERT INTO "Risk" (id, "organizationId", title, description, severity, status, "createdAt", "updatedAt") VALUES (${riskId}, ${testOrg.id}, 'Exp Risk', 'd', 'HIGH', 'OPEN', ${now}, ${now})`;
+
+    // Control MITIGATES Risk, Control COUNTERS Technique
+    await caller().organizationalControl.linkToRisk({ riskId, controlId, role: "IN_PLACE" as never });
+    await caller().graph.counterTechnique({ controlId, techniqueId });
+
+    const exposure = await caller().graph.techniqueExposure({ riskId });
+    expect(exposure.map((t) => t.id)).toContain(techniqueId);
+
+    await db.$executeRaw`DELETE FROM "Edge" WHERE "toNodeId" IN (SELECT id FROM "Node" WHERE "entityId" = ${riskId})`;
+    await db.$executeRaw`DELETE FROM "Node" WHERE "entityId" = ${riskId}`;
+    await db.$executeRaw`DELETE FROM "Risk" WHERE id = ${riskId}`;
+  });
+});

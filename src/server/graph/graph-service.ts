@@ -189,6 +189,23 @@ async function getCounteredTechniques(
   return edges.map((e) => ({ techniqueId: e.toEntityId }));
 }
 
+async function techniqueExposure(
+  riskId: string,
+  organizationId: string,
+  client: GraphClient = db,
+): Promise<Array<{ id: string; externalId: string; name: string }>> {
+  return client.$queryRaw<Array<{ id: string; externalId: string; name: string }>>`
+    SELECT DISTINCT mt.id, mt."externalId", mt.name
+    FROM "Node" rn
+    JOIN "Edge" e1 ON e1."toNodeId" = rn.id AND e1.type = 'MITIGATES' AND e1."organizationId" = ${organizationId}
+    JOIN "Node" cn ON cn.id = e1."fromNodeId" AND cn.type = 'Control'
+    JOIN "Edge" e2 ON e2."fromNodeId" = cn.id AND e2.type = 'COUNTERS' AND e2."organizationId" = ${organizationId}
+    JOIN "Node" tn ON tn.id = e2."toNodeId" AND tn.type = 'Technique'
+    JOIN "MitreTechnique" mt ON mt.id = tn."entityId"
+    WHERE rn.type = 'Risk' AND rn."entityId" = ${riskId}
+  `;
+}
+
 export const graphService = {
   ensureNode,
   removeNode,
@@ -197,4 +214,5 @@ export const graphService = {
   listOutEdges,
   listInEdges,
   getCounteredTechniques,
+  techniqueExposure,
 };
