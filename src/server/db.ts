@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from '@prisma/adapter-pg';
 
 import { organizationFilterMiddleware } from "@/server/db/middleware/organization-filter";
+import { graphSyncMiddleware } from "@/server/db/middleware/graph-sync";
 
 /**
  * Raw Prisma Client without organization filtering
@@ -68,12 +69,10 @@ const createPrismaClient = () => {
     log: env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 
-  // Extend client with organization filtering (Prisma 6 Client Extensions)
-  // This extension automatically:
-  // - Filters read queries by organizationId
-  // - Validates write operations against organizationId
-  // - Prevents cross-organizational data leakage
-  const client = organizationFilterMiddleware(baseClient);
+  // Extend client with organization filtering, then graph node-sync.
+  // Order matters: graph-sync is the OUTER extension and reads ids/org from
+  // the DB-returned row.
+  const client = graphSyncMiddleware(organizationFilterMiddleware(baseClient));
 
   return client;
 };
