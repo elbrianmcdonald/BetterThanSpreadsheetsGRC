@@ -27,6 +27,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure } from "@/server/api/trpc";
+import { graphService } from "@/server/graph/graph-service";
 
 const ALLOWED_MUTATION_ROLES = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
 
@@ -1176,35 +1177,37 @@ export const organizationalControlRouter = createTRPCRouter({
 
   /**
    * Get all risks linked to this control (inverse of getForRisk).
+   * Reads MITIGATES edges: Control(fromEntityId) -> Risk(toEntityId).
    */
   getLinkedRisks: organizationProcedure
     .input(z.object({ controlId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const links = await ctx.db.riskOrganizationalControl.findMany({
-        where: {
-          organizationalControlId: input.controlId,
-          organizationId: ctx.organizationId!,
-        },
-        include: {
-          Risk: {
-            select: {
-              id: true,
-              identifier: true,
-              title: true,
-              severity: true,
-              status: true,
-            },
-          },
-        },
-        orderBy: { createdAt: "desc" },
+      const edges = await graphService.listOutEdges({
+        type: "MITIGATES",
+        from: { type: "Control", id: input.controlId },
+        organizationId: ctx.organizationId!,
       });
-
-      return links.map((l) => ({
-        linkId: l.id,
-        role: l.role,
-        notes: l.notes,
-        risk: l.Risk,
-      }));
+      const riskIds = edges.map((e) => e.toEntityId);
+      const risks = await ctx.db.risk.findMany({
+        where: { id: { in: riskIds } },
+        select: { id: true, identifier: true, title: true, severity: true, status: true },
+      });
+      const riskById = new Map(risks.map((r) => [r.id, r]));
+      return edges
+        .map((e) => {
+          const props = (e.properties ?? {}) as { role?: RiskOrgControlRole; notes?: string | null };
+          const risk = riskById.get(e.toEntityId);
+          if (!risk) return null;
+          return {
+            linkId: e.id,                           // backward compat: UI uses as row key
+            riskId: e.toEntityId,                   // new: test + future use
+            organizationalControlId: input.controlId,
+            role: props.role ?? RiskOrgControlRole.IN_PLACE,
+            notes: props.notes ?? null,
+            risk,                                   // backward compat: UI reads risk.id/title/etc.
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
     }),
 
   /**
@@ -1231,22 +1234,35 @@ export const organizationalControlRouter = createTRPCRouter({
   getForRisk: organizationProcedure
     .input(z.object({ riskId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const links = await ctx.db.riskOrganizationalControl.findMany({
-        where: {
-          riskId: input.riskId,
-          organizationId: ctx.organizationId!,
-        },
-        include: {
-          OrganizationalControl: true,
-        },
-        orderBy: {
-          OrganizationalControl: { name: "asc" },
-        },
+      const edges = await graphService.listInEdges({
+        type: "MITIGATES",
+        to: { type: "Risk", id: input.riskId },
+        organizationId: ctx.organizationId!,
       });
+      const controlIds = edges.map((e) => e.fromEntityId);
+      const controls = await ctx.db.organizationalControl.findMany({
+        where: { id: { in: controlIds } },
+        orderBy: { name: "asc" },
+      });
+      const controlById = new Map(controls.map((c) => [c.id, c]));
+      const links = edges
+        .map((e) => {
+          const props = (e.properties ?? {}) as { role?: RiskOrgControlRole; notes?: string | null };
+          const OrganizationalControl = controlById.get(e.fromEntityId);
+          if (!OrganizationalControl) return null;
+          return {
+            id: e.id,
+            riskId: input.riskId,
+            organizationalControlId: e.fromEntityId,
+            role: props.role ?? RiskOrgControlRole.IN_PLACE,
+            notes: props.notes ?? null,
+            OrganizationalControl,
+          };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
 
       const inPlace = links.filter((l) => l.role === RiskOrgControlRole.IN_PLACE);
       const needed = links.filter((l) => l.role === RiskOrgControlRole.NEEDED);
-
       return { inPlace, needed };
     }),
 
@@ -1262,13 +1278,6 @@ export const organizationalControlRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       assertMutationAllowed(ctx.session?.user.role, "link");
 
-      const risk = await ctx.db.risk.findFirst({
-        where: { id: input.riskId, organizationId: ctx.organizationId! },
-      });
-      if (!risk) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
-      }
-
       const control = await ctx.db.organizationalControl.findFirst({
         where: { id: input.controlId, organizationId: ctx.organizationId! },
       });
@@ -1276,35 +1285,30 @@ export const organizationalControlRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
       }
 
-      const existingLink = await ctx.db.riskOrganizationalControl.findUnique({
-        where: {
-          riskId_organizationalControlId: {
-            riskId: input.riskId,
-            organizationalControlId: input.controlId,
-          },
-        },
+      const risk = await ctx.db.risk.findFirst({
+        where: { id: input.riskId, organizationId: ctx.organizationId! },
       });
-
-      if (existingLink) {
-        return ctx.db.riskOrganizationalControl.update({
-          where: { id: existingLink.id },
-          data: { role: input.role, notes: input.notes },
-          include: { OrganizationalControl: true },
-        });
+      if (!risk) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
       }
 
-      return ctx.db.riskOrganizationalControl.create({
-        data: {
-          id: randomUUID(),
-          organizationId: ctx.organizationId!,
-          riskId: input.riskId,
-          organizationalControlId: input.controlId,
-          role: input.role,
-          notes: input.notes,
-          createdById: ctx.session!.user.id,
-        },
-        include: { OrganizationalControl: true },
+      const edge = await graphService.createEdge({
+        type: "MITIGATES",
+        from: { type: "Control", id: input.controlId },
+        to: { type: "Risk", id: input.riskId },
+        organizationId: ctx.organizationId!,
+        properties: { role: input.role, notes: input.notes ?? null },
+        createdById: ctx.session?.user.id ?? null,
       });
+
+      return {
+        id: edge.id,
+        riskId: input.riskId,
+        organizationalControlId: input.controlId,
+        role: input.role,
+        notes: input.notes ?? null,
+        OrganizationalControl: control,
+      };
     }),
 
   unlinkFromRisk: organizationProcedure
@@ -1312,20 +1316,17 @@ export const organizationalControlRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       assertMutationAllowed(ctx.session?.user.role, "unlink");
 
-      const link = await ctx.db.riskOrganizationalControl.findUnique({
-        where: {
-          riskId_organizationalControlId: {
-            riskId: input.riskId,
-            organizationalControlId: input.controlId,
-          },
-        },
+      const removed = await graphService.deleteEdge({
+        type: "MITIGATES",
+        from: { type: "Control", id: input.controlId },
+        to: { type: "Risk", id: input.riskId },
+        organizationId: ctx.organizationId!,
       });
 
-      if (!link) {
+      if (!removed) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Link not found" });
       }
 
-      await ctx.db.riskOrganizationalControl.delete({ where: { id: link.id } });
       return { success: true };
     }),
 
@@ -1347,36 +1348,21 @@ export const organizationalControlRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
       }
 
-      const existingLinks = await ctx.db.riskOrganizationalControl.findMany({
-        where: {
-          riskId: input.riskId,
-          organizationalControlId: { in: input.controlIds },
-        },
-      });
-
-      const existingControlIds = new Set(existingLinks.map((l) => l.organizationalControlId));
-      const newControlIds = input.controlIds.filter((id) => !existingControlIds.has(id));
-
-      if (newControlIds.length > 0) {
-        await ctx.db.riskOrganizationalControl.createMany({
-          data: newControlIds.map((controlId) => ({
-            id: randomUUID(),
-            organizationId: ctx.organizationId!,
-            riskId: input.riskId,
-            organizationalControlId: controlId,
-            role: input.role,
-            createdById: ctx.session!.user.id,
-          })),
+      // createEdge internally upserts (update if existing, create if new)
+      for (const controlId of input.controlIds) {
+        await graphService.createEdge({
+          type: "MITIGATES",
+          from: { type: "Control", id: controlId },
+          to: { type: "Risk", id: input.riskId },
+          organizationId: ctx.organizationId!,
+          properties: { role: input.role, notes: null },
+          createdById: ctx.session?.user.id ?? null,
         });
       }
 
-      if (existingLinks.length > 0) {
-        await ctx.db.riskOrganizationalControl.updateMany({
-          where: { id: { in: existingLinks.map((l) => l.id) } },
-          data: { role: input.role },
-        });
-      }
-
-      return { created: newControlIds.length, updated: existingLinks.length };
+      // Preserve legacy return shape { created, updated } for contract stability.
+      // Edge-based upsert doesn't distinguish created vs updated, so we report
+      // all as created (callers do not inspect this value).
+      return { created: input.controlIds.length, updated: 0 };
     }),
 });
