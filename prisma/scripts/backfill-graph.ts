@@ -1,9 +1,7 @@
 import { rawPrisma } from "@/server/db";
-import { graphService } from "@/server/graph/graph-service";
 
 export async function backfillGraph(): Promise<{ nodes: number; mitigatesEdges: number }> {
   let nodes = 0;
-  let mitigatesEdges = 0;
 
   // 1. Control nodes
   const controls = await rawPrisma.organizationalControl.findMany({ select: { id: true, organizationId: true } });
@@ -35,26 +33,12 @@ export async function backfillGraph(): Promise<{ nodes: number; mitigatesEdges: 
     nodes += r.count;
   }
 
-  // 4. Migrate RiskOrganizationalControl -> MITIGATES edges (Control -> Risk)
-  const links = await rawPrisma.riskOrganizationalControl.findMany({
-    select: { organizationId: true, riskId: true, organizationalControlId: true, role: true, notes: true, createdById: true },
-  });
-  for (const link of links) {
-    await graphService.createEdge(
-      {
-        type: "MITIGATES",
-        from: { type: "Control", id: link.organizationalControlId },
-        to: { type: "Risk", id: link.riskId },
-        organizationId: link.organizationId,
-        properties: { role: link.role, notes: link.notes ?? null },
-        createdById: link.createdById,
-      },
-      rawPrisma as unknown as Parameters<typeof graphService.createEdge>[1],
-    );
-    mitigatesEdges += 1;
-  }
+  // Section 4 (RiskOrganizationalControl -> MITIGATES migration) removed:
+  // The RiskOrganizationalControl table has been dropped. MITIGATES edges are
+  // now written directly by the graph service on every link/unlink operation.
+  // The backfill is now a node-sync-only operation; mitigatesEdges is 0.
 
-  return { nodes, mitigatesEdges };
+  return { nodes, mitigatesEdges: 0 };
 }
 
 // Allow running directly: `tsx prisma/scripts/backfill-graph.ts`

@@ -146,7 +146,6 @@ export const organizationalControlRouter = createTRPCRouter({
           },
           _count: {
             select: {
-              RiskLinks: true,
               FrameworkMappings: true,
               Assignments: true,
               Deficiencies: true,
@@ -165,7 +164,19 @@ export const organizationalControlRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
-      return { controls, nextCursor };
+      // Inject MITIGATES edge counts back as _count.RiskLinks (preserves UI shape)
+      const linkCounts = await graphService.countOutEdgesByEntities({
+        type: "MITIGATES",
+        fromType: "Control",
+        entityIds: controls.map((c) => c.id),
+        organizationId: ctx.organizationId!,
+      });
+      const controlsWithCounts = controls.map((c) => ({
+        ...c,
+        _count: { ...c._count, RiskLinks: linkCounts.get(c.id) ?? 0 },
+      }));
+
+      return { controls: controlsWithCounts, nextCursor };
     }),
 
   /**
@@ -292,7 +303,6 @@ export const organizationalControlRouter = createTRPCRouter({
           },
           _count: {
             select: {
-              RiskLinks: true,
               FrameworkMappings: true,
               Assignments: true,
               EvidenceRequirements: true,
@@ -312,7 +322,17 @@ export const organizationalControlRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
       }
 
-      return control;
+      // Inject MITIGATES edge count back as _count.RiskLinks (preserves UI shape)
+      const riskLinks = (
+        await graphService.listOutEdges({
+          type: "MITIGATES",
+          from: { type: "Control", id: input.id },
+          organizationId: ctx.organizationId!,
+        })
+      ).length;
+      const result = { ...control, _count: { ...control._count, RiskLinks: riskLinks } };
+
+      return result;
     }),
 
   /**
@@ -1112,7 +1132,6 @@ export const organizationalControlRouter = createTRPCRouter({
         include: {
           _count: {
             select: {
-              RiskLinks: true,
               TestRecords: true,
               Deficiencies: true,
               Exceptions: true,
@@ -1127,9 +1146,18 @@ export const organizationalControlRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Control not found" });
       }
 
+      // Count live MITIGATES edges from the graph (replaces _count.RiskLinks on the dropped table)
+      const mitigatesCount = (
+        await graphService.listOutEdges({
+          type: "MITIGATES",
+          from: { type: "Control", id: input.id },
+          organizationId: ctx.organizationId!,
+        })
+      ).length;
+
       const impact = existing._count;
       const blockingCount =
-        impact.RiskLinks +
+        mitigatesCount +
         impact.TestRecords +
         impact.Deficiencies +
         impact.Exceptions +
@@ -1141,7 +1169,7 @@ export const organizationalControlRouter = createTRPCRouter({
           code: "CONFLICT",
           message:
             `Cannot delete: control has active linkages ` +
-            `(${impact.RiskLinks} risks, ${impact.linkedObjectives} objectives, ` +
+            `(${mitigatesCount} risks, ${impact.linkedObjectives} objectives, ` +
             `${impact.TestRecords} test records, ${impact.Deficiencies} deficiencies, ` +
             `${impact.Exceptions} exceptions, ${impact.DependenciesTo} dependent controls). ` +
             `Archive the control instead.`,

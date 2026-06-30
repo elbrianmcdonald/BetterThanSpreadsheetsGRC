@@ -38,8 +38,9 @@ async function main() {
   // Postgres TRUNCATE CASCADE will follow all FK relationships and clear
   // dependent rows (RiskEvidence, RiskStatusHistory, RiskComment,
   // RemediationOption, RiskControlLink, RiskThreatStep, RiskThreatObjective,
-  // RiskTreatment, RiskOrganizationalControl, RiskRegisterStatusHistory,
-  // RiskScenario, etc.).
+  // RiskTreatment, RiskRegisterStatusHistory, RiskScenario, etc.).
+  // Note: RiskOrganizationalControl was dropped in Task 10; MITIGATES edges
+  // on the graph are retained since they belong to Edge, not Risk cascade.
   await db.$executeRawUnsafe(`
     TRUNCATE TABLE
       "Risk",

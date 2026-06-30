@@ -372,7 +372,6 @@ model Organization {
   BusinessUnitFramework          BusinessUnitFramework[]
   // Organizational Controls: User-defined controls
   OrganizationalControl          OrganizationalControl[]
-  RiskOrganizationalControl      RiskOrganizationalControl[]
   // Organizational Control Redesign: New related models
   OrgControlFrameworkMappings    OrgControlFrameworkMapping[]
   OrgControlAssignments          OrgControlAssignment[]
@@ -1120,8 +1119,6 @@ model Risk {
   Comments               RiskComment[]
   // Story 12.1: Control linkage (AC1-AC8)
   ControlLinks           RiskControlLink[]
-  // Organizational Controls: User-defined controls linked to this risk
-  OrganizationalControls RiskOrganizationalControl[]
 
   // Story 15.5: MITRE ATT&CK relationships
   InitialAccessVector MitreTechnique?       @relation("RiskInitialAccess", fields: [initialAccessVectorId], references: [id], onDelete: SetNull)
@@ -1515,7 +1512,6 @@ model User {
   FrameworkAssignments              BusinessUnitFramework[]      @relation("FrameworkAssigner")
   // Organizational Controls: Controls created by this user
   OrganizationalControlsCreated     OrganizationalControl[]      @relation("OrgControlCreator")
-  RiskOrganizationalControlsCreated RiskOrganizationalControl[]  @relation("RiskOrgControlCreator")
   // Organizational Control Redesign: Assignment, testing, evidence, exceptions
   // (OrgControlAssignment.personId now FKs to Person; User only tracks who made the assignment)
   OrgControlAssignmentsMade         OrgControlAssignment[]       @relation("OrgControlAssigner")
@@ -3112,7 +3108,6 @@ model OrganizationalControl {
   // Relationships
   Organization              Organization                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   CreatedBy                 User?                           @relation("OrgControlCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  RiskLinks                 RiskOrganizationalControl[]
   linkedObjectives          Objective[]                     @relation("ObjectiveLinkedControls")
   FrameworkMappings         OrgControlFrameworkMapping[]
   Assignments               OrgControlAssignment[]
@@ -3320,30 +3315,6 @@ model OrgControlDependency {
 
   @@index([organizationId, parentOrgControlId])
   @@index([childOrgControlId])
-}
-
-model RiskOrganizationalControl {
-  id                      String             @id @default(cuid())
-  organizationId          String
-  riskId                  String
-  organizationalControlId String
-  role                    RiskOrgControlRole // IN_PLACE or NEEDED
-  notes                   String?            @db.VarChar(500)
-
-  createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relationships
-  Organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Risk                  Risk                  @relation(fields: [riskId], references: [id], onDelete: Cascade)
-  OrganizationalControl OrganizationalControl @relation(fields: [organizationalControlId], references: [id], onDelete: Cascade)
-  CreatedBy             User?                 @relation("RiskOrgControlCreator", fields: [createdById], references: [id], onDelete: SetNull)
-
-  @@unique([riskId, organizationalControlId])
-  @@index([organizationId])
-  @@index([riskId])
-  @@index([organizationalControlId])
 }
 
 // ============================================================================

@@ -67,6 +67,31 @@ describe("MITIGATES migration — organizationalControl router contract", () => 
     expect(grouped.needed).toHaveLength(1);
   });
 
+  it("delete is blocked while a MITIGATES edge exists and allowed after unlink", async () => {
+    // Ensure a MITIGATES edge exists (from bulkLinkToRisk above)
+    const edgeBefore = await db.edge.count({ where: { organizationId: testOrg.id, type: "MITIGATES" } });
+    expect(edgeBefore).toBeGreaterThanOrEqual(1);
+
+    // Attempt to delete the control — must be blocked
+    await expect(
+      caller().organizationalControl.delete({ id: controlId }),
+    ).rejects.toThrow(/Cannot delete.*active linkages/);
+
+    // Unlink the control from the risk
+    await caller().organizationalControl.unlinkFromRisk({ riskId, controlId });
+    const edgeAfter = await db.edge.count({ where: { organizationId: testOrg.id, type: "MITIGATES" } });
+    expect(edgeAfter).toBe(0);
+
+    // Now delete must succeed
+    await expect(
+      caller().organizationalControl.delete({ id: controlId }),
+    ).resolves.not.toThrow();
+
+    // Re-create the control for subsequent tests (if any)
+    const now = new Date();
+    await db.$executeRaw`INSERT INTO "OrganizationalControl" (id, "organizationId", "localControlId", name, "createdAt", "updatedAt") VALUES (${controlId}, ${testOrg.id}, 'OC-8001', 'Mit Control', ${now}, ${now})`;
+  });
+
   it("risk.create with controls-in-place creates MITIGATES edges with role IN_PLACE", async () => {
     // Use the same controlId; create a fresh risk through the router so the
     // control-link path runs. Uses risk.create's real input field: controlIdsInPlace.

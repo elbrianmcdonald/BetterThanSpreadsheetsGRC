@@ -206,6 +206,37 @@ async function techniqueExposure(
   `;
 }
 
+/**
+ * Batch-count outgoing edges of a given type from a set of entity IDs.
+ * Returns a Map<entityId, count>. Missing entries mean 0.
+ * NODE lookups use rawPrisma (globally-unique key); EDGE aggregation uses
+ * the passed client (default filtered db) scoped by organizationId.
+ */
+async function countOutEdgesByEntities(
+  p: { type: GraphEdgeType; fromType: GraphNodeType; entityIds: string[]; organizationId: string },
+  client: GraphClient = db,
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (p.entityIds.length === 0) return counts;
+  // entity ids -> node ids (rawPrisma; nodes are global-capable identity rows)
+  const nodes = await rawPrisma.node.findMany({
+    where: { type: p.fromType, entityId: { in: p.entityIds } },
+    select: { id: true, entityId: true },
+  });
+  const nodeIdToEntity = new Map(nodes.map((n) => [n.id, n.entityId]));
+  if (nodeIdToEntity.size === 0) return counts;
+  const grouped = await client.edge.groupBy({
+    by: ["fromNodeId"],
+    where: { type: p.type, organizationId: p.organizationId, fromNodeId: { in: [...nodeIdToEntity.keys()] } },
+    _count: { _all: true },
+  });
+  for (const g of grouped) {
+    const entityId = nodeIdToEntity.get(g.fromNodeId);
+    if (entityId) counts.set(entityId, g._count._all);
+  }
+  return counts;
+}
+
 export const graphService = {
   ensureNode,
   removeNode,
@@ -215,4 +246,5 @@ export const graphService = {
   listInEdges,
   getCounteredTechniques,
   techniqueExposure,
+  countOutEdgesByEntities,
 };
