@@ -267,6 +267,16 @@ protects data if the backfill *runs before* `db push` drops the table, which the
 guarantees. A fresh/empty database (no `RiskOrganizationalControl` rows) can deploy Task 10
 directly with no data to lose.
 
+**Technical enforcement (loud-abort guard).** `docker-entrypoint.sh` runs
+`prisma/scripts/assert-graph-migration-safe.ts` **before** `prisma db push`. The guard inspects the
+live DB and **aborts startup (exit 1)** if `RiskOrganizationalControl` still holds rows that have no
+corresponding `MITIGATES` edge (i.e. the backfill has not run). This converts the silent-data-loss
+path into a hard, self-explanatory deploy failure that names the two-phase procedure. An operator
+who intends to drop the data anyway can bypass with `ALLOW_RISKORGCONTROL_DROP=true`. The guard's
+decision logic (`evaluateGraphMigrationSafety`) is a pure function with unit tests; it fails closed
+on DB-connection errors. (Note: the backfill CLI runs as `tsx prisma/scripts/backfill-graph.ts`; the
+script uses ESM-safe entry detection because the package is `"type": "module"`.)
+
 ---
 
 ## 8. Error Handling
