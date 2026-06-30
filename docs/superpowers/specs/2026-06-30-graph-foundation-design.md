@@ -127,24 +127,40 @@ model Edge {
 
 ## 3. Multi-Tenancy Rules
 
+> **Revised 2026-06-30 after a HIGH security finding.** The original draft added `Node`
+> and `Edge` to `ALLOWLIST_TABLES`, which disables auto org-filtering for those tables
+> entirely — a blanket bypass where any stray `db.edge.findMany()` would read across
+> tenants. We reject that. Instead we use **default-deny everywhere + a confined escape
+> hatch** (the existing unfiltered `rawPrisma` client, used only inside `graphService`/the
+> sync extension, only where global rows make auto-filtering impossible).
+
 The existing auto-filter (`organization-filter.ts`) injects `where.organizationId = orgId`
-on every **non-allowlisted** model, which would make a global Technique node (`org = null`)
-invisible. Therefore:
+on every **non-allowlisted** model. **Neither `Node` nor `Edge` is allowlisted**, so both are
+default-denied on the standard `db` client. Tenancy then works as:
 
-- **`Node` and `Edge` are added to `ALLOWLIST_TABLES`** (exactly like `MaturityFramework` /
-  `StandardControl`, which already mix global + org rows). The graph service enforces tenancy
-  **explicitly**:
-  - **Node visibility:** `organizationId = currentOrg OR organizationId IS NULL`
-    (you see your nodes + global ones).
-  - **Edge visibility & writes:** `organizationId = currentOrg`, always. An org→global edge
-    (Control COUNTERS Technique) belongs to the **org**, so the edge row carries the org's id
-    even though its target node is global.
-- Result: orgs share global nodes (read-only) but never each other's edges. No cross-tenant
-  leakage.
+- **`Edge` — filtered `db` (default-deny).** `Edge.organizationId` is always the asserting
+  org, so the standard auto-filter is exactly right. `graphService` accesses edges through the
+  filtered `db` *and* passes `organizationId` explicitly in every edge `where`/`create` (so it
+  is also correct when handed `rawPrisma` in the backfill). A stray `db.edge` call elsewhere is
+  safely org-scoped by default. `createEdge` uses `findFirst` + `create`/`update` (not a
+  compound-unique `upsert`) so it composes with the filter.
+- **`Node` — `rawPrisma` escape hatch.** Node rows can be **global** (`organizationId = null`
+  for Technique), are created **without org context** (the MITRE sync), and are keyed by a
+  globally-unique compound (`type` + `entityId`) — all of which the generic auto-filter cannot
+  express (it throws on null-context creates and mangles compound-unique selectors). So
+  `graphService` and the sync extension perform Node reads/writes through `rawPrisma`. This is
+  safe because every Node is reached either by its globally-unique `(type, entityId)` key (which
+  the caller already owns) or by traversing an **org-filtered Edge** — never by an unscoped node
+  scan. A stray `db.node` call elsewhere is still default-denied (it just won't see globals,
+  which is safe).
+- **Org→global edge:** a `Control COUNTERS Technique` edge carries the **org's** id (the edge is
+  the org's assertion) even though its `toNode` (Technique) is global with `organizationId = null`.
 
-Because `Node`/`Edge` are allowlisted, **the graph service is the only legitimate access
-path** — direct `db.node` / `db.edge` use in routers is prohibited (enforced by convention +
-code review; the service is the documented API).
+Result: orgs share global nodes (read-only) but never each other's edges; there is **no blanket
+bypass** — unfiltered access is confined to audited `graphService`/sync code via `rawPrisma`.
+`graphService` remains the documented sole access path; direct `db.node`/`db.edge` use in
+routers is prohibited by convention, but is now *fail-safe* (default-deny) rather than
+*fail-open*.
 
 ---
 
@@ -163,8 +179,11 @@ const NODE_SYNC_MODELS = {
 - On `delete` / `deleteMany` → remove the node (edges cascade via FK).
 - Technique rows are created by the global MITRE sync with no org context → their nodes get
   `organizationId = null`, derived from the row's own `organizationId`.
-- Implemented as a `$extends` query wrapper: `const result = await query(args); /* sync */;
-  return result;`. `createMany` / `deleteMany` handle arrays.
+- **Node writes use `rawPrisma`** (the unfiltered escape hatch from §3), since the filtered
+  client cannot create a null-org node or upsert on the compound `(type, entityId)` key.
+- Implemented as a `$extends` query wrapper: `const result = await query(args); /* sync via
+  rawPrisma */; return result;`. `createMany` / `deleteMany` pass through (reconciled by the
+  backfill + `createEdge`'s `ensureNode` safety net).
 - Composed **after** the org-filter extension so the created row already carries its
   `organizationId`.
 

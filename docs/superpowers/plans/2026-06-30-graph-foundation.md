@@ -15,7 +15,7 @@
 - **`graphService` is the ONLY path** to read/write `Node`/`Edge`. Routers and scripts must not call `db.node`/`db.edge` directly (except the backfill script and test cleanup, which may use raw SQL).
 - **Router tRPC input/output contracts must remain byte-identical** through the migration — existing UI and tests must not need changes except where they reference the dropped `RiskOrganizationalControl` table directly.
 - **Keep the `RiskOrgControlRole` enum** (`IN_PLACE | NEEDED`) in `schema.prisma` even after dropping the model — router inputs import it from `@prisma/client` and edge `properties.role` stores it.
-- **Multi-tenancy:** `Node`/`Edge` are added to `ALLOWLIST_TABLES` (no auto-filter); `graphService` enforces tenancy explicitly — node visibility `organizationId = currentOrg OR organizationId IS NULL`; edges are always written/read with `organizationId = currentOrg`.
+- **Multi-tenancy (REVISED — default-deny + escape hatch; supersedes the original allowlist approach after a HIGH security finding):** `Node` and `Edge` are **NOT** added to `ALLOWLIST_TABLES`. `Edge` is accessed through the filtered `db` (default-deny auto-filter) and `graphService` *also* passes `organizationId` explicitly in every edge `where`/`create`. `Node` reads/writes go through `rawPrisma` (the existing unfiltered client, imported from `@/server/db`) inside `graphService` and the sync extension only — this is the sanctioned escape hatch needed because Node rows can be global (`organizationId = null`) and are keyed by the compound `(type, entityId)`. `createEdge` uses `findFirst` + `create`/`update`, NOT a compound-unique `upsert`. Direct `db.node`/`db.edge` use in routers is prohibited but is now fail-safe (default-deny).
 - **Every `graphService` method takes an optional final `client` argument** (default `db`) so callers inside a `$transaction` can pass `tx`.
 - **All graph entity ids are cuid strings.** Edge/Node ids use Prisma `@default(cuid())`.
 
@@ -58,7 +58,7 @@ docker exec betterthanspreadsheetsgrc-test-1 npx jest
 
 **Modify:**
 - `prisma/schema.prisma` — add `Node`, `Edge` models + `GraphNodeType`, `GraphEdgeType` enums (Task 1); drop `RiskOrganizationalControl` model (Task 11).
-- `src/server/db/middleware/organization-filter.ts:119-224` — add `"Node"`, `"Edge"` to `ALLOWLIST_TABLES`.
+- ~~`src/server/db/middleware/organization-filter.ts` — add `"Node"`, `"Edge"` to `ALLOWLIST_TABLES`.~~ **REMOVED** (security revision): `Node`/`Edge` stay default-denied; do NOT touch the allowlist.
 - `src/server/db.ts:76` — compose `graphSyncMiddleware` after `organizationFilterMiddleware`.
 - `src/server/api/routers/organizationalControl.ts` — repoint 5 endpoints (`getLinkedRisks`, `getForRisk`, `linkToRisk`, `unlinkFromRisk`, `bulkLinkToRisk`) to `graphService`.
 - `src/server/api/routers/risk.ts` — repoint `create` control-linking + the risk-assessment-project `$transaction` block (~line 6096).
@@ -68,15 +68,19 @@ docker exec betterthanspreadsheetsgrc-test-1 npx jest
 
 ---
 
-## Task 1: Graph substrate (schema + allowlist)
+## Task 1: Graph substrate (schema only — default-deny tenancy)
+
+> **SECURITY REVISION (supersedes the original "schema + allowlist" task):** Do **NOT**
+> allowlist `Node`/`Edge`. They stay default-denied by the org filter. The smoke test proves
+> *isolation* (org B cannot see org A's edge), not a bypass. Node global rows are written via
+> `rawPrisma` (the sanctioned escape hatch).
 
 **Files:**
 - Modify: `prisma/schema.prisma` (add enums + models near the end of the file)
-- Modify: `src/server/db/middleware/organization-filter.ts:119-224`
 - Test: `src/__tests__/integration/graph-service.test.ts` (first test only)
 
 **Interfaces:**
-- Produces: Prisma models `Node { id, organizationId?, type, entityId, createdAt }` and `Edge { id, organizationId, type, fromNodeId, toNodeId, properties?, createdById?, createdAt }`; enums `GraphNodeType { Control Risk Technique }`, `GraphEdgeType { MITIGATES COUNTERS }`. `db.node` and `db.edge` are allowlisted (no auto org-filter).
+- Produces: Prisma models `Node { id, organizationId?, type, entityId, createdAt }` and `Edge { id, organizationId, type, fromNodeId, toNodeId, properties?, createdById?, createdAt }`; enums `GraphNodeType { Control Risk Technique }`, `GraphEdgeType { MITIGATES COUNTERS }`. `db.node`/`db.edge` are **default-denied** (auto org-filtered); `rawPrisma.node`/`rawPrisma.edge` are the unfiltered escape hatch used only by graphService/sync/backfill.
 
 - [ ] **Step 1: Add enums and models to `prisma/schema.prisma`**
 
@@ -134,16 +138,11 @@ model Edge {
 }
 ```
 
-- [ ] **Step 2: Add `Node`/`Edge` to the org-filter allowlist**
+- [ ] **Step 2: Do NOT touch the allowlist**
 
-In `src/server/db/middleware/organization-filter.ts`, inside the `ALLOWLIST_TABLES` set (ends at line ~224), add before the closing `]);`:
-
-```ts
-  // Graph foundation — Node may be global (null org) and Edge tenancy is
-  // enforced explicitly by graphService, so both bypass the auto-filter.
-  "Node",
-  "Edge",
-```
+`Node` and `Edge` are intentionally left OUT of `ALLOWLIST_TABLES` so the org filter
+default-denies them. There is no edit to `organization-filter.ts` in this task. (If a previous
+revision of this task added `"Node"`/`"Edge"` to the allowlist, REMOVE those two lines now.)
 
 - [ ] **Step 3: Apply schema and regenerate the client**
 
@@ -156,28 +155,63 @@ Expected: `db push` reports the two new tables created; `generate` succeeds.
 
 - [ ] **Step 4: Write the failing smoke test**
 
-Create `src/__tests__/integration/graph-service.test.ts`:
+Create `src/__tests__/integration/graph-service.test.ts`. This proves the substrate exists AND
+that `Edge` is default-denied (org B cannot see org A's edge), AND that a global (null-org) node
+is creatable via `rawPrisma`:
 
 ```ts
-import { db } from "@/server/db";
+import { db, rawPrisma } from "@/server/db";
+import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 import { randomUUID } from "crypto";
 
-describe("Graph substrate", () => {
-  const orgId = randomUUID();
+describe("Graph substrate (default-deny tenancy)", () => {
+  const orgA = randomUUID();
+  const orgB = randomUUID();
+  const fromEntityId = randomUUID();
+  const toEntityId = randomUUID();
+  const globalTechniqueEntityId = randomUUID();
+  let edgeId: string;
 
-  afterAll(async () => {
-    await db.$executeRaw`DELETE FROM "Node" WHERE "organizationId" = ${orgId}`;
+  beforeAll(async () => {
+    // rawPrisma bypasses the org filter — the sanctioned escape hatch.
+    const fromNode = await rawPrisma.node.create({
+      data: { organizationId: orgA, type: "Control", entityId: fromEntityId },
+    });
+    const toNode = await rawPrisma.node.create({
+      data: { organizationId: orgA, type: "Risk", entityId: toEntityId },
+    });
+    const edge = await rawPrisma.edge.create({
+      data: { organizationId: orgA, type: "MITIGATES", fromNodeId: fromNode.id, toNodeId: toNode.id },
+    });
+    edgeId = edge.id;
+    // A global (null-org) Technique node must be creatable via rawPrisma.
+    await rawPrisma.node.create({
+      data: { organizationId: null, type: "Technique", entityId: globalTechniqueEntityId },
+    });
   });
 
-  it("Node and Edge tables exist and Node is not org-filtered", async () => {
-    const entityId = randomUUID();
-    // Direct write proves the model exists and is allowlisted (no org context needed)
-    await db.node.create({
-      data: { id: randomUUID(), organizationId: orgId, type: "Risk", entityId },
-    });
-    const found = await db.node.findFirst({ where: { type: "Risk", entityId } });
-    expect(found).not.toBeNull();
-    expect(found!.organizationId).toBe(orgId);
+  afterAll(async () => {
+    await rawPrisma.$executeRaw`DELETE FROM "Edge" WHERE "organizationId" = ${orgA}`;
+    await rawPrisma.$executeRaw`DELETE FROM "Node" WHERE "organizationId" = ${orgA}`;
+    await rawPrisma.$executeRaw`DELETE FROM "Node" WHERE "entityId" = ${globalTechniqueEntityId}`;
+  });
+
+  it("creates a global (null-org) Technique node via rawPrisma", async () => {
+    const node = await rawPrisma.node.findFirst({ where: { entityId: globalTechniqueEntityId } });
+    expect(node).not.toBeNull();
+    expect(node!.organizationId).toBeNull();
+  });
+
+  it("default-denies Edge: org A sees its edge, org B does not", async () => {
+    const seenByA = await runWithOrganizationContext(orgA, () =>
+      db.edge.findMany({ where: { type: "MITIGATES" } }),
+    );
+    expect(seenByA.some((e) => e.id === edgeId)).toBe(true);
+
+    const seenByB = await runWithOrganizationContext(orgB, () =>
+      db.edge.findMany({ where: { type: "MITIGATES" } }),
+    );
+    expect(seenByB.some((e) => e.id === edgeId)).toBe(false);
   });
 });
 ```
@@ -185,13 +219,13 @@ describe("Graph substrate", () => {
 - [ ] **Step 5: Run it**
 
 Run: `docker exec betterthanspreadsheetsgrc-test-1 npx jest src/__tests__/integration/graph-service.test.ts`
-Expected: PASS (proves schema + client + allowlist).
+Expected: PASS (proves schema + client + default-deny isolation + rawPrisma escape hatch).
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add prisma/schema.prisma src/server/db/middleware/organization-filter.ts src/__tests__/integration/graph-service.test.ts
-git commit -m "feat(graph): add Node/Edge substrate and allowlist them"
+git add prisma/schema.prisma src/__tests__/integration/graph-service.test.ts
+git commit -m "feat(graph): add Node/Edge substrate (default-deny tenancy)"
 ```
 
 ---
@@ -323,11 +357,18 @@ git commit -m "feat(graph): add edge catalog, type maps, and error classes"
 - Create: `src/server/graph/graph-service.ts`
 - Test: `src/__tests__/integration/graph-service.test.ts` (add `describe` blocks)
 
+> **SECURITY REVISION — read before implementing.** Per the revised §3 tenancy rules: **Node
+> reads/writes use `rawPrisma`** (the unfiltered escape hatch — Node can be global/null-org and
+> is keyed by a compound unique the filter can't express). **Edge ops use the passed `client`
+> (default the filtered `db`)** and ALWAYS include `organizationId` explicitly in the
+> `where`/`create`. `createEdge` uses `findFirst` + `create`/`update`, NOT a compound-unique
+> `upsert` (the org filter mangles compound-unique selectors).
+
 **Interfaces:**
-- Consumes: `db` from `@/server/db`; `NODE_SYNC_MODELS`, `EDGE_CATALOG`, `assertEdgeAllowed`, `GraphCatalogError` from `./graph-types`.
-- Produces an exported `graphService` object. `GraphClient` is `typeof db` (or a Prisma transaction client). Entity refs use `{ type: GraphNodeType; id: string }`.
-  - `ensureNode(ref: { type: GraphNodeType; id: string }, organizationId: string | null, client?: GraphClient): Promise<{ id: string }>`
-  - `removeNode(ref, client?): Promise<void>`
+- Consumes: `db`, `rawPrisma` from `@/server/db`; `NODE_SYNC_MODELS`, `EDGE_CATALOG`, `assertEdgeAllowed`, `GraphCatalogError` from `./graph-types`.
+- Produces an exported `graphService` object. `GraphClient` is `typeof db` (or a Prisma transaction client) — used for EDGE ops only; NODE ops always use `rawPrisma`. Entity refs use `{ type: GraphNodeType; id: string }`.
+  - `ensureNode(ref: { type: GraphNodeType; id: string }, organizationId: string | null): Promise<{ id: string }>` — uses `rawPrisma` (no client param)
+  - `removeNode(ref): Promise<void>` — uses `rawPrisma`
   - `createEdge(p: { type: GraphEdgeType; from: { type: GraphNodeType; id: string }; to: { type: GraphNodeType; id: string }; organizationId: string; fromOrgId?: string | null; toOrgId?: string | null; properties?: Record<string, unknown>; createdById?: string | null }, client?): Promise<{ id: string }>`
   - `deleteEdge(p: { type: GraphEdgeType; from; to; organizationId: string }, client?): Promise<boolean>`
   - `listOutEdges(p: { type: GraphEdgeType; from: { type; id }; organizationId: string }, client?): Promise<EdgeRow[]>`
@@ -355,33 +396,38 @@ describe("graphService.createEdge", () => {
   });
 
   it("creates a valid MITIGATES edge and is idempotent", async () => {
-    const first = await graphService.createEdge({
-      type: "MITIGATES",
-      from: { type: "Control", id: controlId },
-      to: { type: "Risk", id: riskId },
-      organizationId: orgId,
-      properties: { role: "IN_PLACE", notes: "n" },
+    // Edge writes go through the filtered `db`, which requires org context
+    // (mirrors how tRPC wraps every request in runWithOrganizationContext).
+    const { first, second, edges } = await runWithOrganizationContext(orgId, async () => {
+      const first = await graphService.createEdge({
+        type: "MITIGATES",
+        from: { type: "Control", id: controlId },
+        to: { type: "Risk", id: riskId },
+        organizationId: orgId,
+        properties: { role: "IN_PLACE", notes: "n" },
+      });
+      const second = await graphService.createEdge({
+        type: "MITIGATES",
+        from: { type: "Control", id: controlId },
+        to: { type: "Risk", id: riskId },
+        organizationId: orgId,
+        properties: { role: "NEEDED", notes: "n2" },
+      });
+      const edges = await graphService.listInEdges({
+        type: "MITIGATES",
+        to: { type: "Risk", id: riskId },
+        organizationId: orgId,
+      });
+      return { first, second, edges };
     });
-    const second = await graphService.createEdge({
-      type: "MITIGATES",
-      from: { type: "Control", id: controlId },
-      to: { type: "Risk", id: riskId },
-      organizationId: orgId,
-      properties: { role: "NEEDED", notes: "n2" },
-    });
-    expect(second.id).toBe(first.id); // upsert, same row
-
-    const edges = await graphService.listInEdges({
-      type: "MITIGATES",
-      to: { type: "Risk", id: riskId },
-      organizationId: orgId,
-    });
+    expect(second.id).toBe(first.id); // same row updated, not duplicated
     expect(edges).toHaveLength(1);
     expect(edges[0]!.fromEntityId).toBe(controlId);
     expect((edges[0]!.properties as { role: string }).role).toBe("NEEDED"); // updated
   });
 
   it("rejects a catalog-violating edge", async () => {
+    // Catalog check throws before any DB write, so no org context is needed.
     await expect(
       graphService.createEdge({
         type: "MITIGATES",
@@ -413,11 +459,11 @@ Expected: FAIL — cannot find module `@/server/graph/graph-service`.
 - [ ] **Step 3: Implement `src/server/graph/graph-service.ts`**
 
 ```ts
-import { db } from "@/server/db";
+import { db, rawPrisma } from "@/server/db";
 import type { GraphNodeType, GraphEdgeType, Prisma } from "@prisma/client";
 import { assertEdgeAllowed } from "./graph-types";
 
-/** A Prisma client or interactive-transaction client. */
+/** A Prisma client or interactive-transaction client. Used for EDGE ops only. */
 type GraphClient = typeof db | Prisma.TransactionClient;
 
 export interface EdgeRow {
@@ -435,22 +481,39 @@ interface EntityRef {
   id: string;
 }
 
-/** Upsert the Node for an entity; returns its node id. */
+/**
+ * Upsert the Node for an entity; returns its node id.
+ * NODE ops use `rawPrisma` (the unfiltered escape hatch): nodes can be global
+ * (null org) and are keyed by the compound (type, entityId) — both of which the
+ * org-filter on `db` cannot express. Safe because (type, entityId) is globally
+ * unique, so there is no cross-tenant ambiguity.
+ */
 async function ensureNode(
   ref: EntityRef,
   organizationId: string | null,
-  client: GraphClient = db,
 ): Promise<{ id: string }> {
-  return client.node.upsert({
+  const existing = await rawPrisma.node.findUnique({
     where: { type_entityId: { type: ref.type, entityId: ref.id } },
-    create: { type: ref.type, entityId: ref.id, organizationId },
-    update: {}, // identity row — nothing to change on conflict
+    select: { id: true },
+  });
+  if (existing) return existing;
+  return rawPrisma.node.create({
+    data: { type: ref.type, entityId: ref.id, organizationId },
     select: { id: true },
   });
 }
 
-async function removeNode(ref: EntityRef, client: GraphClient = db): Promise<void> {
-  await client.node.deleteMany({ where: { type: ref.type, entityId: ref.id } });
+async function removeNode(ref: EntityRef): Promise<void> {
+  await rawPrisma.node.deleteMany({ where: { type: ref.type, entityId: ref.id } });
+}
+
+/** Resolve an entity ref to its node id (rawPrisma — globally-unique key). */
+async function findNodeId(ref: EntityRef): Promise<string | null> {
+  const node = await rawPrisma.node.findUnique({
+    where: { type_entityId: { type: ref.type, entityId: ref.id } },
+    select: { id: true },
+  });
+  return node?.id ?? null;
 }
 
 async function createEdge(
@@ -468,35 +531,45 @@ async function createEdge(
 ): Promise<{ id: string }> {
   assertEdgeAllowed(p.type, p.from.type, p.to.type);
   // Endpoint nodes default to the asserting org unless caller overrides
-  // (Technique nodes are global -> pass toOrgId: null).
+  // (Technique nodes are global -> pass toOrgId: null). Node ops use rawPrisma.
   const fromNode = await ensureNode(
     p.from,
     p.fromOrgId === undefined ? p.organizationId : p.fromOrgId,
-    client,
   );
   const toNode = await ensureNode(
     p.to,
     p.toOrgId === undefined ? p.organizationId : p.toOrgId,
-    client,
   );
-  return client.edge.upsert({
+  const props = (p.properties ?? undefined) as Prisma.InputJsonValue | undefined;
+  // Edge ops go through the passed client (default filtered `db`) and ALWAYS
+  // scope by organizationId explicitly — so this is correct under the org
+  // filter, inside a tx, AND when handed rawPrisma in the backfill.
+  // findFirst + create/update (NOT a compound-unique upsert, which the filter
+  // mangles).
+  const existing = await client.edge.findFirst({
     where: {
-      fromNodeId_type_toNodeId: {
-        fromNodeId: fromNode.id,
-        type: p.type,
-        toNodeId: toNode.id,
-      },
-    },
-    create: {
       type: p.type,
       fromNodeId: fromNode.id,
       toNodeId: toNode.id,
       organizationId: p.organizationId,
-      properties: (p.properties ?? undefined) as Prisma.InputJsonValue | undefined,
-      createdById: p.createdById ?? null,
     },
-    update: {
-      properties: (p.properties ?? undefined) as Prisma.InputJsonValue | undefined,
+    select: { id: true },
+  });
+  if (existing) {
+    await client.edge.update({
+      where: { id: existing.id },
+      data: { properties: props },
+    });
+    return existing;
+  }
+  return client.edge.create({
+    data: {
+      type: p.type,
+      fromNodeId: fromNode.id,
+      toNodeId: toNode.id,
+      organizationId: p.organizationId,
+      properties: props,
+      createdById: p.createdById ?? null,
     },
     select: { id: true },
   });
@@ -506,20 +579,14 @@ async function deleteEdge(
   p: { type: GraphEdgeType; from: EntityRef; to: EntityRef; organizationId: string },
   client: GraphClient = db,
 ): Promise<boolean> {
-  const fromNode = await client.node.findUnique({
-    where: { type_entityId: { type: p.from.type, entityId: p.from.id } },
-    select: { id: true },
-  });
-  const toNode = await client.node.findUnique({
-    where: { type_entityId: { type: p.to.type, entityId: p.to.id } },
-    select: { id: true },
-  });
-  if (!fromNode || !toNode) return false;
+  const fromNodeId = await findNodeId(p.from);
+  const toNodeId = await findNodeId(p.to);
+  if (!fromNodeId || !toNodeId) return false;
   const res = await client.edge.deleteMany({
     where: {
       type: p.type,
-      fromNodeId: fromNode.id,
-      toNodeId: toNode.id,
+      fromNodeId,
+      toNodeId,
       organizationId: p.organizationId,
     },
   });
@@ -552,13 +619,10 @@ async function listOutEdges(
   p: { type: GraphEdgeType; from: EntityRef; organizationId: string },
   client: GraphClient = db,
 ): Promise<EdgeRow[]> {
-  const fromNode = await client.node.findUnique({
-    where: { type_entityId: { type: p.from.type, entityId: p.from.id } },
-    select: { id: true },
-  });
-  if (!fromNode) return [];
+  const fromNodeId = await findNodeId(p.from);
+  if (!fromNodeId) return [];
   const rows = await client.edge.findMany({
-    where: { type: p.type, fromNodeId: fromNode.id, organizationId: p.organizationId },
+    where: { type: p.type, fromNodeId, organizationId: p.organizationId },
     include: { fromNode: { select: { entityId: true } }, toNode: { select: { entityId: true } } },
   });
   return mapEdgeRows(rows);
@@ -568,13 +632,10 @@ async function listInEdges(
   p: { type: GraphEdgeType; to: EntityRef; organizationId: string },
   client: GraphClient = db,
 ): Promise<EdgeRow[]> {
-  const toNode = await client.node.findUnique({
-    where: { type_entityId: { type: p.to.type, entityId: p.to.id } },
-    select: { id: true },
-  });
-  if (!toNode) return [];
+  const toNodeId = await findNodeId(p.to);
+  if (!toNodeId) return [];
   const rows = await client.edge.findMany({
-    where: { type: p.type, toNodeId: toNode.id, organizationId: p.organizationId },
+    where: { type: p.type, toNodeId, organizationId: p.organizationId },
     include: { fromNode: { select: { entityId: true } }, toNode: { select: { entityId: true } } },
   });
   return mapEdgeRows(rows);
@@ -622,7 +683,7 @@ git commit -m "feat(graph): add graphService node/edge core with catalog + tenan
 Create `src/__tests__/integration/graph-sync.test.ts`:
 
 ```ts
-import { db } from "@/server/db";
+import { db, rawPrisma } from "@/server/db";
 import { appRouter } from "@/server/api/root";
 import { randomUUID } from "crypto";
 import type { UserRole } from "@prisma/client";
@@ -662,7 +723,7 @@ describe("Node-sync extension", () => {
       name: `OC Sync ${randomUUID()}`,
     });
 
-    const node = await db.node.findUnique({
+    const node = await rawPrisma.node.findUnique({
       where: { type_entityId: { type: "Control", entityId: control.id } },
     });
     expect(node).not.toBeNull();
@@ -670,7 +731,7 @@ describe("Node-sync extension", () => {
 
     await caller().organizationalControl.delete({ id: control.id });
 
-    const after = await db.node.findUnique({
+    const after = await rawPrisma.node.findUnique({
       where: { type_entityId: { type: "Control", entityId: control.id } },
     });
     expect(after).toBeNull();
@@ -689,6 +750,7 @@ Expected: FAIL — node is `null` (no sync yet).
 
 ```ts
 import type { PrismaClient } from "@prisma/client";
+import { rawPrisma } from "@/server/db";
 import { NODE_SYNC_MODELS } from "@/server/graph/graph-types";
 
 /**
@@ -696,6 +758,10 @@ import { NODE_SYNC_MODELS } from "@/server/graph/graph-types";
  * in NODE_SYNC_MODELS. Single-row create/delete are handled here; bulk writes
  * pass through and are reconciled by the backfill script and by graphService
  * ensureNode (which upserts endpoint nodes when edges are created).
+ *
+ * Node writes go through `rawPrisma` (the unfiltered escape hatch — see §3):
+ * the filtered client cannot create a null-org node or upsert on the compound
+ * (type, entityId) key. (type, entityId) is globally unique, so this is safe.
  *
  * Must be composed AFTER organizationFilterMiddleware (outer extension).
  */
@@ -711,14 +777,18 @@ export function graphSyncMiddleware<T extends PrismaClient>(prisma: T): T {
 
           if (operation === "create" && result && typeof result === "object") {
             const row = result as { id: string; organizationId?: string | null };
-            await (prisma as PrismaClient).node.upsert({
+            const existing = await rawPrisma.node.findUnique({
               where: { type_entityId: { type: nodeType, entityId: row.id } },
-              create: { type: nodeType, entityId: row.id, organizationId: row.organizationId ?? null },
-              update: {},
+              select: { id: true },
             });
+            if (!existing) {
+              await rawPrisma.node.create({
+                data: { type: nodeType, entityId: row.id, organizationId: row.organizationId ?? null },
+              });
+            }
           } else if (operation === "delete" && result && typeof result === "object") {
             const row = result as { id: string };
-            await (prisma as PrismaClient).node.deleteMany({
+            await rawPrisma.node.deleteMany({
               where: { type: nodeType, entityId: row.id },
             });
           }
@@ -1668,7 +1738,7 @@ git commit -m "feat(graph): drop RiskOrganizationalControl; MITIGATES is now gra
 | Spec section | Task(s) |
 |---|---|
 | §2 Data model (Node/Edge, enums) | Task 1 |
-| §3 Multi-tenancy (allowlist, explicit filtering, org→global) | Task 1 (allowlist), Task 3 (service filtering), Task 8 (org→global COUNTERS) |
+| §3 Multi-tenancy (default-deny + rawPrisma escape hatch, org→global) | Task 1 (default-deny, no allowlist), Task 3 (edge ops via filtered db + explicit org; node ops via rawPrisma), Task 4 (sync via rawPrisma), Task 8 (org→global COUNTERS) |
 | §4 Node-sync extension | Task 4 |
 | §5 Edge-type catalog | Task 2 (catalog), Task 3 (enforcement in createEdge) |
 | §6a MITIGATES migrate + clean cut | Tasks 5 (backfill), 6 + 7 (repoint), 10 (drop) |
