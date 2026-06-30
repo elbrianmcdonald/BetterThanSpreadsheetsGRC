@@ -240,6 +240,35 @@ catalog + traversal.
 
 ---
 
+## 7b. Deployment / Rollout Safety (DESTRUCTIVE MIGRATION — read before deploying)
+
+Dropping `RiskOrganizationalControl` is a **destructive schema change**. The container entrypoint
+(`docker-entrypoint.sh`) runs `prisma db push --accept-data-loss` on **every startup**, which will
+drop the table the instant a Task-10 image boots. The backfill that migrates
+`RiskOrganizationalControl` → `MITIGATES` edges is a **separate, manual script**
+(`tsx prisma/scripts/backfill-graph.ts`) — it is NOT run by the entrypoint. Therefore:
+
+> **Deploying the Task-10 image directly to a database that still holds
+> `RiskOrganizationalControl` rows destroys those risk↔control links** (the table is dropped at
+> startup, before any backfill could run).
+
+**Required two-phase rollout for any populated environment:**
+
+1. **Phase 1** — deploy the branch at the **pre-drop state** (through Task 9, where the schema still
+   contains `RiskOrganizationalControl`). `db push` keeps the table.
+2. **Run the backfill** against that deployment: `docker exec <app> npx tsx prisma/scripts/backfill-graph.ts`.
+   It creates nodes and migrates every `RiskOrganizationalControl` row into a `MITIGATES` edge
+   (idempotent — safe to re-run).
+3. **Phase 2** — deploy the **Task-10** image. `db push` now drops the (already-migrated) table.
+
+**Defense in depth:** the backfill keeps a raw-SQL, `IF EXISTS`-guarded migration section so it
+compiles after the model is dropped and is a safe no-op once the table is gone — but this only
+protects data if the backfill *runs before* `db push` drops the table, which the two-phase order
+guarantees. A fresh/empty database (no `RiskOrganizationalControl` rows) can deploy Task 10
+directly with no data to lose.
+
+---
+
 ## 8. Error Handling
 
 - **Catalog violation** → `GraphCatalogError` (typed).
