@@ -266,8 +266,8 @@ export const controlLinkRouter = createTRPCRouter({
       }
 
       // Verify framework controls exist and are active. Any IDs that don't
-      // match are treated as organizational-control IDs and routed to the
-      // RiskOrganizationalControl table instead — picker UIs that mix the
+      // match are treated as organizational-control IDs and routed through
+      // graphService as MITIGATES edges instead — picker UIs that mix the
       // two control sources won't blow up with a hard validation error.
       const frameworkControls = await ctx.db.control.findMany({
         where: {
@@ -293,6 +293,15 @@ export const controlLinkRouter = createTRPCRouter({
         });
         if (orgControls.length > 0) {
           const orgRole = linkType === "MITIGATING" ? "IN_PLACE" : "NEEDED";
+          // Determine which controls are NOT already linked (MITIGATES edges into this risk)
+          const alreadyLinked = new Set(
+            (await graphService.listInEdges({
+              type: "MITIGATES",
+              to: { type: "Risk", id: riskId },
+              organizationId: ctx.organizationId!,
+            })).map((e) => e.fromEntityId),
+          );
+          const newlyLinkedCount = orgControls.filter((c) => !alreadyLinked.has(c.id)).length;
           for (const c of orgControls) {
             await graphService.createEdge({
               type: "MITIGATES",
@@ -303,7 +312,7 @@ export const controlLinkRouter = createTRPCRouter({
               createdById: ctx.session?.user.id ?? null,
             });
           }
-          orgLinkCount = orgControls.length;
+          orgLinkCount = newlyLinkedCount;
         }
       }
 
