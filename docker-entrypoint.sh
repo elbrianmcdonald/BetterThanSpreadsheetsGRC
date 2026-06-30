@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "Checking graph-migration safety (prevents RiskOrganizationalControl data loss)..."
+tsx prisma/scripts/assert-graph-migration-safe.ts
+
 echo "Running database migrations..."
 # Prisma 7 no longer reads `url` from schema.prisma; pass it via --url to avoid
 # needing prisma.config.ts (and its dotenv/prisma/config imports) at runtime.
