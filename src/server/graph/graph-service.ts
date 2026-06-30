@@ -31,13 +31,10 @@ async function ensureNode(
   ref: EntityRef,
   organizationId: string | null,
 ): Promise<{ id: string }> {
-  const existing = await rawPrisma.node.findUnique({
+  return rawPrisma.node.upsert({
     where: { type_entityId: { type: ref.type, entityId: ref.id } },
-    select: { id: true },
-  });
-  if (existing) return existing;
-  return rawPrisma.node.create({
-    data: { type: ref.type, entityId: ref.id, organizationId },
+    create: { type: ref.type, entityId: ref.id, organizationId },
+    update: {}, // identity row — nothing to change on conflict
     select: { id: true },
   });
 }
