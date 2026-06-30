@@ -485,20 +485,18 @@ interface EntityRef {
  * Upsert the Node for an entity; returns its node id.
  * NODE ops use `rawPrisma` (the unfiltered escape hatch): nodes can be global
  * (null org) and are keyed by the compound (type, entityId) — both of which the
- * org-filter on `db` cannot express. Safe because (type, entityId) is globally
- * unique, so there is no cross-tenant ambiguity.
+ * org-filter on `db` cannot express. Because `rawPrisma` is unfiltered, a real
+ * compound-unique `upsert` is safe here (no filter mangling) AND race-immune —
+ * unlike the Edge path, which must use findFirst+create under the filter.
  */
 async function ensureNode(
   ref: EntityRef,
   organizationId: string | null,
 ): Promise<{ id: string }> {
-  const existing = await rawPrisma.node.findUnique({
+  return rawPrisma.node.upsert({
     where: { type_entityId: { type: ref.type, entityId: ref.id } },
-    select: { id: true },
-  });
-  if (existing) return existing;
-  return rawPrisma.node.create({
-    data: { type: ref.type, entityId: ref.id, organizationId },
+    create: { type: ref.type, entityId: ref.id, organizationId },
+    update: {}, // identity row — nothing to change on conflict
     select: { id: true },
   });
 }
@@ -777,15 +775,12 @@ export function graphSyncMiddleware<T extends PrismaClient>(prisma: T): T {
 
           if (operation === "create" && result && typeof result === "object") {
             const row = result as { id: string; organizationId?: string | null };
-            const existing = await rawPrisma.node.findUnique({
+            // rawPrisma is unfiltered → compound-unique upsert is safe + race-immune.
+            await rawPrisma.node.upsert({
               where: { type_entityId: { type: nodeType, entityId: row.id } },
-              select: { id: true },
+              create: { type: nodeType, entityId: row.id, organizationId: row.organizationId ?? null },
+              update: {},
             });
-            if (!existing) {
-              await rawPrisma.node.create({
-                data: { type: nodeType, entityId: row.id, organizationId: row.organizationId ?? null },
-              });
-            }
           } else if (operation === "delete" && result && typeof result === "object") {
             const row = result as { id: string };
             await rawPrisma.node.deleteMany({
@@ -1668,16 +1663,25 @@ git commit -m "feat(graph): add techniqueExposure 2-hop traversal"
 
 **Files:**
 - Modify: `prisma/schema.prisma` (remove `model RiskOrganizationalControl`; keep `enum RiskOrgControlRole`)
+- Modify: `src/server/graph/graph-service.ts` (add batched `countOutEdgesByEntities`)
+- Modify: `src/server/api/routers/organizationalControl.ts` (repoint the THREE `_count.RiskLinks` sites — see Step 2b)
 - Modify: any remaining references found by grep (and stale tests/scripts that query the dropped table, e.g. `prisma/scripts/resetRiskAssessments.ts`)
 - Test: full suite
 
 **Interfaces:**
-- Consumes: nothing new. Removes the `RiskOrganizationalControl` model and the `RiskLinks`/`RiskOrganizationalControl[]` relations on `OrganizationalControl`, `Risk`, and `Organization`.
+- Consumes: `graphService`. Removes the `RiskOrganizationalControl` model and the `RiskLinks`/`RiskOrganizationalControl[]` relations on `OrganizationalControl`, `Risk`, and `Organization`. Produces `graphService.countOutEdgesByEntities(...)`.
+
+> **CARRYOVER FROM TASK 6 REVIEW (must-fix):** Task 6 left three `_count.RiskLinks` reads in
+> `organizationalControl.ts` (`list` ~:149, `getById` ~:295, `delete` guard ~:1115/1132/1144).
+> Dropping the `RiskLinks` relation here breaks the TS build on those lines, and — critically —
+> the `delete` guard counts `RiskLinks` to BLOCK deleting a control that still has risk links; once
+> reads come from edges, that guard reads 0 and a control with live MITIGATES edges becomes
+> deletable. Step 2b repoints all three to edge counts. Do not skip it.
 
 - [ ] **Step 1: Find every remaining reference**
 
-Run: `git grep -n "riskOrganizationalControl\|RiskOrganizationalControl"`
-Expected: only schema relations + `prisma/scripts/resetRiskAssessments.ts` (and possibly a UI/component that already goes through the now-migrated router — leave those, they use the router not the model).
+Run: `git grep -nE "riskOrganizationalControl|RiskOrganizationalControl|RiskLinks"`
+Expected: schema relations, the three `organizationalControl.ts` `RiskLinks` `_count` sites (handled in Step 2b), `prisma/scripts/resetRiskAssessments.ts`, and possibly UI/components that go through the migrated router (leave those — they use the router, not the model).
 
 - [ ] **Step 2: Remove model + relations from `prisma/schema.prisma`**
 
@@ -1687,6 +1691,69 @@ Expected: only schema relations + `prisma/scripts/resetRiskAssessments.ts` (and 
   - On `Risk`: the `RiskOrganizationalControl[]` back-relation (grep within the `Risk` model).
   - On `Organization`: the `RiskOrganizationalControl[]` back-relation.
 - **Keep** `enum RiskOrgControlRole { IN_PLACE NEEDED }`.
+
+- [ ] **Step 2b: Repoint the three `_count.RiskLinks` reads in `organizationalControl.ts` to MITIGATES edge counts**
+
+Removing the `RiskLinks` relation breaks three sites. Grep `RiskLinks` in the file to locate exact lines. First add a batched counter to `graphService` (`src/server/graph/graph-service.ts`), exported on the `graphService` object:
+
+```ts
+async function countOutEdgesByEntities(
+  p: { type: GraphEdgeType; fromType: GraphNodeType; entityIds: string[]; organizationId: string },
+  client: GraphClient = db,
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (p.entityIds.length === 0) return counts;
+  // entity ids -> node ids (rawPrisma; nodes are global-capable identity rows)
+  const nodes = await rawPrisma.node.findMany({
+    where: { type: p.fromType, entityId: { in: p.entityIds } },
+    select: { id: true, entityId: true },
+  });
+  const nodeIdToEntity = new Map(nodes.map((n) => [n.id, n.entityId]));
+  if (nodeIdToEntity.size === 0) return counts;
+  const grouped = await client.edge.groupBy({
+    by: ["fromNodeId"],
+    where: { type: p.type, organizationId: p.organizationId, fromNodeId: { in: [...nodeIdToEntity.keys()] } },
+    _count: { _all: true },
+  });
+  for (const g of grouped) {
+    const entityId = nodeIdToEntity.get(g.fromNodeId);
+    if (entityId) counts.set(entityId, g._count._all);
+  }
+  return counts;
+}
+```
+
+Then repoint the three sites, preserving each endpoint's existing response shape (inject the edge-derived number under the SAME key the UI reads — keep `_count.RiskLinks` as a numeric field):
+
+1. **`delete` guard** (~lines 1115/1132/1144): remove `RiskLinks` from the endpoint's `_count`/`select`, and compute the live count from edges:
+   ```ts
+   const mitigatesCount = (
+     await graphService.listOutEdges({
+       type: "MITIGATES",
+       from: { type: "Control", id: input.id },
+       organizationId: ctx.organizationId!,
+     })
+   ).length;
+   ```
+   Use `mitigatesCount` everywhere the old `impact.RiskLinks` / `_count.RiskLinks` value was used (the block-deletion decision AND the error message). The guard MUST still block deleting a control with active MITIGATES edges.
+
+2. **`getById`** (~line 295): remove `RiskLinks` from `_count.select` (keep the other counts). After fetching the control, compute
+   `const riskLinks = (await graphService.listOutEdges({ type: "MITIGATES", from: { type: "Control", id: input.id }, organizationId: ctx.organizationId! })).length;`
+   and set it back under the same key the response uses (e.g. `result._count.RiskLinks = riskLinks`). Match the existing shape exactly.
+
+3. **`list`** (~line 149): remove `RiskLinks` from `_count.select`. After the page of controls is fetched:
+   ```ts
+   const linkCounts = await graphService.countOutEdgesByEntities({
+     type: "MITIGATES",
+     fromType: "Control",
+     entityIds: controls.map((c) => c.id),
+     organizationId: ctx.organizationId!,
+   });
+   // then for each control row: row._count.RiskLinks = linkCounts.get(row.id) ?? 0
+   ```
+   Preserve the existing response shape (do not change keys the UI reads).
+
+After this step, the `delete`-guard behavior is covered by the migration test's unlink path plus the full suite; if no test currently asserts "cannot delete a control with a live risk link," add one small case to `graph-mitigates-migration.test.ts` proving `delete` is blocked while a MITIGATES edge exists and allowed after unlink.
 
 - [ ] **Step 3: Fix `prisma/scripts/resetRiskAssessments.ts`**
 
