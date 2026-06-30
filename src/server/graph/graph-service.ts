@@ -177,6 +177,18 @@ async function listInEdges(
   return mapEdgeRows(rows);
 }
 
+async function getCounteredTechniques(
+  controlId: string,
+  organizationId: string,
+  client: GraphClient = db,
+): Promise<Array<{ techniqueId: string }>> {
+  const edges = await listOutEdges(
+    { type: "COUNTERS", from: { type: "Control", id: controlId }, organizationId },
+    client,
+  );
+  return edges.map((e) => ({ techniqueId: e.toEntityId }));
+}
+
 export const graphService = {
   ensureNode,
   removeNode,
@@ -184,4 +196,5 @@ export const graphService = {
   deleteEdge,
   listOutEdges,
   listInEdges,
+  getCounteredTechniques,
 };

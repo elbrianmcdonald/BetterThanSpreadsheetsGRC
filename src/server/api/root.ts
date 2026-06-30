@@ -61,6 +61,7 @@ import { deliverableRouter } from "@/server/api/routers/deliverable";
 import { engagementRouter } from "@/server/api/routers/engagement";
 import { pathwayRouter } from "@/server/api/routers/pathway";
 import { actionPlanRouter } from "@/server/api/routers/actionPlan";
+import { graphRouter } from "@/server/api/routers/graph";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 
 /**
@@ -132,6 +133,7 @@ export const appRouter = createTRPCRouter({
   engagement: engagementRouter, // Epic 18: Consulting Engagement wrapper (polymorphic over assessments)
   pathway: pathwayRouter, // Epic 19: Exploitation Pathway (per-assessment, findings + risks)
   actionPlan: actionPlanRouter, // Remediation Roadmap: per-assessment Action Plan initiatives
+  graph: graphRouter, // Graph substrate: COUNTERS edges (Control → ATT&CK Technique)
 });
 
 // export type definition of API
