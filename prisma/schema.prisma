@@ -5515,3 +5515,53 @@ model PathwayStepMember {
   @@index([findingId])
   @@index([riskId])
 }
+
+// ============================================================================
+// Graph Foundation — generic property graph (Node + Edge) as the system of
+// record for relationships. See docs/superpowers/specs/2026-06-30-graph-foundation-design.md
+// ============================================================================
+
+enum GraphNodeType {
+  Control // OrganizationalControl
+  Risk
+  Technique // MitreTechnique (global)
+}
+
+enum GraphEdgeType {
+  MITIGATES // Control -> Risk
+  COUNTERS // Control -> Technique
+}
+
+model Node {
+  id             String        @id @default(cuid())
+  organizationId String? // null = global (e.g. Technique)
+  type           GraphNodeType
+  entityId       String // id of the typed row (OrganizationalControl/Risk/MitreTechnique)
+  createdAt      DateTime      @default(now())
+
+  outEdges Edge[] @relation("EdgeFrom")
+  inEdges  Edge[] @relation("EdgeTo")
+
+  @@unique([type, entityId])
+  @@index([organizationId])
+  @@index([entityId])
+}
+
+model Edge {
+  id             String        @id @default(cuid())
+  organizationId String // asserting org — edges are ALWAYS owned, never global
+  type           GraphEdgeType
+  fromNodeId     String
+  toNodeId       String
+  properties     Json?
+  createdById    String?
+  createdAt      DateTime      @default(now())
+
+  fromNode Node @relation("EdgeFrom", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  toNode   Node @relation("EdgeTo", fields: [toNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([fromNodeId, type, toNodeId])
+  @@index([organizationId, type])
+  @@index([fromNodeId])
+  @@index([toNodeId])
+}
