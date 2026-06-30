@@ -1,6 +1,12 @@
 import { db, rawPrisma } from "@/server/db";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 import { randomUUID } from "crypto";
+import {
+  EDGE_CATALOG,
+  NODE_SYNC_MODELS,
+  assertEdgeAllowed,
+  GraphCatalogError,
+} from "@/server/graph/graph-types";
 
 describe("Graph substrate (default-deny tenancy)", () => {
   const orgA = randomUUID();
@@ -50,5 +56,28 @@ describe("Graph substrate (default-deny tenancy)", () => {
       db.edge.findMany({ where: { type: "MITIGATES" } }),
     );
     expect(seenByB.some((e) => e.id === edgeId)).toBe(false);
+  });
+});
+
+describe("Graph types", () => {
+  it("maps entity models to node types", () => {
+    expect(NODE_SYNC_MODELS.OrganizationalControl).toBe("Control");
+    expect(NODE_SYNC_MODELS.Risk).toBe("Risk");
+    expect(NODE_SYNC_MODELS.MitreTechnique).toBe("Technique");
+  });
+
+  it("defines MITIGATES and COUNTERS in the catalog", () => {
+    expect(EDGE_CATALOG.MITIGATES).toEqual({ from: "Control", to: "Risk" });
+    expect(EDGE_CATALOG.COUNTERS).toEqual({ from: "Control", to: "Technique" });
+  });
+
+  it("accepts a valid edge triple", () => {
+    expect(() => assertEdgeAllowed("MITIGATES", "Control", "Risk")).not.toThrow();
+  });
+
+  it("rejects an invalid edge triple with GraphCatalogError", () => {
+    expect(() => assertEdgeAllowed("MITIGATES", "Risk", "Control")).toThrow(
+      GraphCatalogError,
+    );
   });
 });
