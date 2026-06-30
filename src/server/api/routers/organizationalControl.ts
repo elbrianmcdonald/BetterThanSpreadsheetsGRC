@@ -5,7 +5,7 @@
  * - Full-field CRUD (identification, classification, implementation, cadence, lifecycle)
  * - Many-to-many crosswalk to framework library controls via OrgControlFrameworkMapping
  * - RACI ownership (owner/operator/reviewer) via OrgControlAssignment
- * - Linkage to risks via RiskOrganizationalControl
+ * - Linkage to risks via MITIGATES graph edges (Control→Risk)
  *
  * Sub-Epic B.1 + B.2 (tech-spec: docs/sprint-artifacts/tech-spec-org-controls-redesign.md)
  */

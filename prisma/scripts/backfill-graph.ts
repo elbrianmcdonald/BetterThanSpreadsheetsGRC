@@ -1,7 +1,9 @@
 import { rawPrisma } from "@/server/db";
+import { graphService } from "@/server/graph/graph-service";
 
 export async function backfillGraph(): Promise<{ nodes: number; mitigatesEdges: number }> {
   let nodes = 0;
+  let mitigatesEdges = 0;
 
   // 1. Control nodes
   const controls = await rawPrisma.organizationalControl.findMany({ select: { id: true, organizationId: true } });
@@ -33,12 +35,41 @@ export async function backfillGraph(): Promise<{ nodes: number; mitigatesEdges: 
     nodes += r.count;
   }
 
-  // Section 4 (RiskOrganizationalControl -> MITIGATES migration) removed:
-  // The RiskOrganizationalControl table has been dropped. MITIGATES edges are
-  // now written directly by the graph service on every link/unlink operation.
-  // The backfill is now a node-sync-only operation; mitigatesEdges is 0.
+  // 4. Migrate RiskOrganizationalControl -> MITIGATES edges, IF the legacy table still exists.
+  // Raw SQL so this compiles after the Prisma model is dropped; the IF-EXISTS guard
+  // makes it a safe no-op once the table is gone.
+  const tableExists = await rawPrisma.$queryRaw<{ exists: boolean }[]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'RiskOrganizationalControl'
+    ) AS exists`;
+  if (tableExists[0]?.exists) {
+    const links = await rawPrisma.$queryRaw<{
+      organizationId: string;
+      riskId: string;
+      organizationalControlId: string;
+      role: string;
+      notes: string | null;
+      createdById: string | null;
+    }[]>`SELECT "organizationId", "riskId", "organizationalControlId", role, notes, "createdById"
+         FROM "RiskOrganizationalControl"`;
+    for (const link of links) {
+      await graphService.createEdge(
+        {
+          type: "MITIGATES",
+          from: { type: "Control", id: link.organizationalControlId },
+          to: { type: "Risk", id: link.riskId },
+          organizationId: link.organizationId,
+          properties: { role: link.role, notes: link.notes ?? null },
+          createdById: link.createdById,
+        },
+        rawPrisma as unknown as Parameters<typeof graphService.createEdge>[1],
+      );
+      mitigatesEdges += 1;
+    }
+  }
 
-  return { nodes, mitigatesEdges: 0 };
+  return { nodes, mitigatesEdges };
 }
 
 // Allow running directly: `tsx prisma/scripts/backfill-graph.ts`

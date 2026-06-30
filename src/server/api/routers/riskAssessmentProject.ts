@@ -1686,7 +1686,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
 
   /**
    * Aggregate controls across all identified risks in this assessment.
-   * Combines organizational controls (RiskOrganizationalControl) and
+   * Combines organizational controls (MITIGATES graph edges) and
    * framework controls (RiskControlLink) into a single roll-up.
    */
   getControlsAggregate: organizationProcedure

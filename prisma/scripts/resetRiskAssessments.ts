@@ -39,8 +39,9 @@ async function main() {
   // dependent rows (RiskEvidence, RiskStatusHistory, RiskComment,
   // RemediationOption, RiskControlLink, RiskThreatStep, RiskThreatObjective,
   // RiskTreatment, RiskRegisterStatusHistory, RiskScenario, etc.).
-  // Note: RiskOrganizationalControl was dropped in Task 10; MITIGATES edges
-  // on the graph are retained since they belong to Edge, not Risk cascade.
+  // Note: RiskOrganizationalControl was dropped in Task 10. MITIGATES edges
+  // in the graph are ORPHANED by this TRUNCATE (their Risk rows are gone);
+  // orphan-edge cleanup is a separate manual step and is NOT performed here.
   await db.$executeRawUnsafe(`
     TRUNCATE TABLE
       "Risk",
