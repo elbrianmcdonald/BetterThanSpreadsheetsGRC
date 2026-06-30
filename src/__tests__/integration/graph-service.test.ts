@@ -7,6 +7,7 @@ import {
   assertEdgeAllowed,
   GraphCatalogError,
 } from "@/server/graph/graph-types";
+import { graphService } from "@/server/graph/graph-service";
 
 describe("Graph substrate (default-deny tenancy)", () => {
   const orgA = randomUUID();
@@ -79,5 +80,70 @@ describe("Graph types", () => {
     expect(() => assertEdgeAllowed("MITIGATES", "Risk", "Control")).toThrow(
       GraphCatalogError,
     );
+  });
+});
+
+describe("graphService.createEdge", () => {
+  const orgId = randomUUID();
+  const controlId = randomUUID();
+  const riskId = randomUUID();
+
+  afterAll(async () => {
+    await db.$executeRaw`DELETE FROM "Edge" WHERE "organizationId" = ${orgId}`;
+    await db.$executeRaw`DELETE FROM "Node" WHERE "organizationId" = ${orgId}`;
+  });
+
+  it("creates a valid MITIGATES edge and is idempotent", async () => {
+    // Edge writes go through the filtered `db`, which requires org context
+    // (mirrors how tRPC wraps every request in runWithOrganizationContext).
+    const { first, second, edges } = await runWithOrganizationContext(orgId, async () => {
+      const first = await graphService.createEdge({
+        type: "MITIGATES",
+        from: { type: "Control", id: controlId },
+        to: { type: "Risk", id: riskId },
+        organizationId: orgId,
+        properties: { role: "IN_PLACE", notes: "n" },
+      });
+      const second = await graphService.createEdge({
+        type: "MITIGATES",
+        from: { type: "Control", id: controlId },
+        to: { type: "Risk", id: riskId },
+        organizationId: orgId,
+        properties: { role: "NEEDED", notes: "n2" },
+      });
+      const edges = await graphService.listInEdges({
+        type: "MITIGATES",
+        to: { type: "Risk", id: riskId },
+        organizationId: orgId,
+      });
+      return { first, second, edges };
+    });
+    expect(second.id).toBe(first.id); // same row updated, not duplicated
+    expect(edges).toHaveLength(1);
+    expect(edges[0]!.fromEntityId).toBe(controlId);
+    expect((edges[0]!.properties as { role: string }).role).toBe("NEEDED"); // updated
+  });
+
+  it("rejects a catalog-violating edge", async () => {
+    // Catalog check throws before any DB write, so no org context is needed.
+    await expect(
+      graphService.createEdge({
+        type: "MITIGATES",
+        from: { type: "Risk", id: riskId },
+        to: { type: "Control", id: controlId },
+        organizationId: orgId,
+      }),
+    ).rejects.toThrow(/not allowed/);
+  });
+
+  it("isolates edges by organization", async () => {
+    const otherOrg = randomUUID();
+    const edges = await graphService.listInEdges({
+      type: "MITIGATES",
+      to: { type: "Risk", id: riskId },
+      organizationId: otherOrg,
+    });
+    expect(edges).toHaveLength(0);
+    await db.$executeRaw`DELETE FROM "Node" WHERE "organizationId" = ${otherOrg}`;
   });
 });
