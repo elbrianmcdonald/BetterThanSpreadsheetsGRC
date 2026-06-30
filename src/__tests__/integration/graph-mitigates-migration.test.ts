@@ -134,6 +134,9 @@ describe("MITIGATES migration — organizationalControl router contract", () => 
     expect(forNewRisk.length).toBeGreaterThanOrEqual(1);
     expect((forNewRisk[0]!.properties as { role: string }).role).toBe("IN_PLACE");
 
+    // Let the fire-and-forget recalculateRiskImpact settle before teardown deletes the risk
+    await new Promise((r) => setTimeout(r, 500));
+
     await db.$executeRaw`DELETE FROM "Edge" WHERE "toNodeId" IN (SELECT id FROM "Node" WHERE "entityId" = ${created.id})`;
     await db.$executeRaw`DELETE FROM "Node" WHERE "entityId" = ${created.id}`;
     await db.$executeRaw`DELETE FROM "Risk" WHERE id = ${created.id}`;
