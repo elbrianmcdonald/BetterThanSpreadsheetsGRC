@@ -73,7 +73,8 @@ export async function backfillGraph(): Promise<{ nodes: number; mitigatesEdges: 
 }
 
 // Allow running directly: `tsx prisma/scripts/backfill-graph.ts`
-if (require.main === module) {
+// package.json has "type": "module" so require is undefined — use process.argv[1] for entry-point detection instead.
+if (process.argv[1]?.endsWith("backfill-graph.ts")) {
   backfillGraph()
     .then((res) => {
       console.log(`Backfill complete: ${res.nodes} nodes, ${res.mitigatesEdges} MITIGATES edges`);
