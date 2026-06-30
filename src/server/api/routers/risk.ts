@@ -439,8 +439,21 @@ export const riskRouter = createTRPCRouter({
         }
       }
 
-      // Create MITIGATES edges for in-place / needed controls
+      // Validate control IDs against the caller's org before creating edges.
+      // ctx.db is org-scoped, so findMany automatically excludes foreign/non-existent ids.
+      const requestedControlIds = controlLinks.map((l) => l.organizationalControlId);
+      const validControlIds = new Set(
+        (
+          await ctx.db.organizationalControl.findMany({
+            where: { id: { in: requestedControlIds } },
+            select: { id: true },
+          })
+        ).map((c) => c.id),
+      );
+
+      // Create MITIGATES edges for in-place / needed controls (valid org-owned only)
       for (const link of controlLinks) {
+        if (!validControlIds.has(link.organizationalControlId)) continue;
         await graphService.createEdge({
           type: "MITIGATES",
           from: { type: "Control", id: link.organizationalControlId },
@@ -6098,7 +6111,18 @@ export const riskRouter = createTRPCRouter({
             }
           }
           if (controlLinks.length > 0) {
+            // Validate control IDs against the caller's org inside the transaction.
+            // tx may not carry ambient org context, so filter by organizationId explicitly.
+            const validControlIds = new Set(
+              (
+                await tx.organizationalControl.findMany({
+                  where: { id: { in: controlLinks.map((l) => l.organizationalControlId) }, organizationId },
+                  select: { id: true },
+                })
+              ).map((c) => c.id),
+            );
             for (const link of controlLinks) {
+              if (!validControlIds.has(link.organizationalControlId)) continue;
               await graphService.createEdge(
                 {
                   type: "MITIGATES",

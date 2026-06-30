@@ -92,6 +92,30 @@ describe("MITIGATES migration — organizationalControl router contract", () => 
     await db.$executeRaw`INSERT INTO "OrganizationalControl" (id, "organizationId", "localControlId", name, "createdAt", "updatedAt") VALUES (${controlId}, ${testOrg.id}, 'OC-8001', 'Mit Control', ${now}, ${now})`;
   });
 
+  it("bulkLinkToRisk drops bogus control ids — only creates edge for real org-owned control", async () => {
+    // Clean any leftover edges from prior tests
+    await db.$executeRaw`DELETE FROM "Edge" WHERE "organizationId" = ${testOrg.id} AND type = 'MITIGATES'`;
+
+    const bogusId = randomUUID();
+    await caller().organizationalControl.bulkLinkToRisk({
+      riskId,
+      controlIds: [controlId, bogusId],
+      role: RiskOrgControlRole.IN_PLACE,
+    });
+
+    // Only the real (org-owned) controlId should produce an edge
+    const edgeCount = await db.edge.count({ where: { organizationId: testOrg.id, type: "MITIGATES" } });
+    expect(edgeCount).toBe(1);
+
+    // Verify via getForRisk that exactly 1 inPlace entry exists
+    const grouped = await caller().organizationalControl.getForRisk({ riskId });
+    expect(grouped.inPlace).toHaveLength(1);
+    expect(grouped.inPlace[0]!.OrganizationalControl.id).toBe(controlId);
+
+    // Clean up for subsequent tests
+    await db.$executeRaw`DELETE FROM "Edge" WHERE "organizationId" = ${testOrg.id} AND type = 'MITIGATES'`;
+  });
+
   it("risk.create with controls-in-place creates MITIGATES edges with role IN_PLACE", async () => {
     // Use the same controlId; create a fresh risk through the router so the
     // control-link path runs. Uses risk.create's real input field: controlIdsInPlace.

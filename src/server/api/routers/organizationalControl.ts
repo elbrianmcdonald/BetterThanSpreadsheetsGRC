@@ -1362,7 +1362,7 @@ export const organizationalControlRouter = createTRPCRouter({
     .input(
       z.object({
         riskId: z.string(),
-        controlIds: z.array(z.string()),
+        controlIds: z.array(z.string()).min(1).max(50),
         role: z.nativeEnum(RiskOrgControlRole),
       })
     )
@@ -1376,8 +1376,16 @@ export const organizationalControlRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
       }
 
+      // Validate that all requested control IDs exist and belong to this org.
+      // ctx.db is org-scoped, so findMany automatically filters to the caller's org.
+      const validControls = await ctx.db.organizationalControl.findMany({
+        where: { id: { in: input.controlIds } },
+        select: { id: true },
+      });
+      const validIds = validControls.map((c) => c.id);
+
       // createEdge internally upserts (update if existing, create if new)
-      for (const controlId of input.controlIds) {
+      for (const controlId of validIds) {
         await graphService.createEdge({
           type: "MITIGATES",
           from: { type: "Control", id: controlId },
@@ -1391,6 +1399,8 @@ export const organizationalControlRouter = createTRPCRouter({
       // Preserve legacy return shape { created, updated } for contract stability.
       // Edge-based upsert doesn't distinguish created vs updated, so we report
       // all as created (callers do not inspect this value).
-      return { created: input.controlIds.length, updated: 0 };
+      // skipped covers ids that were invalid (not org-owned) OR already linked.
+      const skipped = input.controlIds.length - validIds.length;
+      return { created: validIds.length, updated: 0, skipped };
     }),
 });

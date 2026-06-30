@@ -1,4 +1,4 @@
-import { db } from "@/server/db";
+import { db, rawPrisma } from "@/server/db";
 import { backfillGraph } from "../../../prisma/scripts/backfill-graph";
 import { randomUUID } from "crypto";
 
@@ -32,8 +32,8 @@ describe("backfillGraph", () => {
   it("creates Control and Risk nodes and is idempotent", async () => {
     const result = await backfillGraph();
 
-    const controlNode = await db.node.findUnique({ where: { type_entityId: { type: "Control", entityId: controlId } } });
-    const riskNode = await db.node.findUnique({ where: { type_entityId: { type: "Risk", entityId: riskId } } });
+    const controlNode = await rawPrisma.node.findUnique({ where: { type_entityId: { type: "Control", entityId: controlId } } });
+    const riskNode = await rawPrisma.node.findUnique({ where: { type_entityId: { type: "Risk", entityId: riskId } } });
     expect(controlNode).not.toBeNull();
     expect(riskNode).not.toBeNull();
 
