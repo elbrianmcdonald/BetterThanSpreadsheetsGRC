@@ -66,4 +66,27 @@ describe("MITIGATES migration — organizationalControl router contract", () => 
     const grouped = await caller().organizationalControl.getForRisk({ riskId });
     expect(grouped.needed).toHaveLength(1);
   });
+
+  it("risk.create with controls-in-place creates MITIGATES edges with role IN_PLACE", async () => {
+    // Use the same controlId; create a fresh risk through the router so the
+    // control-link path runs. Uses risk.create's real input field: controlIdsInPlace.
+    const created = await caller().risk.create({
+      title: `Risk With Controls ${randomUUID()}`,
+      description: "desc",
+      severity: "HIGH",
+      controlIdsInPlace: [controlId],
+    });
+
+    const edges = await db.edge.findMany({
+      where: { organizationId: testOrg.id, type: "MITIGATES" },
+      include: { toNode: { select: { entityId: true } } },
+    });
+    const forNewRisk = edges.filter((e) => e.toNode.entityId === created.id);
+    expect(forNewRisk.length).toBeGreaterThanOrEqual(1);
+    expect((forNewRisk[0]!.properties as { role: string }).role).toBe("IN_PLACE");
+
+    await db.$executeRaw`DELETE FROM "Edge" WHERE "toNodeId" IN (SELECT id FROM "Node" WHERE "entityId" = ${created.id})`;
+    await db.$executeRaw`DELETE FROM "Node" WHERE "entityId" = ${created.id}`;
+    await db.$executeRaw`DELETE FROM "Risk" WHERE id = ${created.id}`;
+  });
 });

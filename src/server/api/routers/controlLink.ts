@@ -29,6 +29,7 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { graphService } from "@/server/graph/graph-service";
 
 /**
  * Roles that can create/update control links (AC23, AC31)
@@ -291,34 +292,18 @@ export const controlLinkRouter = createTRPCRouter({
           select: { id: true },
         });
         if (orgControls.length > 0) {
-          const orgRole =
-            linkType === "MITIGATING" ? "IN_PLACE" : "NEEDED";
-          const existing = await ctx.db.riskOrganizationalControl.findMany({
-            where: {
-              riskId,
-              organizationalControlId: { in: orgControls.map((c) => c.id) },
-            },
-            select: { organizationalControlId: true },
-          });
-          const existingSet = new Set(
-            existing.map((e) => e.organizationalControlId)
-          );
-          const toCreate = orgControls
-            .map((c) => c.id)
-            .filter((id) => !existingSet.has(id));
-          if (toCreate.length > 0) {
-            await ctx.db.riskOrganizationalControl.createMany({
-              data: toCreate.map((organizationalControlId) => ({
-                organizationId: ctx.organizationId!,
-                riskId,
-                organizationalControlId,
-                role: orgRole,
-                createdById: ctx.session!.user.id,
-              })),
-              skipDuplicates: true,
+          const orgRole = linkType === "MITIGATING" ? "IN_PLACE" : "NEEDED";
+          for (const c of orgControls) {
+            await graphService.createEdge({
+              type: "MITIGATES",
+              from: { type: "Control", id: c.id },
+              to: { type: "Risk", id: riskId },
+              organizationId: ctx.organizationId!,
+              properties: { role: orgRole, notes: null },
+              createdById: ctx.session?.user.id ?? null,
             });
-            orgLinkCount = toCreate.length;
           }
+          orgLinkCount = orgControls.length;
         }
       }
 

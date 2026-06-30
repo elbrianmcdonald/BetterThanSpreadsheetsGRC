@@ -84,6 +84,7 @@ import {
 } from "@/lib/matrix/scoring";
 import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 import { recomputeEnterpriseRiskScore } from "@/server/services/enterpriseRiskScore";
+import { graphService } from "@/server/graph/graph-service";
 
 /**
  * Roles that can update risks (Story 4.3 AC29)
@@ -438,11 +439,15 @@ export const riskRouter = createTRPCRouter({
         }
       }
 
-      // Create all control links in one batch
-      if (controlLinks.length > 0) {
-        await ctx.db.riskOrganizationalControl.createMany({
-          data: controlLinks,
-          skipDuplicates: true,
+      // Create MITIGATES edges for in-place / needed controls
+      for (const link of controlLinks) {
+        await graphService.createEdge({
+          type: "MITIGATES",
+          from: { type: "Control", id: link.organizationalControlId },
+          to: { type: "Risk", id: link.riskId },
+          organizationId: link.organizationId,
+          properties: { role: link.role, notes: null },
+          createdById: link.createdById,
         });
       }
 
@@ -6093,16 +6098,19 @@ export const riskRouter = createTRPCRouter({
             }
           }
           if (controlLinks.length > 0) {
-            await tx.riskOrganizationalControl.createMany({
-              data: controlLinks.map((link) => ({
-                riskId: risk.id,
-                organizationalControlId: link.organizationalControlId,
-                organizationId,
-                role: link.role,
-                createdById: userId,
-              })),
-              skipDuplicates: true,
-            });
+            for (const link of controlLinks) {
+              await graphService.createEdge(
+                {
+                  type: "MITIGATES",
+                  from: { type: "Control", id: link.organizationalControlId },
+                  to: { type: "Risk", id: risk.id },
+                  organizationId,
+                  properties: { role: link.role, notes: null },
+                  createdById: userId,
+                },
+                tx, // run inside the same transaction
+              );
+            }
           }
 
           // Per-risk remediation options (from the assessment form editor)
