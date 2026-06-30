@@ -221,10 +221,6 @@ const ALLOWLIST_TABLES = new Set([
   "EngagementSession",
   "EngagementStakeholder",
   "EngagementEvidenceRequest",
-  // Graph foundation — Node may be global (null org) and Edge tenancy is
-  // enforced explicitly by graphService, so both bypass the auto-filter.
-  "Node",
-  "Edge",
 ]);
 
 /**
