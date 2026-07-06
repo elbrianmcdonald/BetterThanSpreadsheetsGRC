@@ -8,10 +8,10 @@
  * Displays finding status with color-coded badges:
  * - NEW = blue (newly created finding awaiting triage)
  * - NEEDS_INFO = yellow (additional information required)
- * - TRIAGED = green (reviewed and ready for acceptance)
+ * - TRIAGED = green (reviewed — link to risks and remediate)
+ * - CLOSED = emerald (remediated/resolved)
  * - DUPLICATE = gray (duplicate of another finding)
  * - REJECTED = red (not a valid security finding)
- * - ACCEPTED = purple (accepted, Risk Assessment created)
  *
  * @see Story 7.3: Finding Triage Workflow
  */
@@ -70,7 +70,16 @@ const STATUS_CONFIG: Record<
     bgColor: "bg-green-100 dark:bg-green-900/30",
     borderColor: "border-green-300 dark:border-green-600",
     icon: CheckCircle,
-    description: "Reviewed and ready for acceptance decision",
+    description: "Reviewed — link to risks and remediate",
+  },
+  // Story 21.4: CLOSED terminal state
+  [FindingStatus.CLOSED]: {
+    label: "Closed",
+    color: "text-emerald-700 dark:text-emerald-300",
+    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+    borderColor: "border-emerald-300 dark:border-emerald-600",
+    icon: CheckCircle2,
+    description: "Remediated or otherwise resolved",
   },
   [FindingStatus.DUPLICATE]: {
     label: "Duplicate",
@@ -87,14 +96,6 @@ const STATUS_CONFIG: Record<
     borderColor: "border-red-300 dark:border-red-600",
     icon: XCircle,
     description: "Not a valid security finding",
-  },
-  [FindingStatus.ACCEPTED]: {
-    label: "Accepted",
-    color: "text-purple-700 dark:text-purple-300",
-    bgColor: "bg-purple-100 dark:bg-purple-900/30",
-    borderColor: "border-purple-300 dark:border-purple-600",
-    icon: CheckCircle2,
-    description: "Accepted - Risk Assessment created",
   },
 };
 

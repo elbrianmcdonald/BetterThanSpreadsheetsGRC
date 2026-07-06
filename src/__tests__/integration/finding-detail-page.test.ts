@@ -11,9 +11,8 @@
  * - AC7-AC12: Finding header data (status, source, severity, locked indicator)
  * - AC13-AC18: Finding details data
  * - AC19-AC22: Actions based on status
- * - AC23-AC30: Inline assessment section data
  *
- * @see Story 7.11: Finding Detail Page with Inline Expansion
+ * @see Story 7.11: Finding Detail Page (inline assessment retired in 23.3)
  */
 
 import { db } from "@/server/db";
@@ -24,7 +23,6 @@ import {
   Severity,
   FindingSource,
   FindingStatus,
-  AssessmentStatus,
 } from "@prisma/client";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 
@@ -52,9 +50,8 @@ let testBusinessUnit: { id: string; name: string };
 // Sample findings for different tests
 let findingNew: { id: string; identifier: string };
 let findingTriaged: { id: string; identifier: string };
-let findingAccepted: { id: string; identifier: string };
+let findingClosed: { id: string; identifier: string };
 let findingRejected: { id: string; identifier: string };
-let assessmentForAcceptedFinding: { id: string; identifier: string };
 
 beforeAll(async () => {
   // Cleanup any residual data from previous failed runs
@@ -182,54 +179,28 @@ beforeAll(async () => {
     });
     findingTriaged = { id: triagedFinding.id, identifier: triagedFinding.identifier };
 
-    // ACCEPTED finding with RiskAssessment
-    const acceptedFinding = await db.finding.create({
+    // CLOSED finding (terminal — Story 23.3 retired ACCEPTED)
+    const closedFinding = await db.finding.create({
       data: {
         id: randomUUID(),
         identifier: "FND-2025-0003",
         organizationId: testOrg.id,
-        title: "Test ACCEPTED Finding",
-        description: "This is an ACCEPTED finding for testing",
+        title: "Test CLOSED Finding",
+        description: "This is a CLOSED finding for testing",
         source: FindingSource.SCANNER,
         severity: Severity.HIGH,
-        status: FindingStatus.ACCEPTED,
+        status: FindingStatus.CLOSED,
         affectedAssets: ["critical-server", "database"],
         createdBy: testUserGRCAnalyst.id,
         triagedBy: testUserGRCAnalyst.id,
         triagedAt: new Date(Date.now() - 86400000),
-        acceptedBy: testUserGRCAnalyst.id,
-        acceptedAt: new Date(),
-        lockedSnapshot: {
-          title: "Test ACCEPTED Finding",
-          description: "This is an ACCEPTED finding for testing",
-          severity: Severity.HIGH,
-          affectedAssets: ["critical-server", "database"],
-          businessUnits: ["Test BU Detail"],
-          source: FindingSource.SCANNER,
-          snapshotAt: new Date().toISOString(),
-        },
+        closedAt: new Date(),
         affectedBusinessUnits: {
           connect: [{ id: testBusinessUnit.id }],
         },
       },
     });
-    findingAccepted = { id: acceptedFinding.id, identifier: acceptedFinding.identifier };
-
-    // Create RiskAssessment for the accepted finding
-    const assessment = await db.riskAssessment.create({
-      data: {
-        id: randomUUID(),
-        identifier: "RSK-2025-0001",
-        organizationId: testOrg.id,
-        findingId: acceptedFinding.id,
-        title: "Risk Assessment for ACCEPTED Finding",
-        context: "Context from finding description",
-        status: AssessmentStatus.DRAFT,
-        affectedSystems: ["critical-server", "database"],
-        createdBy: testUserGRCAnalyst.id,
-      },
-    });
-    assessmentForAcceptedFinding = { id: assessment.id, identifier: assessment.identifier };
+    findingClosed = { id: closedFinding.id, identifier: closedFinding.identifier };
 
     // REJECTED finding
     const rejectedFinding = await db.finding.create({
@@ -364,8 +335,8 @@ describe("Story 7.11: Finding Detail Page", () => {
       const triagedResult = await caller.finding.getById({ id: findingTriaged.id });
       expect(triagedResult.status).toBe(FindingStatus.TRIAGED);
 
-      const acceptedResult = await caller.finding.getById({ id: findingAccepted.id });
-      expect(acceptedResult.status).toBe(FindingStatus.ACCEPTED);
+      const closedResult = await caller.finding.getById({ id: findingClosed.id });
+      expect(closedResult.status).toBe(FindingStatus.CLOSED);
     });
 
     it("AC9: source is included", async () => {
@@ -379,7 +350,7 @@ describe("Story 7.11: Finding Detail Page", () => {
     it("AC10: severity is included", async () => {
       const caller = createCaller(testUserGRCAnalyst);
 
-      const result = await caller.finding.getById({ id: findingAccepted.id });
+      const result = await caller.finding.getById({ id: findingClosed.id });
 
       expect(result.severity).toBe(Severity.HIGH);
     });
@@ -393,23 +364,13 @@ describe("Story 7.11: Finding Detail Page", () => {
       expect(result.createdAt instanceof Date).toBe(true);
     });
 
-    it("AC12: acceptedAt and accepter included for ACCEPTED findings", async () => {
+    it("AC12: closedAt stamped for CLOSED findings (Story 23.3)", async () => {
       const caller = createCaller(testUserGRCAnalyst);
 
-      const result = await caller.finding.getById({ id: findingAccepted.id });
+      const result = await caller.finding.getById({ id: findingClosed.id });
 
-      expect(result.acceptedAt).toBeDefined();
-      expect(result.accepter).toBeDefined();
-      expect(result.accepter?.id).toBe(testUserGRCAnalyst.id);
-    });
-
-    it("AC12: acceptedAt and accepter null for non-ACCEPTED findings", async () => {
-      const caller = createCaller(testUserGRCAnalyst);
-
-      const result = await caller.finding.getById({ id: findingTriaged.id });
-
-      expect(result.acceptedAt).toBeNull();
-      expect(result.accepter).toBeNull();
+      expect(result.closedAt).toBeDefined();
+      expect(result.closedAt).not.toBeNull();
     });
   });
 
@@ -417,23 +378,23 @@ describe("Story 7.11: Finding Detail Page", () => {
     it("AC13: title is included", async () => {
       const caller = createCaller(testUserGRCAnalyst);
 
-      const result = await caller.finding.getById({ id: findingAccepted.id });
+      const result = await caller.finding.getById({ id: findingClosed.id });
 
-      expect(result.title).toBe("Test ACCEPTED Finding");
+      expect(result.title).toBe("Test CLOSED Finding");
     });
 
     it("AC14: description is included", async () => {
       const caller = createCaller(testUserGRCAnalyst);
 
-      const result = await caller.finding.getById({ id: findingAccepted.id });
+      const result = await caller.finding.getById({ id: findingClosed.id });
 
-      expect(result.description).toBe("This is an ACCEPTED finding for testing");
+      expect(result.description).toBe("This is a CLOSED finding for testing");
     });
 
     it("AC15: affectedAssets list is included", async () => {
       const caller = createCaller(testUserGRCAnalyst);
 
-      const result = await caller.finding.getById({ id: findingAccepted.id });
+      const result = await caller.finding.getById({ id: findingClosed.id });
 
       expect(result.affectedAssets).toBeDefined();
       expect(result.affectedAssets).toContain("critical-server");
@@ -462,24 +423,23 @@ describe("Story 7.11: Finding Detail Page", () => {
       // Status allows triage transition
     });
 
-    it("TRIAGED findings can be accepted", async () => {
+    it("TRIAGED findings can be closed", async () => {
       const caller = createCaller(testUserGRCAnalyst);
 
       const result = await caller.finding.getById({ id: findingTriaged.id });
 
       expect(result.status).toBe(FindingStatus.TRIAGED);
       expect(result.triagedBy).toBeDefined();
-      // Status allows accept transition
+      // Status allows the close transition
     });
 
-    it("ACCEPTED findings include accepter info for lock indicator", async () => {
+    it("CLOSED findings are terminal", async () => {
       const caller = createCaller(testUserGRCAnalyst);
 
-      const result = await caller.finding.getById({ id: findingAccepted.id });
+      const result = await caller.finding.getById({ id: findingClosed.id });
 
-      expect(result.status).toBe(FindingStatus.ACCEPTED);
-      expect(result.accepter).toBeDefined();
-      expect(result.acceptedAt).toBeDefined();
+      expect(result.status).toBe(FindingStatus.CLOSED);
+      expect(result.closedAt).toBeDefined();
     });
 
     it("REJECTED findings include rejection info", async () => {
@@ -488,69 +448,6 @@ describe("Story 7.11: Finding Detail Page", () => {
       const result = await caller.finding.getById({ id: findingRejected.id });
 
       expect(result.status).toBe(FindingStatus.REJECTED);
-    });
-  });
-
-  describe("AC23-AC30: Inline Assessment Section Data", () => {
-    it("AC23: riskAssessment included for ACCEPTED findings", async () => {
-      const caller = createCaller(testUserGRCAnalyst);
-
-      const result = await caller.finding.getById({ id: findingAccepted.id });
-
-      expect(result.riskAssessment).toBeDefined();
-      expect(result.riskAssessment).not.toBeNull();
-    });
-
-    it("AC23: riskAssessment null for non-ACCEPTED findings", async () => {
-      const caller = createCaller(testUserGRCAnalyst);
-
-      const triagedResult = await caller.finding.getById({ id: findingTriaged.id });
-      expect(triagedResult.riskAssessment).toBeNull();
-
-      const newResult = await caller.finding.getById({ id: findingNew.id });
-      expect(newResult.riskAssessment).toBeNull();
-    });
-
-    it("AC25: assessment identifier is included", async () => {
-      const caller = createCaller(testUserGRCAnalyst);
-
-      const result = await caller.finding.getById({ id: findingAccepted.id });
-
-      expect(result.riskAssessment?.identifier).toBe("RSK-2025-0001");
-    });
-
-    it("AC25: assessment status is included", async () => {
-      const caller = createCaller(testUserGRCAnalyst);
-
-      const result = await caller.finding.getById({ id: findingAccepted.id });
-
-      expect(result.riskAssessment?.status).toBe(AssessmentStatus.DRAFT);
-    });
-
-    it("assessment title and context are included", async () => {
-      const caller = createCaller(testUserGRCAnalyst);
-
-      const result = await caller.finding.getById({ id: findingAccepted.id });
-
-      expect(result.riskAssessment?.title).toBe("Risk Assessment for ACCEPTED Finding");
-      expect(result.riskAssessment?.context).toBe("Context from finding description");
-    });
-
-    it("assessment affectedSystems are included", async () => {
-      const caller = createCaller(testUserGRCAnalyst);
-
-      const result = await caller.finding.getById({ id: findingAccepted.id });
-
-      expect(result.riskAssessment?.affectedSystems).toBeDefined();
-      expect(result.riskAssessment?.affectedSystems).toContain("critical-server");
-    });
-
-    it("assessment createdAt is included", async () => {
-      const caller = createCaller(testUserGRCAnalyst);
-
-      const result = await caller.finding.getById({ id: findingAccepted.id });
-
-      expect(result.riskAssessment?.createdAt).toBeDefined();
     });
   });
 
@@ -563,7 +460,7 @@ describe("Story 7.11: Finding Detail Page", () => {
       ).rejects.toThrow("Finding not found");
 
       await expect(
-        caller.finding.getById({ id: findingAccepted.id })
+        caller.finding.getById({ id: findingClosed.id })
       ).rejects.toThrow("Finding not found");
     });
 
@@ -576,8 +473,8 @@ describe("Story 7.11: Finding Detail Page", () => {
       const triagedResult = await caller.finding.getById({ id: findingTriaged.id });
       expect(triagedResult.id).toBe(findingTriaged.id);
 
-      const acceptedResult = await caller.finding.getById({ id: findingAccepted.id });
-      expect(acceptedResult.id).toBe(findingAccepted.id);
+      const acceptedResult = await caller.finding.getById({ id: findingClosed.id });
+      expect(acceptedResult.id).toBe(findingClosed.id);
     });
   });
 

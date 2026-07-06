@@ -169,12 +169,15 @@ describe("Story 17.5: getRoadmapDeliverableData isolation", () => {
           description: "Org A risk",
           severity: Severity.HIGH,
           status: RiskStatus.OPEN,
-          spawnedFromFindingId: finding.id,
           inherentLikelihood: 4,
           inherentImpact: 5,
           inherentScore: 20,
           updatedAt: new Date(),
         },
+      });
+      // Story 23.3: the source finding attaches via RiskFindingLink.
+      await db.riskFindingLink.create({
+        data: { riskId: risk.id, findingId: finding.id },
       });
       await db.remediationOption.create({
         data: {

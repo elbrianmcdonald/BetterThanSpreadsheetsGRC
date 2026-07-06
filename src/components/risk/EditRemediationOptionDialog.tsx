@@ -150,8 +150,12 @@ export function EditRemediationOptionDialog({
     onSuccess: () => {
       toast.success("Remediation option updated successfully");
       onOpenChange(false);
-      void utils.risk.listRemediationOptions.invalidate({ riskId: option.riskId });
-      void utils.risk.getById.invalidate({ id: option.riskId });
+      // riskId is null for finding-attached options (Story 20.1) — only
+      // invalidate the risk caches when this option belongs to a risk.
+      if (option.riskId) {
+        void utils.risk.listRemediationOptions.invalidate({ riskId: option.riskId });
+        void utils.risk.getById.invalidate({ id: option.riskId });
+      }
       onSuccess?.();
     },
     onError: (error) => {

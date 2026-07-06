@@ -178,14 +178,6 @@ export const riskAssessmentRouter = createTRPCRouter({
           businessUnit: { select: { id: true, name: true, code: true } },
           performedBy: { select: { id: true, name: true, email: true } },
           scenarios: { select: { id: true, description: true } },
-          finding: {
-            select: {
-              id: true,
-              identifier: true,
-              title: true,
-              status: true,
-            },
-          },
           // Story 7.9: Include risk register entry for approved assessments
           riskRegisterEntry: {
             select: {
@@ -204,11 +196,21 @@ export const riskAssessmentRouter = createTRPCRouter({
         });
       }
 
+      // Story 23.3: the assessment→finding relation is gone; stitch the
+      // source finding for legacy rows via the historical pointer.
+      const sourceFinding = assessment.findingId
+        ? await ctx.db.finding.findFirst({
+            where: { id: assessment.findingId, organizationId },
+            select: { id: true, identifier: true, title: true, status: true },
+          })
+        : null;
+
       // Calculate approval gates (AC21)
       const approvalGates = checkApprovalGates(assessment);
 
       return {
         ...assessment,
+        finding: sourceFinding,
         // Convert Decimal to number for JSON serialization
         likelihoodValue: assessment.likelihoodValue
           ? Number(assessment.likelihoodValue)
@@ -1281,12 +1283,7 @@ export const riskAssessmentRouter = createTRPCRouter({
             identifier: true,
             title: true,
             updatedAt: true,
-            finding: {
-              select: {
-                id: true,
-                identifier: true,
-              },
-            },
+            findingId: true,
             owner: {
               select: {
                 id: true,
@@ -1298,6 +1295,22 @@ export const riskAssessmentRouter = createTRPCRouter({
         }),
       ]);
 
-      return { count, items };
+      // Story 23.3: stitch source-finding identifiers for legacy rows.
+      const findingIds = items
+        .map((i) => i.findingId)
+        .filter((id): id is string => Boolean(id));
+      const findings = findingIds.length
+        ? await ctx.db.finding.findMany({
+            where: { id: { in: findingIds }, organizationId },
+            select: { id: true, identifier: true },
+          })
+        : [];
+      const findingById = new Map(findings.map((f) => [f.id, f]));
+      const itemsWithFinding = items.map((i) => ({
+        ...i,
+        finding: i.findingId ? findingById.get(i.findingId) ?? null : null,
+      }));
+
+      return { count, items: itemsWithFinding };
     }),
 });

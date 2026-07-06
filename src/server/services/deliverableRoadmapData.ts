@@ -166,9 +166,11 @@ export function computeRoadmapScorecard(actions: RoadmapAction[]): ScorecardCell
 
 /**
  * Org-scoped fetch + map for the roadmap body. Reads `RemediationOption` joined
- * to its `Owner` (Person) and parent `Risk` (with the Risk's source Finding via
- * the `SpawnedFromFinding` relation). Each option maps to a {@link RoadmapAction};
- * `remediates` is the source Finding as a `FindingLike` when present, else [].
+ * to its `Owner` (Person), its own `Finding` (finding-owned options, Story
+ * 20.1), and parent `Risk` (whose source finding is the oldest RiskFindingLink
+ * — Story 23.3 retired the spawn relation). Each option maps to a
+ * {@link RoadmapAction}; `remediates` is the source Finding as a `FindingLike`
+ * when present, else [].
  */
 export async function getRoadmapDeliverableData(
   organizationId: string,
@@ -178,13 +180,22 @@ export async function getRoadmapDeliverableData(
     where: { organizationId },
     include: {
       Owner: true,
-      Risk: { include: { SpawnedFromFinding: true } },
+      Finding: true,
+      Risk: {
+        include: {
+          findingLinks: {
+            orderBy: { createdAt: "asc" },
+            take: 1,
+            include: { finding: true },
+          },
+        },
+      },
     },
   });
 
   const actions: RoadmapAction[] = options.map((opt) => {
     const risk = opt.Risk;
-    const finding = risk?.SpawnedFromFinding ?? null;
+    const finding = opt.Finding ?? risk?.findingLinks[0]?.finding ?? null;
 
     // L×I for the remediated finding's severity dot comes from the parent Risk's
     // inherent likelihood/impact, defaulting to 3×3 when unscored.

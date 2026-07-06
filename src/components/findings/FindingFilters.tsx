@@ -13,9 +13,11 @@
  * - Clear filters button
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { FindingSource, FindingStatus, Severity } from "@prisma/client";
 import { Search, X, Filter } from "lucide-react";
+
+import { api } from "@/trpc/react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,8 @@ export interface FindingFilterState {
   status: FindingStatus[];
   source: FindingSource[];
   severity: Severity[];
+  /** Story 20.3: matrix-anchored severity labels (e.g. "Critical") */
+  severityLabel: string[];
   search: string;
 }
 
@@ -48,7 +52,7 @@ const STATUS_OPTIONS: { value: FindingStatus; label: string }[] = [
   { value: FindingStatus.NEW, label: "New" },
   { value: FindingStatus.NEEDS_INFO, label: "Needs Info" },
   { value: FindingStatus.TRIAGED, label: "Triaged" },
-  { value: FindingStatus.ACCEPTED, label: "Accepted" },
+  { value: FindingStatus.CLOSED, label: "Closed" },
   { value: FindingStatus.DUPLICATE, label: "Duplicate" },
   { value: FindingStatus.REJECTED, label: "Rejected" },
 ];
@@ -62,6 +66,7 @@ const SOURCE_OPTIONS: { value: FindingSource; label: string }[] = [
   { value: FindingSource.PENTEST, label: "Pentest" },
   { value: FindingSource.SCANNER, label: "Scanner" },
   { value: FindingSource.INCIDENT, label: "Incident" },
+  { value: FindingSource.RISK_ASSESSMENT, label: "Risk Assessment" },
   { value: FindingSource.MANUAL, label: "Manual" },
 ];
 
@@ -195,12 +200,27 @@ export function FindingFilters({
     [filters, onFiltersChange]
   );
 
+  const handleSeverityLabelChange = useCallback(
+    (severityLabel: string[]) => {
+      onFiltersChange({ ...filters, severityLabel });
+    },
+    [filters, onFiltersChange]
+  );
+
+  // Story 20.3: matrix labels present in the org's findings
+  const { data: severityLabels } = api.finding.listSeverityLabels.useQuery();
+  const severityLabelOptions = useMemo(
+    () => (severityLabels ?? []).map((label) => ({ value: label, label })),
+    [severityLabels]
+  );
+
   const handleClearAll = () => {
     setSearchInput("");
     onFiltersChange({
       status: [],
       source: [],
       severity: [],
+      severityLabel: [],
       search: "",
     });
   };
@@ -209,6 +229,7 @@ export function FindingFilters({
     filters.status.length > 0 ||
     filters.source.length > 0 ||
     filters.severity.length > 0 ||
+    filters.severityLabel.length > 0 ||
     filters.search.length > 0;
 
   return (
@@ -248,6 +269,17 @@ export function FindingFilters({
         onChange={handleSeverityChange}
       />
 
+      {/* Matrix severity label filter (Story 20.3) — only shown when the org
+          has matrix-scored findings */}
+      {severityLabelOptions.length > 0 && (
+        <MultiSelectFilter
+          label="Matrix Severity"
+          options={severityLabelOptions}
+          selected={filters.severityLabel}
+          onChange={handleSeverityLabelChange}
+        />
+      )}
+
       {/* Clear filters button (AC18) */}
       {hasActiveFilters && (
         <Button
@@ -271,5 +303,6 @@ export const DEFAULT_FILTERS: FindingFilterState = {
   status: [],
   source: [],
   severity: [],
+  severityLabel: [],
   search: "",
 };

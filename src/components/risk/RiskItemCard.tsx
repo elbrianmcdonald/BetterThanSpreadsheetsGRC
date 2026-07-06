@@ -80,6 +80,14 @@ interface RiskItemCardProps {
   matrixScales: MatrixScales | null;
   matrixThresholds: Threshold[];
   is3DMatrix: boolean;
+  /**
+   * Story 20.1 follow-up: "finding" renders the same card for capturing a
+   * Finding — labels say Finding/Description, the Enterprise Risk picker is
+   * replaced by a link-to-register-risks picker (`linkedRiskIds`), and the
+   * Treatment (Remediate/Accept) section is omitted because acceptance
+   * attaches to the Risk, never the finding.
+   */
+  variant?: "risk" | "finding";
 }
 
 // ============================================================================
@@ -96,7 +104,10 @@ export function RiskItemCard({
   matrixScales,
   matrixThresholds,
   is3DMatrix,
+  variant = "risk",
 }: RiskItemCardProps) {
+  const isFinding = variant === "finding";
+  const hideTreatment = isFinding;
   // MITRE picker state
   const [showInitialAccessPicker, setShowInitialAccessPicker] = useState(false);
   const [showThreatStepPicker, setShowThreatStepPicker] = useState(false);
@@ -120,8 +131,15 @@ export function RiskItemCard({
   // Fetch control domain taxonomy for risk category
   const { data: controlDomains } = api.controlDomain.listAll.useQuery();
 
-  // Enterprise risks for the alignment picker
-  const { data: enterpriseRisks } = api.enterpriseRisk.list.useQuery();
+  // Enterprise risks for the alignment picker (risk variant only)
+  const { data: enterpriseRisks } = api.enterpriseRisk.list.useQuery(undefined, {
+    enabled: !isFinding,
+  });
+
+  // Register risks for the link picker (finding variant only)
+  const { data: pickerRisks } = api.risk.listForPicker.useQuery(undefined, {
+    enabled: isFinding,
+  });
 
   // Calculate inherent score for display
   const inherentScore = useMemo(() => {
@@ -148,11 +166,11 @@ export function RiskItemCard({
 
   // Truncate risk statement for collapsed view
   const truncatedStatement = useMemo(() => {
-    if (!riskStatement) return "No risk statement";
+    if (!riskStatement) return isFinding ? "No description" : "No risk statement";
     return riskStatement.length > 80
       ? riskStatement.substring(0, 80) + "..."
       : riskStatement;
-  }, [riskStatement]);
+  }, [riskStatement, isFinding]);
 
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
@@ -170,7 +188,7 @@ export function RiskItemCard({
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium">
-                      Risk {index + 1}
+                      {isFinding ? "Finding" : `Risk ${index + 1}`}
                       {title ? `: ${title}` : ""}
                     </span>
                     {inherentSeverity && (
@@ -229,10 +247,14 @@ export function RiskItemCard({
                 name={`risks.${index}.title`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Risk Title *</FormLabel>
+                    <FormLabel>{isFinding ? "Finding Title *" : "Risk Title *"}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Short, specific risk label..."
+                        placeholder={
+                          isFinding
+                            ? "Short, specific finding label..."
+                            : "Short, specific risk label..."
+                        }
                         maxLength={200}
                         {...field}
                       />
@@ -247,7 +269,7 @@ export function RiskItemCard({
                 name={`risks.${index}.controlDomainId`}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Risk Category</FormLabel>
+                    <FormLabel>{isFinding ? "Finding Category" : "Risk Category"}</FormLabel>
                     <Select
                       value={field.value ?? "__none__"}
                       onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
@@ -277,16 +299,20 @@ export function RiskItemCard({
               />
             </div>
 
-            {/* Risk Statement */}
+            {/* Risk Statement / Description */}
             <FormField
               control={control}
               name={`risks.${index}.riskStatement`}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Risk Statement *</FormLabel>
+                  <FormLabel>{isFinding ? "Description *" : "Risk Statement *"}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Describe the risk in detail. Include what could happen, why it matters, and the potential consequences..."
+                      placeholder={
+                        isFinding
+                          ? "Describe the finding in detail. Include what was observed, why it matters, and the potential consequences..."
+                          : "Describe the risk in detail. Include what could happen, why it matters, and the potential consequences..."
+                      }
                       className="min-h-[100px]"
                       {...field}
                     />
@@ -296,38 +322,115 @@ export function RiskItemCard({
               )}
             />
 
-            {/* Enterprise Risk alignment */}
-            <FormField
-              control={control}
-              name={`risks.${index}.enterpriseRiskId`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Enterprise Risk</FormLabel>
-                  <Select
-                    value={field.value ?? "__none__"}
-                    onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Not aligned to an enterprise risk" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="__none__">Not aligned</SelectItem>
-                      {enterpriseRisks?.map((er) => (
-                        <SelectItem key={er.id} value={er.id}>
-                          {er.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Optional roll-up parent. Used for executive-level reporting.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {isFinding ? (
+              /* Link to register risks (RiskFindingLink M:N) — replaces the
+                 Enterprise Risk picker on the finding variant. */
+              <FormField
+                control={control}
+                name={`risks.${index}.linkedRiskIds`}
+                render={({ field }) => {
+                  const ids: string[] = field.value ?? [];
+                  const available = (pickerRisks ?? []).filter((r) => !ids.includes(r.id));
+                  return (
+                    <FormItem>
+                      <FormLabel>Linked Risks</FormLabel>
+                      <FormDescription>
+                        Link this finding to one or more risks from the risk register.
+                      </FormDescription>
+                      <div className="space-y-2">
+                        {ids.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {ids.map((riskId) => {
+                              const risk = pickerRisks?.find((r) => r.id === riskId);
+                              return (
+                                <Badge key={riskId} variant="secondary" className="gap-1 pr-1">
+                                  <span>
+                                    {risk ? `${risk.identifier ?? ""} ${risk.title}`.trim() : riskId}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    aria-label="Remove linked risk"
+                                    className="ml-1 rounded-sm hover:bg-muted p-0.5"
+                                    onClick={() =>
+                                      field.onChange(ids.filter((id) => id !== riskId))
+                                    }
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              );
+                            })}
+                          </div>
+                        )}
+                        <Select
+                          value="__placeholder__"
+                          onValueChange={(v) => {
+                            if (v !== "__placeholder__") field.onChange([...ids, v]);
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Link a risk..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="__placeholder__" className="hidden">
+                              Link a risk...
+                            </SelectItem>
+                            {available.length === 0 ? (
+                              <SelectItem value="__empty__" disabled>
+                                No more risks to link
+                              </SelectItem>
+                            ) : (
+                              available.map((r) => (
+                                <SelectItem key={r.id} value={r.id}>
+                                  {r.identifier ? `${r.identifier} — ` : ""}
+                                  {r.title}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
+              />
+            ) : (
+              /* Enterprise Risk alignment (risk variant) */
+              <FormField
+                control={control}
+                name={`risks.${index}.enterpriseRiskId`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enterprise Risk</FormLabel>
+                    <Select
+                      value={field.value ?? "__none__"}
+                      onValueChange={(v) => field.onChange(v === "__none__" ? null : v)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Not aligned to an enterprise risk" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="__none__">Not aligned</SelectItem>
+                        {enterpriseRisks?.map((er) => (
+                          <SelectItem key={er.id} value={er.id}>
+                            {er.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Optional roll-up parent. Used for executive-level reporting.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* MITRE ATT&CK Section */}
             <div className="space-y-4">
@@ -580,9 +683,42 @@ export function RiskItemCard({
 
             {/* Severity Scoring Section */}
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-4 w-4 text-purple-500" />
-                <h4 className="font-medium">Severity Scoring</h4>
+              {/* Header row: the "eliminated" toggle sits inline with the
+                  section heading so the inherent and residual calculators
+                  start at the same height (no column offset). */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-4 w-4 text-purple-500" />
+                  <h4 className="font-medium">Severity Scoring</h4>
+                </div>
+                <FormField
+                  control={control}
+                  name={`risks.${index}.residualEliminated`}
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={field.value ?? false}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                        />
+                      </FormControl>
+                      <FormLabel
+                        className="cursor-pointer font-normal text-sm text-muted-foreground"
+                        title={
+                          isFinding
+                            ? "Controls fully remove this finding — no residual score required."
+                            : "Controls fully remove this risk — no residual score required."
+                        }
+                      >
+                        {isFinding
+                          ? "Finding eliminated"
+                          : "Risk eliminated — controls fully remove this risk"}
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -600,50 +736,24 @@ export function RiskItemCard({
                 />
 
                 {/* Residual Severity */}
-                <div className="space-y-3">
-                  <FormField
+                {residualEliminated ? (
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 self-start">
+                    Residual severity is marked <strong>Eliminated</strong>. Likelihood,
+                    impact, and exposure fields are disabled.
+                  </div>
+                ) : (
+                  <SeverityCalculator
+                    title="Residual Severity"
+                    description="Risk severity after controls are applied"
                     control={control}
-                    name={`risks.${index}.residualEliminated`}
-                    render={({ field }) => (
-                      <FormItem className="flex items-start gap-2 space-y-0 rounded-md border p-3 bg-muted/30">
-                        <FormControl>
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 mt-0.5"
-                            checked={field.value ?? false}
-                            onChange={(e) => field.onChange(e.target.checked)}
-                          />
-                        </FormControl>
-                        <div className="space-y-1">
-                          <FormLabel className="cursor-pointer">
-                            Risk eliminated
-                          </FormLabel>
-                          <FormDescription>
-                            Controls fully remove this risk — no residual score required.
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
+                    likelihoodName={`risks.${index}.residualLikelihood`}
+                    impactName={`risks.${index}.residualImpact`}
+                    exposureName={`risks.${index}.residualExposure`}
+                    scales={matrixScales}
+                    thresholds={matrixThresholds}
+                    is3DMatrix={is3DMatrix}
                   />
-                  {residualEliminated ? (
-                    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-                      Residual severity is marked <strong>Eliminated</strong>. Likelihood,
-                      impact, and exposure fields are disabled.
-                    </div>
-                  ) : (
-                    <SeverityCalculator
-                      title="Residual Severity"
-                      description="Risk severity after controls are applied"
-                      control={control}
-                      likelihoodName={`risks.${index}.residualLikelihood`}
-                      impactName={`risks.${index}.residualImpact`}
-                      exposureName={`risks.${index}.residualExposure`}
-                      scales={matrixScales}
-                      thresholds={matrixThresholds}
-                      is3DMatrix={is3DMatrix}
-                    />
-                  )}
-                </div>
+                )}
               </div>
             </div>
 
@@ -657,12 +767,15 @@ export function RiskItemCard({
                 <h4 className="font-medium">Remediation Options</h4>
               </div>
               <p className="text-xs text-muted-foreground">
-                Document the treatment alternatives evaluated for this specific risk.
-                Each option is saved against the risk and available on its detail page.
+                {isFinding
+                  ? "Document the treatment alternatives evaluated for this finding. Each option is saved against the finding and available on its detail page."
+                  : "Document the treatment alternatives evaluated for this specific risk. Each option is saved against the risk and available on its detail page."}
               </p>
               <RemediationOptionsEditor control={control} index={index} />
             </div>
 
+            {!hideTreatment && (
+              <>
             <Separator />
 
             {/* Treatment Section */}
@@ -869,6 +982,8 @@ export function RiskItemCard({
                 </div>
               )}
             </div>
+              </>
+            )}
 
             <Separator />
 

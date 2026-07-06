@@ -387,10 +387,11 @@ describe("Approval Gates (Story 7.9)", () => {
 
     it("AC34: Finding should remain unaffected by assessment rejection", () => {
       // Rejection only affects assessment status, not finding
-      const finding = { status: "ACCEPTED" };
+      // (Story 23.3: FindingStatus.ACCEPTED retired — TRIAGED stands in)
+      const finding = { status: "TRIAGED" };
       const assessment = { status: AssessmentStatus.REJECTED };
 
-      expect(finding.status).toBe("ACCEPTED");
+      expect(finding.status).toBe("TRIAGED");
       expect(assessment.status).toBe(AssessmentStatus.REJECTED);
     });
   });

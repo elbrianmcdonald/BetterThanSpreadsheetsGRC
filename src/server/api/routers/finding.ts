@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Finding Router
  *
  * tRPC router for finding management operations including creation and triage.
@@ -16,7 +16,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { UserRole, FindingSource, Severity, AuditAction, FindingStatus, AssessmentStatus, AssessmentProjectStatus, RiskDiscoveryStatus, Prisma } from "@prisma/client";
+import { UserRole, FindingSource, Severity, AuditAction, FindingStatus, AssessmentStatus, AssessmentProjectStatus, RiskDiscoveryStatus, RiskOrgControlRole, Prisma } from "@prisma/client";
 
 import {
   createTRPCRouter,
@@ -25,17 +25,22 @@ import {
 } from "@/server/api/trpc";
 import { generateIdentifier } from "@/server/services/identifierService";
 import { createAuditLog } from "@/server/services/audit-log.service";
-import { assertFindingTransition } from "@/server/services/findingStateMachine";
+import {
+  recomputeRiskScore,
+  recomputeRiskScoresForFinding,
+} from "@/server/services/riskScore";
+import {
+  assertFindingTransition,
+  isTerminalFindingStatus,
+} from "@/server/services/findingStateMachine";
 import {
   formatFindingsForCSV,
   generateFindingsExportFilename,
   type FindingExportData,
 } from "@/lib/csvFormatter";
-import {
-  calculateInherentScore,
-  isScoreResult,
-} from "@/lib/matrix/scoring";
-import type { MatrixScales, Threshold } from "@/lib/matrix/types";
+// Story 22.2: matrix scoring extracted to a shared service (used by both the
+// finding router and the risk manual-override mutation).
+import { computeMatrixScoring as computeFindingMatrixScoring } from "@/server/services/matrixScoring";
 
 /**
  * Roles that can create findings (Story 7.2 AC29)
@@ -75,19 +80,58 @@ const createFindingInput = z.object({
     .min(20, "Description must be at least 20 characters"),
   source: z.nativeEnum(FindingSource),
   severity: z.nativeEnum(Severity),
-  // Matrix-anchored severity — when the create UI pulled options from the
+  // Matrix-anchored severity â€” when the create UI pulled options from the
   // org's risk matrix, it passes the threshold label and the version it came
   // from so findings and risks share the same qualitative vocabulary.
   severityLabel: z.string().max(50).optional(),
   matrixVersionId: z.string().optional(),
-  // Matrix-based L×I(×E) scoring. When likelihood + impact are supplied, the
+  // Matrix-based LÃ—I(Ã—E) scoring. When likelihood + impact are supplied, the
   // server computes the authoritative inherent score (and derives severity +
-  // severityLabel) against the matrix version's scales/thresholds — the
+  // severityLabel) against the matrix version's scales/thresholds â€” the
   // client-sent severity/severityLabel are ignored in that path so the score
   // can't be spoofed.
   likelihood: z.number().positive().optional(),
   impact: z.number().positive().optional(),
   exposure: z.number().positive().optional(),
+  // Story 20.1 follow-up: finding-context documentation (ported from the
+  // risks/new form). Flow straight through to the Finding columns.
+  cveId: z.string().max(50, "CVE ID must be less than 50 characters").optional(),
+  discoveryDate: z.date().optional(),
+  technicalDetails: z
+    .string()
+    .max(10000, "Technical details must be less than 10,000 characters")
+    .optional(),
+  // Story 20.1 follow-up: identified-risk-card parity â€” findings capture the
+  // full risk-item block (minus treatment, which stays on the Risk per the
+  // acceptance-at-risk-level model).
+  controlDomainId: z.string().optional().nullable(),
+  enterpriseRiskId: z.string().optional().nullable(),
+  // Link to existing register risks at creation (RiskFindingLink M:N).
+  linkedRiskIds: z.array(z.string()).optional().default([]),
+  initialAccessVectorId: z.string().optional().nullable(),
+  threatStepIds: z.array(z.string()).optional().default([]),
+  threatObjectiveIds: z.array(z.string()).optional().default([]),
+  mitigatingControlIds: z.array(z.string()).optional().default([]),
+  controlGapIds: z.array(z.string()).optional().default([]),
+  residualLikelihood: z.number().positive().optional().nullable(),
+  residualImpact: z.number().positive().optional().nullable(),
+  residualExposure: z.number().positive().optional().nullable(),
+  residualEliminated: z.boolean().optional().default(false),
+  remediationOptions: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(200),
+        description: z.string().min(1),
+        approach: z.string().min(1),
+        costEstimate: z.number().min(0),
+        timelineEstimate: z.string().min(1).max(100),
+        effortLevel: z.enum(["LOW", "MEDIUM", "HIGH", "VERY_HIGH"]),
+        priority: z.enum(["RECOMMENDED", "ALTERNATIVE", "NOT_RECOMMENDED"]),
+        ownerId: z.string().optional().nullable(),
+      })
+    )
+    .optional()
+    .default([]),
   affectedAssets: z.array(z.string()).optional().default([]),
   affectedBusinessUnitIds: z.array(z.string()).optional().default([]),
   assigneeId: z.string().optional(),
@@ -98,26 +142,13 @@ const createFindingInput = z.object({
   complianceAssessmentId: z.string().optional(),
   maturityAssessmentId: z.string().optional(),
   maturityDomainId: z.string().optional(),
-  // Risk Assessment Project linkage — findings discovered during an assessment.
+  // Risk Assessment Project linkage â€” findings discovered during an assessment.
   // When set, the finding is created PENDING and published on assessment approval.
   discoveryProjectId: z.string().min(1).optional(),
   // Source questionnaire question (when spawned from a question card).
   sourceRiskAssessmentQuestionId: z.string().optional(),
 });
 
-/**
- * Map a matrix threshold label to the coarse Severity enum (mirrors risk.ts).
- * Critical/High → HIGH, Low → LOW, everything else → MEDIUM. Keeps the legacy
- * severity filters/badges working while the qualitative label is preserved in
- * severityLabel.
- */
-function severityFromLabel(label: string | null): Severity {
-  if (!label) return Severity.MEDIUM;
-  const upper = label.toUpperCase();
-  if (upper === "CRITICAL" || upper === "HIGH") return Severity.HIGH;
-  if (upper === "LOW") return Severity.LOW;
-  return Severity.MEDIUM;
-}
 
 /**
  * Transition Finding Input Schema (Story 7.3 AC7)
@@ -148,9 +179,14 @@ const listFindingInput = z.object({
   status: z.array(z.nativeEnum(FindingStatus)).optional(),
   source: z.array(z.nativeEnum(FindingSource)).optional(),
   severity: z.array(z.nativeEnum(Severity)).optional(),
+  // Story 20.3: matrix-anchored severity label filter (e.g. "Critical")
+  severityLabel: z.array(z.string()).optional(),
   search: z.string().optional(),
-  // Sorting (AC19-AC21)
-  sortBy: z.enum(["identifier", "title", "severity", "status", "createdAt"]).optional().default("createdAt"),
+  // Sorting (AC19-AC21; Story 20.3 adds inherentScore)
+  sortBy: z
+    .enum(["identifier", "title", "severity", "status", "createdAt", "inherentScore"])
+    .optional()
+    .default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
   // Pagination (AC22-AC25)
   limit: z.number().min(1).max(100).optional().default(25),
@@ -162,11 +198,9 @@ export const findingRouter = createTRPCRouter({
    * Get a finding by ID with all related data
    *
    * Story 7.11: Finding Detail Page
-   * AC1-AC6: Page fetches finding with related assessment
-   * Returns finding with:
-   * - Creator, assignee, triager, accepter info
-   * - Affected business units
-   * - Risk assessment (if status = ACCEPTED)
+   * Returns finding with creator/assignee/triager info, affected business
+   * units, and linked register risks (the legacy 1:1 risk assessment spine
+   * retired in Story 23.3).
    */
   getById: organizationProcedure
     .input(z.object({ id: z.string() }))
@@ -182,16 +216,29 @@ export const findingRouter = createTRPCRouter({
           creator: { select: { id: true, name: true, email: true } },
           assignee: { select: { id: true, name: true, email: true } },
           triager: { select: { id: true, name: true, email: true } },
-          accepter: { select: { id: true, name: true, email: true } },
           affectedBusinessUnits: { select: { id: true, name: true } },
           duplicateOf: { select: { id: true, identifier: true, title: true } },
-          riskAssessment: {
-            include: {
-              owner: { select: { id: true, name: true, email: true } },
-              scenarios: { select: { id: true, description: true } },
-              // Story 7.9: Include approval info for AssessmentActions
-              riskRegisterEntry: { select: { id: true, identifier: true, status: true } },
+          // Story 21.2: linked register risks (RiskFindingLink M:N)
+          riskLinks: {
+            select: {
+              riskId: true,
+              risk: {
+                select: {
+                  id: true,
+                  identifier: true,
+                  title: true,
+                  severity: true,
+                  status: true,
+                  // Story 23.1: treatment state shown on the finding side
+                  Treatments: {
+                    orderBy: { decidedAt: "desc" },
+                    take: 1,
+                    select: { treatmentType: true, decidedAt: true },
+                  },
+                },
+              },
             },
+            orderBy: { createdAt: "asc" },
           },
         },
       });
@@ -216,6 +263,22 @@ export const findingRouter = createTRPCRouter({
    * AC22-AC25: Cursor-based pagination
    */
   /**
+   * Distinct matrix severity labels across the org's findings (Story 20.3).
+   * Drives the register's "Matrix Severity" filter dropdown â€” sourced from
+   * actual data rather than the current matrix so legacy/superseded labels
+   * remain filterable.
+   */
+  listSeverityLabels: organizationProcedure.query(async ({ ctx }) => {
+    const rows = await ctx.db.finding.findMany({
+      where: { organizationId: ctx.organizationId!, severityLabel: { not: null } },
+      distinct: ["severityLabel"],
+      select: { severityLabel: true },
+      orderBy: { severityLabel: "asc" },
+    });
+    return rows.map((r) => r.severityLabel!) ;
+  }),
+
+  /**
    * List findings spawned from a specific compliance or maturity assessment.
    * Used by the bottom-of-page "Findings entered here" section.
    */
@@ -238,7 +301,7 @@ export const findingRouter = createTRPCRouter({
       const organizationId = ctx.organizationId!;
 
       // Map each assessment kind to the Finding source field it lives under.
-      // BIA has no Finding↔BIA linkage, so short-circuit with an empty array
+      // BIA has no Findingâ†”BIA linkage, so short-circuit with an empty array
       // before touching the DB (keeps the picker working, never throws).
       let where: Prisma.FindingWhereInput;
       switch (input.assessmentType) {
@@ -318,12 +381,12 @@ export const findingRouter = createTRPCRouter({
     .input(listFindingInput)
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const { status, source, severity, search, sortBy, sortOrder, limit, cursor } = input;
+      const { status, source, severity, severityLabel, search, sortBy, sortOrder, limit, cursor } = input;
 
       // Build where clause with filters
       // Only show findings that are published (from approved assessments) or
       // created directly (no discoveryStatus). Assessment-discovered findings
-      // stay PENDING and hidden from the register until approval — same gating
+      // stay PENDING and hidden from the register until approval â€” same gating
       // as discovered risks.
       const where: Prisma.FindingWhereInput = {
         organizationId,
@@ -331,6 +394,9 @@ export const findingRouter = createTRPCRouter({
         ...(status && status.length > 0 && { status: { in: status } }),
         ...(source && source.length > 0 && { source: { in: source } }),
         ...(severity && severity.length > 0 && { severity: { in: severity } }),
+        // Story 20.3: matrix label filter
+        ...(severityLabel &&
+          severityLabel.length > 0 && { severityLabel: { in: severityLabel } }),
         ...(search && {
           AND: [
             {
@@ -343,10 +409,14 @@ export const findingRouter = createTRPCRouter({
         }),
       };
 
-      // Build orderBy clause
-      const orderBy: Prisma.FindingOrderByWithRelationInput = {
-        [sortBy!]: sortOrder,
-      };
+      // Build orderBy clause. Score sorting keeps unscored legacy findings at
+      // the bottom regardless of direction (Story 20.3).
+      // Story 23.5 (review MN-1): a deterministic id tie-breaker makes cursor
+      // pagination stable when the primary sort column has duplicates.
+      const orderBy: Prisma.FindingOrderByWithRelationInput[] =
+        sortBy === "inherentScore"
+          ? [{ inherentScore: { sort: sortOrder!, nulls: "last" } }, { id: "asc" }]
+          : [{ [sortBy!]: sortOrder }, { id: "asc" }];
 
       // Get total count for pagination info
       const totalCount = await ctx.db.finding.count({ where });
@@ -367,8 +437,9 @@ export const findingRouter = createTRPCRouter({
           source: true,
           severity: true,
           severityLabel: true,
+          inherentScore: true, // Story 20.3: sortable score column
           status: true,
-          // Epic 19: exploitation-pathway membership (drives the ⬡ register indicator)
+          // Epic 19: exploitation-pathway membership (drives the â¬¡ register indicator)
           isToxic: true,
           // Array fields
           affectedAssets: true,
@@ -376,7 +447,6 @@ export const findingRouter = createTRPCRouter({
           createdAt: true,
           updatedAt: true,
           triagedAt: true,
-          acceptedAt: true,
           dueDate: true,
           closedAt: true,
           // SLA fields
@@ -387,7 +457,6 @@ export const findingRouter = createTRPCRouter({
           creator: { select: { id: true, name: true, email: true } },
           assignee: { select: { id: true, name: true, email: true } },
           triager: { select: { id: true, name: true, email: true } },
-          accepter: { select: { id: true, name: true, email: true } },
           // Business unit relations
           affectedBusinessUnits: { select: { id: true, name: true } },
           // Counts for related items
@@ -443,6 +512,17 @@ export const findingRouter = createTRPCRouter({
         likelihood,
         impact,
         exposure,
+        // Identified-risk-card parity fields (handled explicitly below)
+        linkedRiskIds,
+        threatStepIds,
+        threatObjectiveIds,
+        mitigatingControlIds,
+        controlGapIds,
+        residualLikelihood,
+        residualImpact,
+        residualExposure,
+        residualEliminated,
+        remediationOptions,
         ...findingData
       } = input;
 
@@ -451,7 +531,7 @@ export const findingRouter = createTRPCRouter({
       const userId = ctx.session!.user.id;
 
       // Risk Assessment Project linkage: validate the assessment and restrict
-      // to the assigned analyst (mirrors risk.create — the assignee owns the
+      // to the assigned analyst (mirrors risk.create â€” the assignee owns the
       // assessment's discovered items). Findings start PENDING and publish on
       // assessment approval.
       if (discoveryProjectId) {
@@ -529,7 +609,7 @@ export const findingRouter = createTRPCRouter({
         if (!ok) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Invalid maturity assessment — must be in same organization",
+            message: "Invalid maturity assessment â€” must be in same organization",
           });
         }
       }
@@ -543,106 +623,154 @@ export const findingRouter = createTRPCRouter({
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
-              "Invalid compliance assessment — must be in same organization",
+              "Invalid compliance assessment â€” must be in same organization",
           });
         }
       }
 
-      // Matrix-based L×I(×E) scoring (authoritative, server-side). When the
-      // caller supplies likelihood + impact we load the referenced matrix
-      // version (or fall back to the org default) and compute the inherent
-      // score + threshold label, then derive the coarse severity from that
-      // label. The client-sent severity/severityLabel are overridden in this
-      // path so a score can't be spoofed. When no scores are passed we keep the
-      // existing categorical severity flow untouched (back-compat).
-      let inherentLikelihood: number | null = null;
-      let inherentImpact: number | null = null;
-      let inherentExposure: number | null = null;
-      let inherentScore: number | null = null;
-      let computedSeverity: Severity | null = null;
-      let computedSeverityLabel: string | null = null;
-      let resolvedMatrixVersionId: string | null = findingData.matrixVersionId ?? null;
-
-      if (likelihood !== undefined && impact !== undefined) {
-        // Load the matrix version: explicit one from the client, else the org
-        // default template's current published version.
-        let matrixVersion = findingData.matrixVersionId
-          ? await ctx.db.riskMatrixVersion.findUnique({
-              where: { id: findingData.matrixVersionId },
-              include: { template: true },
-            })
-          : null;
-
-        if (!matrixVersion) {
-          const defaultTemplate = await ctx.db.riskMatrixTemplate.findFirst({
-            where: {
-              organizationId,
-              isDefault: true,
-              isActive: true,
-              currentVersionId: { not: null },
-            },
-            select: { currentVersionId: true },
+      // Story 23.5 (review MJ-1): every remaining org-scoped foreign id on the
+      // card payload is validated against the caller's org - the org-filter
+      // middleware doesn't inspect nested writes or raw FK values.
+      if (controlId) {
+        const ok = await ctx.db.control.findFirst({
+          where: { id: controlId, organizationId },
+          select: { id: true },
+        });
+        if (!ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid control - must be in same organization",
           });
-          if (defaultTemplate?.currentVersionId) {
-            matrixVersion = await ctx.db.riskMatrixVersion.findUnique({
-              where: { id: defaultTemplate.currentVersionId },
-              include: { template: true },
-            });
-          }
-        }
-
-        if (matrixVersion) {
-          // Guard org ownership of an explicitly-supplied version.
-          if (matrixVersion.template.organizationId !== organizationId) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Invalid matrix version — must be in same organization",
-            });
-          }
-          const scales = matrixVersion.scales as unknown as MatrixScales;
-          const thresholds = matrixVersion.thresholds as unknown as Threshold[];
-          const outputScaleMax = Number(matrixVersion.template.outputScaleMax);
-
-          const scoreResult = calculateInherentScore(
-            scales,
-            thresholds,
-            outputScaleMax,
-            likelihood,
-            impact,
-            exposure
-          );
-
-          if (isScoreResult(scoreResult)) {
-            inherentLikelihood = likelihood;
-            inherentImpact = impact;
-            // Only store exposure when the matrix is 3D (has exposure scale).
-            inherentExposure =
-              scales.exposure && scales.exposure.length > 0 && exposure !== undefined
-                ? exposure
-                : null;
-            inherentScore = scoreResult.normalizedScore;
-            computedSeverityLabel = scoreResult.label;
-            computedSeverity = severityFromLabel(scoreResult.label);
-            resolvedMatrixVersionId = matrixVersion.id;
-          }
         }
       }
 
-      // AC22, AC26, AC27: Create finding with status NEW, createdBy and organizationId from session
-      const finding = await ctx.db.finding.create({
+      if (findingData.enterpriseRiskId) {
+        const ok = await ctx.db.enterpriseRisk.findFirst({
+          where: { id: findingData.enterpriseRiskId, organizationId },
+          select: { id: true },
+        });
+        if (!ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid enterprise risk - must be in same organization",
+          });
+        }
+      }
+
+      const orgControlIdsToValidate = Array.from(
+        new Set([...(mitigatingControlIds ?? []), ...(controlGapIds ?? [])]),
+      );
+      if (orgControlIdsToValidate.length > 0) {
+        const validOrgControls = await ctx.db.organizationalControl.count({
+          where: { id: { in: orgControlIdsToValidate }, organizationId },
+        });
+        if (validOrgControls !== orgControlIdsToValidate.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Invalid organizational control(s) - must be in same organization",
+          });
+        }
+      }
+
+      const remediationOwnerIds = Array.from(
+        new Set(
+          (remediationOptions ?? [])
+            .map((o) => o.ownerId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+      if (remediationOwnerIds.length > 0) {
+        const validOwners = await ctx.db.person.count({
+          where: { id: { in: remediationOwnerIds }, organizationId },
+        });
+        if (validOwners !== remediationOwnerIds.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Invalid remediation owner(s) - must be in same organization",
+          });
+        }
+      }
+
+      // Story 23.5 (review MJ-2): linked-risk validation happens BEFORE the
+      // write transaction so a rejected payload never half-creates a finding.
+      if (linkedRiskIds && linkedRiskIds.length > 0) {
+        const validRisks = await ctx.db.risk.count({
+          where: { id: { in: linkedRiskIds }, organizationId },
+        });
+        if (validRisks !== linkedRiskIds.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid linked risk(s) - must be in same organization",
+          });
+        }
+      }
+
+      // Matrix-based LÃ—I(Ã—E) scoring (authoritative, server-side) â€” shared
+      // helper across all finding-creation mutations (Story 20.1). Overrides
+      // the client-sent severity/severityLabel in the matrix path so a score
+      // can't be spoofed; keeps the categorical flow untouched otherwise.
+      const scoring = await computeFindingMatrixScoring(ctx.db, organizationId, {
+        likelihood,
+        impact,
+        exposure,
+        matrixVersionId: findingData.matrixVersionId,
+        residualLikelihood,
+        residualImpact,
+        residualExposure,
+        residualEliminated,
+      });
+
+      // AC22, AC26, AC27: Create finding with status NEW, createdBy and
+      // organizationId from session.
+      // Story 23.5 (review MJ-2): the finding row and all its card junctions
+      // (risk links, threat steps/objectives, org-control links, remediation
+      // options) commit atomically - a failure anywhere rolls back the whole
+      // create instead of leaving an orphaned half-populated finding.
+      const finding = await ctx.db.$transaction(async (tx) => {
+      const created = await tx.finding.create({
         data: {
           ...findingData,
           // Matrix scoring overrides the categorical severity when present.
-          severity: computedSeverity ?? findingData.severity,
-          severityLabel: computedSeverityLabel ?? findingData.severityLabel,
-          matrixVersionId: resolvedMatrixVersionId,
+          severity: scoring.severity ?? findingData.severity,
+          severityLabel: scoring.severityLabel ?? findingData.severityLabel,
+          matrixVersionId: scoring.matrixVersionId,
           inherentLikelihood:
-            inherentLikelihood !== null ? new Prisma.Decimal(inherentLikelihood) : null,
+            scoring.inherentLikelihood !== null
+              ? new Prisma.Decimal(scoring.inherentLikelihood)
+              : null,
           inherentImpact:
-            inherentImpact !== null ? new Prisma.Decimal(inherentImpact) : null,
+            scoring.inherentImpact !== null
+              ? new Prisma.Decimal(scoring.inherentImpact)
+              : null,
           inherentExposure:
-            inherentExposure !== null ? new Prisma.Decimal(inherentExposure) : null,
-          inherentScore: inherentScore !== null ? new Prisma.Decimal(inherentScore) : null,
+            scoring.inherentExposure !== null
+              ? new Prisma.Decimal(scoring.inherentExposure)
+              : null,
+          inherentScore:
+            scoring.inherentScore !== null
+              ? new Prisma.Decimal(scoring.inherentScore)
+              : null,
+          // Residual severity (identified-risk-card parity)
+          residualLikelihood:
+            scoring.residualLikelihood !== null
+              ? new Prisma.Decimal(scoring.residualLikelihood)
+              : null,
+          residualImpact:
+            scoring.residualImpact !== null
+              ? new Prisma.Decimal(scoring.residualImpact)
+              : null,
+          residualExposure:
+            scoring.residualExposure !== null
+              ? new Prisma.Decimal(scoring.residualExposure)
+              : null,
+          residualScore:
+            scoring.residualScore !== null
+              ? new Prisma.Decimal(scoring.residualScore)
+              : null,
+          residualScoreLabel: scoring.residualScoreLabel,
+          residualEliminated: residualEliminated ?? false,
           identifier,
           organizationId,
           createdBy: userId,
@@ -659,7 +787,7 @@ export const findingRouter = createTRPCRouter({
             ? { connect: affectedBusinessUnitIds.map((id) => ({ id })) }
             : undefined,
           // Auto-link to the compliance control when spawned from an
-          // assessment — mirrors the manual linking flow from the findings
+          // assessment â€” mirrors the manual linking flow from the findings
           // detail page. Default linkType OBSERVATION; users can change it.
           ControlLinks: controlId
             ? {
@@ -678,6 +806,90 @@ export const findingRouter = createTRPCRouter({
           creator: { select: { id: true, name: true, email: true } },
         },
       });
+
+      // Story 20.1 follow-up: link the finding to existing register risks
+      // (RiskFindingLink M:N). Ids validated pre-transaction.
+      if (linkedRiskIds && linkedRiskIds.length > 0) {
+        await tx.riskFindingLink.createMany({
+          data: linkedRiskIds.map((riskId) => ({
+            riskId,
+            findingId: created.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // Story 20.1 follow-up: identified-risk-card parity - persist MITRE
+      // threat steps/objectives, split-role org-control links, and per-item
+      // remediation options (mirrors risk.createAssessment, minus treatment).
+      if (threatStepIds && threatStepIds.length > 0) {
+        await tx.findingThreatStep.createMany({
+          data: threatStepIds.map((techniqueId, i) => ({
+            findingId: created.id,
+            techniqueId,
+            stepOrder: i,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      if (threatObjectiveIds && threatObjectiveIds.length > 0) {
+        await tx.findingThreatObjective.createMany({
+          data: threatObjectiveIds.map((techniqueId) => ({
+            findingId: created.id,
+            techniqueId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      const orgControlLinks: Array<{ organizationalControlId: string; role: RiskOrgControlRole }> = [];
+      for (const id of mitigatingControlIds ?? []) {
+        orgControlLinks.push({ organizationalControlId: id, role: RiskOrgControlRole.IN_PLACE });
+      }
+      for (const id of controlGapIds ?? []) {
+        if (!orgControlLinks.some((l) => l.organizationalControlId === id)) {
+          orgControlLinks.push({ organizationalControlId: id, role: RiskOrgControlRole.NEEDED });
+        }
+      }
+      if (orgControlLinks.length > 0) {
+        await tx.findingOrganizationalControl.createMany({
+          data: orgControlLinks.map((link) => ({
+            findingId: created.id,
+            organizationalControlId: link.organizationalControlId,
+            organizationId,
+            role: link.role,
+            createdById: userId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      if (remediationOptions && remediationOptions.length > 0) {
+        await tx.remediationOption.createMany({
+          data: remediationOptions.map((opt) => ({
+            findingId: created.id,
+            organizationId,
+            title: opt.title,
+            description: opt.description,
+            approach: opt.approach,
+            costEstimate: new Prisma.Decimal(opt.costEstimate),
+            timelineEstimate: opt.timelineEstimate,
+            effortLevel: opt.effortLevel,
+            priority: opt.priority,
+            ownerId: opt.ownerId ?? null,
+            createdById: userId,
+          })),
+        });
+      }
+
+      return created;
+      });
+
+      // Story 22.1: derived-score rollup for newly-linked risks - after the
+      // transaction commits so the recompute sees the new links.
+      if (linkedRiskIds && linkedRiskIds.length > 0) {
+        for (const riskId of linkedRiskIds) {
+          void recomputeRiskScore(ctx.db, riskId, "finding-created-linked", userId);
+        }
+      }
 
       // AC32-AC33: Audit log finding creation
       void createAuditLog({
@@ -752,6 +964,11 @@ export const findingRouter = createTRPCRouter({
         updateData.triagedAt = new Date();
       }
 
+      // Story 21.4: CLOSED transition stamps closedAt (SLA reporting reads it)
+      if (targetStatus === FindingStatus.CLOSED) {
+        updateData.closedAt = new Date();
+      }
+
       // AC11: DUPLICATE transition requires duplicateOfId parameter
       if (targetStatus === FindingStatus.DUPLICATE) {
         if (!duplicateOfId) {
@@ -809,6 +1026,10 @@ export const findingRouter = createTRPCRouter({
         },
       });
 
+      // Story 22.1: status changes move findings in/out of the open rollup
+      // (closing a linked finding burns down its risks' calculated scores)
+      void recomputeRiskScoresForFinding(ctx.db, finding.id, "finding-status-changed", userId);
+
       return updated;
     }),
 
@@ -846,186 +1067,10 @@ export const findingRouter = createTRPCRouter({
       });
     }),
 
-  /**
-   * Accept a triaged finding and create a Risk Assessment
-   *
-   * Story 7.4: Finding Acceptance (Creates Risk Assessment)
-   * AC1: `finding.accept` mutation defined in finding router
-   * AC2: Mutation validates finding is in TRIAGED status
-   * AC3: Mutation creates locked snapshot of finding fields
-   * AC4: Mutation transitions finding to ACCEPTED status
-   * AC5: Mutation sets acceptedBy and acceptedAt
-   * AC6: Mutation generates RSK identifier for assessment
-   * AC7: Mutation creates RiskAssessment in DRAFT status
-   * AC8: Operation is transactional (all or nothing)
-   * AC9: lockedSnapshot stores required fields
-   * AC13-AC18: Risk Assessment pre-populated from finding
-   * AC26-AC27: Returns both finding and assessment
-   * AC28-AC29: Role-based access control
-   * AC30-AC32: Audit logging for both entities
-   *
-   * Story 7.8.9: Assessment Form Matrix Integration (AC27-AC30)
-   * AC27: When finding accepted, assessment created with org's default matrix
-   * AC28: Default assessment type pre-selected
-   * AC29: Analyst can change type and matrix on draft assessment
-   * AC30: Once approved, matrix version permanently locked
-   */
-  accept: organizationProcedure
-    .use(requireRole(FINDING_TRIAGE_ROLES)) // AC28: GRC_ANALYST, SECURITY_ENGINEER, ORG_ADMIN
-    .input(z.object({ findingId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-
-      // AC1: Fetch finding with business units for snapshot
-      const finding = await ctx.db.finding.findFirst({
-        where: {
-          id: input.findingId,
-          organizationId,
-        },
-        include: {
-          affectedBusinessUnits: { select: { id: true } },
-        },
-      });
-
-      if (!finding) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Finding not found",
-        });
-      }
-
-      // AC2: Validate finding is in TRIAGED status
-      assertFindingTransition(finding.status, FindingStatus.ACCEPTED);
-
-      // AC3, AC9: Create locked snapshot of finding fields
-      const lockedSnapshot = {
-        title: finding.title,
-        description: finding.description,
-        severity: finding.severity,
-        affectedAssets: finding.affectedAssets,
-        businessUnits: finding.affectedBusinessUnits.map((bu) => bu.id),
-        source: finding.source,
-        snapshotAt: new Date().toISOString(),
-      };
-
-      // AC6: Generate RSK identifier for assessment
-      const assessmentIdentifier = await generateIdentifier(organizationId, "RSK");
-
-      // Story 7.8.9 AC27-AC28: Get organization's default assessment type and matrix
-      const defaultAssessmentType = await ctx.db.assessmentType.findFirst({
-        where: {
-          organizationId,
-          isDefault: true,
-          isActive: true,
-        },
-        select: { id: true },
-      });
-
-      const defaultMatrixTemplate = await ctx.db.riskMatrixTemplate.findFirst({
-        where: {
-          organizationId,
-          isDefault: true,
-          isActive: true,
-          currentVersionId: { not: null },
-        },
-        select: { currentVersionId: true },
-      });
-
-      // AC8: Wrap in transaction for atomicity
-      return ctx.db.$transaction(async (tx) => {
-        // AC4, AC5: Update finding with status, acceptedBy, acceptedAt, lockedSnapshot
-        const updatedFinding = await tx.finding.update({
-          where: { id: input.findingId },
-          data: {
-            status: FindingStatus.ACCEPTED,
-            acceptedBy: userId,
-            acceptedAt: new Date(),
-            lockedSnapshot,
-          },
-          include: {
-            affectedBusinessUnits: { select: { id: true, name: true } },
-            assignee: { select: { id: true, name: true, email: true } },
-            creator: { select: { id: true, name: true, email: true } },
-            accepter: { select: { id: true, name: true, email: true } },
-          },
-        });
-
-        // AC7, AC13-AC18: Create Risk Assessment with pre-populated fields
-        // Story 7.8.9 AC27-AC28: Include default assessment type and matrix version
-        const assessment = await tx.riskAssessment.create({
-          data: {
-            identifier: assessmentIdentifier,
-            organizationId,
-            findingId: input.findingId,
-            createdBy: userId,
-            // AC13: Title copied from finding
-            title: finding.title,
-            // AC14: Context copied from description
-            context: finding.description,
-            // AC15: affectedSystems copied from affectedAssets
-            affectedSystems: finding.affectedAssets,
-            // AC16: Status = DRAFT
-            status: AssessmentStatus.DRAFT,
-            // Story 7.8.9 AC27-AC28: Set defaults (analyst can change while in DRAFT - AC29)
-            assessmentTypeId: defaultAssessmentType?.id ?? null,
-            matrixVersionId: defaultMatrixTemplate?.currentVersionId ?? null,
-          },
-        });
-
-        // AC30-AC32: Audit logging for both entities
-        await tx.auditLog.create({
-          data: {
-            id: crypto.randomUUID(),
-            organizationId,
-            userId,
-            action: AuditAction.FINDING_ACCEPTED,
-            entityType: "Finding",
-            entityId: finding.id,
-            changes: {
-              findingId: finding.id,
-              findingIdentifier: finding.identifier,
-              assessmentId: assessment.id,
-              assessmentIdentifier: assessment.identifier,
-              lockedSnapshot,
-            },
-          },
-        });
-
-        await tx.auditLog.create({
-          data: {
-            id: crypto.randomUUID(),
-            organizationId,
-            userId,
-            action: AuditAction.ASSESSMENT_CREATED,
-            entityType: "RiskAssessment",
-            entityId: assessment.id,
-            changes: {
-              assessmentId: assessment.id,
-              identifier: assessment.identifier,
-              findingId: finding.id,
-              findingIdentifier: finding.identifier,
-              prePopulatedFrom: {
-                title: finding.title,
-                description: finding.description,
-                affectedAssets: finding.affectedAssets,
-              },
-            },
-          },
-        });
-
-        // AC26-AC27: Return both finding and assessment
-        return {
-          finding: updatedFinding,
-          assessment: {
-            id: assessment.id,
-            identifier: assessment.identifier,
-            title: assessment.title,
-            status: assessment.status,
-          },
-        };
-      });
-    }),
+  // Story 23.3: the legacy `finding.accept` mutation (finding → spawned
+  // RiskAssessment) is retired. Findings link to register risks instead
+  // (finding.linkRisks / risk.linkFindings); acceptance is a risk-level
+  // treatment decision (risk.createTreatment ACCEPT).
 
   // ============================================================================
   // Story 14.5: Finding Comments & Collaboration
@@ -1402,6 +1447,307 @@ export const findingRouter = createTRPCRouter({
     }),
 
   /**
+   * Rescore a finding against its LOCKED matrix version (Story 20.2).
+   *
+   * AC1: The finding's own matrixVersionId drives the scoring â€” a client can
+   *      never re-anchor to a newer matrix (legacy unscored findings fall back
+   *      to the org default for their first score).
+   * AC2: Before/after audit entry (FINDING_RESCORED).
+   * AC3: Terminal-status findings (DUPLICATE/REJECTED/CLOSED) are read-only.
+   */
+  rescore: organizationProcedure
+    .use(requireRole(FINDING_TRIAGE_ROLES))
+    .input(
+      z.object({
+        findingId: z.string(),
+        likelihood: z.number().positive(),
+        impact: z.number().positive(),
+        exposure: z.number().positive().optional(),
+        residualLikelihood: z.number().positive().optional().nullable(),
+        residualImpact: z.number().positive().optional().nullable(),
+        residualExposure: z.number().positive().optional().nullable(),
+        residualEliminated: z.boolean().optional().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      const finding = await ctx.db.finding.findFirst({
+        where: { id: input.findingId, organizationId },
+      });
+      if (!finding) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Finding not found" });
+      }
+      if (isTerminalFindingStatus(finding.status)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Finding is in terminal status ${finding.status} â€” scoring is read-only`,
+        });
+      }
+
+      // Locked matrix version: the finding's own, never client-supplied.
+      const scoring = await computeFindingMatrixScoring(ctx.db, organizationId, {
+        likelihood: input.likelihood,
+        impact: input.impact,
+        exposure: input.exposure,
+        matrixVersionId: finding.matrixVersionId ?? undefined,
+        residualLikelihood: input.residualLikelihood,
+        residualImpact: input.residualImpact,
+        residualExposure: input.residualExposure,
+        residualEliminated: input.residualEliminated,
+      });
+
+      const before = {
+        severity: finding.severity,
+        severityLabel: finding.severityLabel,
+        inherentLikelihood: finding.inherentLikelihood?.toNumber() ?? null,
+        inherentImpact: finding.inherentImpact?.toNumber() ?? null,
+        inherentExposure: finding.inherentExposure?.toNumber() ?? null,
+        inherentScore: finding.inherentScore?.toNumber() ?? null,
+        residualLikelihood: finding.residualLikelihood?.toNumber() ?? null,
+        residualImpact: finding.residualImpact?.toNumber() ?? null,
+        residualScore: finding.residualScore?.toNumber() ?? null,
+        residualScoreLabel: finding.residualScoreLabel,
+        residualEliminated: finding.residualEliminated,
+      };
+
+      const updated = await ctx.db.finding.update({
+        where: { id: finding.id },
+        data: {
+          severity: scoring.severity ?? finding.severity,
+          severityLabel: scoring.severityLabel ?? finding.severityLabel,
+          matrixVersionId: scoring.matrixVersionId ?? finding.matrixVersionId,
+          inherentLikelihood:
+            scoring.inherentLikelihood !== null
+              ? new Prisma.Decimal(scoring.inherentLikelihood)
+              : null,
+          inherentImpact:
+            scoring.inherentImpact !== null
+              ? new Prisma.Decimal(scoring.inherentImpact)
+              : null,
+          inherentExposure:
+            scoring.inherentExposure !== null
+              ? new Prisma.Decimal(scoring.inherentExposure)
+              : null,
+          inherentScore:
+            scoring.inherentScore !== null
+              ? new Prisma.Decimal(scoring.inherentScore)
+              : null,
+          residualLikelihood:
+            scoring.residualLikelihood !== null
+              ? new Prisma.Decimal(scoring.residualLikelihood)
+              : null,
+          residualImpact:
+            scoring.residualImpact !== null
+              ? new Prisma.Decimal(scoring.residualImpact)
+              : null,
+          residualExposure:
+            scoring.residualExposure !== null
+              ? new Prisma.Decimal(scoring.residualExposure)
+              : null,
+          residualScore:
+            scoring.residualScore !== null
+              ? new Prisma.Decimal(scoring.residualScore)
+              : null,
+          residualScoreLabel: scoring.residualScoreLabel,
+          residualEliminated: input.residualEliminated,
+        },
+      });
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: AuditAction.FINDING_RESCORED,
+        entityType: "Finding",
+        entityId: finding.id,
+        changes: {
+          before,
+          after: {
+            severity: updated.severity,
+            severityLabel: updated.severityLabel,
+            inherentLikelihood: updated.inherentLikelihood?.toNumber() ?? null,
+            inherentImpact: updated.inherentImpact?.toNumber() ?? null,
+            inherentExposure: updated.inherentExposure?.toNumber() ?? null,
+            inherentScore: updated.inherentScore?.toNumber() ?? null,
+            residualLikelihood: updated.residualLikelihood?.toNumber() ?? null,
+            residualImpact: updated.residualImpact?.toNumber() ?? null,
+            residualScore: updated.residualScore?.toNumber() ?? null,
+            residualScoreLabel: updated.residualScoreLabel,
+            residualEliminated: updated.residualEliminated,
+          },
+        },
+      });
+
+      // Story 22.1: a rescored finding moves every linked risk's rollup
+      void recomputeRiskScoresForFinding(ctx.db, finding.id, "finding-rescored", userId);
+
+      return updated;
+    }),
+
+  /**
+   * Link a finding to one or more register risks (Story 21.2 â€” replaces the
+   * legacy "Accept finding" promotion path).
+   *
+   * General-model linking: any org risk qualifies (no assessment scoping â€”
+   * contrast risk.addFinding). Idempotent; audited as FINDING_RISK_LINKED.
+   * Terminal findings are read-only.
+   */
+  linkRisks: organizationProcedure
+    .use(requireRole(FINDING_TRIAGE_ROLES))
+    .input(
+      z.object({
+        findingId: z.string().min(1),
+        riskIds: z.array(z.string().min(1)).min(1, "Select at least one risk"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      const finding = await ctx.db.finding.findFirst({
+        where: { id: input.findingId, organizationId },
+        select: { id: true, status: true },
+      });
+      if (!finding) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Finding not found" });
+      }
+      if (isTerminalFindingStatus(finding.status)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Finding is in terminal status ${finding.status} â€” linking is read-only`,
+        });
+      }
+
+      const riskIds = Array.from(new Set(input.riskIds));
+      const validRisks = await ctx.db.risk.count({
+        where: { id: { in: riskIds }, organizationId },
+      });
+      if (validRisks !== riskIds.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid risk(s) â€” must be in same organization",
+        });
+      }
+
+      await ctx.db.riskFindingLink.createMany({
+        data: riskIds.map((riskId) => ({ riskId, findingId: finding.id })),
+        skipDuplicates: true,
+      });
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: AuditAction.FINDING_RISK_LINKED,
+        entityType: "Finding",
+        entityId: finding.id,
+        changes: {
+          before: null,
+          after: { linkedRiskIds: riskIds },
+        },
+      });
+
+      // Story 22.1: derived-score rollup (fire-and-forget)
+      for (const riskId of riskIds) {
+        void recomputeRiskScore(ctx.db, riskId, "finding-linked", userId);
+      }
+
+      return ctx.db.riskFindingLink.findMany({
+        where: { findingId: finding.id },
+        select: {
+          risk: { select: { id: true, identifier: true, title: true, severity: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }),
+
+  /**
+   * Remove a findingâ†”risk link (Story 21.3). Idempotent; audited as
+   * FINDING_RISK_UNLINKED. Terminal findings are read-only.
+   */
+  unlinkRisk: organizationProcedure
+    .use(requireRole(FINDING_TRIAGE_ROLES))
+    .input(
+      z.object({
+        findingId: z.string().min(1),
+        riskId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      const finding = await ctx.db.finding.findFirst({
+        where: { id: input.findingId, organizationId },
+        select: { id: true, status: true },
+      });
+      if (!finding) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Finding not found" });
+      }
+      if (isTerminalFindingStatus(finding.status)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Finding is in terminal status ${finding.status} â€” linking is read-only`,
+        });
+      }
+
+      await ctx.db.riskFindingLink.deleteMany({
+        where: { findingId: finding.id, riskId: input.riskId },
+      });
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: AuditAction.FINDING_RISK_UNLINKED,
+        entityType: "Finding",
+        entityId: finding.id,
+        changes: {
+          before: { riskId: input.riskId },
+          after: null,
+        },
+      });
+
+      // Story 22.1: derived-score rollup (fire-and-forget)
+      void recomputeRiskScore(ctx.db, input.riskId, "finding-unlinked", userId);
+
+      return { success: true };
+    }),
+
+  /**
+   * Lightweight finding list for link pickers (Story 21.3 â€” the risk detail
+   * page links findings). Non-terminal findings only.
+   */
+  listForPicker: organizationProcedure.query(async ({ ctx }) => {
+    return ctx.db.finding.findMany({
+      where: {
+        organizationId: ctx.organizationId!,
+        status: {
+          notIn: [
+            FindingStatus.DUPLICATE,
+            FindingStatus.REJECTED,
+            FindingStatus.CLOSED,
+          ],
+        },
+        // Story 23.5 (review MJ-7): unpublished assessment findings are not
+        // linkable — mirror finding.list's visibility gate.
+        OR: [
+          { discoveryStatus: RiskDiscoveryStatus.PUBLISHED },
+          { discoveryStatus: null },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        identifier: true,
+        title: true,
+        severity: true,
+        severityLabel: true,
+        status: true,
+      },
+    });
+  }),
+
+  /**
    * Mark SLA as breached (for cron job)
    *
    * Story 14.8: SLA Breach Detection
@@ -1437,26 +1783,37 @@ export const findingRouter = createTRPCRouter({
   getStats: organizationProcedure.query(async ({ ctx }) => {
     const organizationId = ctx.organizationId!;
 
+    // Story 23.5 (review MJ-7): mirror finding.list's visibility gate so the
+    // dashboard counts match the register (assessment-discovered findings
+    // stay hidden until their project publishes them).
+    const visible = {
+      organizationId,
+      OR: [
+        { discoveryStatus: RiskDiscoveryStatus.PUBLISHED },
+        { discoveryStatus: null },
+      ],
+    };
+
     // Count open findings by status
-    const [newCount, needsInfoCount, triagedCount, acceptedCount, rejectedCount, duplicateCount] =
+    const [newCount, needsInfoCount, triagedCount, closedCount, rejectedCount, duplicateCount] =
       await Promise.all([
         ctx.db.finding.count({
-          where: { organizationId, status: FindingStatus.NEW },
+          where: { ...visible, status: FindingStatus.NEW },
         }),
         ctx.db.finding.count({
-          where: { organizationId, status: FindingStatus.NEEDS_INFO },
+          where: { ...visible, status: FindingStatus.NEEDS_INFO },
         }),
         ctx.db.finding.count({
-          where: { organizationId, status: FindingStatus.TRIAGED },
+          where: { ...visible, status: FindingStatus.TRIAGED },
         }),
         ctx.db.finding.count({
-          where: { organizationId, status: FindingStatus.ACCEPTED },
+          where: { ...visible, status: FindingStatus.CLOSED },
         }),
         ctx.db.finding.count({
-          where: { organizationId, status: FindingStatus.REJECTED },
+          where: { ...visible, status: FindingStatus.REJECTED },
         }),
         ctx.db.finding.count({
-          where: { organizationId, status: FindingStatus.DUPLICATE },
+          where: { ...visible, status: FindingStatus.DUPLICATE },
         }),
       ]);
 
@@ -1464,21 +1821,21 @@ export const findingRouter = createTRPCRouter({
     const [highCount, mediumCount, lowCount] = await Promise.all([
       ctx.db.finding.count({
         where: {
-          organizationId,
+          ...visible,
           status: { in: [FindingStatus.NEW, FindingStatus.NEEDS_INFO, FindingStatus.TRIAGED] },
           severity: Severity.HIGH,
         },
       }),
       ctx.db.finding.count({
         where: {
-          organizationId,
+          ...visible,
           status: { in: [FindingStatus.NEW, FindingStatus.NEEDS_INFO, FindingStatus.TRIAGED] },
           severity: Severity.MEDIUM,
         },
       }),
       ctx.db.finding.count({
         where: {
-          organizationId,
+          ...visible,
           status: { in: [FindingStatus.NEW, FindingStatus.NEEDS_INFO, FindingStatus.TRIAGED] },
           severity: Severity.LOW,
         },
@@ -1493,7 +1850,7 @@ export const findingRouter = createTRPCRouter({
         NEW: newCount,
         NEEDS_INFO: needsInfoCount,
         TRIAGED: triagedCount,
-        ACCEPTED: acceptedCount,
+        CLOSED: closedCount,
         REJECTED: rejectedCount,
         DUPLICATE: duplicateCount,
       },
@@ -1534,6 +1891,17 @@ export const findingRouter = createTRPCRouter({
       // Build where clause
       const where: Prisma.FindingWhereInput = {
         organizationId,
+        // Story 23.5 (review MJ-7): never export unpublished assessment
+        // findings — mirrors finding.list's visibility gate (AND-wrapped so
+        // it can't collide with the search OR below).
+        AND: [
+          {
+            OR: [
+              { discoveryStatus: RiskDiscoveryStatus.PUBLISHED },
+              { discoveryStatus: null },
+            ],
+          },
+        ],
         ...(status && status.length > 0 && { status: { in: status } }),
         ...(source && source.length > 0 && { source: { in: source } }),
         ...(severity && severity.length > 0 && { severity: { in: severity } }),
@@ -1552,7 +1920,6 @@ export const findingRouter = createTRPCRouter({
           creator: { select: { name: true, email: true } },
           assignee: { select: { name: true, email: true } },
           triager: { select: { name: true } },
-          accepter: { select: { name: true } },
           affectedBusinessUnits: { select: { name: true } },
         },
         orderBy: { createdAt: "desc" },
@@ -1573,10 +1940,9 @@ export const findingRouter = createTRPCRouter({
         creator: finding.creator,
         assignee: finding.assignee,
         triager: finding.triager,
-        accepter: finding.accepter,
         affectedBusinessUnits: finding.affectedBusinessUnits,
         triagedAt: finding.triagedAt,
-        acceptedAt: finding.acceptedAt,
+        closedAt: finding.closedAt,
       }));
 
       // Generate CSV
@@ -1631,6 +1997,14 @@ export const findingRouter = createTRPCRouter({
           .string()
           .min(20, "Description must be at least 20 characters"),
         severity: z.nativeEnum(Severity),
+        // Story 20.1: matrix-anchored scoring â€” same contract as finding.create.
+        // When likelihood + impact are supplied the server computes the
+        // authoritative inherent score and overrides severity/severityLabel.
+        severityLabel: z.string().max(50).optional(),
+        matrixVersionId: z.string().optional(),
+        likelihood: z.number().positive().optional(),
+        impact: z.number().positive().optional(),
+        exposure: z.number().positive().optional(),
         affectedAssets: z.array(z.string()).optional().default([]),
         assigneeId: z.string().optional(),
       })
@@ -1641,6 +2015,11 @@ export const findingRouter = createTRPCRouter({
         title,
         description,
         severity,
+        severityLabel,
+        matrixVersionId,
+        likelihood,
+        impact,
+        exposure,
         affectedAssets,
         assigneeId,
       } = input;
@@ -1720,6 +2099,15 @@ export const findingRouter = createTRPCRouter({
       const vendorName = response.questionnaire.assessment.vendor.name;
       const questionText = response.question.questionText;
 
+      // Story 20.1: matrix scoring shared with finding.create â€” overrides the
+      // client-sent severity when a complete LÃ—I(Ã—E) score is supplied.
+      const scoring = await computeFindingMatrixScoring(ctx.db, organizationId, {
+        likelihood,
+        impact,
+        exposure,
+        matrixVersionId,
+      });
+
       // Create the finding with vendor context
       const finding = await ctx.db.finding.create({
         data: {
@@ -1728,7 +2116,25 @@ export const findingRouter = createTRPCRouter({
           title,
           description,
           source: FindingSource.MANUAL, // Questionnaire-sourced findings are treated as manual
-          severity,
+          severity: scoring.severity ?? severity,
+          severityLabel: scoring.severityLabel ?? severityLabel,
+          matrixVersionId: scoring.matrixVersionId,
+          inherentLikelihood:
+            scoring.inherentLikelihood !== null
+              ? new Prisma.Decimal(scoring.inherentLikelihood)
+              : null,
+          inherentImpact:
+            scoring.inherentImpact !== null
+              ? new Prisma.Decimal(scoring.inherentImpact)
+              : null,
+          inherentExposure:
+            scoring.inherentExposure !== null
+              ? new Prisma.Decimal(scoring.inherentExposure)
+              : null,
+          inherentScore:
+            scoring.inherentScore !== null
+              ? new Prisma.Decimal(scoring.inherentScore)
+              : null,
           status: "NEW",
           affectedAssets,
           createdBy: userId,

@@ -147,13 +147,15 @@ export const enterpriseRiskRouter = createTRPCRouter({
       },
     });
 
-    // Per-row child counts grouped by effective score label (residual ?? inherent ?? "Unscored").
-    // One query that pulls just the columns we need; bucket in JS.
+    // Per-row child counts grouped by score label. Story 22.4: the child's
+    // EFFECTIVE label (derived rollup / manual override) is preferred; the
+    // legacy residual ?? inherent chain remains as fallback.
     const childRows = await ctx.db.risk.findMany({
       where: { organizationId: orgId, enterpriseRiskId: { not: null } },
       select: {
         enterpriseRiskId: true,
         severity: true,
+        effectiveScoreLabel: true,
         residualScoreLabel: true,
         inherentScoreLabel: true,
       },
@@ -161,7 +163,12 @@ export const enterpriseRiskRouter = createTRPCRouter({
     const buckets: Record<string, Record<string, number>> = {};
     for (const r of childRows) {
       if (!r.enterpriseRiskId) continue;
-      const label = r.residualScoreLabel ?? r.inherentScoreLabel ?? r.severity ?? "Unscored";
+      const label =
+        r.effectiveScoreLabel ??
+        r.residualScoreLabel ??
+        r.inherentScoreLabel ??
+        r.severity ??
+        "Unscored";
       const bucket = (buckets[r.enterpriseRiskId] ??= {});
       bucket[label] = (bucket[label] ?? 0) + 1;
     }
@@ -237,6 +244,12 @@ export const enterpriseRiskRouter = createTRPCRouter({
             inherentScoreLabel: true,
             inherentLikelihood: true,
             inherentImpact: true,
+            // Story 22.4: derived scoring — feeders prefer effective/manual
+            useManualScore: true,
+            manualLikelihood: true,
+            manualImpact: true,
+            effectiveScore: true,
+            effectiveScoreLabel: true,
             createdAt: true,
           },
         }),

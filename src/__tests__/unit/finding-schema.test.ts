@@ -19,6 +19,8 @@ describe("Finding Schema (Story 7.1)", () => {
   describe("Finding Model (AC1-AC10)", () => {
     it("AC1: should have all required Finding model fields", () => {
       // Model structure verification - fields expected in Finding
+      // (Story 23.3 retired lockedSnapshot/acceptedBy/acceptedAt; CLOSED
+      // findings stamp closedAt instead.)
       const expectedFields = [
         "id",
         "organizationId",
@@ -31,17 +33,15 @@ describe("Finding Schema (Story 7.1)", () => {
         "affectedAssets",
         "evidenceIds",
         "duplicateOfId",
-        "lockedSnapshot",
         "createdBy",
         "createdAt",
         "updatedAt",
         "triagedBy",
         "triagedAt",
-        "acceptedBy",
-        "acceptedAt",
+        "closedAt",
       ];
 
-      expect(expectedFields.length).toBe(19);
+      expect(expectedFields.length).toBe(17);
       expect(expectedFields).toContain("organizationId");
       expect(expectedFields).toContain("identifier");
     });
@@ -64,22 +64,23 @@ describe("Finding Schema (Story 7.1)", () => {
     });
 
     it("AC3: FindingStatus enum should have correct values", () => {
+      // Story 23.3: ACCEPTED retired — findings link to risks; CLOSED is terminal.
       const findingStatusValues = [
         "NEW",
         "NEEDS_INFO",
         "TRIAGED",
+        "CLOSED",
         "DUPLICATE",
         "REJECTED",
-        "ACCEPTED",
       ];
 
       expect(findingStatusValues.length).toBe(6);
       expect(findingStatusValues).toContain("NEW");
       expect(findingStatusValues).toContain("NEEDS_INFO");
       expect(findingStatusValues).toContain("TRIAGED");
+      expect(findingStatusValues).toContain("CLOSED");
       expect(findingStatusValues).toContain("DUPLICATE");
       expect(findingStatusValues).toContain("REJECTED");
-      expect(findingStatusValues).toContain("ACCEPTED");
     });
 
     it("AC5: identifier field format should be FND-YYYY-NNNN", () => {
@@ -87,31 +88,20 @@ describe("Finding Schema (Story 7.1)", () => {
       expect(sampleIdentifier).toMatch(/^FND-\d{4}-\d{4}$/);
     });
 
-    it("AC6: lockedSnapshot should be optional JSON field", () => {
-      const lockedSnapshot = {
-        title: "Frozen Title",
-        severity: "HIGH",
-        affectedAssets: ["server-1", "server-2"],
-        capturedAt: "2025-01-01T00:00:00Z",
-      };
-
-      expect(typeof lockedSnapshot).toBe("object");
-      expect(lockedSnapshot.title).toBe("Frozen Title");
-    });
-
-    it("AC7: audit trail fields should track create/triage/accept", () => {
+    it("AC7: audit trail fields should track create/triage/close", () => {
+      // Story 23.3: acceptedBy/acceptedAt/lockedSnapshot retired with the
+      // legacy accept flow; closedAt stamps the terminal transition.
       const auditFields = {
         createdBy: "user-1",
         createdAt: new Date(),
         triagedBy: "user-2",
         triagedAt: new Date(),
-        acceptedBy: "user-3",
-        acceptedAt: new Date(),
+        closedAt: new Date(),
       };
 
       expect(auditFields.createdBy).toBeDefined();
       expect(auditFields.triagedBy).toBeDefined();
-      expect(auditFields.acceptedBy).toBeDefined();
+      expect(auditFields.closedAt).toBeDefined();
     });
 
     it("AC9: duplicateOfId supports self-referencing", () => {
@@ -328,17 +318,14 @@ describe("Finding Schema (Story 7.1)", () => {
     it("should handle null optional fields", () => {
       const finding = {
         duplicateOfId: null,
-        lockedSnapshot: null,
         triagedBy: null,
         triagedAt: null,
-        acceptedBy: null,
-        acceptedAt: null,
+        closedAt: null,
       };
 
       expect(finding.duplicateOfId).toBeNull();
-      expect(finding.lockedSnapshot).toBeNull();
       expect(finding.triagedBy).toBeNull();
-      expect(finding.acceptedBy).toBeNull();
+      expect(finding.closedAt).toBeNull();
     });
   });
 });

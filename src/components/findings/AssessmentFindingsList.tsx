@@ -32,7 +32,7 @@ type Status =
   | "NEW"
   | "NEEDS_INFO"
   | "TRIAGED"
-  | "ACCEPTED"
+  | "CLOSED"
   | "DUPLICATE"
   | "REJECTED";
 
@@ -58,8 +58,8 @@ function statusBadge(s: Status) {
         ? "bg-amber-100 text-amber-800 border-amber-200"
         : s === "TRIAGED"
           ? "bg-green-100 text-green-800 border-green-200"
-          : s === "ACCEPTED"
-            ? "bg-violet-100 text-violet-800 border-violet-200"
+          : s === "CLOSED"
+            ? "bg-emerald-100 text-emerald-800 border-emerald-200"
             : "bg-slate-100 text-slate-800 border-slate-200";
   return (
     <Badge variant="outline" className={cls}>

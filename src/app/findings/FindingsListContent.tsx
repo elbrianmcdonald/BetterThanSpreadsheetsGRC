@@ -138,12 +138,14 @@ interface FindingListItem {
   description: string;
   source: FindingSource;
   severity: Severity;
+  // Story 20.3: matrix-anchored severity (label preferred by SeverityBadge)
+  severityLabel: string | null;
+  inherentScore: number | string | null;
   status: FindingStatus;
   affectedAssets: string[];
   createdAt: Date | string;
   updatedAt: Date | string;
   triagedAt: Date | string | null;
-  acceptedAt: Date | string | null;
   dueDate: Date | string | null;
   closedAt: Date | string | null;
   slaBreached: boolean;
@@ -152,7 +154,6 @@ interface FindingListItem {
   creator?: { id: string; name: string | null; email: string | null } | null;
   assignee?: { id: string; name: string | null; email: string | null } | null;
   triager?: { id: string; name: string | null; email: string | null } | null;
-  accepter?: { id: string; name: string | null; email: string | null } | null;
   affectedBusinessUnits?: { id: string; name: string }[];
   _count?: {
     ControlLinks: number;
@@ -167,6 +168,7 @@ const ALL_COLUMN_IDS = [
   "title",
   "source",
   "severity",
+  "inherentScore",
   "status",
   "createdAt",
   "updatedAt",
@@ -174,9 +176,7 @@ const ALL_COLUMN_IDS = [
   "assignee",
   "creator",
   "triager",
-  "accepter",
   "triagedAt",
-  "acceptedAt",
   "dueDate",
   "closedAt",
   "slaBreached",
@@ -194,6 +194,7 @@ const DEFAULT_VISIBILITY: VisibilityState = {
   title: true,
   source: true,
   severity: true,
+  inherentScore: true,
   status: true,
   createdAt: true,
   updatedAt: false,
@@ -201,9 +202,7 @@ const DEFAULT_VISIBILITY: VisibilityState = {
   assignee: false,
   creator: false,
   triager: false,
-  accepter: false,
   triagedAt: false,
-  acceptedAt: false,
   dueDate: false,
   closedAt: false,
   slaBreached: false,
@@ -228,9 +227,7 @@ const COLUMN_LABELS: Record<string, string> = {
   assignee: "Assignee",
   creator: "Creator",
   triager: "Triaged By",
-  accepter: "Accepted By",
   triagedAt: "Triaged Date",
-  acceptedAt: "Accepted Date",
   dueDate: "Due Date",
   closedAt: "Closed Date",
   slaBreached: "SLA Breached",
@@ -364,6 +361,13 @@ export function FindingsListContent() {
       status: parseEnum<FindingStatus>("status", Object.values(FindingStatus)),
       source: parseEnum<FindingSource>("source", Object.values(FindingSource)),
       severity: parseEnum<Severity>("severity", Object.values(Severity)),
+      // Story 20.3: matrix label deep-links (e.g. /findings?severityLabel=Critical)
+      severityLabel:
+        searchParams
+          .get("severityLabel")
+          ?.split(",")
+          .map((v) => v.trim())
+          .filter(Boolean) ?? [],
       search: searchParams.get("search") ?? "",
     };
     // Run once on mount; subsequent filter changes are user-driven.
@@ -444,6 +448,7 @@ export function FindingsListContent() {
     | "severity"
     | "status"
     | "createdAt"
+    | "inherentScore" // Story 20.3: score column
     | undefined;
   const sortOrder = sorting[0]?.desc ? "desc" : "asc";
 
@@ -455,6 +460,8 @@ export function FindingsListContent() {
     status: filters.status.length > 0 ? filters.status : undefined,
     source: filters.source.length > 0 ? filters.source : undefined,
     severity: filters.severity.length > 0 ? filters.severity : undefined,
+    severityLabel:
+      filters.severityLabel.length > 0 ? filters.severityLabel : undefined,
     search: filters.search || undefined,
     sortBy,
     sortOrder,
@@ -603,10 +610,27 @@ export function FindingsListContent() {
         cell: ({ row }) => (
           <SeverityBadge
             severity={row.getValue("severity")}
+            severityLabel={row.original.severityLabel}
             size="sm"
             showTooltip={false}
           />
         ),
+      },
+      {
+        // Story 20.3: sortable matrix score (unscored legacy findings show —)
+        id: "inherentScore",
+        accessorKey: "inherentScore",
+        header: ({ column }) => (
+          <SortableHeader column={column}>Score</SortableHeader>
+        ),
+        cell: ({ row }) => {
+          const score = row.original.inherentScore;
+          return (
+            <span className="font-mono text-sm text-muted-foreground">
+              {score == null ? "—" : Number(Number(score).toFixed(2))}
+            </span>
+          );
+        },
       },
       {
         id: "status",
@@ -701,20 +725,6 @@ export function FindingsListContent() {
         ),
       },
       {
-        id: "accepter",
-        accessorFn: (row) => row.accepter?.name ?? row.accepter?.email,
-        header: () => (
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-            Accepted By
-          </span>
-        ),
-        cell: ({ row }) => (
-          <span className="text-sm">
-            {row.original.accepter?.name ?? row.original.accepter?.email ?? "—"}
-          </span>
-        ),
-      },
-      {
         id: "triagedAt",
         accessorKey: "triagedAt",
         header: () => (
@@ -725,20 +735,6 @@ export function FindingsListContent() {
         cell: ({ row }) => (
           <span className="font-mono text-sm text-muted-foreground">
             {formatDate(row.getValue("triagedAt"))}
-          </span>
-        ),
-      },
-      {
-        id: "acceptedAt",
-        accessorKey: "acceptedAt",
-        header: () => (
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-            Accepted Date
-          </span>
-        ),
-        cell: ({ row }) => (
-          <span className="font-mono text-sm text-muted-foreground">
-            {formatDate(row.getValue("acceptedAt"))}
           </span>
         ),
       },
@@ -1067,20 +1063,20 @@ export function FindingsListContent() {
           }
         />
 
-        {/* Accepted */}
+        {/* Closed */}
         <StatTile
-          label="ACCEPTED"
+          label="CLOSED"
           value={
-            isStatsLoading ? <Skeleton className="h-8 w-16" /> : (stats?.statusDistribution.ACCEPTED ?? 0)
+            isStatsLoading ? <Skeleton className="h-8 w-16" /> : (stats?.statusDistribution.CLOSED ?? 0)
           }
-          sub="Converted to risk assessments"
+          sub="Remediated or resolved"
           icon={<CheckCircle2 />}
           tone="success"
         />
 
-        {/* Closed */}
+        {/* Rejected / duplicate */}
         <StatTile
-          label="CLOSED"
+          label="DISMISSED"
           value={
             isStatsLoading ? (
               <Skeleton className="h-8 w-16" />

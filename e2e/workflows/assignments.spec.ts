@@ -17,14 +17,20 @@ test.describe.serial('Workflow: Assignments (two-user)', () => {
     const { context, page } = await authedContext(browser, USERS.analyst);
     try {
       await page.goto('/findings/new');
-      await page.getByPlaceholder(/descriptive title/i).fill(TITLE);
+      await page.getByPlaceholder(/Short, specific finding label/i).fill(TITLE);
       await page
-        .getByPlaceholder(/detailed description of the finding/i)
+        .getByPlaceholder(/Describe the finding in detail/i)
         .fill('Finding created by the analyst and assigned to the admin for triage.');
-      await page.getByRole('combobox', { name: 'Source *' }).click();
+      await page.getByRole('combobox', { name: /Source/ }).click();
       await page.getByRole('option', { name: /Audit/i }).first().click();
-      await page.getByRole('combobox', { name: 'Severity *' }).click();
-      await page.getByRole('option', { name: /Medium/i }).first().click();
+
+      // Severity scoring: inherent likelihood × impact on the org matrix.
+      await page.getByRole('combobox', { name: 'Likelihood' }).first().click();
+      await page.getByRole('option').first().click();
+      await page.getByRole('combobox', { name: 'Impact' }).first().click();
+      await page.getByRole('option').first().click();
+      const eliminated = page.getByRole('checkbox', { name: /Finding eliminated/i });
+      if (await eliminated.count()) await eliminated.check();
 
       // Assign to Alice via the AssigneePicker (combobox named by its placeholder).
       await page.getByRole('combobox', { name: /Select assignee/i }).click();

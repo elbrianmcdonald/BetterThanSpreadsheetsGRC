@@ -244,10 +244,9 @@ export interface FindingExportData {
   creator: { name: string | null; email: string | null } | null;
   assignee: { name: string | null; email: string | null } | null;
   triager: { name: string | null } | null;
-  accepter: { name: string | null } | null;
   affectedBusinessUnits: Array<{ name: string }>;
   triagedAt: Date | null;
-  acceptedAt: Date | null;
+  closedAt: Date | null;
 }
 
 /**
@@ -268,8 +267,7 @@ export const FINDING_CSV_HEADERS = [
   "Created At",
   "Triaged By",
   "Triaged At",
-  "Accepted By",
-  "Accepted At",
+  "Closed At",
 ];
 
 /**
@@ -291,8 +289,7 @@ export function formatFindingForCSV(finding: FindingExportData): Record<string, 
     "Created At": formatDateForCSV(finding.createdAt),
     "Triaged By": finding.triager?.name ?? "",
     "Triaged At": formatDateForCSV(finding.triagedAt),
-    "Accepted By": finding.accepter?.name ?? "",
-    "Accepted At": formatDateForCSV(finding.acceptedAt),
+    "Closed At": formatDateForCSV(finding.closedAt),
   };
 }
 

@@ -26,7 +26,6 @@ export {
   GATE_SHORT_LABELS,
   type ApprovalGateResult,
 } from "./ApprovalGateChecklist";
-export { AssessmentActions, ApprovalStatusBadge } from "./AssessmentActions";
 
 // Epic 3: Vendor Assessment Workflow
 export {

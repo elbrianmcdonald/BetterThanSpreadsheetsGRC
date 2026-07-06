@@ -11,9 +11,8 @@
  * - AC9: Source badge (Audit, Pentest, etc.)
  * - AC10: Severity badge with color coding
  * - AC11: Created date and creator name
- * - AC12: Locked indicator (if status = ACCEPTED)
  *
- * @see Story 7.11: Finding Detail Page with Inline Expansion
+ * @see Story 7.11: Finding Detail Page
  */
 
 import { type FindingStatus, type FindingSource, type Severity } from "@prisma/client";
@@ -22,7 +21,6 @@ import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { FindingStatusBadge } from "./FindingStatusBadge";
-import { LockedFindingBadge } from "./LockedFindingBadge";
 
 /**
  * Source badge configuration
@@ -33,6 +31,7 @@ const SOURCE_CONFIG: Record<FindingSource, { label: string; className: string }>
   SCANNER: { label: "Scanner", className: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300" },
   INCIDENT: { label: "Incident", className: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300" },
   MANUAL: { label: "Manual", className: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+  RISK_ASSESSMENT: { label: "Risk Assessment", className: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300" },
 };
 
 /**
@@ -62,12 +61,6 @@ interface FindingHeaderProps {
     name: string | null;
     email: string | null;
   } | null;
-  /** When the finding was accepted (for lock indicator) */
-  acceptedAt?: Date | string | null;
-  /** Who accepted the finding (for lock indicator) */
-  accepter?: {
-    name: string | null;
-  } | null;
   /** Additional CSS classes */
   className?: string;
 }
@@ -79,13 +72,11 @@ interface FindingHeaderProps {
  * ```tsx
  * <FindingHeader
  *   identifier="FND-001"
- *   status={FindingStatus.ACCEPTED}
+ *   status={FindingStatus.TRIAGED}
  *   source={FindingSource.PENTEST}
  *   severity={Severity.HIGH}
  *   createdAt={finding.createdAt}
  *   creator={finding.creator}
- *   acceptedAt={finding.acceptedAt}
- *   accepter={finding.accepter}
  * />
  * ```
  */
@@ -97,8 +88,6 @@ export function FindingHeader({
   severityLabel,
   createdAt,
   creator,
-  acceptedAt,
-  accepter,
   className,
 }: FindingHeaderProps) {
   const sourceConfig = SOURCE_CONFIG[source];
@@ -143,14 +132,6 @@ export function FindingHeader({
           </div>
         )}
       </div>
-
-      {/* AC12: Locked indicator (if status = ACCEPTED) */}
-      {status === "ACCEPTED" && acceptedAt && (
-        <LockedFindingBadge
-          acceptedAt={acceptedAt}
-          acceptedByName={accepter?.name}
-        />
-      )}
     </div>
   );
 }

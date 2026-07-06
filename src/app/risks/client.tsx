@@ -183,6 +183,10 @@ interface RiskData {
   inherentScoreLabel: string | null;
   residualScore: unknown;
   residualScoreLabel: string | null;
+  // Story 22.4: derived scoring — the register reads effective
+  effectiveScore: unknown;
+  effectiveScoreLabel: string | null;
+  effectiveScoreSource: string | null;
   findingSource: string | null;
   cveId: string | null;
   technicalDetails: string | null;
@@ -502,6 +506,25 @@ export function RiskRegistryClient() {
         accessorKey: "severity",
         header: "Severity",
         cell: ({ row }) => {
+          // Story 22.4: prefer the derived effective score/label (rollup or
+          // manual override); coarse enum badge remains the legacy fallback.
+          const effLabel = row.original.effectiveScoreLabel;
+          const effScore =
+            row.original.effectiveScore == null
+              ? null
+              : Number(row.original.effectiveScore);
+          if (effLabel) {
+            return (
+              <span className="inline-flex items-center gap-1.5">
+                <Badge>{effLabel}</Badge>
+                {effScore !== null && (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {Number(effScore.toFixed(2))}
+                  </span>
+                )}
+              </span>
+            );
+          }
           const severityStyle = severityConfig[row.original.severity as keyof typeof severityConfig];
           return (
             <Badge variant={severityStyle?.variant}>

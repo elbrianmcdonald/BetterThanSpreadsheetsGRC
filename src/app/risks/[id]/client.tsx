@@ -41,6 +41,12 @@ import { StatusHistory } from "@/components/risk/StatusHistory";
 import { BusinessImpactStatement } from "@/components/risk/BusinessImpactStatement";
 // Story 12.6: Risk-to-Control Linkage
 import { RiskControlsSection } from "@/components/risk/RiskControlsSection";
+// Story 21.3: Risk ↔ Finding link management
+import { RiskLinkedFindingsSection } from "@/components/risk/RiskLinkedFindingsSection";
+// Story 22.1: Derived scoring display
+import { RiskEffectiveScoreCard } from "@/components/risk/RiskEffectiveScoreCard";
+// Story 23.1: Risk-level acceptance
+import { RiskTreatmentSection } from "@/components/risk/RiskTreatmentSection";
 // Story 16.4: Residual Severity Section
 import { ResidualSeveritySection } from "@/components/risk/ResidualSeveritySection";
 // Story 16.2: MITRE Threat Modeling
@@ -110,6 +116,13 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
   const canComment = userRole && CAN_COMMENT_ROLES.includes(userRole);
   const canEditImpactStatement =
     userRole && (userRole === UserRole.GRC_ANALYST || userRole === UserRole.ORG_ADMIN);
+  // Story 23.5 (review MJ-5): mirrors the server's RISK_UPDATE_ROLES —
+  // Security Engineers may override scores, accept risk, and manage links.
+  const canManageRisk =
+    userRole &&
+    (userRole === UserRole.SECURITY_ENGINEER ||
+      userRole === UserRole.GRC_ANALYST ||
+      userRole === UserRole.ORG_ADMIN);
 
   // Fetch risk data with all relations
   const {
@@ -284,6 +297,37 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
                 preventativeControlsNeeded: risk.preventativeControlsNeeded,
               }}
               showHeader={false}
+            />
+            {/* Story 22.1: Effective severity (derived from linked findings) */}
+            <RiskEffectiveScoreCard
+              riskId={riskId}
+              matrixVersionId={risk.matrixVersionId}
+              canManage={!!canManageRisk}
+              useManualScore={risk.useManualScore}
+              manualScore={risk.manualScore ? Number(risk.manualScore) : null}
+              manualScoreLabel={risk.manualScoreLabel}
+              manualLikelihood={risk.manualLikelihood ? Number(risk.manualLikelihood) : null}
+              manualImpact={risk.manualImpact ? Number(risk.manualImpact) : null}
+              manualExposure={risk.manualExposure ? Number(risk.manualExposure) : null}
+              calculatedScore={risk.calculatedScore ? Number(risk.calculatedScore) : null}
+              calculatedScoreLabel={risk.calculatedScoreLabel}
+              effectiveScore={risk.effectiveScore ? Number(risk.effectiveScore) : null}
+              effectiveScoreLabel={risk.effectiveScoreLabel}
+              effectiveScoreSource={risk.effectiveScoreSource}
+              onChanged={() => refetch()}
+            />
+            {/* Story 23.1: Treatment / acceptance (risk-level only) */}
+            <RiskTreatmentSection
+              riskId={riskId}
+              canManage={!!canManageRisk}
+              acceptanceReReviewRequired={!!risk.acceptanceReReviewRequired}
+              onChanged={() => refetch()}
+            />
+            {/* Story 21.3: Linked findings — the risk's evidence trail */}
+            <RiskLinkedFindingsSection
+              riskId={riskId}
+              canManage={!!canManageRisk}
+              onScoreChanged={() => refetch()}
             />
             <BusinessImpactStatement
               riskId={riskId}

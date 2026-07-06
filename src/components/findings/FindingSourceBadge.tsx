@@ -69,6 +69,13 @@ const SOURCE_CONFIG: Record<
     borderColor: "border-blue-300 dark:border-blue-600",
     icon: FileText,
   },
+  [FindingSource.RISK_ASSESSMENT]: {
+    label: "Risk Assessment",
+    color: "text-emerald-700 dark:text-emerald-300",
+    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+    borderColor: "border-emerald-300 dark:border-emerald-600",
+    icon: Shield,
+  },
 };
 
 interface FindingSourceBadgeProps {

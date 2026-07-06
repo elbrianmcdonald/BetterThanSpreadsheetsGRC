@@ -146,6 +146,9 @@ export const riskRegisterRouter = createTRPCRouter({
         Boolean(input.businessUnitId) ||
         (input.severityLabels?.length ?? 0) > 0;
 
+      // Story 23.3: the assessment→finding relation is gone (legacy rows keep
+      // a findingId pointer), so search covers entry/assessment identifiers,
+      // assessment title, and risk title.
       const searchClause: Prisma.RiskRegisterEntryWhereInput | undefined = input.search
         ? {
             OR: [
@@ -155,9 +158,7 @@ export const riskRegisterRouter = createTRPCRouter({
                   is: {
                     OR: [
                       { identifier: { contains: input.search, mode: "insensitive" as const } },
-                      {
-                        finding: { title: { contains: input.search, mode: "insensitive" as const } },
-                      },
+                      { title: { contains: input.search, mode: "insensitive" as const } },
                     ],
                   },
                 },
@@ -202,16 +203,6 @@ export const riskRegisterRouter = createTRPCRouter({
         include: {
           assessment: {
             include: {
-              finding: {
-                select: {
-                  id: true,
-                  identifier: true,
-                  title: true,
-                  source: true,
-                  // Epic 19: exploitation-pathway membership (drives the ⬡ indicator)
-                  isToxic: true,
-                },
-              },
               // Story 16.5: Include business unit (AC17)
               businessUnit: {
                 select: {
@@ -256,6 +247,19 @@ export const riskRegisterRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
+      // Story 23.3: stitch source-finding summaries onto legacy
+      // assessment-backed entries via the historical findingId pointer.
+      const findingIds = entries
+        .map((e) => e.assessment?.findingId)
+        .filter((id): id is string => Boolean(id));
+      const stitchedFindings = findingIds.length
+        ? await ctx.db.finding.findMany({
+            where: { id: { in: findingIds }, organizationId },
+            select: { id: true, identifier: true, title: true, source: true, isToxic: true },
+          })
+        : [];
+      const findingById = new Map(stitchedFindings.map((f) => [f.id, f]));
+
       // Story 16.5: Calculate SLA status for each entry (AC19)
       const now = new Date();
       const serializedEntries = entries.map((entry) => {
@@ -289,6 +293,9 @@ export const riskRegisterRouter = createTRPCRouter({
           assessment: entry.assessment
             ? {
                 ...entry.assessment,
+                finding: entry.assessment.findingId
+                  ? findingById.get(entry.assessment.findingId) ?? null
+                  : null,
                 likelihoodValue: entry.assessment.likelihoodValue
                   ? Number(entry.assessment.likelihoodValue)
                   : null,
@@ -331,15 +338,6 @@ export const riskRegisterRouter = createTRPCRouter({
         include: {
           assessment: {
             include: {
-              finding: {
-                select: {
-                  id: true,
-                  identifier: true,
-                  title: true,
-                  source: true,
-                  description: true,
-                },
-              },
               owner: {
                 select: {
                   id: true,
@@ -381,11 +379,20 @@ export const riskRegisterRouter = createTRPCRouter({
         return null;
       }
 
+      // Story 23.3: stitch the source finding via the historical pointer.
+      const sourceFinding = entry.assessment?.findingId
+        ? await ctx.db.finding.findFirst({
+            where: { id: entry.assessment.findingId, organizationId },
+            select: { id: true, identifier: true, title: true, source: true, description: true },
+          })
+        : null;
+
       return {
         ...entry,
         assessment: entry.assessment
           ? {
               ...entry.assessment,
+              finding: sourceFinding,
               likelihoodValue: entry.assessment.likelihoodValue
                 ? Number(entry.assessment.likelihoodValue)
                 : null,
@@ -572,11 +579,7 @@ export const riskRegisterRouter = createTRPCRouter({
         },
         include: {
           assessment: {
-            include: {
-              finding: {
-                select: { id: true, title: true },
-              },
-            },
+            select: { id: true, identifier: true, title: true, findingId: true },
           },
         },
       });

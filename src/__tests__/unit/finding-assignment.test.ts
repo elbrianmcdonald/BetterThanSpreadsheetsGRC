@@ -134,26 +134,27 @@ describe("Finding Assignment (Story 7.0.8)", () => {
 
     it("AC11: Assignee editable for NEW/NEEDS_INFO/TRIAGED findings", () => {
       const editableStatuses = ["NEW", "NEEDS_INFO", "TRIAGED"];
-      const lockedStatuses = ["ACCEPTED", "DUPLICATE", "REJECTED"];
+      const lockedStatuses = ["CLOSED", "DUPLICATE", "REJECTED"];
 
       const isAssigneeEditable = (status: string): boolean => {
         return editableStatuses.includes(status);
       };
 
+      expect(lockedStatuses.every((s) => !isAssigneeEditable(s))).toBe(true);
       expect(isAssigneeEditable("NEW")).toBe(true);
       expect(isAssigneeEditable("NEEDS_INFO")).toBe(true);
       expect(isAssigneeEditable("TRIAGED")).toBe(true);
-      expect(isAssigneeEditable("ACCEPTED")).toBe(false);
+      expect(isAssigneeEditable("CLOSED")).toBe(false);
     });
 
-    it("AC12: Assignee locked for ACCEPTED findings", () => {
+    it("AC12: Assignee locked for terminal findings", () => {
       const finding = {
         id: "finding-1",
-        status: "ACCEPTED",
+        status: "CLOSED",
         assigneeId: "user-1",
       };
 
-      const canChangeAssignee = finding.status !== "ACCEPTED";
+      const canChangeAssignee = finding.status !== "CLOSED";
       expect(canChangeAssignee).toBe(false);
     });
 

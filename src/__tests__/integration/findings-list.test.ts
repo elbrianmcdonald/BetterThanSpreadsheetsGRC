@@ -46,7 +46,7 @@ const mockFindings = [
     title: "Weak Password Policy",
     source: FindingSource.AUDIT,
     severity: Severity.LOW,
-    status: FindingStatus.ACCEPTED,
+    status: FindingStatus.CLOSED,
     createdAt: new Date("2024-01-13"),
     organizationId: mockOrganizationId,
     createdBy: mockUserId,
@@ -425,7 +425,7 @@ describe("FindingFilters Component", () => {
       FindingStatus.NEW,
       FindingStatus.NEEDS_INFO,
       FindingStatus.TRIAGED,
-      FindingStatus.ACCEPTED,
+      FindingStatus.CLOSED,
       FindingStatus.DUPLICATE,
       FindingStatus.REJECTED,
     ];

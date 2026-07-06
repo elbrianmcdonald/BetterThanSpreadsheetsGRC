@@ -234,11 +234,11 @@ describe("Story 7.3: Finding Triage Workflow", () => {
     it("AC4: Terminal states have no valid transitions", () => {
       expect(TERMINAL_STATUSES).toContain(FindingStatus.DUPLICATE);
       expect(TERMINAL_STATUSES).toContain(FindingStatus.REJECTED);
-      expect(TERMINAL_STATUSES).toContain(FindingStatus.ACCEPTED);
+      expect(TERMINAL_STATUSES).toContain(FindingStatus.CLOSED);
 
       expect(FINDING_TRANSITIONS[FindingStatus.DUPLICATE]).toHaveLength(0);
       expect(FINDING_TRANSITIONS[FindingStatus.REJECTED]).toHaveLength(0);
-      expect(FINDING_TRANSITIONS[FindingStatus.ACCEPTED]).toHaveLength(0);
+      expect(FINDING_TRANSITIONS[FindingStatus.CLOSED]).toHaveLength(0);
     });
 
     it("AC5: canTransitionFinding returns boolean correctly", () => {
@@ -246,7 +246,7 @@ describe("Story 7.3: Finding Triage Workflow", () => {
       expect(canTransitionFinding(FindingStatus.NEW, FindingStatus.NEEDS_INFO)).toBe(true);
       expect(canTransitionFinding(FindingStatus.NEW, FindingStatus.DUPLICATE)).toBe(true);
       expect(canTransitionFinding(FindingStatus.NEW, FindingStatus.REJECTED)).toBe(true);
-      expect(canTransitionFinding(FindingStatus.NEW, FindingStatus.ACCEPTED)).toBe(false);
+      expect(canTransitionFinding(FindingStatus.NEW, FindingStatus.CLOSED)).toBe(false);
       expect(canTransitionFinding(FindingStatus.REJECTED, FindingStatus.NEW)).toBe(false);
     });
 
@@ -260,7 +260,7 @@ describe("Story 7.3: Finding Triage Workflow", () => {
     it("isTerminalFindingStatus works correctly", () => {
       expect(isTerminalFindingStatus(FindingStatus.DUPLICATE)).toBe(true);
       expect(isTerminalFindingStatus(FindingStatus.REJECTED)).toBe(true);
-      expect(isTerminalFindingStatus(FindingStatus.ACCEPTED)).toBe(true);
+      expect(isTerminalFindingStatus(FindingStatus.CLOSED)).toBe(true);
       expect(isTerminalFindingStatus(FindingStatus.NEW)).toBe(false);
       expect(isTerminalFindingStatus(FindingStatus.TRIAGED)).toBe(false);
     });

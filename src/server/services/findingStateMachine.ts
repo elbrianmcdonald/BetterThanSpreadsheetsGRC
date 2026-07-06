@@ -6,20 +6,21 @@
  * This service implements the finding workflow state machine that governs
  * valid status transitions for the triage process.
  *
- * State Transition Rules (AC1-AC6):
+ * State Transition Rules (AC1-AC6, reshaped by Stories 21.4/23.3):
  * - NEW → TRIAGED: Mark as triaged after review
  * - NEW → NEEDS_INFO: Request more information
  * - NEW → DUPLICATE: Mark as duplicate of existing finding
  * - NEW → REJECTED: Reject invalid finding
  * - NEEDS_INFO → TRIAGED: Resume triage after info provided
- * - TRIAGED → ACCEPTED: Accept finding (creates Risk Assessment) - Story 7.4
- * - DUPLICATE, REJECTED, ACCEPTED: Terminal states (no transitions out)
+ * - TRIAGED → CLOSED: Remediated/resolved (Story 21.4)
+ * - DUPLICATE, REJECTED, CLOSED: Terminal states (no transitions out)
  *
  * @see Story 7.3: Finding Triage Workflow
  */
 
 import { FindingStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { TERMINAL_FINDING_STATUSES } from "@/lib/findings/terminal-statuses";
 
 /**
  * Map of allowed state transitions for each status.
@@ -36,21 +37,20 @@ export const FINDING_TRANSITIONS: Record<FindingStatus, FindingStatus[]> = {
     FindingStatus.REJECTED,
   ],
   [FindingStatus.NEEDS_INFO]: [FindingStatus.TRIAGED],
-  [FindingStatus.TRIAGED]: [FindingStatus.ACCEPTED],
+  // Story 21.4: TRIAGED closes (remediated/resolved).
+  [FindingStatus.TRIAGED]: [FindingStatus.CLOSED],
+  [FindingStatus.CLOSED]: [], // Terminal - Story 21.4
   [FindingStatus.DUPLICATE]: [], // Terminal - AC4
   [FindingStatus.REJECTED]: [], // Terminal - AC4
-  [FindingStatus.ACCEPTED]: [], // Terminal - AC4, handled by Story 7.4
 };
 
 /**
  * Terminal states that cannot transition further.
- * AC4: Terminal states identified: DUPLICATE, REJECTED, ACCEPTED
+ * AC4 + Story 21.4: DUPLICATE, REJECTED, CLOSED
+ * Story 23.5: sourced from the shared client-safe constant so UI copies
+ * can't drift from server enforcement.
  */
-export const TERMINAL_STATUSES: FindingStatus[] = [
-  FindingStatus.DUPLICATE,
-  FindingStatus.REJECTED,
-  FindingStatus.ACCEPTED,
-];
+export const TERMINAL_STATUSES: FindingStatus[] = TERMINAL_FINDING_STATUSES;
 
 /**
  * Checks if a status transition is allowed.
@@ -192,7 +192,15 @@ export function getFindingStatusDisplayConfig(
       color: "text-green-700",
       bgColor: "bg-green-100",
       icon: "check-circle",
-      description: "Reviewed and ready for acceptance decision",
+      description: "Reviewed — link to risks and remediate",
+    },
+    // Story 21.4: CLOSED terminal state
+    [FindingStatus.CLOSED]: {
+      label: "Closed",
+      color: "text-emerald-700",
+      bgColor: "bg-emerald-100",
+      icon: "check-circle-2",
+      description: "Remediated or otherwise resolved",
     },
     [FindingStatus.DUPLICATE]: {
       label: "Duplicate",
@@ -207,13 +215,6 @@ export function getFindingStatusDisplayConfig(
       bgColor: "bg-red-100",
       icon: "x-circle",
       description: "Not a valid security finding",
-    },
-    [FindingStatus.ACCEPTED]: {
-      label: "Accepted",
-      color: "text-purple-700",
-      bgColor: "bg-purple-100",
-      icon: "check-circle-2",
-      description: "Accepted - Risk Assessment created",
     },
   };
 
@@ -288,18 +289,22 @@ export function getFindingActionConfigs(
         requiresModal: false,
       },
     ],
+    // Story 21.2: findings link to register risks ("Link to Risk" in
+    // FindingActions) instead of promoting into them.
+    // Story 21.4: TRIAGED closes when remediated/resolved (nudge in
+    // FindingActions when the finding has no risk links).
     [FindingStatus.TRIAGED]: [
       {
-        targetStatus: FindingStatus.ACCEPTED,
-        label: "Accept Finding",
+        targetStatus: FindingStatus.CLOSED,
+        label: "Close Finding",
         variant: "default",
         requiresModal: false,
       },
     ],
+    [FindingStatus.CLOSED]: [],
     // Terminal states - no actions available (AC17)
     [FindingStatus.DUPLICATE]: [],
     [FindingStatus.REJECTED]: [],
-    [FindingStatus.ACCEPTED]: [],
   };
 
   return actionMap[currentStatus] || [];

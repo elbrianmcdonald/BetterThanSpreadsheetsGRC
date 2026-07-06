@@ -85,13 +85,25 @@ export async function getRiskDeliverableData(
 ): Promise<{ scorecard: ScorecardCellConfig[]; rows: RiskRow[] }> {
   const assessments = await db.riskAssessment.findMany({
     where: { organizationId },
-    include: { finding: { include: { affectedBusinessUnits: true } } },
   });
+
+  // Story 23.3: the assessment→finding relation is gone; legacy rows keep a
+  // findingId pointer, so batch-stitch the findings for the heatmap rows.
+  const findingIds = assessments
+    .map((a) => a.findingId)
+    .filter((id): id is string => Boolean(id));
+  const findings = findingIds.length
+    ? await db.finding.findMany({
+        where: { id: { in: findingIds }, organizationId },
+        include: { affectedBusinessUnits: true },
+      })
+    : [];
+  const findingById = new Map(findings.map((f) => [f.id, f]));
 
   const rows: RiskRow[] = [];
   for (const ra of assessments) {
     if (ra.likelihoodValue == null || ra.impactValue == null) continue;
-    const finding = ra.finding;
+    const finding = ra.findingId ? findingById.get(ra.findingId) : null;
     if (!finding) continue;
 
     const likelihood = Math.round(Number(ra.likelihoodValue));

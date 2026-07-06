@@ -142,17 +142,25 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
   }, [matrix, manualLikelihood, manualImpact]);
 
   // Tagged child risks plotted on the view heatmap (risks only, per spec).
-  // Position by residual ?? inherent L/I against the ER's resolved view matrix.
+  // Story 22.4: position by the DERIVED score's inputs — manual L/I when the
+  // override is active, else the legacy residual ?? inherent chain (children
+  // scored purely by the findings rollup have no single L/I pair and fall to
+  // the unscored list, still labeled with their effective label).
   const viewMatrix = data?.viewMatrix ?? null;
   const riskHeatmapRows: HeatmapItem[] = useMemo(() => {
     if (!data) return [];
     return data.childRisks.map((r) => {
-      const lRaw = r.residualLikelihood ?? r.inherentLikelihood;
-      const iRaw = r.residualImpact ?? r.inherentImpact;
+      const lRaw = r.useManualScore
+        ? (r.manualLikelihood ?? r.residualLikelihood ?? r.inherentLikelihood)
+        : (r.residualLikelihood ?? r.inherentLikelihood);
+      const iRaw = r.useManualScore
+        ? (r.manualImpact ?? r.residualImpact ?? r.inherentImpact)
+        : (r.residualImpact ?? r.inherentImpact);
       const likelihood = lRaw !== null && lRaw !== undefined ? Number(lRaw) : null;
       const impact = iRaw !== null && iRaw !== undefined ? Number(iRaw) : null;
       let score: number | null = null;
-      let scoreLabel: string | null = r.residualScoreLabel ?? r.inherentScoreLabel ?? null;
+      let scoreLabel: string | null =
+        r.effectiveScoreLabel ?? r.residualScoreLabel ?? r.inherentScoreLabel ?? null;
       let color = "#CCCCCC";
       if (viewMatrix && likelihood !== null && impact !== null) {
         score = score2D(likelihood, impact, viewMatrix.scales, viewMatrix.outputScaleMax);
@@ -533,7 +541,7 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
                           <Badge variant="outline">{r.severity}</Badge>
                         </TableCell>
                         <TableCell className="text-sm">
-                          {r.residualScoreLabel ?? r.inherentScoreLabel ?? "—"}
+                          {r.effectiveScoreLabel ?? r.residualScoreLabel ?? r.inherentScoreLabel ?? "—"}
                         </TableCell>
                       </TableRow>
                     ))}

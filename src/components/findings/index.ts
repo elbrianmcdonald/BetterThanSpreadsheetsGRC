@@ -13,15 +13,9 @@ export { FindingActions } from "./FindingActions";
 export { RejectFindingDialog } from "./RejectFindingDialog";
 export { DuplicateFinderModal } from "./DuplicateFinderModal";
 
-// Story 7.4: Finding Acceptance
-export { LockedFindingBadge } from "./LockedFindingBadge";
-
 // Story 7.11: Finding Detail Page
 export { FindingHeader } from "./FindingHeader";
 export { FindingDetails } from "./FindingDetails";
-export { InlineAssessmentSection } from "./InlineAssessmentSection";
-export { AssessmentForm } from "./AssessmentForm";
-export { SaveIndicator } from "./SaveIndicator";
 export { ApprovalGateChecklist } from "./ApprovalGateChecklist";
 export { RiskScoreDisplay } from "./RiskScoreDisplay";
 

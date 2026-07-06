@@ -84,6 +84,12 @@ import {
 } from "@/lib/matrix/scoring";
 import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 import { recomputeEnterpriseRiskScore } from "@/server/services/enterpriseRiskScore";
+import { recomputeRiskScore } from "@/server/services/riskScore";
+import { isTerminalFindingStatus } from "@/server/services/findingStateMachine";
+import {
+  computeMatrixScoring,
+  severityFromLabel as severityFromMatrixLabel,
+} from "@/server/services/matrixScoring";
 
 /**
  * Roles that can update risks (Story 4.3 AC29)
@@ -313,6 +319,21 @@ export const riskRouter = createTRPCRouter({
         }
 
         templateName = template.name;
+      }
+
+      // Story 23.5 (review MJ-1): enterprise-risk alignment must stay inside
+      // the caller's org (recomputeEnterpriseRiskScore writes to the target).
+      if (input.enterpriseRiskId) {
+        const er = await ctx.db.enterpriseRisk.findFirst({
+          where: { id: input.enterpriseRiskId, organizationId: ctx.organizationId! },
+          select: { id: true },
+        });
+        if (!er) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid enterprise risk - must be in same organization",
+          });
+        }
       }
 
       // Generate risk identifier (RISK-2026-0001 format)
@@ -799,6 +820,19 @@ export const riskRouter = createTRPCRouter({
     }),
 
   /**
+   * Lightweight risk list for link pickers (Story 20.1 follow-up — the
+   * finding form links findings to register risks at creation). Mirrors
+   * enterpriseRisk.listForPicker.
+   */
+  listForPicker: organizationProcedure.query(async ({ ctx }) => {
+    return ctx.db.risk.findMany({
+      where: { organizationId: ctx.organizationId! },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, identifier: true, title: true, severity: true },
+    });
+  }),
+
+  /**
    * List risks with role-based filtering
    *
    * Story 4.9: Role-Based Risk Views (AC23-AC28)
@@ -983,6 +1017,10 @@ export const riskRouter = createTRPCRouter({
             inherentScoreLabel: true,
             residualScore: true,
             residualScoreLabel: true,
+            // Story 22.4: derived scoring — register reads effective
+            effectiveScore: true,
+            effectiveScoreLabel: true,
+            effectiveScoreSource: true,
             // Source fields
             findingSource: true,
             cveId: true,
@@ -1365,10 +1403,12 @@ export const riskRouter = createTRPCRouter({
         preventativeControlsNeeded: z.string().max(10000).optional().nullable(),
         // Enterprise Risk alignment
         enterpriseRiskId: z.string().optional().nullable(),
-        // Risk Acceptance (populated when treatment = ACCEPT)
+        // Acceptance PROPOSAL fields (creator-authored documentation).
+        // Story 23.5 (review CR-2): the decision markers acceptedById /
+        // acceptedAt were removed from this input — an acceptance decision
+        // can only be minted via risk.createTreatment (TreatmentDecision
+        // ACCEPT), which enforces segregation of duties.
         acceptanceJustification: z.string().max(10000).optional().nullable(),
-        acceptedById: z.string().optional().nullable(),
-        acceptedAt: z.date().optional().nullable(),
         acceptanceReviewDate: z.date().optional().nullable(),
         acceptanceCompensatingControls: z.string().max(10000).optional().nullable(),
       })
@@ -1506,20 +1546,27 @@ export const riskRouter = createTRPCRouter({
 
       // Enterprise Risk alignment change tracking
       if (updateFields.enterpriseRiskId !== undefined && updateFields.enterpriseRiskId !== existingRisk.enterpriseRiskId) {
+        // Story 23.5 (review MJ-1): the new parent must be in the same org.
+        if (updateFields.enterpriseRiskId) {
+          const er = await ctx.db.enterpriseRisk.findFirst({
+            where: { id: updateFields.enterpriseRiskId, organizationId: existingRisk.organizationId },
+            select: { id: true },
+          });
+          if (!er) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Invalid enterprise risk - must be in same organization",
+            });
+          }
+        }
         updateData.enterpriseRiskId = updateFields.enterpriseRiskId;
         changes.enterpriseRiskId = { old: existingRisk.enterpriseRiskId, new: updateFields.enterpriseRiskId };
       }
 
-      // Risk acceptance fields (passed through; treatment toggle on the
-      // identified-risk card decides whether to write or null these)
+      // Acceptance proposal fields (documentation only — never the decision;
+      // see the input-schema note above).
       if (updateFields.acceptanceJustification !== undefined) {
         updateData.acceptanceJustification = updateFields.acceptanceJustification;
-      }
-      if (updateFields.acceptedById !== undefined) {
-        updateData.acceptedById = updateFields.acceptedById;
-      }
-      if (updateFields.acceptedAt !== undefined) {
-        updateData.acceptedAt = updateFields.acceptedAt;
       }
       if (updateFields.acceptanceReviewDate !== undefined) {
         updateData.acceptanceReviewDate = updateFields.acceptanceReviewDate;
@@ -1882,7 +1929,8 @@ export const riskRouter = createTRPCRouter({
         changes: {
           before: {
             riskId: existingOption.riskId,
-            riskTitle: existingOption.Risk.title,
+            // Risk is null for finding-attached options (Story 20.1)
+            riskTitle: existingOption.Risk?.title ?? null,
             title: existingOption.title,
             costEstimate: Number(existingOption.costEstimate),
             effortLevel: existingOption.effortLevel,
@@ -5031,11 +5079,22 @@ export const riskRouter = createTRPCRouter({
         select: {
           id: true,
           matrixVersionId: true,
+          createdById: true,
         },
       });
 
       if (!risk) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
+      }
+
+      // Story 23.1: segregation of duties — the acceptance decider cannot be
+      // the risk's creator (NFR6: created_by vs approved_by are separate).
+      if (input.treatmentType === "ACCEPT" && risk.createdById === userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Segregation of duties: the risk's creator cannot accept it — another authorized user must record the acceptance.",
+        });
       }
 
       // Calculate due date if SLA provided
@@ -5134,6 +5193,13 @@ export const riskRouter = createTRPCRouter({
           assignedTo: { select: { id: true, name: true, email: true } },
           treatmentBusinessUnit: { select: { id: true, name: true } },
         },
+      });
+
+      // Story 23.1: a fresh treatment decision resolves any pending
+      // acceptance re-review flag.
+      await ctx.db.risk.update({
+        where: { id: input.riskId },
+        data: { acceptanceReReviewRequired: false },
       });
 
       // Audit log
@@ -6049,6 +6115,41 @@ export const riskRouter = createTRPCRouter({
                 ? new Prisma.Decimal(residualScore)
                 : null,
               residualScoreLabel,
+              // Story 22.2: assessment risks are BORN in manual-score mode —
+              // the card-entered judgment (residual preferred) becomes the
+              // manual/effective score. The DRAFT→PENDING_REVIEW approval
+              // workflow keeps operating on manually-scored risks.
+              ...(residualScore !== null || inherentScore !== null
+                ? {
+                    useManualScore: true,
+                    manualLikelihood:
+                      riskInput.residualLikelihood ?? riskInput.inherentLikelihood
+                        ? new Prisma.Decimal(
+                            (riskInput.residualLikelihood ??
+                              riskInput.inherentLikelihood)!
+                          )
+                        : null,
+                    manualImpact:
+                      riskInput.residualImpact ?? riskInput.inherentImpact
+                        ? new Prisma.Decimal(
+                            (riskInput.residualImpact ?? riskInput.inherentImpact)!
+                          )
+                        : null,
+                    manualScore: new Prisma.Decimal(
+                      (residualScore ?? inherentScore)!
+                    ),
+                    manualScoreLabel: residualScore !== null
+                      ? residualScoreLabel
+                      : inherentScoreLabel,
+                    effectiveScore: new Prisma.Decimal(
+                      (residualScore ?? inherentScore)!
+                    ),
+                    effectiveScoreLabel: residualScore !== null
+                      ? residualScoreLabel
+                      : inherentScoreLabel,
+                    effectiveScoreSource: "MANUAL" as const,
+                  }
+                : {}),
             },
           });
 
@@ -6124,8 +6225,14 @@ export const riskRouter = createTRPCRouter({
             });
           }
 
-          // Create treatment record if treatment selected
-          if (riskInput.treatment) {
+          // Create treatment record if treatment selected.
+          // Story 23.5 (review CR-1): ACCEPT is a segregated decision — the
+          // risk's creator cannot decide it, and in this flow the decider
+          // would always BE the creator. Acceptance intent stays on the
+          // risk's proposal fields (acceptanceJustification et al. via the
+          // card); the formal decision must come from another authorized
+          // user through risk.createTreatment, which enforces the guard.
+          if (riskInput.treatment && riskInput.treatment !== "ACCEPT") {
             // Get SLA days from threshold
             let slaDays = 30; // Default
             if (inherentScoreLabel) {
@@ -6142,10 +6249,8 @@ export const riskRouter = createTRPCRouter({
                 id: randomUUID(),
                 organizationId,
                 riskId: risk.id,
-                treatmentType: riskInput.treatment, // ACCEPT or REMEDIATE
-                justification: riskInput.treatment === "ACCEPT"
-                  ? "Risk accepted during assessment"
-                  : "Risk to be remediated",
+                treatmentType: riskInput.treatment,
+                justification: "Risk to be remediated",
                 decidedById: userId,
                 decidedAt: new Date(),
                 slaDays,
@@ -6450,10 +6555,10 @@ export const riskRouter = createTRPCRouter({
   /**
    * Create a lightweight risk from within a compliance assessment workspace.
    *
-   * Mirrors finding.create's inline flow: spawns a risk tied to a specific
-   * control via Risk.sourceComplianceAssessmentId (+ optional RiskControlLink),
-   * and optionally links an originating finding (spawnedFromFindingId).
-   * Keeps the input minimal — no template / project / impact fields required.
+   * Mirrors finding.create's inline flow: creates a first-class register risk
+   * tied to the assessment via Risk.sourceComplianceAssessmentId (+ optional
+   * RiskControlLink), with assessment findings attached via RiskFindingLink
+   * (recommended but optional — Story 21.1).
    */
   createForAssessment: organizationProcedure
     .use(requireRole(RISK_CREATE_ROLES))
@@ -6464,10 +6569,9 @@ export const riskRouter = createTRPCRouter({
         severity: z.nativeEnum(Severity),
         complianceAssessmentId: z.string().min(1),
         controlId: z.string().optional(),
-        // A risk MUST be tied to one or more findings from this assessment.
-        linkedFindingIds: z
-          .array(z.string().min(1))
-          .min(1, "At least one finding is required"),
+        // Story 21.1: linking findings is recommended but OPTIONAL (FR5) —
+        // an assessment risk can exist before any finding documents it.
+        linkedFindingIds: z.array(z.string().min(1)).optional().default([]),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -6486,31 +6590,31 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      // De-duplicate ids, preserving order (first = primary/origin).
+      // De-duplicate ids, preserving order.
       const findingIds = Array.from(new Set(input.linkedFindingIds));
 
-      // Every risk must be tied to findings RAISED IN THIS ASSESSMENT.
-      const findings = await ctx.db.finding.findMany({
-        where: {
-          id: { in: findingIds },
-          organizationId,
-          sourceComplianceAssessmentId: input.complianceAssessmentId,
-        },
-        select: { id: true },
-      });
-      if (findings.length !== findingIds.length) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Every linked finding must be a finding from this assessment.",
+      // Linked findings (when provided) must be RAISED IN THIS ASSESSMENT.
+      if (findingIds.length > 0) {
+        const findings = await ctx.db.finding.findMany({
+          where: {
+            id: { in: findingIds },
+            organizationId,
+            sourceComplianceAssessmentId: input.complianceAssessmentId,
+          },
+          select: { id: true },
         });
+        if (findings.length !== findingIds.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Every linked finding must be a finding from this assessment.",
+          });
+        }
       }
-
-      // First id is the denormalized primary/origin finding.
-      const primaryFindingId = findingIds[0]!;
 
       // Generate risk identifier (RISK-YYYY-NNNN format).
       const identifier = await generateIdentifier(organizationId, "RISK");
 
+      // Story 21.1: RiskFindingLink is the sole source of truth.
       const risk = await ctx.db.risk.create({
         data: {
           identifier,
@@ -6522,7 +6626,6 @@ export const riskRouter = createTRPCRouter({
           organizationId,
           assetCriticality: "MEDIUM",
           sourceComplianceAssessmentId: input.complianceAssessmentId,
-          spawnedFromFindingId: primaryFindingId,
           // Surface the source in the register filters.
           findingSource: RiskFindingSource.COMPLIANCE_ASSESSMENT,
         },
@@ -6530,13 +6633,17 @@ export const riskRouter = createTRPCRouter({
       });
 
       // Source of truth: create a RiskFindingLink for EACH linked finding.
-      await ctx.db.riskFindingLink.createMany({
-        data: findingIds.map((findingId) => ({
-          riskId: risk.id,
-          findingId,
-        })),
-        skipDuplicates: true,
-      });
+      if (findingIds.length > 0) {
+        await ctx.db.riskFindingLink.createMany({
+          data: findingIds.map((findingId) => ({
+            riskId: risk.id,
+            findingId,
+          })),
+          skipDuplicates: true,
+        });
+        // Story 22.1: seed the derived score from the linked findings
+        void recomputeRiskScore(ctx.db, risk.id, "risk-created-with-findings", userId);
+      }
 
       // Auto-link to the compliance control when spawned from one (mirrors the
       // finding side's auto-link). AFFECTED = the risk affects this control.
@@ -6566,7 +6673,6 @@ export const riskRouter = createTRPCRouter({
             severity: input.severity,
             status: RiskStatus.OPEN,
             sourceComplianceAssessmentId: input.complianceAssessmentId,
-            spawnedFromFindingId: primaryFindingId,
             linkedFindingIds: findingIds,
             controlId: input.controlId ?? null,
           },
@@ -6655,13 +6761,556 @@ export const riskRouter = createTRPCRouter({
     }),
 
   /**
-   * Add a finding to a risk (creates a RiskFindingLink if absent).
-   *
-   * The finding must belong to the SAME compliance assessment as the risk.
-   * After linking, spawnedFromFindingId is kept synced to the first
-   * (oldest) remaining link as the denormalized primary/origin finding.
-   * Org-scoped.
+   * General-model finding linking from the risk side (Story 21.3). Contrast
+   * addFinding below (assessment-scoped: the finding must belong to the same
+   * compliance assessment): any non-terminal org finding qualifies and the
+   * operation is idempotent. Audited as FINDING_RISK_LINKED on the Risk entity.
    */
+  linkFindings: organizationProcedure
+    .use(requireRole(RISK_UPDATE_ROLES))
+    .input(
+      z.object({
+        riskId: z.string().min(1),
+        findingIds: z.array(z.string().min(1)).min(1, "Select at least one finding"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      const risk = await ctx.db.risk.findFirst({
+        where: { id: input.riskId, organizationId },
+        select: { id: true },
+      });
+      if (!risk) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
+      }
+
+      const findingIds = Array.from(new Set(input.findingIds));
+      const validFindings = await ctx.db.finding.count({
+        where: {
+          id: { in: findingIds },
+          organizationId,
+          status: { notIn: ["DUPLICATE", "REJECTED", "CLOSED"] },
+        },
+      });
+      if (validFindings !== findingIds.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Invalid finding(s) — must be non-terminal findings in the same organization",
+        });
+      }
+
+      await ctx.db.riskFindingLink.createMany({
+        data: findingIds.map((findingId) => ({ riskId: risk.id, findingId })),
+        skipDuplicates: true,
+      });
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: AuditAction.FINDING_RISK_LINKED,
+        entityType: "Risk",
+        entityId: risk.id,
+        changes: {
+          before: null,
+          after: { linkedFindingIds: findingIds },
+        },
+      });
+
+      // Story 22.1: derived-score rollup (fire-and-forget)
+      // Story 23.5 (review MJ-6): awaited so the client's immediate refetch
+      // of risk.getById sees the settled rollup.
+      await recomputeRiskScore(ctx.db, risk.id, "findings-linked", userId);
+
+      return ctx.db.riskFindingLink.findMany({
+        where: { riskId: risk.id },
+        select: {
+          finding: {
+            select: {
+              id: true,
+              identifier: true,
+              title: true,
+              severity: true,
+              severityLabel: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }),
+
+  /**
+   * Remove a risk↔finding link from the risk side (Story 21.3). Idempotent;
+   * no last-link protection (linking is optional in the cleaned-up model) and
+   * no spawn-sync. Audited as FINDING_RISK_UNLINKED on the Risk entity.
+   */
+  unlinkFinding: organizationProcedure
+    .use(requireRole(RISK_UPDATE_ROLES))
+    .input(
+      z.object({
+        riskId: z.string().min(1),
+        findingId: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      const risk = await ctx.db.risk.findFirst({
+        where: { id: input.riskId, organizationId },
+        select: { id: true },
+      });
+      if (!risk) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
+      }
+
+      // Story 23.5 (review MJ-9): terminal findings' links are read-only from
+      // BOTH sides (mirrors finding.unlinkRisk) — a closed finding's evidence
+      // trail to its risks must not be silently destroyed.
+      const linkedFinding = await ctx.db.finding.findFirst({
+        where: { id: input.findingId, organizationId },
+        select: { status: true },
+      });
+      if (linkedFinding && isTerminalFindingStatus(linkedFinding.status)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "This finding is in a terminal status - its risk links are read-only.",
+        });
+      }
+
+      await ctx.db.riskFindingLink.deleteMany({
+        where: { riskId: risk.id, findingId: input.findingId },
+      });
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: AuditAction.FINDING_RISK_UNLINKED,
+        entityType: "Risk",
+        entityId: risk.id,
+        changes: {
+          before: { findingId: input.findingId },
+          after: null,
+        },
+      });
+
+      // Story 22.1: derived-score rollup (fire-and-forget)
+      // Story 23.5 (review MJ-6): awaited so the client's immediate refetch
+      // of risk.getById sees the settled rollup.
+      await recomputeRiskScore(ctx.db, risk.id, "finding-unlinked", userId);
+
+      return { success: true };
+    }),
+
+  /**
+   * ER-style risk creation (Story 22.3) — the register's /risks/new form.
+   *
+   * A risk is an AGGREGATION: identity fields (name, description, owner,
+   * matrix, review cadence, BU, category) plus a score that comes from
+   * linked findings (22.1 rollup) and/or a manual override (22.2). Direct
+   * inherent/residual entry does not exist here. At least one scoring path
+   * is required — a risk is never born unscoreable.
+   */
+  createAggregateRisk: organizationProcedure
+    .use(requireRole(RISK_CREATE_ROLES))
+    .input(
+      z.object({
+        title: z.string().min(5).max(200),
+        description: z.string().min(10).max(10000),
+        businessOwnerId: z.string().optional().nullable(),
+        businessUnitId: z.string().optional().nullable(),
+        controlDomainId: z.string().optional().nullable(),
+        enterpriseRiskId: z.string().optional().nullable(),
+        matrixVersionId: z.string().min(1, "Select a risk matrix"),
+        reviewIntervalDays: z.number().int().positive().max(3650).optional().nullable(),
+        // Scoring paths — at least one required (refined below)
+        linkedFindingIds: z.array(z.string().min(1)).optional().default([]),
+        manualLikelihood: z.number().positive().optional(),
+        manualImpact: z.number().positive().optional(),
+        manualExposure: z.number().positive().optional(),
+      })
+      .refine(
+        (v) =>
+          v.linkedFindingIds.length > 0 ||
+          (v.manualLikelihood != null && v.manualImpact != null),
+        { message: "Link at least one finding or set a manual score" }
+      )
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      // Validate linked findings (org-scoped, non-terminal).
+      const findingIds = Array.from(new Set(input.linkedFindingIds));
+      if (findingIds.length > 0) {
+        const valid = await ctx.db.finding.count({
+          where: {
+            id: { in: findingIds },
+            organizationId,
+            status: { notIn: ["DUPLICATE", "REJECTED", "CLOSED"] },
+          },
+        });
+        if (valid !== findingIds.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid finding(s) — must be open findings in the same organization",
+          });
+        }
+      }
+
+      // Story 23.5 (review MJ-1): validate the remaining org-scoped foreign
+      // ids against the caller's org before persisting them.
+      if (input.enterpriseRiskId) {
+        const ok = await ctx.db.enterpriseRisk.findFirst({
+          where: { id: input.enterpriseRiskId, organizationId },
+          select: { id: true },
+        });
+        if (!ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid enterprise risk - must be in same organization",
+          });
+        }
+      }
+      if (input.businessOwnerId) {
+        const ok = await ctx.db.person.findFirst({
+          where: { id: input.businessOwnerId, organizationId },
+          select: { id: true },
+        });
+        if (!ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid owner - must be in same organization",
+          });
+        }
+      }
+      if (input.businessUnitId) {
+        const ok = await ctx.db.businessUnit.findFirst({
+          where: { id: input.businessUnitId, organizationId },
+          select: { id: true },
+        });
+        if (!ok) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid business unit - must be in same organization",
+          });
+        }
+      }
+      // matrixVersionId is persisted on every path; on the findings-only path
+      // computeMatrixScoring never runs, so verify ownership here (version ->
+      // template -> organization).
+      {
+        const version = await ctx.db.riskMatrixVersion.findFirst({
+          where: {
+            id: input.matrixVersionId,
+            template: { organizationId },
+          },
+          select: { id: true },
+        });
+        if (!version) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid risk matrix - must belong to your organization",
+          });
+        }
+      }
+
+      // Manual score path (22.2): score against the selected matrix.
+      const hasManual = input.manualLikelihood != null && input.manualImpact != null;
+      let manualScoring: Awaited<ReturnType<typeof computeMatrixScoring>> | null = null;
+      if (hasManual) {
+        manualScoring = await computeMatrixScoring(ctx.db, organizationId, {
+          likelihood: input.manualLikelihood,
+          impact: input.manualImpact,
+          exposure: input.manualExposure,
+          matrixVersionId: input.matrixVersionId,
+        });
+        if (manualScoring.inherentScore === null) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Selected matrix could not score the manual values",
+          });
+        }
+      }
+
+      const identifier = await generateIdentifier(organizationId, "RISK");
+
+      const risk = await ctx.db.risk.create({
+        data: {
+          identifier,
+          organizationId,
+          title: input.title,
+          description: input.description,
+          status: RiskStatus.OPEN,
+          createdById: userId,
+          businessOwnerId: input.businessOwnerId ?? null,
+          businessUnitId: input.businessUnitId ?? null,
+          controlDomainId: input.controlDomainId ?? null,
+          enterpriseRiskId: input.enterpriseRiskId ?? null,
+          matrixVersionId: input.matrixVersionId,
+          reviewIntervalDays: input.reviewIntervalDays ?? null,
+          nextReviewDue: input.reviewIntervalDays
+            ? new Date(Date.now() + input.reviewIntervalDays * 86400000)
+            : null,
+          // Advisory severity — refined below once the rollup lands.
+          severity: manualScoring
+            ? severityFromMatrixLabel(manualScoring.severityLabel)
+            : Severity.MEDIUM,
+          ...(manualScoring
+            ? {
+                useManualScore: true,
+                manualLikelihood: new Prisma.Decimal(input.manualLikelihood!),
+                manualImpact: new Prisma.Decimal(input.manualImpact!),
+                manualExposure:
+                  manualScoring.inherentExposure !== null
+                    ? new Prisma.Decimal(manualScoring.inherentExposure)
+                    : null,
+                manualScore: new Prisma.Decimal(manualScoring.inherentScore!),
+                manualScoreLabel: manualScoring.severityLabel,
+              }
+            : {}),
+        },
+        select: { id: true, identifier: true, title: true },
+      });
+
+      if (findingIds.length > 0) {
+        await ctx.db.riskFindingLink.createMany({
+          data: findingIds.map((findingId) => ({ riskId: risk.id, findingId })),
+          skipDuplicates: true,
+        });
+      }
+
+      // Awaited so the response carries the settled effective score.
+      const scored = await recomputeRiskScore(
+        ctx.db,
+        risk.id,
+        "risk-created-aggregate",
+        userId
+      );
+
+      // Without a manual override, derive the coarse severity from the rollup.
+      if (!manualScoring && scored && "effectiveScoreLabel" in scored) {
+        await ctx.db.risk.update({
+          where: { id: risk.id },
+          data: {
+            severity: severityFromMatrixLabel(
+              (scored.effectiveScoreLabel as string | null) ?? null
+            ),
+          },
+        });
+      }
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: "CREATE_RISK",
+        entityType: "Risk",
+        entityId: risk.id,
+        changes: {
+          before: null,
+          after: {
+            identifier: risk.identifier,
+            title: risk.title,
+            matrixVersionId: input.matrixVersionId,
+            linkedFindingIds: findingIds,
+            manualScore: manualScoring?.inherentScore ?? null,
+            reviewIntervalDays: input.reviewIntervalDays ?? null,
+          },
+        },
+        actorName: ctx.session!.user.name ?? "Unknown",
+        actorRole: ctx.session!.user.role,
+      });
+
+      return ctx.db.risk.findUnique({
+        where: { id: risk.id },
+        select: {
+          id: true,
+          identifier: true,
+          title: true,
+          severity: true,
+          useManualScore: true,
+          manualScore: true,
+          calculatedScore: true,
+          effectiveScore: true,
+          effectiveScoreLabel: true,
+          effectiveScoreSource: true,
+          nextReviewDue: true,
+        },
+      });
+    }),
+
+  /**
+   * Set / change / remove the manual score override (Story 22.2).
+   *
+   * When enabled, L×I(×E) is scored against the risk's LOCKED matrix version
+   * (org default fallback) and the effective score switches to MANUAL
+   * immediately (recompute awaited). Disabling reverts effective to the
+   * calculated rollup. Audited (UPDATE_RISK before/after of the override
+   * fields; the recompute itself audits RISK_SCORE_RECALCULATED).
+   */
+  setManualScore: organizationProcedure
+    .use(requireRole(RISK_UPDATE_ROLES))
+    .input(
+      z.object({
+        riskId: z.string().min(1),
+        enabled: z.boolean(),
+        likelihood: z.number().positive().optional(),
+        impact: z.number().positive().optional(),
+        exposure: z.number().positive().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+
+      const risk = await ctx.db.risk.findFirst({
+        where: { id: input.riskId, organizationId },
+        select: {
+          id: true,
+          matrixVersionId: true,
+          useManualScore: true,
+          manualLikelihood: true,
+          manualImpact: true,
+          manualScore: true,
+          manualScoreLabel: true,
+        },
+      });
+      if (!risk) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
+      }
+
+      const before = {
+        useManualScore: risk.useManualScore,
+        manualScore: risk.manualScore?.toNumber() ?? null,
+        manualScoreLabel: risk.manualScoreLabel,
+      };
+
+      if (input.enabled) {
+        if (input.likelihood == null || input.impact == null) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Likelihood and impact are required for a manual score",
+          });
+        }
+        // Score against the risk's own locked matrix (org default fallback).
+        const scoring = await computeMatrixScoring(ctx.db, organizationId, {
+          likelihood: input.likelihood,
+          impact: input.impact,
+          exposure: input.exposure,
+          matrixVersionId: risk.matrixVersionId ?? undefined,
+        });
+        if (scoring.inherentScore === null) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No risk matrix available to score against",
+          });
+        }
+        await ctx.db.risk.update({
+          where: { id: risk.id },
+          data: {
+            useManualScore: true,
+            manualLikelihood: new Prisma.Decimal(input.likelihood),
+            manualImpact: new Prisma.Decimal(input.impact),
+            manualExposure:
+              scoring.inherentExposure !== null
+                ? new Prisma.Decimal(scoring.inherentExposure)
+                : null,
+            manualScore: new Prisma.Decimal(scoring.inherentScore),
+            manualScoreLabel: scoring.severityLabel,
+            matrixVersionId: scoring.matrixVersionId ?? risk.matrixVersionId,
+          },
+        });
+      } else {
+        await ctx.db.risk.update({
+          where: { id: risk.id },
+          data: { useManualScore: false },
+        });
+      }
+
+      // Effective must reflect the change immediately (AC1) — await it.
+      const updated = await recomputeRiskScore(
+        ctx.db,
+        risk.id,
+        input.enabled ? "manual-override-set" : "manual-override-removed",
+        userId
+      );
+
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: "UPDATE_RISK",
+        entityType: "Risk",
+        entityId: risk.id,
+        changes: {
+          before,
+          after: {
+            useManualScore: input.enabled,
+            manualScore: input.enabled
+              ? (updated && "manualScore" in updated
+                  ? (updated.manualScore as Prisma.Decimal | null)?.toNumber() ?? null
+                  : null)
+              : before.manualScore,
+            manualLikelihood: input.enabled ? input.likelihood : null,
+            manualImpact: input.enabled ? input.impact : null,
+          },
+        },
+        actorName: ctx.session!.user.name ?? "Unknown",
+        actorRole: ctx.session!.user.role,
+      });
+
+      return ctx.db.risk.findUnique({
+        where: { id: risk.id },
+        select: {
+          id: true,
+          useManualScore: true,
+          manualScore: true,
+          manualScoreLabel: true,
+          calculatedScore: true,
+          calculatedScoreLabel: true,
+          effectiveScore: true,
+          effectiveScoreLabel: true,
+          effectiveScoreSource: true,
+        },
+      });
+    }),
+
+  /**
+   * Linked findings for a risk's detail page (Story 21.3).
+   */
+  getLinkedFindings: organizationProcedure
+    .input(z.object({ riskId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const risk = await ctx.db.risk.findFirst({
+        where: { id: input.riskId, organizationId: ctx.organizationId! },
+        select: { id: true },
+      });
+      if (!risk) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Risk not found" });
+      }
+      return ctx.db.riskFindingLink.findMany({
+        where: { riskId: risk.id },
+        select: {
+          finding: {
+            select: {
+              id: true,
+              identifier: true,
+              title: true,
+              severity: true,
+              severityLabel: true,
+              status: true,
+              inherentScore: true,
+            },
+          },
+          createdAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }),
+
   addFinding: organizationProcedure
     .use(requireRole(RISK_UPDATE_ROLES))
     .input(
@@ -6689,12 +7338,20 @@ export const riskRouter = createTRPCRouter({
           organizationId,
           sourceComplianceAssessmentId: risk.sourceComplianceAssessmentId,
         },
-        select: { id: true },
+        select: { id: true, status: true },
       });
       if (!finding) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "The finding must be from the same assessment as the risk.",
+        });
+      }
+      // Story 23.5 (review MJ-9): terminal findings' links are read-only.
+      if (isTerminalFindingStatus(finding.status)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "This finding is in a terminal status - its risk links are read-only.",
         });
       }
 
@@ -6703,19 +7360,6 @@ export const riskRouter = createTRPCRouter({
         data: [{ riskId: input.riskId, findingId: input.findingId }],
         skipDuplicates: true,
       });
-
-      // Keep spawnedFromFindingId synced to the first remaining link.
-      {
-        const first = await ctx.db.riskFindingLink.findFirst({
-          where: { riskId: input.riskId },
-          orderBy: { createdAt: "asc" },
-          select: { findingId: true },
-        });
-        await ctx.db.risk.update({
-          where: { id: input.riskId },
-          data: { spawnedFromFindingId: first?.findingId ?? null },
-        });
-      }
 
       void createAuditLog({
         organizationId,
@@ -6731,6 +7375,9 @@ export const riskRouter = createTRPCRouter({
         actorRole: ctx.session!.user.role,
       });
 
+      // Story 22.1: derived-score rollup (fire-and-forget)
+      void recomputeRiskScore(ctx.db, input.riskId, "finding-linked", userId);
+
       return ctx.db.riskFindingLink.findMany({
         where: { riskId: input.riskId },
         select: {
@@ -6743,9 +7390,10 @@ export const riskRouter = createTRPCRouter({
   /**
    * Remove a finding from a risk (deletes the RiskFindingLink).
    *
-   * Refuses to remove the LAST remaining link — a risk must keep ≥1 finding.
-   * After removal, spawnedFromFindingId is re-synced to the first remaining
-   * link. Org-scoped.
+   * Story 23.5 (review MN-2): the legacy "risk must keep >=1 finding" rule is
+   * gone — linking is recommended-but-optional in the cleaned-up model, and
+   * the other unlink paths never enforced it. Terminal findings' links are
+   * read-only (review MJ-9). Org-scoped.
    */
   removeFinding: organizationProcedure
     .use(requireRole(RISK_UPDATE_ROLES))
@@ -6769,7 +7417,7 @@ export const riskRouter = createTRPCRouter({
 
       const links = await ctx.db.riskFindingLink.findMany({
         where: { riskId: input.riskId },
-        select: { id: true, findingId: true },
+        select: { id: true, findingId: true, finding: { select: { status: true } } },
       });
 
       const target = links.find((l) => l.findingId === input.findingId);
@@ -6780,28 +7428,16 @@ export const riskRouter = createTRPCRouter({
         });
       }
 
-      if (links.length <= 1) {
+      // Story 23.5 (review MJ-9): terminal findings' links are read-only.
+      if (isTerminalFindingStatus(target.finding.status)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
-            "A risk must keep at least one finding — add another before removing this one.",
+            "This finding is in a terminal status - its risk links are read-only.",
         });
       }
 
       await ctx.db.riskFindingLink.delete({ where: { id: target.id } });
-
-      // Re-sync spawnedFromFindingId to the first remaining link.
-      {
-        const first = await ctx.db.riskFindingLink.findFirst({
-          where: { riskId: input.riskId },
-          orderBy: { createdAt: "asc" },
-          select: { findingId: true },
-        });
-        await ctx.db.risk.update({
-          where: { id: input.riskId },
-          data: { spawnedFromFindingId: first?.findingId ?? null },
-        });
-      }
 
       void createAuditLog({
         organizationId,
@@ -6816,6 +7452,9 @@ export const riskRouter = createTRPCRouter({
         actorName: ctx.session!.user.name ?? "Unknown",
         actorRole: ctx.session!.user.role,
       });
+
+      // Story 22.1: derived-score rollup (fire-and-forget)
+      void recomputeRiskScore(ctx.db, input.riskId, "finding-unlinked", userId);
 
       return ctx.db.riskFindingLink.findMany({
         where: { riskId: input.riskId },

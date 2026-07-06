@@ -168,7 +168,7 @@ beforeAll(async () => {
         description: "This is a test finding to associate with the risk assessment.",
         source: FindingSource.PENTEST,
         severity: Severity.HIGH,
-        status: FindingStatus.ACCEPTED,
+        status: FindingStatus.CLOSED,
         createdBy: testUserSecurityEngineer.id,
       },
     });
@@ -198,7 +198,7 @@ beforeAll(async () => {
         description: "This finding is associated with an approved assessment.",
         source: FindingSource.AUDIT,
         severity: Severity.MEDIUM,
-        status: FindingStatus.ACCEPTED,
+        status: FindingStatus.CLOSED,
         createdBy: testUserSecurityEngineer.id,
       },
     });

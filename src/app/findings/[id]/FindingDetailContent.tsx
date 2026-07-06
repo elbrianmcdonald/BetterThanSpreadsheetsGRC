@@ -3,14 +3,11 @@
 /**
  * Finding Detail Content Component
  *
- * Story 7.11: Finding Detail Page with Inline Expansion
+ * Story 7.11: Finding Detail Page
  *
  * Client component that handles interactive elements:
  * - FindingActions with mutation callbacks
- * - InlineAssessmentSection with collapsible state
  * - Data refetching after status transitions
- *
- * @see Story 7.11: Finding Detail Page with Inline Expansion
  */
 
 import { useRouter } from "next/navigation";
@@ -19,17 +16,15 @@ import {
   type FindingStatus,
   type FindingSource,
   type Severity,
-  type AssessmentStatus,
-  type TreatmentType,
-  Prisma,
 } from "@prisma/client";
 import { FileSearch } from "lucide-react";
 
 import { api } from "@/trpc/react";
 import { FindingHeader } from "@/components/findings/FindingHeader";
 import { FindingDetails } from "@/components/findings/FindingDetails";
+import { FindingSeverityPanel } from "@/components/findings/FindingSeverityPanel";
+import { FindingLinkedRisksSection } from "@/components/findings/FindingLinkedRisksSection";
 import { FindingActions } from "@/components/findings/FindingActions";
-import { InlineAssessmentSection } from "@/components/findings/InlineAssessmentSection";
 // Story 12.7: Finding-to-Control Linkage
 import { FindingLinkedControls } from "@/components/findings/FindingLinkedControls";
 
@@ -48,53 +43,48 @@ interface FindingData {
   severityLabel: string | null;
   matrixVersionId: string | null;
   organizationId: string;
+  // Story 20.1 follow-up: finding-context documentation
+  cveId: string | null;
+  discoveryDate: Date | null;
+  technicalDetails: string | null;
+  // Story 20.2: matrix scores (Prisma Decimals arrive serialized — number|string)
+  inherentLikelihood: number | string | null;
+  inherentImpact: number | string | null;
+  inherentExposure: number | string | null;
+  inherentScore: number | string | null;
+  residualLikelihood: number | string | null;
+  residualImpact: number | string | null;
+  residualExposure: number | string | null;
+  residualScore: number | string | null;
+  residualScoreLabel: string | null;
+  residualEliminated: boolean;
+  // Story 21.2: linked register risks (23.1 adds latest treatment for badges)
+  riskLinks?: {
+    riskId: string;
+    risk: {
+      id: string;
+      identifier: string | null;
+      title: string;
+      severity: Severity;
+      status: string;
+      Treatments?: { treatmentType: string; decidedAt: Date | string }[];
+    };
+  }[];
   affectedAssets: string[];
   evidenceIds: string[];
   assigneeId: string | null;
   duplicateOfId: string | null;
-  lockedSnapshot: unknown;
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
   triagedBy: string | null;
   triagedAt: Date | null;
-  acceptedBy: string | null;
-  acceptedAt: Date | null;
   // Included relations
   creator: { id: string; name: string | null; email: string | null };
   assignee: { id: string; name: string | null; email: string | null } | null;
   triager: { id: string; name: string | null; email: string | null } | null;
-  accepter: { id: string; name: string | null; email: string | null } | null;
   affectedBusinessUnits: { id: string; name: string }[];
   duplicateOf: { id: string; identifier: string; title: string } | null;
-  riskAssessment: {
-    id: string;
-    identifier: string;
-    title: string;
-    context: string | null;
-    riskCategory: string | null;
-    status: AssessmentStatus;
-    affectedSystems: string[];
-    likelihoodValue: Prisma.Decimal | null;
-    impactValue: Prisma.Decimal | null;
-    treatment: TreatmentType | null;
-    ownerId: string | null;
-    createdAt: Date;
-    createdBy: string;
-    approvedAt: Date | null;
-    // Additional fields required by Prisma type
-    organizationId: string;
-    updatedAt: Date;
-    exposureValue: Prisma.Decimal | null;
-    inherentScore: Prisma.Decimal | null;
-    inherentScoreLabel: string | null;
-    residualScore: Prisma.Decimal | null;
-    residualScoreLabel: string | null;
-    findingId: string | null;
-    approverId: string | null;
-    owner: { id: string; name: string | null; email: string | null } | null;
-    scenarios: { id: string; description: string }[];
-  } | null;
 }
 
 interface FindingDetailContentProps {
@@ -161,8 +151,6 @@ export function FindingDetailContent({
         severityLabel={finding.severityLabel}
         createdAt={finding.createdAt}
         creator={finding.creator}
-        acceptedAt={finding.acceptedAt}
-        accepter={finding.accepter}
       />
 
       {/* AC13-AC18: Finding Details Section */}
@@ -172,6 +160,39 @@ export function FindingDetailContent({
         affectedAssets={finding.affectedAssets}
         affectedBusinessUnits={finding.affectedBusinessUnits}
         status={finding.status}
+        cveId={finding.cveId}
+        discoveryDate={finding.discoveryDate}
+        technicalDetails={finding.technicalDetails}
+      />
+
+      {/* Story 20.2: Severity panel with rescore against the locked matrix */}
+      <FindingSeverityPanel
+        findingId={finding.id}
+        status={finding.status}
+        canRescore={["SECURITY_ENGINEER", "GRC_ANALYST", "ORG_ADMIN"].includes(userRole)}
+        severityLabel={finding.severityLabel}
+        matrixVersionId={finding.matrixVersionId}
+        inherentLikelihood={finding.inherentLikelihood}
+        inherentImpact={finding.inherentImpact}
+        inherentExposure={finding.inherentExposure}
+        inherentScore={finding.inherentScore}
+        residualLikelihood={finding.residualLikelihood}
+        residualImpact={finding.residualImpact}
+        residualExposure={finding.residualExposure}
+        residualScore={finding.residualScore}
+        residualScoreLabel={finding.residualScoreLabel}
+        residualEliminated={finding.residualEliminated}
+        onRescored={handleTransitionComplete}
+      />
+
+      {/* Story 21.3: Linked risks — where this observation rolls up */}
+      <FindingLinkedRisksSection
+        findingId={finding.id}
+        findingIdentifier={finding.identifier}
+        status={finding.status}
+        riskLinks={finding.riskLinks ?? []}
+        onChanged={handleTransitionComplete}
+        canManage={["SECURITY_ENGINEER", "GRC_ANALYST", "ORG_ADMIN"].includes(userRole)}
       />
 
       {/* Story 12.7: Linked Controls Section (AC1-AC10) */}
@@ -189,18 +210,11 @@ export function FindingDetailContent({
           status: finding.status,
           severity: finding.severity,
         }}
+        linkedRiskIds={finding.riskLinks?.map((l) => l.riskId) ?? []}
         userRole={userRole}
         onTransitionComplete={handleTransitionComplete}
         className="py-2"
       />
-
-      {/* AC23-AC30: Inline Assessment Section (only when ACCEPTED) */}
-      {finding.status === "ACCEPTED" && finding.riskAssessment && (
-        <InlineAssessmentSection
-          assessment={finding.riskAssessment}
-          defaultExpanded={true}
-        />
-      )}
     </div>
   );
 }

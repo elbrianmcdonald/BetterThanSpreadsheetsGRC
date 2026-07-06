@@ -119,6 +119,7 @@ model ControlDomain {
   MaturityDomains       ControlDomainMaturityDomain[]
   // Risk category alignment
   Risks                 Risk[]                         @relation("RiskControlDomain")
+  Findings              Finding[]                      @relation("FindingControlDomain")
 
   @@index([isActive, sortOrder])
   @@index([sortOrder])
@@ -373,6 +374,7 @@ model Organization {
   // Organizational Controls: User-defined controls
   OrganizationalControl          OrganizationalControl[]
   RiskOrganizationalControl      RiskOrganizationalControl[]
+  FindingOrganizationalControl   FindingOrganizationalControl[]
   // Organizational Control Redesign: New related models
   OrgControlFrameworkMappings    OrgControlFrameworkMapping[]
   OrgControlAssignments          OrgControlAssignment[]
@@ -1016,6 +1018,32 @@ model Risk {
   // Matrix version used for scoring (locked at first save)
   matrixVersionId String?
 
+  // ============================================================================
+  // Story 22.1: Derived scoring (EnterpriseRisk pattern) — calculated from
+  // OPEN linked findings' inherent scores; manual override via useManualScore.
+  // Direct inherent*/residual* entry retires with Story 22.3's ER-style form.
+  // ============================================================================
+  useManualScore       Boolean                    @default(false)
+  manualLikelihood     Decimal?                   @db.Decimal(10, 4)
+  manualImpact         Decimal?                   @db.Decimal(10, 4)
+  manualExposure       Decimal?                   @db.Decimal(10, 4)
+  manualScore          Decimal?                   @db.Decimal(10, 4)
+  manualScoreLabel     String?
+  calculatedScore      Decimal?                   @db.Decimal(10, 4)
+  calculatedScoreLabel String?
+  effectiveScore       Decimal?                   @db.Decimal(10, 4)
+  effectiveScoreLabel  String?
+  effectiveScoreSource EnterpriseRiskScoreSource? // CALCULATED or MANUAL (enum reused)
+
+  // Story 22.3: review cadence (EnterpriseRisk pattern)
+  reviewIntervalDays Int? // null = no scheduled review
+  lastReviewedAt     DateTime?
+  nextReviewDue      DateTime?
+
+  // Story 23.1: acceptance re-review — set when an ACCEPTED risk's effective
+  // score rises after the acceptance decision; cleared by a new treatment.
+  acceptanceReReviewRequired Boolean @default(false)
+
   // Controls documentation
   mitigatingControlsInPlace   String? @db.Text // Current mitigating controls
   preventativeControlsInPlace String? @db.Text // Current preventative controls
@@ -1035,12 +1063,6 @@ model Risk {
   assessmentReviewedAt    DateTime? // When review was completed (approved/rejected)
   assessmentReviewNotes   String?   @db.Text // Notes from reviewer (esp. for rejection)
   assessmentRevisionCount Int       @default(0) // Number of revision cycles
-
-  // ============================================================================
-  // Story 15.10: Spawned from Finding Tracking
-  // ============================================================================
-  spawnedFromFindingId String? // Link to original finding if risk was spawned
-  spawnReason          RiskSpawnReason? // Why the risk was spawned
 
   // Risk raised within a compliance assessment (mirrors Finding.sourceComplianceAssessmentId).
   sourceComplianceAssessmentId String?
@@ -1128,11 +1150,8 @@ model Risk {
   ThreatSteps         RiskThreatStep[] // Attack chain techniques
   ThreatObjectives    RiskThreatObjective[] // Objective techniques
 
-  // Story 15.10: Spawned from finding relationship
-  SpawnedFromFinding Finding? @relation("RiskSpawnedFromFinding", fields: [spawnedFromFindingId], references: [id], onDelete: SetNull)
-
-  // Multiple findings can roll up into one risk (within an assessment). The
-  // join is the source of truth; spawnedFromFindingId stays as the primary/origin.
+  // Multiple findings can roll up into one risk. The join is the source of
+  // truth (the legacy spawnedFromFindingId spine retired in Story 23.3).
   findingLinks       RiskFindingLink[]   @relation("RiskFindingLinks")
   pathwayStepMembers PathwayStepMember[] @relation("PathwayStepMemberRisk")
 
@@ -1196,7 +1215,6 @@ model Risk {
   @@index([organizationId, impactScore])
   // Story 15: New indexes
   @@index([initialAccessVectorId])
-  @@index([spawnedFromFindingId])
   @@index([businessUnitId])
   @@index([assessmentTaskId])
   @@index([inherentScore])
@@ -1305,7 +1323,11 @@ model RiskAssessmentProjectComment {
 // Enables Business Stakeholders to evaluate different remediation approaches
 model RemediationOption {
   id               String              @id @default(cuid())
-  riskId           String
+  // Exactly one of riskId / findingId is set (enforced in application code).
+  // findingId added in Story 20.1 follow-up — findings adopt the
+  // identified-risk card, including per-item remediation options.
+  riskId           String?
+  findingId        String?
   title            String              @db.VarChar(200)
   description      String              @db.Text
   approach         String              @db.Text
@@ -1323,13 +1345,15 @@ model RemediationOption {
   updatedAt        DateTime            @updatedAt // AC6
 
   // Relationships
-  Risk         Risk         @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  Risk         Risk?        @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  Finding      Finding?     @relation("FindingRemediationOptions", fields: [findingId], references: [id], onDelete: Cascade)
   CreatedBy    User         @relation("RemediationOptionCreator", fields: [createdById], references: [id])
   SelectedBy   User?        @relation("RemediationOptionApprover", fields: [selectedById], references: [id])
   Owner        Person?      @relation("RemediationOptionOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([riskId]) // AC4: Multiple options per risk
+  @@index([findingId])
   @@index([organizationId, riskId]) // Multi-tenant query optimization
   @@index([organizationId])
   @@index([ownerId])
@@ -1477,7 +1501,6 @@ model User {
   // Story 7.1: Finding relationships (AC16-AC18)
   FindingsCreated                         Finding[]                   @relation("FindingCreator")
   FindingsTriaged                         Finding[]                   @relation("FindingTriager")
-  FindingsAccepted                        Finding[]                   @relation("FindingAccepter")
   // Story 7.0.8: Findings assigned to this user (AC3)
   FindingsAssigned                        Finding[]                   @relation("FindingAssignee")
   // Story 7.5: RiskAssessment relationships (AC30-AC32)
@@ -1516,6 +1539,7 @@ model User {
   // Organizational Controls: Controls created by this user
   OrganizationalControlsCreated     OrganizationalControl[]      @relation("OrgControlCreator")
   RiskOrganizationalControlsCreated RiskOrganizationalControl[]  @relation("RiskOrgControlCreator")
+  FindingOrganizationalControlsCreated FindingOrganizationalControl[] @relation("FindingOrgControlCreator")
   // Organizational Control Redesign: Assignment, testing, evidence, exceptions
   // (OrgControlAssignment.personId now FKs to Person; User only tracks who made the assignment)
   OrgControlAssignmentsMade         OrgControlAssignment[]       @relation("OrgControlAssigner")
@@ -1708,6 +1732,10 @@ enum AuditAction {
   FINDING_TRANSITIONED
   // Story 7.4: Finding acceptance audit action
   FINDING_ACCEPTED
+  FINDING_RESCORED // Story 20.2: matrix score edited against the locked version
+  FINDING_RISK_LINKED // Story 21.2: finding linked to register risk(s)
+  FINDING_RISK_UNLINKED // Story 21.3: finding↔risk link removed
+  RISK_SCORE_RECALCULATED // Story 22.1: derived risk score recomputed from linked findings
   // Story 7.5: Risk Assessment audit actions
   ASSESSMENT_CREATED
   ASSESSMENT_TRANSITIONED
@@ -1934,11 +1962,6 @@ enum RiskFindingSource {
 
 // Story 15.10: Risk Spawn Reason enum
 // Tracks why a risk was created from a finding
-enum RiskSpawnReason {
-  ACCEPTED // Finding accepted as risk by analyst
-  SLA_BREACH // Finding auto-promoted due to SLA breach
-}
-
 // Story 15.8: Treatment Type for risk treatment decisions
 enum TreatmentDecision {
   ACCEPT // Accept the risk with justification
@@ -2022,17 +2045,20 @@ enum FindingSource {
   SCANNER // From automated security scanner
   INCIDENT // From security incident
   MANUAL // Manually reported finding
+  RISK_ASSESSMENT // Identified during a risk assessment (Story 20.1 follow-up)
 }
 
 // Story 7.1: Finding Status enum (AC3)
-// State machine for finding workflow: NEW → NEEDS_INFO → TRIAGED → ACCEPTED (or DUPLICATE/REJECTED)
+// State machine for finding workflow (Story 21.4):
+// NEW → NEEDS_INFO → TRIAGED → CLOSED, with DUPLICATE/REJECTED exits.
+// ACCEPTED is legacy (old finding-becomes-risk flow) — retired by Epic 23.
 enum FindingStatus {
   NEW // Initial state - just created, awaiting triage
   NEEDS_INFO // Triager needs more information before proceeding
-  TRIAGED // Reviewed and ready for acceptance decision
+  TRIAGED // Reviewed; link to risks and remediate
+  CLOSED // Remediated/resolved — terminal (Story 21.4)
   DUPLICATE // Marked as duplicate of another finding
   REJECTED // Rejected - not a valid security finding
-  ACCEPTED // Accepted - will create Risk Assessment
 }
 
 // Story 7.5: Assessment Status enum (AC2)
@@ -2266,7 +2292,27 @@ model Finding {
   inherentImpact     Decimal? @db.Decimal(10, 4)
   inherentExposure   Decimal? @db.Decimal(10, 4) // For 3D (L×I×E) matrices
   inherentScore      Decimal? @db.Decimal(10, 4) // Computed score via calculateInherentScore
+  // Story 20.1 follow-up: residual severity (after controls) — mirrors the
+  // identified-risk card. "Eliminated" short-circuits the numeric path.
+  residualLikelihood Decimal? @db.Decimal(10, 4)
+  residualImpact     Decimal? @db.Decimal(10, 4)
+  residualExposure   Decimal? @db.Decimal(10, 4)
+  residualScore      Decimal? @db.Decimal(10, 4)
+  residualScoreLabel String?
+  residualEliminated Boolean  @default(false)
+  // Story 20.1 follow-up: taxonomy category + MITRE initial access — mirrors
+  // Risk.controlDomainId / Risk.initialAccessVectorId.
+  controlDomainId       String?
+  initialAccessVectorId String?
   status         FindingStatus @default(NEW) // AC3: NEW → TRIAGED → ACCEPTED
+
+  // Story 20.1 follow-up: finding-context documentation, ported from the
+  // risks/new form. Story 4.3 originally attached these to Risk because the
+  // old model promoted findings into risks; in the cleaned-up model the
+  // observation carries its own documentation.
+  cveId            String? // CVE/Reference ID for vulnerability tracking
+  discoveryDate    DateTime? // When the issue was discovered
+  technicalDetails String?   @db.Text // Collapsible technical details (markdown)
 
   // Array fields for related data
   affectedAssets String[] @default([]) // List of affected systems/assets
@@ -2284,23 +2330,17 @@ model Finding {
   // Enterprise risk alignment — a finding can be tagged to one rollup EnterpriseRisk.
   enterpriseRiskId String?
 
-  // Frozen snapshot when finding is accepted (AC6)
-  lockedSnapshot Json?
-
   // Audit trail fields (AC7)
   createdBy  String
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   triagedBy  String?
   triagedAt  DateTime?
-  acceptedBy String?
-  acceptedAt DateTime?
 
   // Relations
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   creator      User         @relation("FindingCreator", fields: [createdBy], references: [id])
   triager      User?        @relation("FindingTriager", fields: [triagedBy], references: [id])
-  accepter     User?        @relation("FindingAccepter", fields: [acceptedBy], references: [id])
   assignee     User?        @relation("FindingAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   duplicateOf  Finding?     @relation("FindingDuplicates", fields: [duplicateOfId], references: [id], onDelete: SetNull)
   duplicates   Finding[]    @relation("FindingDuplicates")
@@ -2311,9 +2351,6 @@ model Finding {
   slaBreached Boolean   @default(false) // Set true when dueDate passes
   closedAt    DateTime? // When finding was closed/remediated
 
-  // AC8: Relation to RiskAssessment (1:1, optional until accepted)
-  // Story 7.5: RiskAssessment relation
-  riskAssessment RiskAssessment?
   // Story 12.1: Control linkage (AC9-AC16)
   ControlLinks   FindingControlLink[]
   // Story 14.5: Finding Comments
@@ -2321,13 +2358,18 @@ model Finding {
   // Story 14.6: Finding Evidence Attachment
   evidenceLinks  FindingEvidence[]
 
-  // Story 15.10: Risks spawned from this finding
-  spawnedRisks Risk[] @relation("RiskSpawnedFromFinding")
-
   // A finding can roll up into multiple risks, and appear in multiple pathway steps.
   riskLinks          RiskFindingLink[]       @relation("FindingRiskLinks")
   pathwayStepMembers PathwayStepMember[]     @relation("PathwayStepMemberFinding")
   actionPlanLinks    ActionPlanItemFinding[] @relation("ActionPlanItemFinding")
+
+  // Story 20.1 follow-up: identified-risk-card parity relations
+  ControlDomain          ControlDomain?                 @relation("FindingControlDomain", fields: [controlDomainId], references: [id], onDelete: SetNull)
+  InitialAccessVector    MitreTechnique?                @relation("FindingInitialAccess", fields: [initialAccessVectorId], references: [id], onDelete: SetNull)
+  ThreatSteps            FindingThreatStep[]
+  ThreatObjectives       FindingThreatObjective[]
+  OrganizationalControls FindingOrganizationalControl[]
+  RemediationOptions     RemediationOption[]            @relation("FindingRemediationOptions")
 
   // ============================================================================
   // Epic 5: Vendor Risk & Finding Integration (FR45-FR50)
@@ -2429,8 +2471,10 @@ model RiskAssessment {
   // Risk Owner: Person accountable for this risk assessment
   riskOwnerId String? // Person responsible for this risk
 
-  // Source finding link - 1:1 relationship (AC6, AC9)
-  findingId String @unique
+  // Historical pointer to the finding that spawned this legacy assessment.
+  // The Prisma relation was retired in Story 23.3 (findings no longer become
+  // assessments); the scalar stays so pre-cutover rows remain traceable.
+  findingId String? @unique
 
   // Story 7.8.x relations (AC11-AC14)
   assessmentTypeId String? // Story 7.8.1 - links to AssessmentType
@@ -2448,7 +2492,6 @@ model RiskAssessment {
 
   // Relations
   organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  finding           Finding            @relation(fields: [findingId], references: [id])
   creator           User               @relation("AssessmentCreator", fields: [createdBy], references: [id])
   owner             User?              @relation("AssessmentOwner", fields: [ownerId], references: [id])
   approver          User?              @relation("AssessmentApprover", fields: [approvedBy], references: [id])
@@ -2778,6 +2821,42 @@ model RiskThreatStep {
   @@index([techniqueId])
 }
 
+// Story 20.1 follow-up: Finding Threat Step (attack chain techniques)
+// Mirrors RiskThreatStep — findings adopt the identified-risk card.
+model FindingThreatStep {
+  id          String  @id @default(cuid())
+  findingId   String
+  techniqueId String
+  stepOrder   Int     @default(0) // Order in the attack chain
+  notes       String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+
+  finding   Finding        @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  technique MitreTechnique @relation("FindingThreatStepTechniques", fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([findingId, techniqueId])
+  @@index([findingId, stepOrder])
+  @@index([techniqueId])
+}
+
+// Story 20.1 follow-up: Finding Threat Objective — mirrors RiskThreatObjective.
+model FindingThreatObjective {
+  id          String  @id @default(cuid())
+  findingId   String
+  techniqueId String
+  notes       String? @db.VarChar(500)
+
+  createdAt DateTime @default(now())
+
+  finding   Finding        @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  technique MitreTechnique @relation("FindingThreatObjectiveTechniques", fields: [techniqueId], references: [id], onDelete: Cascade)
+
+  @@unique([findingId, techniqueId])
+  @@index([findingId])
+  @@index([techniqueId])
+}
+
 // Story 15.5: Risk Threat Objective (Target Objectives)
 // Links risks to MITRE techniques representing attacker objectives
 model RiskThreatObjective {
@@ -2939,6 +3018,11 @@ model MitreTechnique {
   risksAsInitialAccess Risk[]                @relation("RiskInitialAccess")
   riskThreatSteps      RiskThreatStep[]      @relation("ThreatStepTechniques")
   riskThreatObjectives RiskThreatObjective[] @relation("ThreatObjectiveTechniques")
+
+  // Story 20.1 follow-up: Finding linkages (identified-risk-card parity)
+  findingsAsInitialAccess Finding[]                @relation("FindingInitialAccess")
+  findingThreatSteps      FindingThreatStep[]      @relation("FindingThreatStepTechniques")
+  findingThreatObjectives FindingThreatObjective[] @relation("FindingThreatObjectiveTechniques")
 
   @@index([isSubTechnique])
   @@index([parentId])
@@ -3113,6 +3197,7 @@ model OrganizationalControl {
   Organization              Organization                    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   CreatedBy                 User?                           @relation("OrgControlCreator", fields: [createdById], references: [id], onDelete: SetNull)
   RiskLinks                 RiskOrganizationalControl[]
+  FindingLinks              FindingOrganizationalControl[]
   linkedObjectives          Objective[]                     @relation("ObjectiveLinkedControls")
   FrameworkMappings         OrgControlFrameworkMapping[]
   Assignments               OrgControlAssignment[]
@@ -3343,6 +3428,31 @@ model RiskOrganizationalControl {
   @@unique([riskId, organizationalControlId])
   @@index([organizationId])
   @@index([riskId])
+  @@index([organizationalControlId])
+}
+
+// Story 20.1 follow-up: Finding ↔ OrganizationalControl split-role links
+// (mitigating IN_PLACE / gap NEEDED) — mirrors RiskOrganizationalControl.
+model FindingOrganizationalControl {
+  id                      String             @id @default(cuid())
+  organizationId          String
+  findingId               String
+  organizationalControlId String
+  role                    RiskOrgControlRole // IN_PLACE or NEEDED
+  notes                   String?            @db.VarChar(500)
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  Organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Finding               Finding               @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  OrganizationalControl OrganizationalControl @relation(fields: [organizationalControlId], references: [id], onDelete: Cascade)
+  CreatedBy             User?                 @relation("FindingOrgControlCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([findingId, organizationalControlId])
+  @@index([organizationId])
+  @@index([findingId])
   @@index([organizationalControlId])
 }
 

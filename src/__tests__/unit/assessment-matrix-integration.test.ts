@@ -244,17 +244,16 @@ describe("Assessment Matrix Integration", () => {
   });
 });
 
-describe("Default Values on Accept Finding (AC27-AC30)", () => {
-  it("AC27: Should use org default matrix on accept", () => {
-    // When finding accepted, assessment should have default matrix
-    // This is integration behavior verified by finding.accept mutation
+// Story 23.3 note: the finding-accept flow is retired; these default-value
+// checks now describe legacy RSK assessments only (historical rows).
+describe("Default Values on legacy assessments (AC27-AC30)", () => {
+  it("AC27: legacy assessments carried the org default matrix", () => {
     const defaultMatrixVersionId = "default-version-id";
     const assessmentMatrixVersionId = defaultMatrixVersionId;
     expect(assessmentMatrixVersionId).toBe(defaultMatrixVersionId);
   });
 
-  it("AC28: Should use org default assessment type on accept", () => {
-    // When finding accepted, assessment should have default type
+  it("AC28: legacy assessments carried the org default assessment type", () => {
     const defaultAssessmentTypeId = "default-type-id";
     const assessmentTypeId = defaultAssessmentTypeId;
     expect(assessmentTypeId).toBe(defaultAssessmentTypeId);

@@ -9,8 +9,8 @@
  * complianceAssessmentId) server-side via risk.createForAssessment.
  *
  * Findings picker: a risk can aggregate MULTIPLE findings from this assessment
- * (RiskFindingLink join). At least one is required; the first checked becomes
- * the denormalized primary/origin finding (Risk.spawnedFromFindingId).
+ * (RiskFindingLink join). Linking is recommended but optional (Story 21.1) —
+ * findings never become risks; they attach as evidence via links only.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -134,12 +134,10 @@ export function CreateRiskDialog(props: CreateRiskDialogProps) {
 
   const descLen = description.trim().length;
   const titleLen = title.trim().length;
-  const hasFinding = linkedFindingIds.length >= 1;
   const canSubmit =
     titleLen >= 1 &&
     titleLen <= 500 &&
     descLen >= 1 &&
-    hasFinding &&
     !createMutation.isPending;
 
   const toggleFinding = (id: string, checked: boolean) => {
@@ -271,7 +269,7 @@ export function CreateRiskDialog(props: CreateRiskDialogProps) {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {linkedFindingIds.length === 0
-                    ? "Select at least one finding from this assessment. The first becomes the primary."
+                    ? "Linking findings from this assessment is recommended — it keeps the risk's evidence trail current."
                     : `${linkedFindingIds.length} finding${
                         linkedFindingIds.length === 1 ? "" : "s"
                       } selected.`}

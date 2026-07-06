@@ -339,7 +339,7 @@ describe("Assessment Type Management - Story 7.8.1", () => {
             identifier: `FND-TYPE-${Date.now()}`,
             title: "Test Finding for Type",
             description: "Test description",
-            status: FindingStatus.ACCEPTED,
+            status: FindingStatus.CLOSED,
             source: FindingSource.MANUAL,
             severity: Severity.HIGH,
             organizationId: testOrg.id,

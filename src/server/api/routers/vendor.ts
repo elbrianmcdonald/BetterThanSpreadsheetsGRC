@@ -734,7 +734,6 @@ export const vendorRouter = createTRPCRouter({
         FindingStatus.NEW,
         FindingStatus.NEEDS_INFO,
         FindingStatus.TRIAGED,
-        FindingStatus.ACCEPTED,
       ];
 
       const [
@@ -1398,9 +1397,9 @@ export const vendorRouter = createTRPCRouter({
 
         // Calculate finding metrics
         // Open statuses: NEW, NEEDS_INFO, TRIAGED
-        // Closed statuses: REJECTED, ACCEPTED, DUPLICATE
+        // Closed statuses: REJECTED, CLOSED, DUPLICATE
         const openStatuses: FindingStatus[] = [FindingStatus.NEW, FindingStatus.NEEDS_INFO, FindingStatus.TRIAGED];
-        const closedStatuses: FindingStatus[] = [FindingStatus.REJECTED, FindingStatus.ACCEPTED, FindingStatus.DUPLICATE];
+        const closedStatuses: FindingStatus[] = [FindingStatus.REJECTED, FindingStatus.CLOSED, FindingStatus.DUPLICATE];
 
         const openFindings = vendor.findings.filter(
           (f) => openStatuses.includes(f.status)

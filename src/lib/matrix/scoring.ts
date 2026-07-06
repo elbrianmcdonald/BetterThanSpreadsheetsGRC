@@ -96,6 +96,25 @@ export function calculateInherentScore(
   const maxImpact = getMaxValue(scales.impact);
   const maxExposure = is3D && scales.exposure ? getMaxValue(scales.exposure) : 1;
 
+  // Story 23.5 (review MJ-3): values outside the matrix scales produce an
+  // "incomplete" result instead of a normalized score beyond outputScaleMax
+  // (which would corrupt register sorting, heatmaps, and rollups).
+  if (likelihoodValue < getMinValue(scales.likelihood) || likelihoodValue > maxLikelihood) {
+    return { incomplete: true, reason: "Likelihood is outside the matrix scale" };
+  }
+  if (impactValue < getMinValue(scales.impact) || impactValue > maxImpact) {
+    return { incomplete: true, reason: "Impact is outside the matrix scale" };
+  }
+  if (
+    is3D &&
+    scales.exposure &&
+    exposureValue !== undefined &&
+    exposureValue !== null &&
+    (exposureValue < getMinValue(scales.exposure) || exposureValue > maxExposure)
+  ) {
+    return { incomplete: true, reason: "Exposure is outside the matrix scale" };
+  }
+
   // AC3 & AC7: Calculate raw and max possible scores
   let rawScore: number;
   let maxPossible: number;

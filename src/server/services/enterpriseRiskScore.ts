@@ -28,6 +28,10 @@ export async function recomputeEnterpriseRiskScore(
   db: Db,
   enterpriseRiskId: string,
 ) {
+  // Story 23.5 (review MJ-4): optimistic updatedAt guard with retry — a
+  // concurrent manual-override update (or sibling cascade) can't be stomped
+  // by a staler in-flight computation.
+  for (let attempt = 0; attempt < 3; attempt++) {
   const er = await db.enterpriseRisk.findUnique({
     where: { id: enterpriseRiskId },
     select: {
@@ -38,21 +42,36 @@ export async function recomputeEnterpriseRiskScore(
       effectiveScore: true,
       effectiveScoreLabel: true,
       effectiveScoreSource: true,
+      updatedAt: true,
     },
   });
   if (!er) return null;
 
-  // Calculated score: max of residual (preferred) or inherent across child risks.
+  // Calculated score: max across child risks. Story 22.4: the child's
+  // EFFECTIVE score (derived rollup or manual override) is preferred; the
+  // legacy residual/inherent chain remains as fallback for children created
+  // before derived scoring.
   const children = await db.risk.findMany({
     where: { enterpriseRiskId },
-    select: { residualScore: true, residualScoreLabel: true, inherentScore: true, inherentScoreLabel: true },
+    select: {
+      effectiveScore: true,
+      effectiveScoreLabel: true,
+      residualScore: true,
+      residualScoreLabel: true,
+      inherentScore: true,
+      inherentScoreLabel: true,
+    },
   });
 
   let calculatedScore: Prisma.Decimal | null = null;
   let calculatedLabel: string | null = null;
   for (const child of children) {
-    const score = child.residualScore ?? child.inherentScore;
-    const label = child.residualScore ? child.residualScoreLabel : child.inherentScoreLabel;
+    const score = child.effectiveScore ?? child.residualScore ?? child.inherentScore;
+    const label = child.effectiveScore
+      ? child.effectiveScoreLabel
+      : child.residualScore
+        ? child.residualScoreLabel
+        : child.inherentScoreLabel;
     if (score === null || score === undefined) continue;
     if (calculatedScore === null || score.greaterThan(calculatedScore)) {
       calculatedScore = score;
@@ -74,14 +93,15 @@ export async function recomputeEnterpriseRiskScore(
     return er;
   }
 
-  const updated = await db.enterpriseRisk.update({
-    where: { id: enterpriseRiskId },
+  const { count } = await db.enterpriseRisk.updateMany({
+    where: { id: enterpriseRiskId, updatedAt: er.updatedAt },
     data: {
       effectiveScore: newEffectiveScore ?? null,
       effectiveScoreLabel: newEffectiveLabel ?? null,
       effectiveScoreSource: newSource,
     },
   });
+  if (count === 0) continue; // concurrent write — recompute from fresh state
 
   await db.enterpriseRiskSeveritySnapshot.create({
     data: {
@@ -92,5 +112,9 @@ export async function recomputeEnterpriseRiskScore(
     },
   });
 
-  return updated;
+  return db.enterpriseRisk.findUnique({ where: { id: enterpriseRiskId } });
+  }
+
+  // Retries exhausted: leave the last writer's state; next trigger reconciles.
+  return db.enterpriseRisk.findUnique({ where: { id: enterpriseRiskId } });
 }

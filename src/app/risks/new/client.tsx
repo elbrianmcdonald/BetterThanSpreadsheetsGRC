@@ -20,7 +20,10 @@
  */
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { RiskAssessmentForm } from "@/components/risk/RiskAssessmentForm";
+// Story 22.3: /risks/new is the ER-style aggregate-risk form. The legacy
+// multi-risk RiskAssessmentForm flow lives on at /risk-assessments/new
+// (assessment-container workspace) until Epic 23 retires it.
+import { CreateRiskForm } from "@/components/risk/CreateRiskForm";
 import { DiscoveredRiskForm } from "@/components/risk-assessment-project";
 import { AppLayout } from "@/components/layout";
 import { api } from "@/trpc/react";
@@ -91,26 +94,25 @@ export function CreateRiskClient() {
     );
   }
 
-  // Default: Full risk assessment form (multi-risk)
+  // Default (Story 22.3): ER-style aggregate risk creation. A risk captures
+  // identity + review cadence; its score derives from linked findings and/or
+  // a manual judgment. Multi-risk assessments live at /risk-assessments/new.
   return (
     <AppLayout
       breadcrumbs={[
         { label: "Risks", href: "/risks" },
-        { label: "New Risk Assessment" },
+        { label: "New Risk" },
       ]}
     >
-      <div className="container max-w-5xl mx-auto py-6">
+      <div className="container max-w-3xl mx-auto py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Create Risk Assessment
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight">Create Risk</h1>
           <p className="text-muted-foreground mt-1">
-            Identify and document risks, assess their severity, and define treatment plans.
+            Define the risk and how it&apos;s scored — from linked findings, a
+            manual judgment, or both.
           </p>
         </div>
-        <RiskAssessmentForm
-          onCancel={() => router.push("/risks")}
-        />
+        <CreateRiskForm onCancel={() => router.push("/risks")} />
       </div>
     </AppLayout>
   );

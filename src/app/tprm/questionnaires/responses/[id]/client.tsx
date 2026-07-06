@@ -29,7 +29,12 @@ import {
   Plus,
 } from "lucide-react";
 
-import { UserRole, Severity, ResponseScore, QuestionType } from "@prisma/client";
+import { UserRole, ResponseScore, QuestionType } from "@prisma/client";
+import {
+  FindingMatrixScoringSection,
+  buildScoringSubmitFields,
+  type FindingScoringValue,
+} from "@/components/findings/FindingMatrixScoringSection";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -108,7 +113,8 @@ export function QuestionnaireResponsesClient({
   const [selectedQuestion, setSelectedQuestion] = useState<string>("");
   const [findingTitle, setFindingTitle] = useState("");
   const [findingDescription, setFindingDescription] = useState("");
-  const [findingSeverity, setFindingSeverity] = useState<Severity>("MEDIUM");
+  // Story 20.1: normalized scoring state from the shared matrix section.
+  const [findingScoring, setFindingScoring] = useState<FindingScoringValue | null>(null);
 
   const canCreateFinding = FINDING_CREATE_ROLES.includes(userRole);
 
@@ -135,7 +141,6 @@ export function QuestionnaireResponsesClient({
     setSelectedQuestion("");
     setFindingTitle("");
     setFindingDescription("");
-    setFindingSeverity("MEDIUM");
   };
 
   const openCreateFindingDialog = (responseId: string, questionText: string, responseValue: string) => {
@@ -159,11 +164,18 @@ export function QuestionnaireResponsesClient({
       toast.error("Please fill in all required fields");
       return;
     }
+    // Story 20.1: with a configured matrix, require a complete L×I(×E) score.
+    if (!findingScoring?.isComplete) {
+      toast.error("Complete the severity scoring before creating the finding");
+      return;
+    }
     createFindingMutation.mutate({
       questionnaireResponseId: selectedResponseId,
       title: findingTitle,
       description: findingDescription,
-      severity: findingSeverity,
+      // Matrix path sends L/I(/E) + version id (server computes score);
+      // categorical fallback sends severity + optional threshold label.
+      ...buildScoringSubmitFields(findingScoring),
     });
   };
 
@@ -317,19 +329,13 @@ export function QuestionnaireResponsesClient({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="finding-severity">Severity *</Label>
-              <Select value={findingSeverity} onValueChange={(v) => setFindingSeverity(v as Severity)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="HIGH">High</SelectItem>
-                  <SelectItem value="MEDIUM">Medium</SelectItem>
-                  <SelectItem value="LOW">Low</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Severity scoring (Story 20.1): matrix L×I(×E) with live score,
+                or categorical fallback when no matrix is configured */}
+            <FindingMatrixScoringSection
+              enabled={createFindingOpen}
+              resetKey={selectedResponseId}
+              onChange={setFindingScoring}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="finding-description">Description *</Label>

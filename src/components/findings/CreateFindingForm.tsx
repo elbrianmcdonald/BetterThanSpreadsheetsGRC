@@ -1,12 +1,17 @@
 /**
  * Create Finding Form Component
  *
- * Story 7.2: Finding Creation Form
+ * Story 7.2 (original form) → Story 20.1 follow-up (Risk Model Cleanup):
+ * the finding form IS the identified-risk card — the exact same fields as a
+ * risk item in the Create Risk Assessment flow (title, statement, taxonomy
+ * category, enterprise-risk alignment, MITRE ATT&CK mapping, mitigating
+ * controls / control gaps, inherent + residual severity, remediation options)
+ * — minus the Treatment section, because acceptance attaches to the Risk,
+ * never the finding.
  *
- * A form for creating new findings with validation, BU picker, and assignee selection.
- * Follows patterns from CreateRiskForm.tsx.
- *
- * @see AC5-AC22: Form fields, validation, and submission
+ * Scores against the org's default risk matrix (server resolves + locks the
+ * version). Finding-specific operational fields (source, business units,
+ * assignee, exploitation pathway) wrap the card.
  */
 
 "use client";
@@ -16,8 +21,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { FindingSource, Severity } from "@prisma/client";
-import { Loader2 } from "lucide-react";
+import { FindingSource } from "@prisma/client";
+import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
@@ -32,7 +37,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -55,7 +59,9 @@ import {
   PathwayAttachSection,
   type PathwayAttachState,
 } from "@/components/pathway/PathwayAttachSection";
-import { Plus } from "lucide-react";
+import { RiskItemCard } from "@/components/risk/RiskItemCard";
+import { severityFromLabel } from "@/lib/findings/scoring-options";
+import type { MatrixScales, Threshold } from "@/lib/matrix";
 
 /**
  * Finding Source Options (AC7)
@@ -65,43 +71,98 @@ const FINDING_SOURCE_OPTIONS = [
   { value: "PENTEST", label: "Penetration Test", description: "From security testing" },
   { value: "SCANNER", label: "Vulnerability Scanner", description: "From automated scanning" },
   { value: "INCIDENT", label: "Security Incident", description: "Discovered during incident" },
+  { value: "RISK_ASSESSMENT", label: "Risk Assessment", description: "Identified during a risk assessment" },
   { value: "MANUAL", label: "Manual Discovery", description: "Manually discovered" },
 ] as const;
 
-/**
- * Severity Options (AC8)
- */
-const SEVERITY_OPTIONS = [
-  { value: "CRITICAL", label: "Critical", color: "text-purple-600", description: "Immediate action required" },
-  { value: "HIGH", label: "High", color: "text-red-600", description: "Urgent attention required" },
-  { value: "MEDIUM", label: "Medium", color: "text-amber-600", description: "Should be addressed soon" },
-  { value: "LOW", label: "Low", color: "text-blue-600", description: "Address when resources allow" },
-] as const;
+// Identical shape to the Create Risk Assessment risk item (RiskAssessmentForm)
+// so RiskItemCard's `risks.${index}.*` field paths line up. Treatment fields
+// stay in the schema but are never rendered (hideTreatment) and never sent.
+const remediationOptionSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  description: z.string().min(1, "Description is required"),
+  approach: z.string().min(1, "Approach is required"),
+  costEstimate: z.number().min(0, "Cost must be >= 0"),
+  timelineEstimate: z.string().min(1, "Timeline is required").max(100),
+  effortLevel: z.enum(["LOW", "MEDIUM", "HIGH", "VERY_HIGH"]),
+  priority: z.enum(["RECOMMENDED", "ALTERNATIVE", "NOT_RECOMMENDED"]),
+  ownerId: z.string().nullable(),
+});
 
-/**
- * Form validation schema (AC5-AC11, AC13-AC16)
- * Matches tRPC input validation
- */
+const riskItemSchema = z.object({
+  id: z.string(),
+  title: z.string().min(5, "Title must be at least 5 characters").max(200),
+  riskStatement: z.string().min(20, "Statement must be at least 20 characters"),
+  controlDomainId: z.string().nullable().optional(),
+  enterpriseRiskId: z.string().nullable().optional(),
+  // Finding variant: links to register risks (replaces the ER picker)
+  linkedRiskIds: z.array(z.string()),
+  remediationOptions: z.array(remediationOptionSchema),
+  initialAccessVectorId: z.string().nullable().optional(),
+  threatStepIds: z.array(z.string()),
+  threatObjectiveIds: z.array(z.string()),
+  mitigatingControlsInPlace: z.string().nullable().optional(),
+  preventativeControlsInPlace: z.string().nullable().optional(),
+  mitigatingControlsNeeded: z.string().nullable().optional(),
+  preventativeControlsNeeded: z.string().nullable().optional(),
+  controlLinkIds: z.array(z.string()),
+  mitigatingControlIds: z.array(z.string()),
+  controlGapIds: z.array(z.string()),
+  inherentLikelihood: z.number().nullable().optional(),
+  inherentImpact: z.number().nullable().optional(),
+  inherentExposure: z.number().nullable().optional(),
+  residualLikelihood: z.number().nullable().optional(),
+  residualImpact: z.number().nullable().optional(),
+  residualExposure: z.number().nullable().optional(),
+  residualEliminated: z.boolean(),
+  treatment: z.enum(["ACCEPT", "REMEDIATE"]).nullable().optional(),
+  treatmentDueDate: z.date().nullable().optional(),
+  evidenceIds: z.array(z.string()),
+});
+
 const createFindingSchema = z.object({
-  title: z
-    .string()
-    .min(5, "Title must be at least 5 characters")
-    .max(500, "Title must be less than 500 characters"),
-  description: z
-    .string()
-    .min(20, "Description must be at least 20 characters"),
   source: z.nativeEnum(FindingSource, {
     required_error: "Please select a source",
   }),
-  severity: z.nativeEnum(Severity, {
-    required_error: "Please select a severity",
-  }),
-  affectedAssets: z.string().optional(),
   affectedBusinessUnitIds: z.array(z.string()).optional(),
   assigneeId: z.string().optional(),
+  risks: z.array(riskItemSchema).length(1),
 });
 
 type CreateFindingFormValues = z.infer<typeof createFindingSchema>;
+type RiskItemValues = z.infer<typeof riskItemSchema>;
+
+function emptyItem(): RiskItemValues {
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    riskStatement: "",
+    controlDomainId: null,
+    enterpriseRiskId: null,
+    linkedRiskIds: [],
+    remediationOptions: [],
+    initialAccessVectorId: null,
+    threatStepIds: [],
+    threatObjectiveIds: [],
+    mitigatingControlsInPlace: null,
+    preventativeControlsInPlace: null,
+    mitigatingControlsNeeded: null,
+    preventativeControlsNeeded: null,
+    controlLinkIds: [],
+    mitigatingControlIds: [],
+    controlGapIds: [],
+    inherentLikelihood: null,
+    inherentImpact: null,
+    inherentExposure: null,
+    residualLikelihood: null,
+    residualImpact: null,
+    residualExposure: null,
+    residualEliminated: false,
+    treatment: null,
+    treatmentDueDate: null,
+    evidenceIds: [],
+  };
+}
 
 export function CreateFindingForm() {
   const router = useRouter();
@@ -110,8 +171,16 @@ export function CreateFindingForm() {
   const [newBUName, setNewBUName] = useState("");
   const [newBUCode, setNewBUCode] = useState("");
   const [newBUParentId, setNewBUParentId] = useState<string | null>(null);
+  const [cardExpanded, setCardExpanded] = useState(true);
 
   const utils = api.useUtils();
+
+  // Org default risk matrix drives the card's severity calculators; the
+  // server re-resolves + locks the version authoritatively on create.
+  const { data: defaultMatrix } = api.riskMatrix.getDefault.useQuery();
+  const matrixScales = (defaultMatrix?.scales ?? null) as MatrixScales | null;
+  const matrixThresholds = (defaultMatrix?.thresholds ?? []) as Threshold[];
+  const is3DMatrix = !!matrixScales?.exposure && matrixScales.exposure.length > 0;
 
   // Fetch all business units for parent selection
   const { data: buData } = api.businessUnit.list.useQuery({
@@ -126,14 +195,11 @@ export function CreateFindingForm() {
       } else {
         toast.info(`Business unit "${data.name}" already exists`);
       }
-      // Add to selection
       const currentBUs = form.getValues("affectedBusinessUnitIds") ?? [];
       const newBUs = [...currentBUs, data.id];
       form.setValue("affectedBusinessUnitIds", newBUs);
       setSelectedBUs(newBUs);
-      // Invalidate the list to refresh
       void utils.businessUnit.list.invalidate();
-      // Reset and close dialog
       setNewBUName("");
       setNewBUCode("");
       setNewBUParentId(null);
@@ -180,30 +246,22 @@ export function CreateFindingForm() {
   );
   const [submitting, setSubmitting] = useState(false);
 
-  // Create mutation (AC17). Success/error handled in onSubmit so we can chain
-  // the pathway attach before redirecting.
   const createMutation = api.finding.create.useMutation();
   const createPathwayMutation = api.pathway.create.useMutation();
   const addStepMutation = api.pathway.addStep.useMutation();
 
-  // Form setup (AC13: validate on blur)
   const form = useForm<CreateFindingFormValues>({
     resolver: zodResolver(createFindingSchema),
     defaultValues: {
-      title: "",
-      description: "",
       source: undefined,
-      severity: undefined,
-      affectedAssets: "",
       affectedBusinessUnitIds: [],
       assigneeId: undefined,
+      risks: [emptyItem()],
     },
-    mode: "onBlur", // AC13: Client-side validation on blur
+    mode: "onBlur",
   });
 
-  // Transform affected assets from string to array
   const onSubmit = async (values: CreateFindingFormValues) => {
-    // Block submit when the pathway box is checked but its details are incomplete.
     if (pathwayState.enabled && !pathwayState.value) {
       toast.error(
         "Complete the exploitation pathway details (assessment, pathway, and MITRE technique) or uncheck it.",
@@ -211,29 +269,62 @@ export function CreateFindingForm() {
       return;
     }
 
-    const affectedAssets = values.affectedAssets
-      ? values.affectedAssets
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [];
+    const item = values.risks[0]!;
+
+    // Findings are scored observations — require the inherent score.
+    if (item.inherentLikelihood == null || item.inherentImpact == null) {
+      toast.error("Select inherent likelihood and impact to score the finding.");
+      return;
+    }
+    if (is3DMatrix && item.inherentExposure == null) {
+      toast.error("Select inherent exposure to score the finding.");
+      return;
+    }
+
+    // Advisory severity from the inherent score against the matrix thresholds;
+    // the server recomputes authoritatively.
+    const rawScore = is3DMatrix
+      ? item.inherentLikelihood * item.inherentImpact * (item.inherentExposure ?? 1)
+      : item.inherentLikelihood * item.inherentImpact;
+    const threshold = matrixThresholds.find(
+      (t) => rawScore >= t.minValue && rawScore < t.maxValue
+    );
+    const advisorySeverity = severityFromLabel(threshold?.label ?? null);
 
     setSubmitting(true);
     try {
-      // AC17: create the finding first.
       let finding: { id: string; identifier: string };
       try {
         finding = await createMutation.mutateAsync({
-          title: values.title,
-          description: values.description,
+          title: item.title,
+          description: item.riskStatement,
           source: values.source,
-          severity: values.severity,
-          affectedAssets,
+          severity: advisorySeverity,
+          likelihood: item.inherentLikelihood,
+          impact: item.inherentImpact,
+          exposure: is3DMatrix ? item.inherentExposure ?? undefined : undefined,
+          matrixVersionId: defaultMatrix?.currentVersionId ?? undefined,
+          // Identified-risk-card parity
+          controlDomainId: item.controlDomainId ?? undefined,
+          linkedRiskIds: item.linkedRiskIds,
+          initialAccessVectorId: item.initialAccessVectorId ?? undefined,
+          threatStepIds: item.threatStepIds,
+          threatObjectiveIds: item.threatObjectiveIds,
+          mitigatingControlIds: item.mitigatingControlIds,
+          controlGapIds: item.controlGapIds,
+          residualLikelihood: item.residualEliminated ? undefined : item.residualLikelihood ?? undefined,
+          residualImpact: item.residualEliminated ? undefined : item.residualImpact ?? undefined,
+          residualExposure: item.residualEliminated ? undefined : item.residualExposure ?? undefined,
+          residualEliminated: item.residualEliminated,
+          remediationOptions: item.remediationOptions.map((opt) => ({
+            ...opt,
+            ownerId: opt.ownerId ?? undefined,
+          })),
+          // Finding operational fields
           affectedBusinessUnitIds: values.affectedBusinessUnitIds,
           assigneeId: values.assigneeId,
         });
       } catch (error) {
-        // AC21: server validation errors
         toast.error(error instanceof Error ? error.message : "Failed to create finding");
         return;
       }
@@ -272,11 +363,9 @@ export function CreateFindingForm() {
           );
         }
       } else {
-        // AC19: Success toast
         toast.success(`Finding ${finding.identifier} created successfully`);
       }
 
-      // AC20: Redirect to finding detail page
       router.push(`/findings/${finding.id}`);
     } finally {
       setSubmitting(false);
@@ -290,149 +379,65 @@ export function CreateFindingForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Title Field (AC5, AC14) */}
+        {/* Source Field (AC7) — the one finding-specific required field */}
         <FormField
           control={form.control}
-          name="title"
+          name="source"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                Title <span className="text-destructive">*</span>
+                Source <span className="text-destructive">*</span>
               </FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="Enter a descriptive title for the finding"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                A clear, concise title (5-500 characters)
-              </FormDescription>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="How was this discovered?" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {FINDING_SOURCE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col">
+                        <span>{option.label}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {option.description}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {/* Description Field (AC6, AC15) */}
-        <FormField
+        {/* Story 20.1 follow-up: the identified-risk card IS the finding form —
+            exact same fields as a risk item in Create Risk Assessment, minus
+            Treatment (acceptance lives on the Risk). Scores against the org
+            default matrix. */}
+        <RiskItemCard
+          index={0}
           control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                Description <span className="text-destructive">*</span>
-              </FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Provide a detailed description of the finding, including context, impact, and any relevant technical details..."
-                  className="min-h-[150px]"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Detailed description of the finding (minimum 20 characters). Markdown supported.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+          isExpanded={cardExpanded}
+          onToggle={() => setCardExpanded((v) => !v)}
+          onRemove={() => undefined}
+          canRemove={false}
+          matrixScales={matrixScales}
+          matrixThresholds={matrixThresholds}
+          is3DMatrix={is3DMatrix}
+          variant="finding"
         />
-
-        {/* Source and Severity Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Source Field (AC7) */}
-          <FormField
-            control={form.control}
-            name="source"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  Source <span className="text-destructive">*</span>
-                </FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select source..." />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {FINDING_SOURCE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex flex-col">
-                          <span>{option.label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {option.description}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {/* Severity Field (AC8) */}
-          <FormField
-            control={form.control}
-            name="severity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  Severity <span className="text-destructive">*</span>
-                </FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select severity..." />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {SEVERITY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex flex-col">
-                          <span className={option.color}>{option.label}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {option.description}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* Affected Assets Field (AC9) */}
-        <FormField
-          control={form.control}
-          name="affectedAssets"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Affected Assets</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Enter affected assets, one per line:&#10;server-prod-01&#10;database-main&#10;api.example.com"
-                  className="min-h-[100px]"
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                List of affected systems, servers, or assets (one per line)
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {defaultMatrix?.name ? (
+          <p className="text-xs text-muted-foreground -mt-4">
+            Severity scored against <span className="font-medium">{defaultMatrix.name}</span> (org default).
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground -mt-4">
+            No default risk matrix configured — configure one under Admin → Risk
+            Matrices to score findings.
+          </p>
+        )}
 
         {/* Business Units Field (AC10) */}
         <FormField

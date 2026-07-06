@@ -165,6 +165,9 @@ const ALLOWLIST_TABLES = new Set([
   // Risk threat chain tables — isolation via Risk relation (which has organizationId)
   "RiskThreatStep",
   "RiskThreatObjective",
+  // Finding threat chain tables — isolation via Finding relation (Story 20.1 follow-up)
+  "FindingThreatStep",
+  "FindingThreatObjective",
   // Vendor assessment comments — isolation via VendorAssessment relation
   "VendorAssessmentComment",
   // Questionnaire template tree — isolation via QuestionnaireTemplate

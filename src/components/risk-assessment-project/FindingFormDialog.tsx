@@ -16,9 +16,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { FindingSource, Severity } from "@prisma/client";
+import { FindingSource } from "@prisma/client";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  FindingMatrixScoringSection,
+  buildScoringSubmitFields,
+  type FindingScoringValue,
+} from "@/components/findings/FindingMatrixScoringSection";
 
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -56,15 +61,11 @@ const FINDING_SOURCE_OPTIONS = [
   { value: FindingSource.PENTEST, label: "Penetration Test" },
   { value: FindingSource.SCANNER, label: "Vulnerability Scanner" },
   { value: FindingSource.INCIDENT, label: "Security Incident" },
+  { value: FindingSource.RISK_ASSESSMENT, label: "Risk Assessment" },
   { value: FindingSource.MANUAL, label: "Manual Discovery" },
 ] as const;
 
-const SEVERITY_OPTIONS = [
-  { value: Severity.HIGH, label: "High", color: "text-red-600" },
-  { value: Severity.MEDIUM, label: "Medium", color: "text-amber-600" },
-  { value: Severity.LOW, label: "Low", color: "text-blue-600" },
-] as const;
-
+// Severity comes from the shared matrix scoring section (Story 20.1).
 const findingFormSchema = z.object({
   title: z
     .string()
@@ -72,7 +73,6 @@ const findingFormSchema = z.object({
     .max(500, "Title must be less than 500 characters"),
   description: z.string().min(20, "Description must be at least 20 characters"),
   source: z.nativeEnum(FindingSource),
-  severity: z.nativeEnum(Severity),
   affectedAssets: z.string().optional(),
   affectedBusinessUnitIds: z.array(z.string()).optional(),
   assigneeId: z.string().optional(),
@@ -106,7 +106,6 @@ export function FindingFormDialog({
       title: "",
       description: "",
       source: FindingSource.MANUAL,
-      severity: Severity.MEDIUM,
       affectedAssets: "",
       affectedBusinessUnitIds: [],
       assigneeId: undefined,
@@ -120,7 +119,6 @@ export function FindingFormDialog({
         title: defaultTitle ?? "",
         description: defaultDescription ?? "",
         source: FindingSource.MANUAL,
-        severity: Severity.MEDIUM,
         affectedAssets: "",
         affectedBusinessUnitIds: [],
         assigneeId: undefined,
@@ -130,11 +128,19 @@ export function FindingFormDialog({
 
   const createFinding = api.finding.create.useMutation();
   const [isSaving, setIsSaving] = useState(false);
+  // Story 20.1: normalized scoring state from the shared matrix section.
+  const [scoring, setScoring] = useState<FindingScoringValue | null>(null);
 
   const affectedBUs = form.watch("affectedBusinessUnitIds");
   const suggestedBUs = useMemo(() => affectedBUs ?? [], [affectedBUs]);
 
   const onSubmit = async (values: FindingFormValues) => {
+    // With a configured matrix, a complete L×I(×E) score is required; the
+    // categorical fallback is always complete (Story 20.1).
+    if (!scoring?.isComplete) {
+      toast.error("Complete the severity scoring before adding the finding.");
+      return;
+    }
     setIsSaving(true);
     try {
       const affectedAssets = values.affectedAssets
@@ -148,7 +154,9 @@ export function FindingFormDialog({
         title: values.title,
         description: values.description,
         source: values.source,
-        severity: values.severity,
+        // Matrix path sends L/I(/E) + version id (server computes score);
+        // categorical fallback sends severity + optional threshold label.
+        ...buildScoringSubmitFields(scoring),
         affectedAssets,
         affectedBusinessUnitIds: values.affectedBusinessUnitIds ?? [],
         assigneeId: values.assigneeId,
@@ -216,61 +224,40 @@ export function FindingFormDialog({
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="source"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Source <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select source..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {FINDING_SOURCE_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="source"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Source <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select source..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {FINDING_SOURCE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="severity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Severity <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select severity..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {SEVERITY_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            <span className={o.color}>{o.label}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Severity scoring (Story 20.1): matrix L×I(×E) with live score,
+                or categorical fallback when no matrix is configured */}
+            <FindingMatrixScoringSection
+              enabled={open}
+              resetKey={open}
+              onChange={setScoring}
+            />
 
             <FormField
               control={form.control}
