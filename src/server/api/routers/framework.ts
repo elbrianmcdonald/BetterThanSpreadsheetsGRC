@@ -40,6 +40,11 @@ import type {
   OscalValidationIssue,
 } from "@/types/oscal";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import {
+  parseFrameworkImportFile,
+  validateImportFileBase64,
+} from "@/lib/framework-import-parser";
+import { buildControlsFromMapping } from "@/lib/framework-import-mapping";
 import { OSCALUpdater } from "@/server/services/oscal-updater";
 import { getTemplateMetadata, getTemplate, getTemplatePreview } from "@/data/frameworks";
 
@@ -67,6 +72,37 @@ const previewInput = z.object({
   filename: z.string().optional(),
   /** Optional format override */
   format: z.enum(["json", "yaml", "yml"]).optional(),
+});
+
+/**
+ * Input schema for CSV/XLSX framework import file parsing (Story 24.1)
+ *
+ * fileContent max length caps the base64 payload so oversized uploads fail
+ * fast at validation (5MB file ≈ 6.7MB base64; 8M chars is a safe ceiling).
+ */
+const parseImportFileInput = z.object({
+  /** Base64-encoded file content (CSV or XLSX) */
+  fileContent: z.string().min(1, "File content is required").max(8_000_000),
+  /** Original file name (used for extension validation) */
+  fileName: z.string().min(1, "File name is required").max(255),
+});
+
+/**
+ * Input schema for committing a mapped CSV/XLSX import (Story 24.3)
+ */
+const commitImportInput = z.object({
+  fileContent: z.string().min(1, "File content is required").max(8_000_000),
+  fileName: z.string().min(1, "File name is required").max(255),
+  name: z.string().min(1, "Framework name is required").max(200),
+  code: z.string().min(1, "Framework code is required").max(50),
+  version: z.string().min(1, "Framework version is required").max(50),
+  mapping: z.object({
+    controlId: z.number().int().min(0),
+    title: z.number().int().min(0),
+    description: z.number().int().min(0).nullable(),
+    family: z.number().int().min(0).nullable(),
+    parentControlId: z.number().int().min(0).nullable(),
+  }),
 });
 
 /**
@@ -103,6 +139,226 @@ export const frameworkRouter = createTRPCRouter({
           message: `Failed to parse OSCAL file: ${message}`,
         });
       }
+    }),
+
+  /**
+   * Parse a CSV/XLSX framework import file and return a raw preview (Story 24.1)
+   *
+   * Stage 1 of the two-stage framework import: validates the file
+   * (extension, size) and parses it into raw headers + rows so the user can
+   * verify the file was read correctly before column mapping (Story 24.2).
+   *
+   * Read-only: no database writes, no audit log (audit lands at commit).
+   *
+   * @requires FRAMEWORK_MANAGE permission (ORG_ADMIN)
+   */
+  parseImportFile: organizationProcedure
+    .use(requirePermission(Permission.FRAMEWORK_MANAGE))
+    .input(parseImportFileInput)
+    .mutation(({ input }) => {
+      const validationError = validateImportFileBase64(input.fileName, input.fileContent);
+      if (validationError) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: validationError,
+        });
+      }
+
+      const parsed = parseFrameworkImportFile(input.fileContent);
+
+      return {
+        valid: parsed.valid,
+        headers: parsed.headers,
+        /** First 10 data rows for the preview table (AC1) */
+        previewRows: parsed.rows.slice(0, 10),
+        totalRows: parsed.totalRows,
+        issues: parsed.issues,
+      };
+    }),
+
+  /**
+   * Commit a mapped CSV/XLSX framework import (Story 24.3)
+   *
+   * Stage 3 of the two-stage import: re-parses the file server-side, extracts
+   * controls via the user's column mapping, validates (blank required fields,
+   * duplicate control IDs, dangling parent refs, duplicate framework), then
+   * writes an ordinary versioned Framework + Control rows in one transaction.
+   *
+   * Family handling: when a family column is mapped, controls WITHOUT an
+   * explicit parentControlId are grouped under a synthesized family Control row
+   * (mirrors how seed data models Family → Base → Enhancement hierarchy).
+   *
+   * @requires FRAMEWORK_MANAGE permission (ORG_ADMIN)
+   */
+  commitImport: organizationProcedure
+    .use(requirePermission(Permission.FRAMEWORK_MANAGE))
+    .input(commitImportInput)
+    .mutation(async ({ ctx, input }) => {
+      // Re-validate + re-parse server-side; never trust client-sent rows.
+      const validationError = validateImportFileBase64(input.fileName, input.fileContent);
+      if (validationError) {
+        return { success: false as const, issues: [{ message: validationError }] };
+      }
+
+      const parsed = parseFrameworkImportFile(input.fileContent);
+      if (!parsed.valid) {
+        return {
+          success: false as const,
+          issues: parsed.issues.filter((i) => i.severity === "error"),
+        };
+      }
+
+      const { controls, errors } = buildControlsFromMapping(parsed.rows, input.mapping);
+      if (errors.length > 0) {
+        return { success: false as const, rowErrors: errors };
+      }
+
+      // Duplicate-framework guard (mirror importOscal): org + code + version.
+      const existing = await ctx.db.framework.findFirst({
+        where: {
+          organizationId: ctx.organizationId!,
+          code: input.code,
+          version: input.version,
+        },
+      });
+      if (existing) {
+        return {
+          success: false as const,
+          issues: [
+            {
+              code: "DUPLICATE_FRAMEWORK",
+              message: `Framework "${input.code}" version "${input.version}" already exists. Try a different version string.`,
+            },
+          ],
+        };
+      }
+
+      // Resolve which controls need a synthesized family parent: family column
+      // mapped, a family value present, and NO explicit parentControlId.
+      const familyMapped = input.mapping.family !== null;
+      const distinctFamilies = familyMapped
+        ? Array.from(
+            new Set(
+              controls
+                .filter((c) => c.family && !c.parentControlId)
+                .map((c) => c.family as string),
+            ),
+          )
+        : [];
+
+      // Ensure synthesized family controlIds don't collide with real ones.
+      const usedControlIds = new Set(controls.map((c) => c.controlId));
+      const familyControlId = (family: string): string => {
+        let candidate = family;
+        let suffix = 1;
+        while (usedControlIds.has(candidate)) {
+          candidate = `${family} (family ${suffix++})`;
+        }
+        usedControlIds.add(candidate);
+        return candidate;
+      };
+      const familyToControlId = new Map<string, string>();
+      for (const family of distinctFamilies) {
+        familyToControlId.set(family, familyControlId(family));
+      }
+
+      const result = await ctx.db.$transaction(async (tx) => {
+        const framework = await tx.framework.create({
+          data: {
+            id: randomUUID(),
+            organizationId: ctx.organizationId!,
+            code: input.code,
+            name: input.name,
+            version: input.version,
+            isActive: false,
+            updatedAt: new Date(),
+          },
+        });
+
+        const controlIdMap = new Map<string, string>(); // controlId → db id
+
+        // Pass 0: create synthesized family parents (top-level).
+        for (const [family, synthId] of familyToControlId) {
+          const created = await tx.control.create({
+            data: {
+              id: randomUUID(),
+              organizationId: ctx.organizationId!,
+              frameworkId: framework.id,
+              controlId: synthId,
+              title: family,
+              description: family,
+              isActive: true,
+              isOscalImported: false,
+              isCustom: false,
+              updatedAt: new Date(),
+            },
+          });
+          controlIdMap.set(synthId, created.id);
+        }
+
+        // Pass 1: create all mapped controls (no parent yet).
+        for (const control of controls) {
+          const created = await tx.control.create({
+            data: {
+              id: randomUUID(),
+              organizationId: ctx.organizationId!,
+              frameworkId: framework.id,
+              controlId: control.controlId,
+              title: control.title,
+              description: control.description || control.title,
+              isActive: true,
+              isOscalImported: false,
+              isCustom: false,
+              updatedAt: new Date(),
+            },
+          });
+          controlIdMap.set(control.controlId, created.id);
+        }
+
+        // Pass 2: wire parent references — explicit parent wins, else family.
+        for (const control of controls) {
+          let parentDbId: string | undefined;
+          if (control.parentControlId) {
+            parentDbId = controlIdMap.get(control.parentControlId);
+          } else if (familyMapped && control.family) {
+            const synthId = familyToControlId.get(control.family);
+            parentDbId = synthId ? controlIdMap.get(synthId) : undefined;
+          }
+          if (parentDbId) {
+            await tx.control.update({
+              where: { id: controlIdMap.get(control.controlId)! },
+              data: { parentControlId: parentDbId },
+            });
+          }
+        }
+
+        return { framework, controlCount: controlIdMap.size };
+      });
+
+      void createAuditLog({
+        organizationId: ctx.organizationId!,
+        userId: ctx.session!.user.id,
+        action: "FRAMEWORK_IMPORT",
+        entityType: "Framework",
+        entityId: result.framework.id,
+        changes: {
+          before: null,
+          after: {
+            code: input.code,
+            name: input.name,
+            version: input.version,
+            controlCount: result.controlCount,
+            source: "csv-xlsx",
+          },
+        },
+      });
+
+      return {
+        success: true as const,
+        frameworkId: result.framework.id,
+        frameworkName: input.name,
+        controlsImported: result.controlCount,
+      };
     }),
 
   /**
@@ -395,7 +651,7 @@ export const frameworkRouter = createTRPCRouter({
               organizationId,
               orgControlId: source!.id,
               frameworkControlId: c.id,
-              mappingType: "COVERS" as const,
+              mappingType: "EQUIVALENT" as const,
               createdById: userId,
             };
           }),
@@ -601,7 +857,7 @@ export const frameworkRouter = createTRPCRouter({
             organizationId,
             orgControlId: oc.id,
             frameworkControlId: controlRows[idx]!.id,
-            mappingType: "COVERS" as const,
+            mappingType: "EQUIVALENT" as const,
             createdById: userId,
           })),
           skipDuplicates: true,

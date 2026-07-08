@@ -226,9 +226,9 @@ export function BiaRegisterClient() {
             icon={<Activity />}
           />
           <StatTile
-            label={`Stale (>${stats?.staleCutoffDays ?? 90}d)`}
+            label="Annual review due"
             value={stats?.staleCount ?? "—"}
-            sub="Not updated recently — review"
+            sub="Not updated in the last year"
             icon={<Clock />}
             tone={
               stats && stats.staleCount > 0

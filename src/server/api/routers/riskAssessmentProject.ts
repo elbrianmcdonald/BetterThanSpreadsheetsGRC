@@ -24,6 +24,7 @@ import {
   emitRejectedNotification,
 } from "@/lib/notifications";
 import { generateIdentifier } from "@/server/services/identifierService";
+import { recomputeRiskScore } from "@/server/services/riskScore";
 import { normalizeLayout } from "@/components/deliverable/execSummaryLayout";
 
 // =============================================================================
@@ -1420,6 +1421,25 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
             riskId: r.id,
           },
         });
+      }
+
+      // Newly-published findings start feeding register risk rollups NOW
+      // (they were excluded from recomputeRiskScore while PENDING) — refresh
+      // every risk linked to a finding from this assessment (2026-07-06).
+      const publishedFindingLinks = await ctx.db.riskFindingLink.findMany({
+        where: {
+          finding: { discoveryProjectId: id, discoveryStatus: "PUBLISHED" },
+        },
+        select: { riskId: true },
+        distinct: ["riskId"],
+      });
+      for (const link of publishedFindingLinks) {
+        void recomputeRiskScore(
+          ctx.db,
+          link.riskId,
+          "assessment-approved-findings-published",
+          ctx.session.user.id,
+        );
       }
 
       // Log the approval in audit trail

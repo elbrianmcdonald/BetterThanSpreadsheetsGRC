@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { UserRole } from "@prisma/client";
 import toast from "react-hot-toast";
@@ -86,8 +87,6 @@ type Tab =
   | "identified-risks"
   | "findings"
   | "controls"
-  | "evidence-rollup"
-  | "comments"
   | "audit-trail"
   | "history"
   | "summary"
@@ -100,20 +99,23 @@ interface TabConfig {
   countKey?: "identifiedRisksCount" | "questionnaireUnanswered" | "findingsCount";
 }
 
+// Tab order per the 2026-07-06 workspace restructure: Executive Summary
+// leads, Schedule + Stakeholders follow Overview, Audit Trail closes.
+// Comments live inside Overview (no standalone tab) and the Evidence
+// Roll-up tab was removed.
 const TABS: TabConfig[] = [
+  { id: "summary", label: "Executive Summary", icon: BarChart3 },
   { id: "overview", label: "Overview", icon: FileText },
+  ...WRAPPER_TAB_DEFS.filter((t) => t.id === "schedule" || t.id === "stakeholders"),
   { id: "questionnaire", label: "Questionnaire", icon: ClipboardList, countKey: "questionnaireUnanswered" },
   { id: "identified-risks", label: "Identified Risks", icon: ListTree, countKey: "identifiedRisksCount" },
   { id: "findings", label: "Findings", icon: Bug, countKey: "findingsCount" },
   { id: "controls", label: "Controls", icon: Shield },
-  { id: "evidence-rollup", label: "Evidence Roll-up", icon: FolderOpen },
-  { id: "comments", label: "Comments", icon: MessageSquare },
-  { id: "audit-trail", label: "Audit Trail", icon: History },
+  // Remaining consulting wrapper tabs (Evidence requests / Exploitation
+  // Pathways / Action Plans) — shared module.
+  ...WRAPPER_TAB_DEFS.filter((t) => t.id !== "schedule" && t.id !== "stakeholders"),
   { id: "history", label: "History", icon: Calendar },
-  // Consulting wrapper tabs (Schedule / Stakeholders / Evidence /
-  // Exploitation Pathways / Action Plans) — shared module.
-  ...WRAPPER_TAB_DEFS,
-  { id: "summary", label: "Executive Summary", icon: BarChart3 },
+  { id: "audit-trail", label: "Audit Trail", icon: History },
 ];
 
 const STATUS_BADGE: Record<AssessmentProjectStatus, string> = {
@@ -123,7 +125,13 @@ const STATUS_BADGE: Record<AssessmentProjectStatus, string> = {
 };
 
 export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClientProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  // Deep-linkable tabs: ?tab=questionnaire etc. (used by the full-page Add
+  // Finding flow's return path). Falls back to the leading tab.
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<Tab>(
+    TABS.some((t) => t.id === requestedTab) ? (requestedTab as Tab) : "summary",
+  );
 
   const { data: project, isLoading, error } = api.riskAssessmentProject.getById.useQuery({
     id: projectId,
@@ -255,7 +263,13 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
 
       {/* Tab content */}
       <div role="tabpanel">
-        {activeTab === "overview" && <OverviewTab project={project} />}
+        {activeTab === "overview" && (
+          <div className="space-y-6">
+            <OverviewTab project={project} />
+            {/* Comments live inside Overview (2026-07-06 restructure). */}
+            <CommentsTab projectId={projectId} />
+          </div>
+        )}
         {activeTab === "questionnaire" && (
           <QuestionnaireTab
             projectId={projectId}
@@ -275,8 +289,6 @@ export function AssessmentWorkspaceClient({ projectId }: AssessmentWorkspaceClie
           />
         )}
         {activeTab === "controls" && <ControlsAggregateTab projectId={projectId} />}
-        {activeTab === "evidence-rollup" && <EvidenceAggregateTab projectId={projectId} />}
-        {activeTab === "comments" && <CommentsTab projectId={projectId} />}
         {activeTab === "audit-trail" && <AuditTrailTab projectId={projectId} />}
         {activeTab === "history" && <HistoryTab project={project} />}
         {activeTab === "summary" && (
@@ -560,68 +572,6 @@ function ControlsAggregateTab({ projectId }: { projectId: string }) {
     </Card>
   );
 }
-
-function EvidenceAggregateTab({ projectId }: { projectId: string }) {
-  const { data, isLoading } = api.riskAssessmentProject.getEvidenceAggregate.useQuery({
-    projectId,
-  });
-  if (isLoading) return <Skeleton className="h-32 w-full" />;
-  if (!data || data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border border-dashed rounded-lg">
-        <FolderOpen className="h-8 w-8 mb-2 opacity-50" />
-        <p className="text-sm">No evidence attached to any identified risk yet.</p>
-      </div>
-    );
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Evidence Roll-up</CardTitle>
-        <CardDescription>
-          Every file linked to any identified risk in this assessment.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <table className="w-full text-sm">
-          <thead className="text-xs text-muted-foreground uppercase">
-            <tr className="border-b">
-              <th className="text-left py-2 font-medium">Evidence</th>
-              <th className="text-left py-2 font-medium">Type</th>
-              <th className="text-left py-2 font-medium">Linked Risk</th>
-              <th className="text-left py-2 font-medium">Linked At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((link) => (
-              <tr key={link.id} className="border-b last:border-0">
-                <td className="py-2">
-                  <div className="font-medium">{link.Evidence.title || link.Evidence.originalFileName}</div>
-                  <div className="text-xs text-muted-foreground">{link.Evidence.originalFileName}</div>
-                </td>
-                <td className="py-2 text-muted-foreground capitalize">{link.linkType.toLowerCase()}</td>
-                <td className="py-2">
-                  {link.Risk.identifier ? (
-                    <Link href={`/risks/${link.Risk.id}`} className="hover:underline text-primary">
-                      {link.Risk.identifier}
-                    </Link>
-                  ) : (
-                    <span>—</span>
-                  )}
-                  <div className="text-xs text-muted-foreground">{link.Risk.title}</div>
-                </td>
-                <td className="py-2 text-muted-foreground">
-                  {format(new Date(link.linkedAt), "PP")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </CardContent>
-    </Card>
-  );
-}
-
 
 function EditableAssessmentDetails({ project }: { project: ProjectData }) {
   const { data: session } = useSession();

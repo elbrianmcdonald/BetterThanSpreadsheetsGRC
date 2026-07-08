@@ -127,7 +127,7 @@ export function AssessmentDetailClient({ assessmentId }: AssessmentDetailClientP
   // Exploitation Pathways / Action Plans).
   const [activeTab, setActiveTab] = useState<
     "assessment" | "summary" | WrapperTabId
-  >("assessment");
+  >("summary");
 
   // Questionnaire state
   const [addQuestionnaireOpen, setAddQuestionnaireOpen] = useState(false);
@@ -317,11 +317,14 @@ export function AssessmentDetailClient({ assessmentId }: AssessmentDetailClientP
     assessment.status !== VendorAssessmentStatus.COMPLETED &&
     new Date(assessment.dueDate) < new Date();
 
-  // Tabs: "Assessment" (existing workspace) + shared consulting wrapper tabs.
+  // Tabs: 2026-07-06 order aligned across assessments (risk-assessment
+  // order): Executive Summary leads, Schedule + Stakeholders follow the
+  // main tab.
   const TABS = [
-    { id: "assessment" as const, label: "Assessment", icon: ClipboardCheck },
-    ...WRAPPER_TAB_DEFS,
     { id: "summary" as const, label: "Executive Summary", icon: BarChart3 },
+    { id: "assessment" as const, label: "Assessment", icon: ClipboardCheck },
+    ...WRAPPER_TAB_DEFS.filter((t) => t.id === "schedule" || t.id === "stakeholders"),
+    ...WRAPPER_TAB_DEFS.filter((t) => t.id !== "schedule" && t.id !== "stakeholders"),
   ];
 
   return (

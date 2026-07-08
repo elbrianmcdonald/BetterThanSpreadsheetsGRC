@@ -1544,6 +1544,7 @@ model User {
   // (OrgControlAssignment.personId now FKs to Person; User only tracks who made the assignment)
   OrgControlAssignmentsMade         OrgControlAssignment[]       @relation("OrgControlAssigner")
   OrgControlMappingsCreated         OrgControlFrameworkMapping[] @relation("OrgControlMappingCreator")
+  OrgControlMappingsReviewed        OrgControlFrameworkMapping[] @relation("OrgControlMappingReviewer")
   OrgControlEvidenceCreated         OrgControlEvidence[]         @relation("OrgControlEvidenceCreator")
   OrgControlTestsConducted          OrgControlTestRecord[]       @relation("OrgControlTester")
   OrgControlExceptionsRequested     OrgControlException[]        @relation("OrgControlExceptionRequester")
@@ -1691,6 +1692,7 @@ enum AuditAction {
   ACTIVATE_FRAMEWORK
   DEACTIVATE_FRAMEWORK
   IMPORT_OSCAL_CATALOG
+  FRAMEWORK_IMPORT
   UPDATE_OSCAL_CATALOG
   CONTROL_ADDED
   CONTROL_DEPRECATED
@@ -3222,24 +3224,41 @@ model OrganizationalControl {
 }
 
 // Many-to-many: OrgControl ↔ framework library Control
+// Lifecycle for org-control → framework-control mappings.
+// Human-created mappings are CONFIRMED; system-derived one-hop suggestions are
+// SUGGESTED until a human promotes/rejects them (Epic 26). REJECTED is retained
+// (the unique key blocks re-proposal) and never auto-transitions.
+enum MappingStatus {
+  SUGGESTED
+  CONFIRMED
+  REJECTED
+}
+
 model OrgControlFrameworkMapping {
   id                 String              @id @default(cuid())
   organizationId     String
   orgControlId       String
   frameworkControlId String
-  mappingType        StandardMappingType @default(COVERS)
+  mappingType        StandardMappingType @default(EQUIVALENT)
+  status             MappingStatus       @default(CONFIRMED)
+  confidence         Int                 @default(100) // 0-100; derived suggestions carry a computed score
+  derivedVia         Json? // lineage for SUGGESTED rows: { orgMappingId, crosswalkId, chain }
   notes              String?             @db.VarChar(500)
   createdAt          DateTime            @default(now())
   createdById        String?
+  reviewedById       String? // who confirmed/rejected a suggestion
+  reviewedAt         DateTime?
 
   Organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   OrgControl       OrganizationalControl @relation(fields: [orgControlId], references: [id], onDelete: Cascade)
   FrameworkControl Control               @relation("OrgControlFrameworkMapping", fields: [frameworkControlId], references: [id], onDelete: Cascade)
   CreatedBy        User?                 @relation("OrgControlMappingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  ReviewedBy       User?                 @relation("OrgControlMappingReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@unique([orgControlId, frameworkControlId])
   @@index([organizationId, orgControlId])
   @@index([organizationId, frameworkControlId])
+  @@index([organizationId, status])
 }
 
 // Multi-person-per-role RACI assignments. Assignees draw from the Person pool
@@ -3473,18 +3492,22 @@ enum StandardControlCriticality {
   LOW
 }
 
+// NIST OLIR-style relationship semantics (replaces the legacy COVERS/PARTIAL/EXCEEDS trio).
+// Migration mapping: COVERS→EQUIVALENT, EXCEEDS→SUPERSET_OF, PARTIAL→INTERSECTS.
 enum StandardMappingType {
-  COVERS // Standard control fully covers the framework control
-  PARTIAL // Standard control partially covers the framework control
-  EXCEEDS // Standard control exceeds framework requirements
+  EQUIVALENT // Source and target are functionally the same
+  SUBSET_OF // Source is narrower — fully contained within the target
+  SUPERSET_OF // Source is broader — covers the target and more
+  INTERSECTS // Source and target overlap partially, neither contains the other
 }
 
-// Framework-to-Framework Mapping Type
-// Used for base framework mapping feature
+// Framework-to-Framework Mapping Type — same OLIR semantics as StandardMappingType.
+// Kept as a distinct enum for schema clarity, but the member set is identical.
 enum FrameworkMappingType {
-  COVERS // Source control fully covers the base control
-  PARTIAL // Source control partially covers the base control
-  EXCEEDS // Source control exceeds base control requirements
+  EQUIVALENT // Source and target are functionally the same
+  SUBSET_OF // Source is narrower — fully contained within the target
+  SUPERSET_OF // Source is broader — covers the target and more
+  INTERSECTS // Source and target overlap partially, neither contains the other
 }
 
 // Base type for organization-level base control mapping
@@ -3712,7 +3735,7 @@ model StandardControlMapping {
   id                String              @id @default(cuid())
   standardControlId String
   controlId         String // Framework control ID
-  mappingType       StandardMappingType @default(COVERS)
+  mappingType       StandardMappingType @default(EQUIVALENT)
   notes             String?             @db.Text
 
   createdAt   DateTime @default(now())
@@ -3737,7 +3760,7 @@ model FrameworkControlMapping {
   sourceControlId String // FK to Control (from non-base framework)
   targetControlId String // FK to Control (from base framework)
 
-  mappingType FrameworkMappingType @default(COVERS)
+  mappingType FrameworkMappingType @default(EQUIVALENT)
   confidence  Int                  @default(100) // 0-100
   notes       String?              @db.Text
 

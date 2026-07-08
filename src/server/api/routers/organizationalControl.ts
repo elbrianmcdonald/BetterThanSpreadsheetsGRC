@@ -45,7 +45,7 @@ function generateLocalControlId(): string {
 
 const frameworkMappingInput = z.object({
   frameworkControlId: z.string(),
-  mappingType: z.nativeEnum(StandardMappingType).default(StandardMappingType.COVERS),
+  mappingType: z.nativeEnum(StandardMappingType).default(StandardMappingType.EQUIVALENT),
   notes: z.string().max(500).optional(),
 });
 

@@ -164,7 +164,37 @@ function emptyItem(): RiskItemValues {
   };
 }
 
-export function CreateFindingForm() {
+interface CreateFindingFormProps {
+  /**
+   * Assessment-scoped create (2026-07-06): the finding is recorded against
+   * this risk-assessment project (PENDING until approval) and optionally
+   * back-links the questionnaire question that surfaced it.
+   */
+  discoveryProjectId?: string;
+  sourceRiskAssessmentQuestionId?: string;
+  /** Prefill for question-spawned findings (question text / notes). */
+  defaultTitle?: string;
+  defaultDescription?: string;
+  /** When set, called after create instead of navigating to the finding. */
+  onCreated?: (finding: { id: string; identifier: string }) => void;
+  /** Cancel handler when hosted in a dialog (defaults to router.back()). */
+  onCancel?: () => void;
+  /**
+   * Where to navigate after a successful create (e.g. back to the source
+   * assessment tab). Defaults to the new finding's detail page.
+   */
+  returnTo?: string;
+}
+
+export function CreateFindingForm({
+  discoveryProjectId,
+  sourceRiskAssessmentQuestionId,
+  defaultTitle,
+  defaultDescription,
+  onCreated,
+  onCancel,
+  returnTo,
+}: CreateFindingFormProps = {}) {
   const router = useRouter();
   const [selectedBUs, setSelectedBUs] = useState<string[]>([]);
   const [createBUDialogOpen, setCreateBUDialogOpen] = useState(false);
@@ -253,10 +283,17 @@ export function CreateFindingForm() {
   const form = useForm<CreateFindingFormValues>({
     resolver: zodResolver(createFindingSchema),
     defaultValues: {
-      source: undefined,
+      // Assessment-spawned findings default to the RISK_ASSESSMENT source.
+      source: discoveryProjectId ? FindingSource.RISK_ASSESSMENT : undefined,
       affectedBusinessUnitIds: [],
       assigneeId: undefined,
-      risks: [emptyItem()],
+      risks: [
+        {
+          ...emptyItem(),
+          title: defaultTitle ?? "",
+          riskStatement: defaultDescription ?? "",
+        },
+      ],
     },
     mode: "onBlur",
   });
@@ -323,6 +360,10 @@ export function CreateFindingForm() {
           // Finding operational fields
           affectedBusinessUnitIds: values.affectedBusinessUnitIds,
           assigneeId: values.assigneeId,
+          // Assessment-scoped create: gated PENDING until project approval,
+          // optionally back-linking the source questionnaire question.
+          discoveryProjectId,
+          sourceRiskAssessmentQuestionId,
         });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to create finding");
@@ -366,7 +407,11 @@ export function CreateFindingForm() {
         toast.success(`Finding ${finding.identifier} created successfully`);
       }
 
-      router.push(`/findings/${finding.id}`);
+      if (onCreated) {
+        onCreated(finding);
+      } else {
+        router.push(returnTo ?? `/findings/${finding.id}`);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -510,7 +555,9 @@ export function CreateFindingForm() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.back()}
+            onClick={() =>
+              onCancel ? onCancel() : returnTo ? router.push(returnTo) : router.back()
+            }
             disabled={submitting}
           >
             Cancel

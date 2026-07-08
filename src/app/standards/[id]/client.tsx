@@ -123,9 +123,10 @@ const criticalityConfig: Record<StandardControlCriticality, { color: string; lab
 
 /** Mapping type configuration */
 const mappingTypeConfig: Record<StandardMappingType, { color: string; label: string }> = {
-  COVERS: { color: "bg-green-100 text-green-700", label: "Covers" },
-  PARTIAL: { color: "bg-amber-100 text-amber-700", label: "Partial" },
-  EXCEEDS: { color: "bg-blue-100 text-blue-700", label: "Exceeds" },
+  EQUIVALENT: { color: "bg-green-100 text-green-700", label: "Equivalent" },
+  SUBSET_OF: { color: "bg-purple-100 text-purple-700", label: "Subset of" },
+  SUPERSET_OF: { color: "bg-blue-100 text-blue-700", label: "Superset of" },
+  INTERSECTS: { color: "bg-amber-100 text-amber-700", label: "Intersects" },
 };
 
 /** Exception status configuration */
@@ -181,7 +182,7 @@ export function StandardDetailClient() {
   const [mappingForm, setMappingForm] = useState({
     frameworkId: "",
     controlId: "",
-    mappingType: "COVERS" as StandardMappingType,
+    mappingType: "EQUIVALENT" as StandardMappingType,
     notes: "",
   });
 
@@ -274,7 +275,7 @@ export function StandardDetailClient() {
       toast.success("Framework mapping created successfully");
       setAddMappingDialogOpen(false);
       setMappingControlId(null);
-      setMappingForm({ frameworkId: "", controlId: "", mappingType: "COVERS", notes: "" });
+      setMappingForm({ frameworkId: "", controlId: "", mappingType: "EQUIVALENT", notes: "" });
       void utils.standard.getById.invalidate({ id: standardId });
     },
     onError: (error) => {
@@ -369,7 +370,7 @@ export function StandardDetailClient() {
 
   const handleOpenMappingDialog = useCallback((controlId: string) => {
     setMappingControlId(controlId);
-    setMappingForm({ frameworkId: "", controlId: "", mappingType: "COVERS", notes: "" });
+    setMappingForm({ frameworkId: "", controlId: "", mappingType: "EQUIVALENT", notes: "" });
     setAddMappingDialogOpen(true);
   }, []);
 
@@ -1142,7 +1143,7 @@ export function StandardDetailClient() {
           if (!open) {
             setAddMappingDialogOpen(false);
             setMappingControlId(null);
-            setMappingForm({ frameworkId: "", controlId: "", mappingType: "COVERS", notes: "" });
+            setMappingForm({ frameworkId: "", controlId: "", mappingType: "EQUIVALENT", notes: "" });
           }
         }}>
           <DialogContent className="max-w-lg">
@@ -1201,9 +1202,10 @@ export function StandardDetailClient() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="COVERS">Covers - Fully satisfies the requirement</SelectItem>
-                    <SelectItem value="PARTIAL">Partial - Partially satisfies the requirement</SelectItem>
-                    <SelectItem value="EXCEEDS">Exceeds - Goes beyond the requirement</SelectItem>
+                    <SelectItem value="EQUIVALENT">Equivalent - Functionally the same</SelectItem>
+                    <SelectItem value="SUBSET_OF">Subset of - Narrower than the requirement</SelectItem>
+                    <SelectItem value="SUPERSET_OF">Superset of - Goes beyond the requirement</SelectItem>
+                    <SelectItem value="INTERSECTS">Intersects - Partial overlap</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

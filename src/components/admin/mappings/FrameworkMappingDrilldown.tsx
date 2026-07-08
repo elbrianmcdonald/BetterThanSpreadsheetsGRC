@@ -137,7 +137,7 @@ export function FrameworkMappingDrilldown({
       sourceControlId,
       sourceControlName,
       targetControlId: "",
-      mappingType: FrameworkMappingType.COVERS,
+      mappingType: FrameworkMappingType.EQUIVALENT,
       confidence: 100,
       notes: "",
     });
@@ -196,12 +196,14 @@ export function FrameworkMappingDrilldown({
 
   const getMappingTypeBadgeVariant = (type: FrameworkMappingType) => {
     switch (type) {
-      case FrameworkMappingType.COVERS:
+      case FrameworkMappingType.EQUIVALENT:
         return "default";
-      case FrameworkMappingType.PARTIAL:
+      case FrameworkMappingType.SUBSET_OF:
         return "secondary";
-      case FrameworkMappingType.EXCEEDS:
+      case FrameworkMappingType.SUPERSET_OF:
         return "outline";
+      case FrameworkMappingType.INTERSECTS:
+        return "secondary";
       default:
         return "secondary";
     }
@@ -473,14 +475,17 @@ export function FrameworkMappingDrilldown({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={FrameworkMappingType.COVERS}>
-                    COVERS - Source fully covers base control
+                  <SelectItem value={FrameworkMappingType.EQUIVALENT}>
+                    Equivalent - Functionally the same as the base control
                   </SelectItem>
-                  <SelectItem value={FrameworkMappingType.PARTIAL}>
-                    PARTIAL - Source partially covers base control
+                  <SelectItem value={FrameworkMappingType.SUBSET_OF}>
+                    Subset of - Narrower; contained within the base control
                   </SelectItem>
-                  <SelectItem value={FrameworkMappingType.EXCEEDS}>
-                    EXCEEDS - Source exceeds base control requirements
+                  <SelectItem value={FrameworkMappingType.SUPERSET_OF}>
+                    Superset of - Broader; covers the base control and more
+                  </SelectItem>
+                  <SelectItem value={FrameworkMappingType.INTERSECTS}>
+                    Intersects - Partial overlap; neither contains the other
                   </SelectItem>
                 </SelectContent>
               </Select>

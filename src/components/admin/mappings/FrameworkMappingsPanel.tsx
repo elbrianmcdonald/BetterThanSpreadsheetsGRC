@@ -317,16 +317,20 @@ export function FrameworkMappingsPanel() {
               <CardContent>
                 <div className="flex flex-wrap gap-4">
                   <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg">
-                    <span className="font-medium text-green-700">COVERS</span>
-                    <Badge variant="secondary">{coverageStats.typeBreakdown.COVERS}</Badge>
+                    <span className="font-medium text-green-700">Equivalent</span>
+                    <Badge variant="secondary">{coverageStats.typeBreakdown.EQUIVALENT}</Badge>
                   </div>
-                  <div className="flex items-center gap-2 bg-yellow-50 px-4 py-2 rounded-lg">
-                    <span className="font-medium text-yellow-700">PARTIAL</span>
-                    <Badge variant="secondary">{coverageStats.typeBreakdown.PARTIAL}</Badge>
+                  <div className="flex items-center gap-2 bg-purple-50 px-4 py-2 rounded-lg">
+                    <span className="font-medium text-purple-700">Subset of</span>
+                    <Badge variant="secondary">{coverageStats.typeBreakdown.SUBSET_OF}</Badge>
                   </div>
                   <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg">
-                    <span className="font-medium text-blue-700">EXCEEDS</span>
-                    <Badge variant="secondary">{coverageStats.typeBreakdown.EXCEEDS}</Badge>
+                    <span className="font-medium text-blue-700">Superset of</span>
+                    <Badge variant="secondary">{coverageStats.typeBreakdown.SUPERSET_OF}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 bg-yellow-50 px-4 py-2 rounded-lg">
+                    <span className="font-medium text-yellow-700">Intersects</span>
+                    <Badge variant="secondary">{coverageStats.typeBreakdown.INTERSECTS}</Badge>
                   </div>
                 </div>
               </CardContent>

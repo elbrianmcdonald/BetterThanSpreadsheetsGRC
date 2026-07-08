@@ -18,6 +18,7 @@ import { calculateInherentScore, isScoreResult } from "@/lib/matrix/scoring";
 import { score2D, thresholdForScore } from "@/lib/matrix/heatmap";
 import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 import { recomputeEnterpriseRiskScore } from "@/server/services/enterpriseRiskScore";
+import { PUBLISHED_FINDINGS_AND } from "@/server/services/findingVisibility";
 import { createAuditLog } from "@/server/services/audit-log.service";
 
 const ENTERPRISE_RISK_WRITE_ROLES = [
@@ -254,7 +255,8 @@ export const enterpriseRiskRouter = createTRPCRouter({
           },
         }),
         ctx.db.finding.findMany({
-          where: { enterpriseRiskId: er.id, organizationId: orgId },
+          // Unpublished assessment findings stay off ER views (2026-07-06).
+          where: { enterpriseRiskId: er.id, organizationId: orgId, ...PUBLISHED_FINDINGS_AND },
           orderBy: [{ severity: "asc" }, { createdAt: "desc" }],
           select: {
             id: true,
@@ -568,7 +570,8 @@ export const enterpriseRiskRouter = createTRPCRouter({
     .use(requireRole(ENTERPRISE_RISK_WRITE_ROLES))
     .query(async ({ ctx }) => {
       return ctx.db.finding.findMany({
-        where: { organizationId: ctx.organizationId! },
+        // Unpublished assessment findings are not taggable (2026-07-06).
+        where: { organizationId: ctx.organizationId!, ...PUBLISHED_FINDINGS_AND },
         orderBy: [{ createdAt: "desc" }],
         select: {
           id: true,

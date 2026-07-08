@@ -48,7 +48,7 @@ export function FrameworkMappingsEditor({ value, onChange }: FrameworkMappingsEd
   const addRow = () => {
     onChange([
       ...value,
-      { frameworkId: null, frameworkControlId: null, mappingType: StandardMappingType.COVERS },
+      { frameworkId: null, frameworkControlId: null, mappingType: StandardMappingType.EQUIVALENT },
     ]);
   };
 

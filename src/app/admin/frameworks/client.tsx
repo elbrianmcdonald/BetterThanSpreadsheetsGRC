@@ -51,6 +51,7 @@ import {
   Building2,
   Filter,
   Search,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   Select,
@@ -408,6 +409,12 @@ export function FrameworkManagementClient() {
           <Link href="/admin/frameworks/new">
             <Plus className="mr-2 h-4 w-4" />
             Create framework
+          </Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/admin/frameworks/import">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Import CSV/XLSX
           </Link>
         </Button>
         <Dialog open={isImportDialogOpen} onOpenChange={(open) => {

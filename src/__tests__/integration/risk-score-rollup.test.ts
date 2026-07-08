@@ -408,6 +408,40 @@ describe("Story 22.1: derived risk scoring", () => {
     expect(linkCount).toBe(1);
   });
 
+  it("2026-07-06: PENDING assessment findings don't feed the rollup until published", async () => {
+    const caller = createCaller(analyst);
+    const riskId = await mkRisk();
+
+    // A finding discovered inside an unapproved assessment (PENDING).
+    const f = await mkScoredFinding(caller, 5, 5, [riskId]); // 25 Critical
+    await runWithOrganizationContext(testOrg.id, async () => {
+      await db.finding.update({
+        where: { id: f.id },
+        data: { discoveryStatus: "PENDING" },
+      });
+    });
+    const { recomputeRiskScore } = await import("@/server/services/riskScore");
+    await runWithOrganizationContext(testOrg.id, async () => {
+      await recomputeRiskScore(db, riskId, "test-pending-gate");
+    });
+
+    let score = await riskScore(riskId);
+    expect(score.calculated).toBeNull(); // pending finding excluded
+
+    // Approval publishes the finding — the rollup picks it up.
+    await runWithOrganizationContext(testOrg.id, async () => {
+      await db.finding.update({
+        where: { id: f.id },
+        data: { discoveryStatus: "PUBLISHED" },
+      });
+      await recomputeRiskScore(db, riskId, "test-published");
+    });
+
+    score = await riskScore(riskId);
+    expect(score.calculated).toBe(25);
+    expect(score.source).toBe("CALCULATED");
+  });
+
   it("recompute writes a RISK_SCORE_RECALCULATED audit entry", async () => {
     const caller = createCaller(analyst);
     const riskId = await mkRisk();

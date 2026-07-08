@@ -65,7 +65,6 @@ import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
-import { CreateRiskDialog } from "@/components/risk/CreateRiskDialog";
 import { AssessmentRisksList } from "@/components/risk/AssessmentRisksList";
 import { AssessmentEvidencePanel } from "@/components/evidence/AssessmentEvidencePanel";
 import { Button } from "@/components/ui/button";
@@ -291,7 +290,6 @@ function ControlScoringItem({
   isSaving,
   isEditable,
   onCreateFinding,
-  onCreateRisk,
 }: {
   score: ControlScore;
   assessmentId: string;
@@ -299,7 +297,6 @@ function ControlScoringItem({
   isSaving: boolean;
   isEditable: boolean;
   onCreateFinding?: () => void;
-  onCreateRisk?: () => void;
 }) {
   const level = getStatusLevel(score.status);
   const isScored = score.status !== ComplianceStatus.NOT_ASSESSED;
@@ -355,18 +352,6 @@ function ControlScoringItem({
             >
               <AlertTriangle className="h-3 w-3" />
               Finding
-            </Button>
-          )}
-          {onCreateRisk && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 gap-1 shrink-0 text-red-700 hover:text-red-800 border-red-200 hover:bg-red-50"
-              onClick={onCreateRisk}
-              title="Raise risk linked to this control"
-            >
-              <ShieldAlert className="h-3 w-3" />
-              Risk
             </Button>
           )}
         </div>
@@ -563,7 +548,6 @@ function ControlGroupCard({
   isSaving,
   isEditable,
   onCreateFinding,
-  onCreateRisk,
 }: {
   group: ControlGroup;
   assessmentId: string;
@@ -573,7 +557,6 @@ function ControlGroupCard({
   isSaving: boolean;
   isEditable: boolean;
   onCreateFinding?: (score: ControlScore) => void;
-  onCreateRisk?: (score: ControlScore) => void;
 }) {
   const stats = calculateGroupCompliance(group.children);
   const scoredCount = stats.total - stats.notAssessed;
@@ -692,11 +675,6 @@ function ControlGroupCard({
                 onCreateFinding={
                   onCreateFinding
                     ? () => onCreateFinding(childScore)
-                    : undefined
-                }
-                onCreateRisk={
-                  onCreateRisk
-                    ? () => onCreateRisk(childScore)
                     : undefined
                 }
               />
@@ -920,16 +898,18 @@ const TABS: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
+  // 2026-07-06: tab order aligned across assessments (risk-assessment order):
+  // Executive Summary leads, Schedule + Stakeholders follow Overview.
+  { id: "summary", label: "Executive Summary", icon: BarChart3 },
   { id: "overview", label: "Overview", icon: FileText },
+  { id: "schedule", label: "Schedule", icon: Calendar },
+  { id: "stakeholders", label: "Stakeholders", icon: Users },
   { id: "controls", label: "Controls", icon: Shield },
   { id: "findings", label: "Findings", icon: Bug },
   { id: "risks", label: "Risks", icon: ShieldAlert },
-  { id: "schedule", label: "Schedule", icon: Calendar },
-  { id: "stakeholders", label: "Stakeholders", icon: Users },
   { id: "evidence", label: "Evidence", icon: FolderOpen },
   { id: "pathways", label: "Exploitation Pathways", icon: Network },
   { id: "action-plans", label: "Action Plans", icon: ListChecks },
-  { id: "summary", label: "Executive Summary", icon: BarChart3 },
 ];
 
 // =============================================================================
@@ -947,7 +927,7 @@ export function ComplianceAssessmentDetailClient({
   const utils = api.useUtils();
 
   const [isMounted, setIsMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<AssessmentTab>("overview");
+  const [activeTab, setActiveTab] = useState<AssessmentTab>("summary");
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ComplianceStatus | "ALL">(
     "ALL"
@@ -962,13 +942,6 @@ export function ComplianceAssessmentDetailClient({
     controlDescription: string | null;
   } | null>(null);
   // Inline risk creation state — mirrors findingContext.
-  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
-  const [riskContext, setRiskContext] = useState<{
-    controlId: string;
-    controlCode: string;
-    controlTitle: string;
-    controlDescription: string | null;
-  } | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -1533,15 +1506,6 @@ export function ComplianceAssessmentDetailClient({
                         });
                         setFindingDialogOpen(true);
                       }}
-                      onCreateRisk={(childScore) => {
-                        setRiskContext({
-                          controlId: childScore.control.id,
-                          controlCode: childScore.control.controlId,
-                          controlTitle: childScore.control.title,
-                          controlDescription: childScore.control.description,
-                        });
-                        setRiskDialogOpen(true);
-                      }}
                     />
                   ))
                 )}
@@ -1634,23 +1598,6 @@ export function ComplianceAssessmentDetailClient({
         />
       )}
 
-      {/* Inline "Create Risk" dialog — mirrors the finding dialog, context
-          swapped per control via riskContext state. */}
-      {riskContext && (
-        <CreateRiskDialog
-          open={riskDialogOpen}
-          onOpenChange={setRiskDialogOpen}
-          initialTitle={`${riskContext.controlCode} — ${riskContext.controlTitle}`}
-          initialDescription={
-            riskContext.controlDescription
-              ? `Raised during assessment "${assessment.name}" (${assessment.identifier}):\n\n${riskContext.controlDescription}`
-              : `Raised during assessment "${assessment.name}" (${assessment.identifier}) against ${riskContext.controlCode} — ${riskContext.controlTitle}.`
-          }
-          contextLabel={`Linked to ${riskContext.controlCode} — ${riskContext.controlTitle}`}
-          controlId={riskContext.controlId}
-          complianceAssessmentId={assessment.id}
-        />
-      )}
     </AppLayout>
   );
 }

@@ -39,11 +39,31 @@ const FINDING_CREATE_ROLES = [
   UserRole.ORG_ADMIN,
 ];
 
-export default async function CreateFindingPage() {
+export default async function CreateFindingPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
 
   // AC2, AC29-AC30: Require authentication and role
   requireRole(session, FINDING_CREATE_ROLES, "/findings/new");
+
+  // Assessment-scoped create (2026-07-06): the questionnaire / findings tab
+  // link here with prefill + a return path so the full-page form replaces the
+  // old squished dialog. Only same-origin relative return paths are honored.
+  const sp = await searchParams;
+  const str = (v: string | string[] | undefined) =>
+    typeof v === "string" && v.length > 0 ? v : undefined;
+  const discoveryProjectId = str(sp.discoveryProjectId);
+  const questionId = str(sp.questionId);
+  const defaultTitle = str(sp.title);
+  const defaultDescription = str(sp.description);
+  const rawReturnTo = str(sp.returnTo);
+  const returnTo =
+    rawReturnTo && rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//")
+      ? rawReturnTo
+      : undefined;
 
   return (
     <AppLayout breadcrumbs={[{ label: "Findings", href: "/findings" }, { label: "New Finding" }]}>
@@ -57,8 +77,9 @@ export default async function CreateFindingPage() {
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Document a security finding from audits, penetration tests, vulnerability scans,
-            or other security assessments. Complete the form below to create a new finding record.
+            {discoveryProjectId
+              ? "This finding is recorded against the risk assessment and stays pending until the assessment is approved, then publishes to the findings register."
+              : "Document a security finding from audits, penetration tests, vulnerability scans, or other security assessments. Complete the form below to create a new finding record."}
           </p>
         </div>
 
@@ -72,7 +93,13 @@ export default async function CreateFindingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <CreateFindingForm />
+            <CreateFindingForm
+              discoveryProjectId={discoveryProjectId}
+              sourceRiskAssessmentQuestionId={questionId}
+              defaultTitle={defaultTitle}
+              defaultDescription={defaultDescription}
+              returnTo={returnTo}
+            />
           </CardContent>
         </Card>
       </div>

@@ -96,12 +96,14 @@ type FilterMode = "all" | "mapped" | "unmapped";
 // Mapping type badge variant
 function getMappingTypeBadge(type: FrameworkMappingType) {
   switch (type) {
-    case "COVERS":
+    case "EQUIVALENT":
       return { variant: "default" as const, className: "bg-green-100 text-green-800 border-green-200" };
-    case "PARTIAL":
-      return { variant: "secondary" as const, className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
-    case "EXCEEDS":
+    case "SUBSET_OF":
+      return { variant: "secondary" as const, className: "bg-purple-100 text-purple-800 border-purple-200" };
+    case "SUPERSET_OF":
       return { variant: "secondary" as const, className: "bg-blue-100 text-blue-800 border-blue-200" };
+    case "INTERSECTS":
+      return { variant: "secondary" as const, className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
     default:
       return { variant: "secondary" as const, className: "" };
   }
@@ -783,9 +785,10 @@ export function BaseMappingsPanel() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="COVERS">COVERS - Fully covers</SelectItem>
-                    <SelectItem value="PARTIAL">PARTIAL - Partially covers</SelectItem>
-                    <SelectItem value="EXCEEDS">EXCEEDS - Exceeds requirements</SelectItem>
+                    <SelectItem value="EQUIVALENT">Equivalent - Functionally the same</SelectItem>
+                    <SelectItem value="SUBSET_OF">Subset of - Narrower than the base</SelectItem>
+                    <SelectItem value="SUPERSET_OF">Superset of - Broader than the base</SelectItem>
+                    <SelectItem value="INTERSECTS">Intersects - Partial overlap</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

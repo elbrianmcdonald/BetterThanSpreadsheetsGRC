@@ -39,6 +39,7 @@ import { maturityRouter } from "@/server/api/routers/maturity";
 import { complianceAssessmentRouter } from "@/server/api/routers/complianceAssessment";
 import { riskAssessmentProjectRouter } from "@/server/api/routers/riskAssessmentProject";
 import { baseFrameworkMappingRouter } from "@/server/api/routers/baseFrameworkMapping";
+import { crosswalkRouter } from "@/server/api/routers/crosswalk";
 import { personRouter } from "@/server/api/routers/person";
 import { myAssignmentsRouter } from "@/server/api/routers/myAssignments";
 import { vendorRouter } from "@/server/api/routers/vendor";
@@ -110,6 +111,7 @@ export const appRouter = createTRPCRouter({
   complianceAssessment: complianceAssessmentRouter, // Compliance Assessment Module
   riskAssessmentProject: riskAssessmentProjectRouter, // Risk Assessment Project Module: Container-based risk discovery
   baseFrameworkMapping: baseFrameworkMappingRouter, // Base Framework Mapping: Framework-to-framework control mappings
+  crosswalk: crosswalkRouter, // Epic 25: Crosswalk any two frameworks (OLIR semantics)
   person: personRouter, // Person: Stakeholder accountability tracking
   myAssignments: myAssignmentsRouter, // Unified work assignments across domains
   vendor: vendorRouter, // Epic 1: TPRM Vendor Registry

@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, ExternalLink, BookOpen } from "lucide-react";
 import Link from "next/link";
+import { labelForMappingType } from "@/components/organizational-control/enum-labels";
 
 export function StandardMappingsPanel() {
   const [selectedStandardId, setSelectedStandardId] = useState<string>("");
@@ -64,12 +65,14 @@ export function StandardMappingsPanel() {
 
   const getMappingTypeBadgeVariant = (type: string) => {
     switch (type) {
-      case "COVERS":
+      case "EQUIVALENT":
         return "default";
-      case "PARTIAL":
+      case "SUBSET_OF":
         return "secondary";
-      case "EXCEEDS":
+      case "SUPERSET_OF":
         return "outline";
+      case "INTERSECTS":
+        return "secondary";
       default:
         return "secondary";
     }
@@ -202,7 +205,7 @@ export function StandardMappingsPanel() {
                             <Badge
                               variant={getMappingTypeBadgeVariant(mapping.mappingType)}
                             >
-                              {mapping.mappingType}
+                              {labelForMappingType(mapping.mappingType)}
                             </Badge>
                           </TableCell>
                         </TableRow>

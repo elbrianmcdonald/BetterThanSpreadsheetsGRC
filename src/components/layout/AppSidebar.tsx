@@ -28,6 +28,7 @@ import {
   BarChart3,
   Tag,
   GitMerge,
+  GitCompare,
   Home,
   Crosshair,
   Target,
@@ -95,6 +96,12 @@ const NAV_SECTIONS: NavSection[] = [
         label: "Frameworks",
         icon: <ClipboardList className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST],
+      },
+      {
+        href: "/crosswalks",
+        label: "Crosswalks",
+        icon: <GitCompare className="h-4 w-4" />,
+        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER],
       },
       {
         href: "/controls",

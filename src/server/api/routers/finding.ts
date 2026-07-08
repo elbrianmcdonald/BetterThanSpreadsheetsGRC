@@ -41,6 +41,7 @@ import {
 // Story 22.2: matrix scoring extracted to a shared service (used by both the
 // finding router and the risk manual-override mutation).
 import { computeMatrixScoring as computeFindingMatrixScoring } from "@/server/services/matrixScoring";
+import { PUBLISHED_FINDINGS_AND } from "@/server/services/findingVisibility";
 
 /**
  * Roles that can create findings (Story 7.2 AC29)
@@ -270,7 +271,11 @@ export const findingRouter = createTRPCRouter({
    */
   listSeverityLabels: organizationProcedure.query(async ({ ctx }) => {
     const rows = await ctx.db.finding.findMany({
-      where: { organizationId: ctx.organizationId!, severityLabel: { not: null } },
+      where: {
+        organizationId: ctx.organizationId!,
+        severityLabel: { not: null },
+        ...PUBLISHED_FINDINGS_AND,
+      },
       distinct: ["severityLabel"],
       select: { severityLabel: true },
       orderBy: { severityLabel: "asc" },
@@ -1050,6 +1055,8 @@ export const findingRouter = createTRPCRouter({
         where: {
           organizationId,
           ...(excludeId && { id: { not: excludeId } }),
+          // Unpublished assessment findings are not searchable (2026-07-06).
+          ...PUBLISHED_FINDINGS_AND,
           OR: [
             { identifier: { startsWith: query.toUpperCase() } },
             { title: { contains: query, mode: "insensitive" } },
@@ -1408,11 +1415,13 @@ export const findingRouter = createTRPCRouter({
       const now = new Date();
       const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-      // Build where clause based on SLA status filter
+      // Build where clause based on SLA status filter. Unpublished assessment
+      // findings don't accrue register SLA visibility (2026-07-06).
       let whereClause: Prisma.FindingWhereInput = {
         organizationId,
         status: { in: [FindingStatus.NEW, FindingStatus.TRIAGED, FindingStatus.NEEDS_INFO] },
         dueDate: { not: null },
+        ...PUBLISHED_FINDINGS_AND,
       };
 
       if (input.slaStatus === "breached") {

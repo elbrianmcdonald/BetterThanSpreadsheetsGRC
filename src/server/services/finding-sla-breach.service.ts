@@ -8,6 +8,7 @@
 
 import { db } from "@/server/db";
 import { FindingStatus, AuditAction } from "@prisma/client";
+import { PUBLISHED_FINDINGS_AND } from "@/server/services/findingVisibility";
 
 interface SlaBreachResult {
   processedCount: number;
@@ -34,7 +35,9 @@ export async function processFindingSlaBreaches(): Promise<SlaBreachResult> {
   const now = new Date();
 
   try {
-    // Find all open findings that are past due and not yet marked breached
+    // Find all open findings that are past due and not yet marked breached.
+    // Unpublished assessment findings don't accrue register SLA breaches
+    // (2026-07-06) — their clock starts when the assessment is approved.
     const overdueFindings = await db.finding.findMany({
       where: {
         status: {
@@ -46,6 +49,7 @@ export async function processFindingSlaBreaches(): Promise<SlaBreachResult> {
         },
         dueDate: { lt: now },
         slaBreached: false,
+        ...PUBLISHED_FINDINGS_AND,
       },
       select: {
         id: true,
@@ -137,6 +141,7 @@ export async function getSlaBreachStats() {
           in: [FindingStatus.NEW, FindingStatus.TRIAGED, FindingStatus.NEEDS_INFO],
         },
         OR: [{ slaBreached: true }, { dueDate: { lt: now } }],
+        ...PUBLISHED_FINDINGS_AND,
       },
     }),
     // At Risk: due within 3 days
@@ -147,6 +152,7 @@ export async function getSlaBreachStats() {
         },
         dueDate: { gte: now, lte: threeDaysFromNow },
         slaBreached: false,
+        ...PUBLISHED_FINDINGS_AND,
       },
     }),
     // On Track: due more than 3 days out
@@ -157,6 +163,7 @@ export async function getSlaBreachStats() {
         },
         dueDate: { gt: threeDaysFromNow },
         slaBreached: false,
+        ...PUBLISHED_FINDINGS_AND,
       },
     }),
   ]);

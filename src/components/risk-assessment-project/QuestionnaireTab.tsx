@@ -64,9 +64,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { CreateFindingForm } from "@/components/findings/CreateFindingForm";
 import { cn } from "@/lib/utils";
-import { QuestionRiskDialog } from "./QuestionRiskDialog";
-import { FindingFormDialog } from "./FindingFormDialog";
 
 type Questionnaire = NonNullable<
   RouterOutputs["riskAssessmentQuestionnaire"]["getForProject"]
@@ -225,6 +224,13 @@ function EmptyState({
 // Filled state — sections + questions
 // ---------------------------------------------------------------------------
 
+/** Prefill for the inline finding form spawned from a question. */
+interface AddFindingContext {
+  questionId: string;
+  title: string;
+  description: string;
+}
+
 function FilledState({
   questionnaire,
   projectId,
@@ -236,6 +242,10 @@ function FilledState({
   isReadOnly: boolean;
   refresh: () => void;
 }) {
+  // Inline finding creation (2026-07-06): the full card form renders in
+  // place of the questionnaire so the user never leaves the assessment.
+  const [addingFinding, setAddingFinding] = useState<AddFindingContext | null>(null);
+
   const totals = useMemo(() => {
     let total = 0;
     let answered = 0;
@@ -257,6 +267,41 @@ function FilledState({
     },
     onError: (e) => toast.error(`Failed: ${e.message}`),
   });
+
+  if (addingFinding) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Add Finding</h3>
+            <p className="text-sm text-muted-foreground">
+              Spawned from a questionnaire question. The finding stays pending
+              until the assessment is approved, then publishes to the register.
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setAddingFinding(null)}>
+            <XIcon className="h-4 w-4 mr-1" />
+            Back to questionnaire
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <CreateFindingForm
+              discoveryProjectId={projectId}
+              sourceRiskAssessmentQuestionId={addingFinding.questionId}
+              defaultTitle={addingFinding.title}
+              defaultDescription={addingFinding.description}
+              onCreated={() => {
+                refresh();
+                setAddingFinding(null);
+              }}
+              onCancel={() => setAddingFinding(null)}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -302,6 +347,7 @@ function FilledState({
           projectId={projectId}
           isReadOnly={isReadOnly}
           refresh={refresh}
+          onAddFinding={setAddingFinding}
         />
       ))}
 
@@ -337,11 +383,13 @@ function SectionCard({
   projectId,
   isReadOnly,
   refresh,
+  onAddFinding,
 }: {
   section: Section;
   projectId: string;
   isReadOnly: boolean;
   refresh: () => void;
+  onAddFinding: (ctx: AddFindingContext) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [customDialogOpen, setCustomDialogOpen] = useState(false);
@@ -381,7 +429,14 @@ function SectionCard({
               <p className="text-sm text-muted-foreground italic">No questions in this section.</p>
             ) : (
               section.questions.map((q) => (
-                <QuestionCard key={q.id} question={q} projectId={projectId} isReadOnly={isReadOnly} refresh={refresh} />
+                <QuestionCard
+                  key={q.id}
+                  question={q}
+                  projectId={projectId}
+                  isReadOnly={isReadOnly}
+                  refresh={refresh}
+                  onAddFinding={onAddFinding}
+                />
               ))
             )}
             {!isReadOnly && (
@@ -415,16 +470,16 @@ function QuestionCard({
   question,
   projectId,
   isReadOnly,
+  onAddFinding,
   refresh,
 }: {
   question: Question;
   projectId: string;
   isReadOnly: boolean;
   refresh: () => void;
+  onAddFinding: (ctx: AddFindingContext) => void;
 }) {
   const [notesDraft, setNotesDraft] = useState(question.notes ?? "");
-  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
-  const [findingDialogOpen, setFindingDialogOpen] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [confirmDeleteCustom, setConfirmDeleteCustom] = useState(false);
 
@@ -457,7 +512,9 @@ function QuestionCard({
     });
   };
 
-  // Prefill the spawn dialogs with the question text (title) and notes (body).
+  // Prefill the inline finding form with the question text (title) and notes
+  // (body). Add Finding renders the full card form IN PLACE of the
+  // questionnaire (2026-07-06) so the user stays on the assessment.
   const spawnDefaultTitle =
     question.text.length > 80 ? `${question.text.slice(0, 77)}...` : question.text;
   const spawnDefaultDescription = question.notes ?? "";
@@ -632,25 +689,24 @@ function QuestionCard({
             ⚠️ {r.identifier}
           </Link>
         ))}
+        {/* Risk Model Cleanup: questions spawn FINDINGS only — risks are
+            aggregations built from findings on the register, so the per-
+            question "Add Risk" was removed (2026-07-06). */}
         {!isReadOnly && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFindingDialogOpen(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add Finding
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRiskDialogOpen(true)}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add Risk
-            </Button>
-          </>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              onAddFinding({
+                questionId: question.id,
+                title: spawnDefaultTitle,
+                description: spawnDefaultDescription,
+              })
+            }
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Add Finding
+          </Button>
         )}
       </div>
 
@@ -661,30 +717,6 @@ function QuestionCard({
         attached={question.evidenceLinks.map((l) => l.evidence.id)}
         onAttached={refresh}
       />
-
-      {riskDialogOpen && (
-        <QuestionRiskDialog
-          questionId={question.id}
-          projectId={projectId}
-          open={riskDialogOpen}
-          onOpenChange={setRiskDialogOpen}
-          onCreated={refresh}
-          defaultTitle={spawnDefaultTitle}
-          defaultDescription={spawnDefaultDescription}
-        />
-      )}
-
-      {findingDialogOpen && (
-        <FindingFormDialog
-          questionId={question.id}
-          projectId={projectId}
-          open={findingDialogOpen}
-          onOpenChange={setFindingDialogOpen}
-          onCreated={refresh}
-          defaultTitle={spawnDefaultTitle}
-          defaultDescription={spawnDefaultDescription}
-        />
-      )}
 
       <AlertDialog open={confirmDeleteCustom} onOpenChange={setConfirmDeleteCustom}>
         <AlertDialogContent>

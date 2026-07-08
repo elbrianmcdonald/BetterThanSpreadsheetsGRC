@@ -174,7 +174,7 @@ const uploadStandardFromCsvSchema = z.object({
 const createMappingSchema = z.object({
   standardControlId: z.string().min(1, "Standard Control ID is required"),
   controlId: z.string().min(1, "Framework Control ID is required"),
-  mappingType: z.nativeEnum(StandardMappingType).default(StandardMappingType.COVERS),
+  mappingType: z.nativeEnum(StandardMappingType).default(StandardMappingType.EQUIVALENT),
   notes: z.string().optional().nullable(),
 });
 
@@ -1408,9 +1408,10 @@ export const standardRouter = createTRPCRouter({
 
       // Group by mapping type
       const mappingTypes = {
-        COVERS: 0,
-        PARTIAL: 0,
-        EXCEEDS: 0,
+        EQUIVALENT: 0,
+        SUBSET_OF: 0,
+        SUPERSET_OF: 0,
+        INTERSECTS: 0,
       };
 
       const unmappedControls: Array<{

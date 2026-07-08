@@ -40,20 +40,24 @@ import { toast } from "sonner";
 
 export function TacticsClient() {
   const [expandedTactic, setExpandedTactic] = useState<string | null>(null);
+  const utils = api.useUtils();
 
   // Fetch tactics
-  const { data: tactics, isLoading, error, refetch } = api.mitre.getTactics.useQuery();
+  const { data: tactics, isLoading, error } = api.mitre.getTactics.useQuery();
 
   // Fetch stats
   const { data: stats } = api.mitre.getStats.useQuery();
 
-  // Sync mutation (for admin)
+  // Sync mutation (for admin). Invalidate the whole mitre namespace so the
+  // stat cards (getStats: counts + Last Synced) and any expanded tactic
+  // details refresh too — refetching only the tactics list left the cards
+  // stale after a sync.
   const syncMutation = api.mitre.syncFromStix.useMutation({
     onSuccess: (result) => {
       toast.success(
         `Synced ${result.tacticsCount} tactics, ${result.techniquesCount} techniques, ${result.subTechniquesCount} sub-techniques`
       );
-      refetch();
+      void utils.mitre.invalidate();
     },
     onError: (error) => {
       toast.error(error.message);
@@ -67,7 +71,7 @@ export function TacticsClient() {
         toast.success(
           `Seeded ${result.tacticsCount} tactics, ${result.techniquesCount} techniques`
         );
-        refetch();
+        void utils.mitre.invalidate();
       }
     },
     onError: (error) => {
@@ -135,7 +139,7 @@ export function TacticsClient() {
           <AlertTriangle className="h-16 w-16 text-destructive mb-6" />
           <h2 className="text-2xl font-semibold mb-2 text-foreground">Error Loading Tactics</h2>
           <p className="text-muted-foreground mb-6">{error.message}</p>
-          <Button onClick={() => refetch()}>
+          <Button onClick={() => void utils.mitre.getTactics.invalidate()}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Retry
           </Button>

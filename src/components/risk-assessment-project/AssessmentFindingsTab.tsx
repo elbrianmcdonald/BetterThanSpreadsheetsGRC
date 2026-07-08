@@ -10,13 +10,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FindingFormDialog } from "./FindingFormDialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { CreateFindingForm } from "@/components/findings/CreateFindingForm";
 
 const SEVERITY_BADGE: Record<string, string> = {
   HIGH: "bg-red-100 text-red-800 border-red-300",
@@ -34,7 +35,9 @@ export function AssessmentFindingsTab({
   isReadOnly = false,
 }: AssessmentFindingsTabProps) {
   const utils = api.useUtils();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  // Inline Add Finding (2026-07-06): the full card form renders in place of
+  // the findings list so the user stays on the assessment.
+  const [adding, setAdding] = useState(false);
 
   const { data: findings, isLoading } = api.finding.listForProject.useQuery({
     projectId,
@@ -54,6 +57,38 @@ export function AssessmentFindingsTab({
     );
   }
 
+  if (adding) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Add Finding</h3>
+            <p className="text-sm text-muted-foreground">
+              The finding stays pending until the assessment is approved, then
+              publishes to the findings register.
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setAdding(false)}>
+            <X className="h-4 w-4 mr-1" />
+            Back to findings
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <CreateFindingForm
+              discoveryProjectId={projectId}
+              onCreated={() => {
+                refresh();
+                setAdding(false);
+              }}
+              onCancel={() => setAdding(false)}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -62,12 +97,7 @@ export function AssessmentFindingsTab({
           assessment is approved, then publishes to the findings register.
         </p>
         {!isReadOnly && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setDialogOpen(true)}
-          >
+          <Button type="button" variant="outline" size="sm" onClick={() => setAdding(true)}>
             <Plus className="h-4 w-4 mr-1" />
             Add Finding
           </Button>
@@ -83,7 +113,7 @@ export function AssessmentFindingsTab({
               variant="outline"
               size="sm"
               className="mt-4"
-              onClick={() => setDialogOpen(true)}
+              onClick={() => setAdding(true)}
             >
               <Plus className="h-4 w-4 mr-1" />
               Add First Finding
@@ -145,14 +175,6 @@ export function AssessmentFindingsTab({
         </div>
       )}
 
-      {dialogOpen && (
-        <FindingFormDialog
-          projectId={projectId}
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onCreated={refresh}
-        />
-      )}
     </div>
   );
 }

@@ -13,7 +13,7 @@
  * the server recomputes authoritatively in finding.create.
  *
  * Extracted from CreateFindingDialog (compliance/maturity), which is now a
- * consumer alongside CreateFindingForm, FindingFormDialog, and the vendor
+ * consumer alongside CreateFindingForm and the vendor
  * questionnaire client.
  */
 

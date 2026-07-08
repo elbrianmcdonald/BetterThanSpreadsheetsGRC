@@ -69,7 +69,7 @@ export function AddMappingDialog({
 }: AddMappingDialogProps) {
   const [selectedControls, setSelectedControls] = useState<Map<string, SelectedControl>>(new Map());
   const [mappingType, setMappingType] = useState<FrameworkMappingType>(
-    FrameworkMappingType.COVERS
+    FrameworkMappingType.EQUIVALENT
   );
   const [notes, setNotes] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -182,7 +182,7 @@ export function AddMappingDialog({
 
   const handleClose = () => {
     setSelectedControls(new Map());
-    setMappingType(FrameworkMappingType.COVERS);
+    setMappingType(FrameworkMappingType.EQUIVALENT);
     setNotes("");
     setSearchTerm("");
     setExpandedSources(new Set());
@@ -488,14 +488,17 @@ export function AddMappingDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="COVERS">
-                      COVERS - Source fully covers base control
+                    <SelectItem value="EQUIVALENT">
+                      Equivalent - Functionally the same as the base control
                     </SelectItem>
-                    <SelectItem value="PARTIAL">
-                      PARTIAL - Source partially covers base control
+                    <SelectItem value="SUBSET_OF">
+                      Subset of - Narrower; fully contained within the base control
                     </SelectItem>
-                    <SelectItem value="EXCEEDS">
-                      EXCEEDS - Source exceeds base control requirements
+                    <SelectItem value="SUPERSET_OF">
+                      Superset of - Broader; covers the base control and more
+                    </SelectItem>
+                    <SelectItem value="INTERSECTS">
+                      Intersects - Partial overlap; neither contains the other
                     </SelectItem>
                   </SelectContent>
                 </Select>

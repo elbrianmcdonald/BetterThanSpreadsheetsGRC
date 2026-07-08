@@ -149,11 +149,11 @@ export const biaSystemContingencyRouter = createTRPCRouter({
 
   /**
    * Register summary stats — counts by status / anchor / BCP for the cards.
-   * Stale = last updated more than 90 days ago.
+   * Stale = last updated more than a year ago (BIAs are reviewed annually).
    */
   getRegisterStats: organizationProcedure.query(async ({ ctx }) => {
     const organizationId = ctx.organizationId!;
-    const STALE_DAYS = 90;
+    const STALE_DAYS = 365;
     const staleCutoff = new Date();
     staleCutoff.setDate(staleCutoff.getDate() - STALE_DAYS);
 

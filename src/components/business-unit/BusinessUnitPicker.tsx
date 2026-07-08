@@ -16,10 +16,10 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { api } from "@/trpc/react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
+  Check,
   ChevronDown,
   ChevronRight,
   Search,
@@ -166,21 +166,40 @@ export function BusinessUnitPicker({
     return { filteredTree: filtered, matchedIds };
   }, [data?.tree, search]);
 
+  // Add ids to the expanded set, RETURNING THE SAME identity when nothing
+  // changed — an unconditional `new Set(prev)` here caused an infinite
+  // update loop (React #185) whenever the `value` prop identity was unstable:
+  // effect runs → new Set → re-render → effect runs → ... React bails out on
+  // identical state, breaking any such cycle (2026-07-06 crash fix).
+  const expandIds = useCallback((ids: Iterable<string>) => {
+    setExpanded((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (!next.has(id)) {
+          next.add(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
   // Auto-expand ancestors of search matches
   useEffect(() => {
     if (search.trim() && matchedIds.size > 0 && data?.tree) {
       const ancestors = getAncestorIds(data.tree, matchedIds);
-      setExpanded((prev) => new Set([...prev, ...ancestors, ...matchedIds]));
+      expandIds([...ancestors, ...matchedIds]);
     }
-  }, [search, matchedIds, data?.tree]);
+  }, [search, matchedIds, data?.tree, expandIds]);
 
   // Auto-expand ancestors of selected items on mount
   useEffect(() => {
     if (data?.tree && selectedSet.size > 0) {
       const ancestors = getAncestorIds(data.tree, selectedSet);
-      setExpanded((prev) => new Set([...prev, ...ancestors]));
+      expandIds(ancestors);
     }
-  }, [data?.tree, selectedSet]);
+  }, [data?.tree, selectedSet, expandIds]);
 
   // Auto-focus search input
   useEffect(() => {
@@ -457,14 +476,24 @@ function BusinessUnitPickerNode({
           <span className="w-5" aria-hidden="true" />
         )}
 
-        {/* Selection Control (AC4/AC5, AC11) */}
+        {/* Selection Control (AC4/AC5, AC11) — purely decorative (the row
+            handles clicks; the treeitem carries aria-selected). A static
+            element replaces the Radix Checkbox here: flipping a controlled
+            Radix Checkbox inside this recursive tree triggered an infinite
+            ref/setState loop (React #185) that crashed the page on select
+            (2026-07-06). */}
         {mode === "multi" ? (
-          <Checkbox
-            checked={isSelected}
-            disabled={isDisabled}
-            className="pointer-events-none"
+          <div
+            className={cn(
+              "h-4 w-4 shrink-0 rounded-sm border flex items-center justify-center",
+              isSelected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-muted-foreground/50"
+            )}
             aria-hidden="true"
-          />
+          >
+            {isSelected && <Check className="h-3 w-3" />}
+          </div>
         ) : (
           <div
             className={cn(

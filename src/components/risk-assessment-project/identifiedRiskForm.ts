@@ -2,7 +2,7 @@
  * Shared form shape for an "identified risk" item rendered by RiskItemCard.
  *
  * Used by both the Identified Risks tab (IdentifiedRisksEditor) and the
- * questionnaire "Add Risk" dialog (QuestionRiskDialog) so the two stay in sync
+ * IdentifiedRisksEditor (the per-question "Add Risk" dialog was retired 2026-07-06 - questions spawn findings only)
  * with the field paths RiskItemCard reads/writes (`risks.${index}.*`).
  */
 import { z } from "zod";

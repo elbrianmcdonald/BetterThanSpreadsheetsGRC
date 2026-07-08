@@ -6,6 +6,7 @@ import {
   ControlFrequency,
   AssignmentRole,
   StandardMappingType,
+  FrameworkMappingType,
   TestResult,
   DeficiencySeverity,
   RemediationStatus,
@@ -55,11 +56,20 @@ export const ASSIGNMENT_ROLE_OPTIONS: { value: AssignmentRole; label: string; hi
   { value: AssignmentRole.REVIEWER, label: "Reviewer", hint: "Approves or audits the control" },
 ];
 
-export const MAPPING_TYPE_OPTIONS: { value: StandardMappingType; label: string }[] = [
-  { value: StandardMappingType.COVERS, label: "Covers" },
-  { value: StandardMappingType.PARTIAL, label: "Partial" },
-  { value: StandardMappingType.EXCEEDS, label: "Exceeds" },
+// NIST OLIR relationship semantics. StandardMappingType and FrameworkMappingType have
+// identical members, so both share these labels/hints (single source of truth — Story 25.1).
+export const OLIR_MAPPING_TYPE_META: { value: string; label: string; hint: string }[] = [
+  { value: "EQUIVALENT", label: "Equivalent", hint: "Functionally the same as the target" },
+  { value: "SUBSET_OF", label: "Subset of", hint: "Narrower — fully contained within the target" },
+  { value: "SUPERSET_OF", label: "Superset of", hint: "Broader — covers the target and more" },
+  { value: "INTERSECTS", label: "Intersects", hint: "Partial overlap; neither contains the other" },
 ];
+
+export const MAPPING_TYPE_OPTIONS: { value: StandardMappingType; label: string }[] =
+  OLIR_MAPPING_TYPE_META.map((o) => ({ value: o.value as StandardMappingType, label: o.label }));
+
+export const FRAMEWORK_MAPPING_TYPE_OPTIONS: { value: FrameworkMappingType; label: string; hint: string }[] =
+  OLIR_MAPPING_TYPE_META.map((o) => ({ value: o.value as FrameworkMappingType, label: o.label, hint: o.hint }));
 
 export function labelForControlType(v: ControlType): string {
   return CONTROL_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v;
@@ -84,6 +94,9 @@ export function labelForAssignmentRole(v: AssignmentRole): string {
 }
 export function labelForMappingType(v: StandardMappingType): string {
   return MAPPING_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v;
+}
+export function labelForFrameworkMappingType(v: FrameworkMappingType): string {
+  return FRAMEWORK_MAPPING_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v;
 }
 
 export function statusBadgeColor(status: OrgControlStatus): string {

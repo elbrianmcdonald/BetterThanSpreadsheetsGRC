@@ -63,11 +63,17 @@ export async function recomputeRiskScore(
     });
     if (!risk) return null;
 
-    // Calculated: max inherentScore across OPEN linked findings.
+    // Calculated: max inherentScore across OPEN linked findings. Unpublished
+    // assessment findings (discoveryStatus PENDING) don't feed register risk
+    // scores until their assessment is approved (2026-07-06) — the approval
+    // flow recomputes affected risks when it publishes them.
     const links = await db.riskFindingLink.findMany({
       where: {
         riskId,
-        finding: { status: { notIn: TERMINAL_STATUSES } },
+        finding: {
+          status: { notIn: TERMINAL_STATUSES },
+          OR: [{ discoveryStatus: "PUBLISHED" }, { discoveryStatus: null }],
+        },
       },
       select: {
         finding: { select: { inherentScore: true, severityLabel: true } },

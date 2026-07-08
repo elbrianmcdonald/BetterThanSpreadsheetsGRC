@@ -56,7 +56,7 @@ const setBaseSchema = z.object({
 const createMappingSchema = z.object({
   sourceControlId: z.string().min(1, "Source control ID is required"),
   targetControlId: z.string().min(1, "Target control ID is required"),
-  mappingType: z.nativeEnum(FrameworkMappingType).default(FrameworkMappingType.COVERS),
+  mappingType: z.nativeEnum(FrameworkMappingType).default(FrameworkMappingType.EQUIVALENT),
   confidence: z.number().int().min(0).max(100).default(100),
   notes: z.string().optional().nullable(),
 });
@@ -67,7 +67,7 @@ const createMappingsSchema = z.object({
   mappings: z.array(z.object({
     sourceType: z.nativeEnum(BaseType),
     sourceControlId: z.string().min(1, "Source control ID is required"),
-    mappingType: z.nativeEnum(FrameworkMappingType).default(FrameworkMappingType.COVERS),
+    mappingType: z.nativeEnum(FrameworkMappingType).default(FrameworkMappingType.EQUIVALENT),
     notes: z.string().optional().nullable(),
   })).min(1).max(50),
 });
@@ -1218,9 +1218,10 @@ export const baseFrameworkMappingRouter = createTRPCRouter({
 
         // Group by mapping type
         const typeBreakdown = {
-          COVERS: 0,
-          PARTIAL: 0,
-          EXCEEDS: 0,
+          EQUIVALENT: 0,
+          SUBSET_OF: 0,
+          SUPERSET_OF: 0,
+          INTERSECTS: 0,
         };
         for (const m of mappings) {
           typeBreakdown[m.mappingType]++;
@@ -1273,9 +1274,10 @@ export const baseFrameworkMappingRouter = createTRPCRouter({
 
         // Group by mapping type
         const typeBreakdown = {
-          COVERS: 0,
-          PARTIAL: 0,
-          EXCEEDS: 0,
+          EQUIVALENT: 0,
+          SUBSET_OF: 0,
+          SUPERSET_OF: 0,
+          INTERSECTS: 0,
         };
         for (const m of mappings) {
           typeBreakdown[m.mappingType]++;

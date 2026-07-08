@@ -1888,10 +1888,15 @@ const MATURITY_TABS: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { id: "assessment", label: "Assessment", icon: ClipboardCheck },
-  // Exploitation Pathways is not relevant to maturity assessments — exclude it.
-  ...WRAPPER_TAB_DEFS.filter((t) => t.id !== "pathways"),
+  // 2026-07-06: tab order aligned across assessments (risk-assessment order):
+  // Executive Summary leads, Schedule + Stakeholders follow the main tab.
   { id: "summary", label: "Executive Summary", icon: BarChart3 },
+  { id: "assessment", label: "Assessment", icon: ClipboardCheck },
+  ...WRAPPER_TAB_DEFS.filter((t) => t.id === "schedule" || t.id === "stakeholders"),
+  // Exploitation Pathways is not relevant to maturity assessments — exclude it.
+  ...WRAPPER_TAB_DEFS.filter(
+    (t) => t.id !== "pathways" && t.id !== "schedule" && t.id !== "stakeholders",
+  ),
 ];
 
 export function MaturityAssessmentDetailClient({
@@ -1902,7 +1907,7 @@ export function MaturityAssessmentDetailClient({
   const utils = api.useUtils();
 
   const [isMounted, setIsMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<MaturityTab>("assessment");
+  const [activeTab, setActiveTab] = useState<MaturityTab>("summary");
   const [expandedDomain, setExpandedDomain] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [snapshotDialogOpen, setSnapshotDialogOpen] = useState(false);

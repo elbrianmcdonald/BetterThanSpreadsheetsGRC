@@ -211,7 +211,7 @@ export function CreatableControlPicker({
       description: dialogDescription.trim() || undefined,
       controlType: dialogControlType,
       ...(dialogFrameworkControlId && {
-        frameworkMappings: [{ frameworkControlId: dialogFrameworkControlId, mappingType: "COVERS" as const }],
+        frameworkMappings: [{ frameworkControlId: dialogFrameworkControlId, mappingType: "EQUIVALENT" as const }],
       }),
     });
   }, [dialogName, dialogDescription, dialogControlType, dialogFrameworkControlId, createMutation]);
