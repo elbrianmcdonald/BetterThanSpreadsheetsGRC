@@ -439,6 +439,9 @@ model Organization {
   Pathway Pathway[]
   // Multi-Tenancy Epic 1: per-user company memberships
   OrganizationMembership OrganizationMembership[]
+  // Compliance Plan (POA&M)
+  CompliancePlan         CompliancePlan[]
+  CompliancePlanItem     CompliancePlanItem[]
 
   @@index([active])
   @@index([slug])
@@ -936,6 +939,9 @@ model Person {
   remediationOptionsOwned     RemediationOption[]             @relation("RemediationOptionOwner")
   // Enterprise Risk: ownership relation
   enterpriseRisksOwned        EnterpriseRisk[]                @relation("EnterpriseRiskOwner")
+  // Compliance Plan (POA&M): plan + item ownership
+  compliancePlansOwned        CompliancePlan[]                @relation("CompliancePlanOwner")
+  compliancePlanItemsOwned    CompliancePlanItem[]            @relation("CompliancePlanItemOwner")
 
   @@unique([organizationId, email]) // Unique email per org (when email provided)
   @@index([organizationId, isActive])
@@ -1903,6 +1909,10 @@ enum AuditAction {
   MEMBERSHIP_ROLE_UPDATED
   MEMBERSHIP_REVOKED
   UPDATE_PLATFORM_ADMIN
+  // Bridge to Compliance Plan (POA&M) — NFR5
+  CREATE_COMPLIANCE_PLAN
+  BRIDGE_COMPLIANCE_PLAN
+  UPDATE_COMPLIANCE_PLAN_ITEM
   // Note: Application changelog is now file-backed (CHANGELOG.md), not DB-backed.
 }
 
@@ -5694,4 +5704,96 @@ model PathwayStepMember {
   @@index([stepId])
   @@index([findingId])
   @@index([riskId])
+}
+
+// ============================================================================
+// Bridge to Compliance Plan (POA&M) — Epic 1
+// Named, owned plans of control-anchored remediation items. Each item points at
+// exactly one control of any of four types via a polymorphic (controlKind +
+// controlId) reference — no single FK can span four control tables, so control
+// resolution + integrity live in application logic (see NFR3).
+// ============================================================================
+
+model CompliancePlan {
+  id             String               @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?              @db.Text
+  status         CompliancePlanStatus @default(DRAFT)
+  ownerId        String? // Person accountable for the overarching plan
+  createdById    String // User who created it (no FK, mirrors ActionPlanItem)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  Organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Owner        Person?              @relation("CompliancePlanOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  items        CompliancePlanItem[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+model CompliancePlanItem {
+  id                 String                    @id @default(cuid())
+  organizationId     String
+  planId             String
+  // Polymorphic control reference across all four control types.
+  controlKind        CompliancePlanControlKind
+  controlId          String
+  ownerId            String? // Person accountable for this item
+  status             CompliancePlanItemStatus  @default(OPEN)
+  targetDate         DateTime?
+  evidenceNeeded     String?                   @db.Text
+  notes              String?                   @db.Text
+  acceptanceCriteria String?                   @db.Text
+  // Epic 3 (FR19): linked Evidence ids (array pattern, mirrors ControlAssessmentScore.evidenceLinks).
+  evidenceLinks      String[]                  @default([])
+  // Epic 2: snapshot back-link to the assessment gap this item was bridged from.
+  // Null for manually-added items. `sourceSignature` snapshots the source's
+  // status/value at bridge time so staleness (FR18) is derived on read.
+  sourceKind         CompliancePlanSourceKind?
+  sourceId           String?
+  sourceSignature    String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  Organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Plan         CompliancePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  Owner        Person?        @relation("CompliancePlanItemOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  @@unique([planId, controlKind, controlId]) // no duplicate control per plan (FR8)
+  @@index([organizationId])
+  @@index([planId])
+  @@index([planId, status])
+}
+
+enum CompliancePlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETE
+  ARCHIVED
+}
+
+enum CompliancePlanControlKind {
+  FRAMEWORK_CONTROL
+  STANDARD_CONTROL
+  ORGANIZATIONAL_CONTROL
+  MATURITY_CONTROL // a maturity practice / question (manual, fine-grained)
+  MATURITY_DOMAIN // a maturity domain / capability (bridged from domain scores)
+}
+
+enum CompliancePlanItemStatus {
+  OPEN
+  IN_PROGRESS
+  IN_REVIEW
+  COMPLETE
+  RISK_ACCEPTED
+  DEFERRED
+}
+
+enum CompliancePlanSourceKind {
+  COMPLIANCE_ASSESSMENT
+  MATURITY_ASSESSMENT
+  STANDARD_EXCEPTION
+  ORG_DEFICIENCY
 }

@@ -196,6 +196,11 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <BarChart3 className="h-4 w-4" />,
       },
       {
+        href: "/compliance/plans",
+        label: "Compliance Plans",
+        icon: <ClipboardList className="h-4 w-4" />,
+      },
+      {
         href: "/standards",
         label: "Standards",
         icon: <BookCheck className="h-4 w-4" />,

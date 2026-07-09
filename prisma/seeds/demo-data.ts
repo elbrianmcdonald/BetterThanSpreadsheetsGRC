@@ -1,4 +1,4 @@
-import { PrismaClient, QuestionType, QuestionnaireUsageType, RiskQuestionStatus } from '@prisma/client';
+import { PrismaClient, QuestionType, QuestionnaireUsageType, RiskQuestionStatus, CompliancePlanStatus, CompliancePlanControlKind, CompliancePlanItemStatus } from '@prisma/client';
 
 // ----------------------------------------------------------------------------
 // Inline 3×3 default risk matrix payload. This duplicates a slice of
@@ -1143,6 +1143,67 @@ export async function seedDemoData(prisma: PrismaClient) {
     });
   }
   console.log(`  ✅ BIA: 1 config, ${categoriesData.length} categories, ${tiersData.length} tiers, ${functionsData.length} functions, ${processesData.length} processes, ${impactScoresData.length} scores\n`);
+
+  // ========================================================================
+  // Layer 8B: Compliance Plan (POA&M) — Bridge to Compliance Plan demo
+  // ========================================================================
+  console.log('  Creating demo compliance plan...');
+  const planControls = await prisma.control.findMany({
+    where: { organizationId: ORG_A, controlId: { in: ['AC-01', 'AU-02', 'SC-07', 'IA-02', 'CP-09', 'SI-04'] } },
+    select: { id: true, controlId: true },
+  });
+  const controlByCode = new Map(planControls.map((c) => [c.controlId, c.id]));
+
+  const CP_PLAN_ID = 'demo-compliance-plan-soc2';
+  await prisma.compliancePlan.upsert({
+    where: { id: CP_PLAN_ID },
+    update: {},
+    create: {
+      id: CP_PLAN_ID,
+      organizationId: ORG_A,
+      name: 'SOC 2 Readiness Plan',
+      description: 'Close control gaps ahead of the SOC 2 Type II audit.',
+      status: CompliancePlanStatus.ACTIVE,
+      ownerId: people['Sarah Chen'] ?? null,
+      createdById: ALICE,
+    },
+  });
+
+  const cpItems: Array<{
+    id: string; code: string; status: CompliancePlanItemStatus; owner: string;
+    target: string; evidence: string; ac: string; notes: string;
+  }> = [
+    { id: 'demo-cp-item-1', code: 'AC-01', status: CompliancePlanItemStatus.IN_PROGRESS,  owner: 'Sarah Chen',   target: '2026-08-15', evidence: 'Signed access-control policy (PDF) + management approval', ac: 'Policy approved by the CISO and published to the intranet.', notes: 'Draft complete; awaiting CISO sign-off.' },
+    { id: 'demo-cp-item-2', code: 'AU-02', status: CompliancePlanItemStatus.OPEN,         owner: 'James Wilson', target: '2026-05-01', evidence: 'SIEM audit-logging configuration export', ac: 'All in-scope systems forward auth + admin events to the SIEM.', notes: 'Overdue — SIEM onboarding for two systems still pending.' },
+    { id: 'demo-cp-item-3', code: 'SC-07', status: CompliancePlanItemStatus.IN_REVIEW,    owner: 'Tom Bradley',  target: '2026-09-01', evidence: 'Network segmentation diagram + firewall rule review', ac: 'Production is segmented from corporate with deny-by-default rules.', notes: 'Firewall review scheduled with the infrastructure team.' },
+    { id: 'demo-cp-item-4', code: 'IA-02', status: CompliancePlanItemStatus.COMPLETE,     owner: 'Sarah Chen',   target: '2026-04-01', evidence: 'MFA enrollment report (100% of privileged users)', ac: 'MFA enforced for all administrative accounts.', notes: 'Completed and verified.' },
+    { id: 'demo-cp-item-5', code: 'CP-09', status: CompliancePlanItemStatus.RISK_ACCEPTED, owner: 'James Wilson', target: '2026-10-01', evidence: 'DR backup-encryption change ticket', ac: 'DR-region backups encrypted at rest.', notes: 'Accepted at a reduced level pending the Q4 encryption rollout.' },
+    { id: 'demo-cp-item-6', code: 'SI-04', status: CompliancePlanItemStatus.OPEN,         owner: 'Tom Bradley',  target: '2026-06-15', evidence: 'EDR deployment coverage report', ac: 'EDR agents on 95%+ of production servers.', notes: 'Overdue — 12 legacy hosts remain uncovered.' },
+  ];
+  let cpItemCount = 0;
+  for (const it of cpItems) {
+    const controlId = controlByCode.get(it.code);
+    if (!controlId) continue; // control not seeded for this org — skip gracefully
+    await prisma.compliancePlanItem.upsert({
+      where: { id: it.id },
+      update: {},
+      create: {
+        id: it.id,
+        organizationId: ORG_A,
+        planId: CP_PLAN_ID,
+        controlKind: CompliancePlanControlKind.FRAMEWORK_CONTROL,
+        controlId,
+        ownerId: people[it.owner] ?? null,
+        status: it.status,
+        targetDate: new Date(it.target),
+        evidenceNeeded: it.evidence,
+        notes: it.notes,
+        acceptanceCriteria: it.ac,
+      },
+    });
+    cpItemCount++;
+  }
+  console.log(`  ✅ Compliance plan: 1 plan, ${cpItemCount} items\n`);
 
   // ========================================================================
   // Layer 9: Identifier Sequences
