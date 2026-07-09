@@ -117,8 +117,8 @@ export function EngagementPathways({
         <p className="eyebrow">Exploitation pathways</p>
       </div>
       <p className="mb-4 text-sm text-muted-foreground">
-        Chain findings and risks into MITRE ATT&amp;CK kill chains for this
-        assessment. Select a pathway to view and edit its full narrative.
+        Chain findings into MITRE ATT&amp;CK kill chains for this assessment.
+        Select a pathway to view and edit its full narrative.
       </p>
 
       {listQuery.isLoading ? (

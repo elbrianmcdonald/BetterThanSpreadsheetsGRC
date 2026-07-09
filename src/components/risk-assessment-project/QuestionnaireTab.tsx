@@ -14,6 +14,7 @@ import {
   Paperclip,
   Plus,
   Trash2,
+  Users,
   X as XIcon,
   ArrowRight,
 } from "lucide-react";
@@ -65,6 +66,7 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { CreateFindingForm } from "@/components/findings/CreateFindingForm";
+import { AttendeePillsInput } from "@/components/engagement/AttendeePillsInput";
 import { cn } from "@/lib/utils";
 
 type Questionnaire = NonNullable<
@@ -268,6 +270,13 @@ function FilledState({
     onError: (e) => toast.error(`Failed: ${e.message}`),
   });
 
+  const defaultInterviewees = questionnaire.defaultInterviewees ?? [];
+  const setDefaultInterviewees =
+    api.riskAssessmentQuestionnaire.setDefaultInterviewees.useMutation({
+      onSuccess: () => refresh(),
+      onError: (e) => toast.error(`Failed: ${e.message}`),
+    });
+
   if (addingFinding) {
     return (
       <div className="space-y-4">
@@ -337,6 +346,26 @@ function FilledState({
               </Button>
             )}
           </div>
+
+          {/* Default interviewed stakeholders — inherited by every question that
+              doesn't set its own. */}
+          <div className="mt-4 border-t pt-3">
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <Label className="text-xs">Interviewed stakeholders (default)</Label>
+            </div>
+            {defaultInterviewees.length === 0 && isReadOnly ? (
+              <p className="text-xs text-muted-foreground italic">None recorded.</p>
+            ) : (
+              <AttendeePillsInput
+                value={defaultInterviewees}
+                disabled={isReadOnly}
+                onChange={(next) =>
+                  setDefaultInterviewees.mutate({ projectId, interviewees: next })
+                }
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -346,6 +375,7 @@ function FilledState({
           section={section}
           projectId={projectId}
           isReadOnly={isReadOnly}
+          defaultInterviewees={defaultInterviewees}
           refresh={refresh}
           onAddFinding={setAddingFinding}
         />
@@ -382,12 +412,14 @@ function SectionCard({
   section,
   projectId,
   isReadOnly,
+  defaultInterviewees,
   refresh,
   onAddFinding,
 }: {
   section: Section;
   projectId: string;
   isReadOnly: boolean;
+  defaultInterviewees: string[];
   refresh: () => void;
   onAddFinding: (ctx: AddFindingContext) => void;
 }) {
@@ -434,6 +466,7 @@ function SectionCard({
                   question={q}
                   projectId={projectId}
                   isReadOnly={isReadOnly}
+                  defaultInterviewees={defaultInterviewees}
                   refresh={refresh}
                   onAddFinding={onAddFinding}
                 />
@@ -470,12 +503,14 @@ function QuestionCard({
   question,
   projectId,
   isReadOnly,
+  defaultInterviewees,
   onAddFinding,
   refresh,
 }: {
   question: Question;
   projectId: string;
   isReadOnly: boolean;
+  defaultInterviewees: string[];
   refresh: () => void;
   onAddFinding: (ctx: AddFindingContext) => void;
 }) {
@@ -491,6 +526,14 @@ function QuestionCard({
     onSuccess: () => refresh(),
     onError: (e) => toast.error(`Failed: ${e.message}`),
   });
+  const setInterviewees = api.riskAssessmentQuestionnaire.setInterviewees.useMutation({
+    onSuccess: () => refresh(),
+    onError: (e) => toast.error(`Failed: ${e.message}`),
+  });
+  // Empty override = inherit the questionnaire default.
+  const ownInterviewees = question.interviewees ?? [];
+  const inheriting = ownInterviewees.length === 0;
+  const shownInterviewees = inheriting ? defaultInterviewees : ownInterviewees;
   const removeCustom = api.riskAssessmentQuestionnaire.removeCustomQuestion.useMutation({
     onSuccess: () => {
       refresh();
@@ -614,6 +657,30 @@ function QuestionCard({
           maxLength={5000}
           disabled={isReadOnly}
         />
+      </div>
+
+      {/* Interviewed stakeholders (per-question; inherits questionnaire default) */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5">
+          <Users className="h-3 w-3 text-muted-foreground" />
+          <Label className="text-xs">Interviewed</Label>
+          {inheriting && shownInterviewees.length > 0 && (
+            <span className="text-[10px] text-muted-foreground italic">
+              inherited — edit to override
+            </span>
+          )}
+        </div>
+        {isReadOnly && shownInterviewees.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">None recorded.</p>
+        ) : (
+          <AttendeePillsInput
+            value={shownInterviewees}
+            disabled={isReadOnly}
+            onChange={(next) =>
+              setInterviewees.mutate({ questionId: question.id, interviewees: next })
+            }
+          />
+        )}
       </div>
 
       {/* Evidence */}

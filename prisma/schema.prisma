@@ -2703,6 +2703,11 @@ model RiskAssessmentQuestionnaire {
   templateId              String? // Source template (nullable so template deletion doesn't cascade-delete the snapshot)
   templateName            String // Snapshot of template name at clone time (preserved if template deleted/renamed)
 
+  // Default set of interviewed stakeholders for the whole questionnaire. Each
+  // question inherits this list unless it overrides with its own `interviewees`.
+  // Stored as denormalized names (same convention as EngagementSession.attendees).
+  defaultInterviewees String[] @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2757,6 +2762,10 @@ model RiskAssessmentQuestion {
   // Answer state (mutable post-clone, even though structure is immutable).
   status RiskQuestionStatus?
   notes  String?             @db.Text
+
+  // Interviewed stakeholders for THIS question. Empty = inherit the
+  // questionnaire's `defaultInterviewees`. Denormalized names.
+  interviewees String[] @default([])
 
   // Order within section (cloned questions preserve template order; custom adds sort last).
   order Int @default(0)

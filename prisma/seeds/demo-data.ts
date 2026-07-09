@@ -1413,11 +1413,17 @@ export async function seedDemoData(prisma: PrismaClient) {
       organizationId: ORG_A,
       subject: 'Q3 Internal IT Risk Review',
       description: 'Quarterly review of IT controls scoped to access management, data protection, monitoring, and incident response.',
+      executiveStatement:
+        'This quarterly review assessed twelve NIST CSF 2.0 control areas across the Identify, Protect, Detect, Respond, and Recover functions. Overall posture is moderate: identity, access, and monitoring controls are largely effective, while data-at-rest encryption and post-incident lessons-learned processes are the two highest-priority gaps. Remediation is tracked in the engagement action plan with target dates in Q3.',
       matrixVersionId,
       assigneeId: BOB,
       createdById: ALICE,
-      status: 'IN_PROGRESS',
-      dueDate: new Date('2026-09-30'),
+      // Fully completed assessment: analyst submitted, manager reviewed & approved.
+      status: 'APPROVED',
+      submittedAt: new Date('2026-05-02'),
+      reviewerId: ALICE,
+      reviewedAt: new Date('2026-05-06'),
+      dueDate: new Date('2026-05-15'),
     },
   });
 
@@ -1451,27 +1457,80 @@ export async function seedDemoData(prisma: PrismaClient) {
         riskAssessmentProjectId: PROJECT_WITH_Q_ID,
         templateId: ratemplate.id,
         templateName: ratemplate.name,
+        // Default interviewees inherited by every question without an override.
+        defaultInterviewees: ['Tom Bradley', 'Priya Shah', 'Marcus Lee'],
         updatedAt: new Date(),
       },
     });
 
-    // Clone every section/question. Pre-answer 3 of the 12 questions so the
-    // tab's progress bar isn't 0% out of the box but also isn't fully
-    // satisfied — leaves room for the demo presenter to answer a question
-    // live and watch the "Submit for Approval" gate flip.
+    // Clone every section/question. All 12 questions are answered so this
+    // assessment demonstrates a fully completed questionnaire (12/12), with a
+    // realistic spread of statuses across Implemented / Partial /
+    // Not-Implemented / Not-Applicable.
     const PREANSWER: Record<string, { status: RiskQuestionStatus; notes: string }> = {
+      // Identify
       'ID.AM-1': {
         status: RiskQuestionStatus.IMPLEMENTED,
         notes: 'CMDB sync runs nightly against AWS Config. Validated 2026-04-15 by Tom Bradley.',
       },
+      'ID.AM-2': {
+        status: RiskQuestionStatus.IMPLEMENTED,
+        notes: 'Software inventory maintained in the CMDB and reconciled monthly against the SCCM/Jamf agents. SaaS apps tracked in the SSO catalog.',
+      },
+      'ID.RA-1': {
+        status: RiskQuestionStatus.PARTIAL,
+        notes: 'Authenticated Tenable scans run weekly on production. Developer laptops and OT segment are out of scope pending agent rollout in Q3.',
+      },
+      // Protect
       'PR.AC-1': {
         status: RiskQuestionStatus.PARTIAL,
         notes: 'MFA enforced for SSO + privileged accounts. Service accounts still on rotated static credentials — exception until 2026-Q4.',
+      },
+      'PR.AC-4': {
+        status: RiskQuestionStatus.IMPLEMENTED,
+        notes: 'Least-privilege enforced via Okta group-based RBAC. Quarterly access recertification completed 2026-03-31; no exceptions outstanding.',
       },
       'PR.DS-1': {
         status: RiskQuestionStatus.NOT_IMPLEMENTED,
         notes: 'Production database volumes confirmed unencrypted at rest (AWS RDS — encryption flag was not set at creation time). Treatment plan in Q3.',
       },
+      'PR.DS-2': {
+        status: RiskQuestionStatus.IMPLEMENTED,
+        notes: 'TLS 1.2+ enforced on all external endpoints via the ALB security policy. Internal service mesh uses mTLS.',
+      },
+      // Detect
+      'DE.CM-1': {
+        status: RiskQuestionStatus.IMPLEMENTED,
+        notes: 'VPC flow logs + GuardDuty feed the SIEM. 24/7 monitoring covered by the managed SOC contract.',
+      },
+      'DE.AE-3': {
+        status: RiskQuestionStatus.PARTIAL,
+        notes: 'CloudTrail, GuardDuty, and endpoint EDR correlate in the SIEM. On-prem AD security logs not yet forwarded — scoped for Q3.',
+      },
+      // Respond
+      'RS.RP-1': {
+        status: RiskQuestionStatus.IMPLEMENTED,
+        notes: 'IR plan v3.2 approved 2026-02. Tabletop exercise run 2026-03-18; findings tracked to closure in the action plan.',
+      },
+      // Recover
+      'RC.RP-1': {
+        status: RiskQuestionStatus.PARTIAL,
+        notes: 'DR runbooks exist for tier-1 systems and are tested semi-annually. Tier-2 application recovery procedures are still in draft.',
+      },
+      'RC.IM-1': {
+        status: RiskQuestionStatus.NOT_IMPLEMENTED,
+        notes: 'No formal process to fold post-incident lessons learned back into recovery plans. Recommended as a Q3 action item.',
+      },
+    };
+
+    // Per-question interviewee overrides (by question number). Questions not
+    // listed here inherit the questionnaire's defaultInterviewees.
+    const INTERVIEWEES_BY_NUMBER: Record<string, string[]> = {
+      'ID.AM-1': ['Tom Bradley'],
+      'ID.RA-1': ['Priya Shah', 'Marcus Lee'],
+      'PR.DS-1': ['Tom Bradley', 'Priya Shah'],
+      'DE.AE-3': ['Marcus Lee'],
+      'RS.RP-1': ['Marcus Lee', 'Dana Cole'],
     };
 
     for (let sIdx = 0; sIdx < sectionsData.length; sIdx++) {
@@ -1504,13 +1563,211 @@ export async function seedDemoData(prisma: PrismaClient) {
             unresolvedReference: unresolved,
             status: pre?.status ?? null,
             notes: pre?.notes ?? null,
+            interviewees: INTERVIEWEES_BY_NUMBER[q.number] ?? [],
             order: qIdx,
             updatedAt: new Date(),
           },
         });
       }
     }
-    console.log(`  ✅ 2 risk assessments (1 with attached questionnaire, 3/${templateQuestionTotal} pre-answered)\n`);
+    console.log(`  ✅ 2 risk assessments (1 fully completed: ${templateQuestionTotal}/${templateQuestionTotal} answered)\n`);
+
+    // ----------------------------------------------------------------------
+    // Engagement wrapper for the completed assessment. Populates the Schedule
+    // (sessions), Stakeholders (RACI), and Evidence tabs so the whole
+    // assessment reads as fully filled out end-to-end. Deterministic id keeps
+    // it idempotent alongside the questionnaire clone above.
+    // ----------------------------------------------------------------------
+    console.log('  Creating engagement wrapper (schedule / stakeholders / evidence)...');
+    await prisma.engagement.create({
+      data: {
+        id: 'demo-eng-ra-1',
+        organizationId: ORG_A,
+        identifier: 'ENG-2026-0001',
+        clientName: 'Acme Corporation',
+        sector: 'Financial Services',
+        size: '500–1,000 employees',
+        engagementWindow: 'Apr 2026 – May 2026',
+        consultancy: 'Internal GRC Team',
+        analystId: BOB,
+        status: 'DELIVERED',
+        phase: 'review',
+        inScopeDomains: ['Identify', 'Protect', 'Detect', 'Respond', 'Recover'],
+        assessmentKind: 'RISK',
+        assessmentId: PROJECT_WITH_Q_ID,
+        createdById: ALICE,
+        deliveredAt: new Date('2026-05-08'),
+        sessions: {
+          create: [
+            { name: 'Kickoff & Scoping', purpose: 'Confirm scope, timeline, and points of contact for the Q3 IT risk review.', week: 'Week 1', duration: '60 min', attendees: ['Alice Admin', 'Bob Analyst', 'Tom Bradley'], sortOrder: 0 },
+            { name: 'Access & Data Protection Walkthrough', purpose: 'Review IAM, least-privilege, and encryption controls with the platform team.', week: 'Week 2', duration: '90 min', attendees: ['Bob Analyst', 'Tom Bradley', 'Priya Shah'], sortOrder: 1 },
+            { name: 'Detection & Response Interview', purpose: 'Walk through SIEM coverage, monitoring, and the incident response plan with the SOC lead.', week: 'Week 3', duration: '60 min', attendees: ['Bob Analyst', 'Marcus Lee'], sortOrder: 2 },
+            { name: 'Findings Readout & Sign-off', purpose: 'Present results, agree remediation owners and dates, and obtain management approval.', week: 'Week 4', duration: '45 min', attendees: ['Alice Admin', 'Bob Analyst', 'Dana Cole'], sortOrder: 3 },
+          ],
+        },
+        stakeholders: {
+          create: [
+            { name: 'Dana Cole', role: 'CISO', domain: 'Executive Sponsor', raci: 'A', isReviewer: false, isApprover: true, sortOrder: 0 },
+            { name: 'Bob Analyst', role: 'GRC Analyst', domain: 'Assessment Lead', raci: 'R', isReviewer: false, isApprover: false, sortOrder: 1 },
+            { name: 'Tom Bradley', role: 'IT Operations Manager', domain: 'Identify / Protect', raci: 'C', isReviewer: true, isApprover: false, sortOrder: 2 },
+            { name: 'Marcus Lee', role: 'SOC Lead', domain: 'Detect / Respond', raci: 'C', isReviewer: false, isApprover: false, sortOrder: 3 },
+            { name: 'Priya Shah', role: 'Platform Engineer', domain: 'Protect', raci: 'I', isReviewer: false, isApprover: false, sortOrder: 4 },
+          ],
+        },
+        evidenceRequests: {
+          create: [
+            { item: 'Asset inventory / CMDB export', domain: 'Identify', status: 'RECEIVED', sortOrder: 0 },
+            { item: 'IAM role definitions & last access recertification report', domain: 'Protect', status: 'RECEIVED', sortOrder: 1 },
+            { item: 'RDS encryption configuration screenshots', domain: 'Protect', status: 'PARTIAL', sortOrder: 2 },
+            { item: 'SIEM data-source coverage list', domain: 'Detect', status: 'RECEIVED', sortOrder: 3 },
+            { item: 'Incident response plan & latest tabletop after-action report', domain: 'Respond', status: 'RECEIVED', sortOrder: 4 },
+            { item: 'DR runbooks & most recent recovery test results', domain: 'Recover', status: 'REQUESTED', sortOrder: 5 },
+          ],
+        },
+      },
+    });
+    console.log('  ✅ Engagement ENG-2026-0001 (4 sessions, 5 stakeholders, 6 evidence requests)\n');
+
+    // ----------------------------------------------------------------------
+    // Findings + Risks derived from the questionnaire gaps, scoped to this
+    // project (discoveryProjectId) so the Findings and Identified Risks tabs
+    // are populated — and can anchor the exploitation pathway + action plans
+    // that follow. Toxic-marked members are the ones chained into the pathway.
+    // ----------------------------------------------------------------------
+    console.log('  Creating assessment findings, risks, pathway & action plans...');
+
+    const raFindings = [
+      { id: 'demo-ra-find-1', identifier: 'FND-2026-0101', title: 'Production RDS Instances Unencrypted at Rest',    source: 'SCANNER' as const, l: 3, i: 3, status: 'TRIAGED' as const, toxic: true,  description: 'Configuration review of production AWS RDS confirmed encryption-at-rest was never enabled (the flag must be set at instance creation). Regulated customer data is stored unencrypted. Maps to questionnaire item PR.DS-1.' },
+      { id: 'demo-ra-find-2', identifier: 'FND-2026-0102', title: 'Incomplete Vulnerability Scan Coverage',           source: 'SCANNER' as const, l: 2, i: 3, status: 'TRIAGED' as const, toxic: true,  description: 'Authenticated scanning covers production only; developer laptops and the OT segment are unscanned, leaving exploitable hosts undiscovered. Maps to questionnaire item ID.RA-1.' },
+      { id: 'demo-ra-find-3', identifier: 'FND-2026-0103', title: 'On-Prem AD Security Logs Not Forwarded to SIEM',    source: 'AUDIT' as const,   l: 2, i: 2, status: 'TRIAGED' as const, toxic: true,  description: 'Active Directory security event logs are not shipped to the SIEM, creating a detection blind spot for credential attacks and lateral movement. Maps to questionnaire item DE.AE-3.' },
+      { id: 'demo-ra-find-4', identifier: 'FND-2026-0104', title: 'Tier-2 Disaster-Recovery Runbooks Incomplete',      source: 'AUDIT' as const,   l: 2, i: 3, status: 'NEW' as const,     toxic: true,  description: 'DR runbooks exist and are tested for Tier-1 systems only; Tier-2 application recovery procedures remain in draft, extending recovery time after an incident. Maps to questionnaire item RC.RP-1.' },
+      { id: 'demo-ra-find-5', identifier: 'FND-2026-0105', title: 'No Post-Incident Lessons-Learned Feedback Loop',     source: 'MANUAL' as const,  l: 2, i: 2, status: 'NEW' as const,     toxic: false, description: 'There is no formal process to fold post-incident lessons learned back into recovery and response plans, so the same gaps recur. Maps to questionnaire item RC.IM-1.' },
+    ];
+    for (const f of raFindings) {
+      const s = scoreLI(f.l, f.i);
+      await prisma.finding.create({
+        data: {
+          id: f.id,
+          organizationId: ORG_A,
+          identifier: f.identifier,
+          title: f.title,
+          description: f.description,
+          source: f.source,
+          severity: s.severity,
+          severityLabel: s.label,
+          status: f.status,
+          inherentLikelihood: f.l,
+          inherentImpact: f.i,
+          inherentScore: s.score,
+          matrixVersionId: MATRIX_VERSION_ID,
+          discoveryProjectId: PROJECT_WITH_Q_ID,
+          isToxic: f.toxic,
+          createdBy: BOB,
+          assigneeId: BOB,
+          ...(f.status === 'TRIAGED' ? { triagedBy: BOB, triagedAt: new Date('2026-04-20') } : {}),
+        },
+      });
+    }
+
+    const raRisks = [
+      // Risks are register aggregations, not pathway members (pathways link
+      // findings only), so neither is toxic-marked.
+      { id: 'demo-ra-risk-1', identifier: 'RISK-2026-0101', title: 'Customer Data Exposure via Unencrypted Database', link: 'demo-ra-find-1', il: 3, ii: 3, rl: 2, ri: 3, status: 'OPEN' as const,     toxic: false, description: 'Unencrypted production databases could expose regulated customer data if a host or backup is compromised.' },
+      { id: 'demo-ra-risk-2', identifier: 'RISK-2026-0102', title: 'Prolonged Outage from Incomplete DR Procedures',  link: 'demo-ra-find-4', il: 2, ii: 3, rl: 2, ri: 2, status: 'ASSIGNED' as const, toxic: false, description: 'Missing Tier-2 recovery runbooks would extend downtime of critical services after a disruptive incident.' },
+    ];
+    for (const r of raRisks) {
+      const inh = scoreLI(r.il, r.ii);
+      const res = scoreLI(r.rl, r.ri);
+      const linked = raFindings.find((f) => f.id === r.link)!;
+      const rollup = scoreLI(linked.l, linked.i);
+      await prisma.risk.create({
+        data: {
+          id: r.id,
+          organizationId: ORG_A,
+          identifier: r.identifier,
+          updatedAt: new Date(),
+          title: r.title,
+          description: r.description,
+          severity: inh.severity,
+          status: r.status,
+          inherentLikelihood: r.il,
+          inherentImpact: r.ii,
+          inherentScore: inh.score,
+          inherentScoreLabel: inh.label,
+          residualLikelihood: r.rl,
+          residualImpact: r.ri,
+          residualScore: res.score,
+          residualScoreLabel: res.label,
+          matrixVersionId: MATRIX_VERSION_ID,
+          discoveryProjectId: PROJECT_WITH_Q_ID,
+          isToxic: r.toxic,
+          useManualScore: false,
+          calculatedScore: rollup.score,
+          calculatedScoreLabel: rollup.label,
+          effectiveScore: rollup.score,
+          effectiveScoreLabel: rollup.label,
+          effectiveScoreSource: 'CALCULATED',
+        },
+      });
+      await prisma.riskFindingLink.create({ data: { riskId: r.id, findingId: r.link } });
+    }
+
+    // Exploitation pathway — chains the toxic findings/risks into a MITRE
+    // ATT&CK kill chain. Each step carries the denormalized primary finding/
+    // risk AND its `members` join (the source of truth the UI reads).
+    await prisma.pathway.create({
+      data: {
+        id: 'demo-ra-pathway-1',
+        organizationId: ORG_A,
+        assessmentKind: 'RISK',
+        assessmentId: PROJECT_WITH_Q_ID,
+        name: 'Ransomware Data-Exfiltration Chain',
+        verdict: 'Plausible with current gaps',
+        narrative:
+          'An external attacker exploits an unscanned, exposed host, evades detection because on-prem AD logs never reach the SIEM, reaches the unencrypted production database to exfiltrate regulated data, and finally triggers a disruptive event the incomplete Tier-2 DR runbooks cannot quickly recover from.',
+        blastRadius: 'Regulated customer PII, production database availability, and Tier-2 business services.',
+        createdById: BOB,
+        steps: {
+          create: [
+            { order: 1, tactic: 'Initial Access', technique: 'Exploit Public-Facing Application', mitreTid: 'T1190', findingId: 'demo-ra-find-2', note: 'Unscanned hosts leave an exploitable entry point.', members: { create: [{ findingId: 'demo-ra-find-2' }] } },
+            { order: 2, tactic: 'Defense Evasion', technique: 'Impair Defenses: Disable or Modify Tools', mitreTid: 'T1562', findingId: 'demo-ra-find-3', note: 'Missing AD log forwarding blinds detection.', members: { create: [{ findingId: 'demo-ra-find-3' }] } },
+            { order: 3, tactic: 'Collection', technique: 'Data from Information Repositories', mitreTid: 'T1213', findingId: 'demo-ra-find-1', note: 'The unencrypted database yields regulated data directly.', members: { create: [{ findingId: 'demo-ra-find-1' }] } },
+            { order: 4, tactic: 'Impact', technique: 'Data Encrypted for Impact', mitreTid: 'T1486', findingId: 'demo-ra-find-4', note: 'Incomplete Tier-2 DR runbooks prolong the outage.', members: { create: [{ findingId: 'demo-ra-find-4' }] } },
+          ],
+        },
+      },
+    });
+
+    // Remediation action plans — one initiative per gap; AP-0101 is flagged as
+    // breaking the exploitation pathway (encrypting the database removes the
+    // collection step's payoff).
+    const raActionPlans = [
+      { id: 'demo-ra-ap-1', identifier: 'AP-2026-0101', title: 'Enable encryption at rest for all production RDS instances', ownerTeam: 'Infrastructure', effort: 'MEDIUM' as const, timeline: '0–30 days',    reduction: 5, breaks: true,  findings: ['demo-ra-find-1'], detail: 'Snapshot each production RDS instance, restore into an encrypted instance (KMS-managed key), cut over, and verify. Enforce encryption via an SCP so new instances cannot be created without it.' },
+      { id: 'demo-ra-ap-2', identifier: 'AP-2026-0102', title: 'Extend vulnerability scanning to developer and OT segments', ownerTeam: 'IT Security',   effort: 'MEDIUM' as const, timeline: '30–90 days',   reduction: 4, breaks: false, findings: ['demo-ra-find-2'], detail: 'Deploy authenticated scan agents to developer laptops and stand up a passive scanner on the OT segment. Add both scopes to the weekly scan schedule and the exception review.' },
+      { id: 'demo-ra-ap-3', identifier: 'AP-2026-0103', title: 'Forward on-prem AD security logs to the SIEM',                ownerTeam: 'SOC',           effort: 'LOW' as const,    timeline: '0–30 days',    reduction: 3, breaks: false, findings: ['demo-ra-find-3'], detail: 'Install the log-forwarding agent on domain controllers and onboard the AD security channel to the SIEM, with correlation rules for credential attacks and lateral movement.' },
+      { id: 'demo-ra-ap-4', identifier: 'AP-2026-0104', title: 'Complete Tier-2 DR runbooks and add a lessons-learned loop',   ownerTeam: 'IT Operations', effort: 'HIGH' as const,   timeline: '1–2 quarters', reduction: 4, breaks: false, findings: ['demo-ra-find-4', 'demo-ra-find-5'], detail: 'Author and test recovery runbooks for all Tier-2 applications, and establish a standing post-incident review that feeds lessons learned back into the DR and IR plans.' },
+    ];
+    for (const ap of raActionPlans) {
+      await prisma.actionPlanItem.create({
+        data: {
+          id: ap.id,
+          organizationId: ORG_A,
+          identifier: ap.identifier,
+          assessmentKind: 'RISK',
+          assessmentId: PROJECT_WITH_Q_ID,
+          title: ap.title,
+          detail: ap.detail,
+          ownerTeam: ap.ownerTeam,
+          effort: ap.effort,
+          timelineEstimate: ap.timeline,
+          riskReduction: ap.reduction,
+          breaksPathway: ap.breaks,
+          createdById: BOB,
+          findingLinks: { create: ap.findings.map((findingId) => ({ findingId })) },
+        },
+      });
+    }
+    console.log(`  ✅ ${raFindings.length} findings, ${raRisks.length} risks, 1 pathway (4 steps), ${raActionPlans.length} action plans\n`);
   } else {
     console.log(`  ⏭️  Risk assessments already seeded — skipping\n`);
   }

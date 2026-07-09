@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
 
 import { api } from "@/trpc/react";
@@ -35,6 +35,7 @@ export function AssessmentFindingsTab({
   isReadOnly = false,
 }: AssessmentFindingsTabProps) {
   const utils = api.useUtils();
+  const router = useRouter();
   // Inline Add Finding (2026-07-06): the full card form renders in place of
   // the findings list so the user stays on the assessment.
   const [adding, setAdding] = useState(false);
@@ -137,11 +138,13 @@ export function AssessmentFindingsTab({
             </thead>
             <tbody>
               {findings.map((f) => (
-                <tr key={f.id} className="border-t hover:bg-muted/30">
-                  <td className="px-3 py-2 font-mono text-xs">
-                    <Link href={`/findings/${f.id}`} className="text-primary hover:underline">
-                      {f.identifier}
-                    </Link>
+                <tr
+                  key={f.id}
+                  onClick={() => router.push(`/findings/${f.id}`)}
+                  className="cursor-pointer border-t hover:bg-muted/30"
+                >
+                  <td className="px-3 py-2 font-mono text-xs text-primary">
+                    {f.identifier}
                   </td>
                   <td className="px-3 py-2">{f.title}</td>
                   <td className="px-3 py-2">

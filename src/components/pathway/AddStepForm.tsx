@@ -7,13 +7,13 @@
  * `ExploitationPathwayView` can render it without a circular dependency:
  *   EngagementPathways → ExploitationPathwayView → AddStepForm (imports neither).
  *
- * MULTI-MEMBER PICKER: a step may reference MANY findings AND/OR risks. Both
- * lists are scoped to THIS assessment via `api.finding.listForAssessment` /
- * `api.risk.listForAssessment` — only findings/risks raised within the
- * assessment are selectable, not the org registers. The user adds members to a
- * chip list (Finding picker + Risk picker), requires ≥1 member total, picks a
- * MITRE ATT&CK technique (`MitreTechniquePicker` → tactic/technique/mitreTid),
- * an optional note, then `pathway.addStep` with `findingIds`/`riskIds` arrays.
+ * MULTI-FINDING PICKER: a step may reference MANY findings. Pathways link
+ * findings only (risks are aggregations built from findings). The finding list
+ * is scoped to THIS assessment via `api.finding.listForAssessment` — only
+ * findings raised within the assessment are selectable, not the org register.
+ * The user adds findings to a chip list, requires ≥1, picks a MITRE ATT&CK
+ * technique (`MitreTechniquePicker` → tactic/technique/mitreTid), an optional
+ * note, then `pathway.addStep` with a `findingIds` array.
  */
 
 import { useState } from "react";
@@ -73,18 +73,14 @@ export function AddStepForm({
   const [note, setNote] = useState("");
   const [mitrePickerOpen, setMitrePickerOpen] = useState(false);
 
-  // Both lists are scoped to THIS assessment, not the org-wide registers.
+  // Findings scoped to THIS assessment, not the org-wide register. Pathways
+  // link findings only — risks are aggregations built from findings.
   const findingsQuery = api.finding.listForAssessment.useQuery({
-    assessmentId,
-    assessmentType: assessmentKind,
-  });
-  const risksQuery = api.risk.listForAssessment.useQuery({
     assessmentId,
     assessmentType: assessmentKind,
   });
 
   const findings = findingsQuery.data ?? [];
-  const risks = risksQuery.data ?? [];
 
   const addStep = api.pathway.addStep.useMutation({ onSuccess: onDone });
 
@@ -112,70 +108,45 @@ export function AddStepForm({
       technique: technique.trim(),
       mitreTid: mitreTid.trim() || undefined,
       note: note.trim() || undefined,
-      findingIds: picked.filter((m) => m.kind === "finding").map((m) => m.id),
-      riskIds: picked.filter((m) => m.kind === "risk").map((m) => m.id),
+      findingIds: picked.map((m) => m.id),
+      riskIds: [],
     });
   }
 
   return (
     <div className="mt-3 space-y-3 rounded-md border bg-muted/30 p-3">
-      {/* Member pickers — Findings and Risks both available. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label>Add finding</Label>
-          <Select
-            value=""
-            onValueChange={(id) => {
-              const f = findings.find((x) => x.id === id);
-              if (f) addMember({ kind: "finding", id: f.id, identifier: f.identifier, title: f.title });
-            }}
-            disabled={findingsQuery.isLoading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a finding…" />
-            </SelectTrigger>
-            <SelectContent>
-              {findings.map((f) => (
-                <SelectItem key={f.id} value={f.id} disabled={isPicked("finding", f.id)}>
-                  {f.identifier} · {f.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Add risk</Label>
-          <Select
-            value=""
-            onValueChange={(id) => {
-              const r = risks.find((x) => x.id === id);
-              if (r) addMember({ kind: "risk", id: r.id, identifier: r.identifier, title: r.title });
-            }}
-            disabled={risksQuery.isLoading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a risk…" />
-            </SelectTrigger>
-            <SelectContent>
-              {risks.map((r) => (
-                <SelectItem key={r.id} value={r.id} disabled={isPicked("risk", r.id)}>
-                  {r.identifier} · {r.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Finding picker — pathways link findings only. */}
+      <div className="space-y-1.5">
+        <Label>Add finding</Label>
+        <Select
+          value=""
+          onValueChange={(id) => {
+            const f = findings.find((x) => x.id === id);
+            if (f) addMember({ kind: "finding", id: f.id, identifier: f.identifier, title: f.title });
+          }}
+          disabled={findingsQuery.isLoading}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a finding…" />
+          </SelectTrigger>
+          <SelectContent>
+            {findings.map((f) => (
+              <SelectItem key={f.id} value={f.id} disabled={isPicked("finding", f.id)}>
+                {f.identifier} · {f.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Picked-member chip list (source of truth for what gets submitted). */}
+      {/* Picked-finding chip list (source of truth for what gets submitted). */}
       <div className="space-y-1.5">
         <Label>
-          Linked members <span className="text-destructive">*</span>
+          Linked findings <span className="text-destructive">*</span>
         </Label>
         {picked.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            Add at least one finding or risk to this step.
+            Add at least one finding to this step.
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -184,17 +155,12 @@ export function AddStepForm({
                 key={`${m.kind}:${m.id}`}
                 className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs"
                 style={{
-                  borderColor: m.kind === "risk" ? "var(--primary)" : "var(--border)",
+                  borderColor: "var(--border)",
                   background: "var(--muted)",
                 }}
               >
-                <span
-                  className="font-mono"
-                  style={{
-                    color: m.kind === "risk" ? "var(--primary)" : "var(--muted-foreground)",
-                  }}
-                >
-                  {m.identifier ?? (m.kind === "risk" ? "RISK" : "FINDING")}
+                <span className="font-mono" style={{ color: "var(--muted-foreground)" }}>
+                  {m.identifier ?? "FINDING"}
                 </span>
                 <span className="max-w-[160px] truncate" style={{ color: "var(--foreground)" }}>
                   {m.title}

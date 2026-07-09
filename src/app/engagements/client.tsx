@@ -245,7 +245,7 @@ export function EngagementsClient() {
     <AppLayout>
       <PageHeader
         title="Engagements"
-        description="Consulting engagements that wrap an existing assessment."
+        description="Engagements that wrap an existing assessment."
         actions={
           <Dialog
             open={createOpen}

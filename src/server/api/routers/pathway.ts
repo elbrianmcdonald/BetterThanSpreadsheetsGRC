@@ -47,11 +47,37 @@ const mitreTidSchema = z
   .string()
   .regex(/^T\d{4}(\.\d{3})?$/, "Expected a MITRE technique id like T1566 or T1566.001");
 
+/** Highest-effort label among a finding's linked action-plan items. Findings
+ * carry no effort of their own — "remediation effort" is the effort of the
+ * action plan(s) that close the finding. */
+const EFFORT_LABEL: Record<string, string> = {
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+  VERY_HIGH: "Very High",
+};
+const EFFORT_RANK: Record<string, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, VERY_HIGH: 3 };
+function remediationEffortLabel(
+  links?: Array<{ actionPlanItem: { effort: string } | null }> | null,
+): string | undefined {
+  if (!links || links.length === 0) return undefined;
+  let best: string | undefined;
+  for (const l of links) {
+    const e = l.actionPlanItem?.effort;
+    if (!e) continue;
+    if (best === undefined || (EFFORT_RANK[e] ?? -1) > (EFFORT_RANK[best] ?? -1)) best = e;
+  }
+  return best ? EFFORT_LABEL[best] ?? best : undefined;
+}
+
 /** Scoring/summary fields selected for a step's denormalized primary finding. */
 const findingMemberSelect = {
   id: true,
   identifier: true,
   title: true,
+  description: true,
+  // Linked action-plan items → derived remediation effort for the drawer.
+  actionPlanLinks: { select: { actionPlanItem: { select: { effort: true } } } },
   severity: true,
   severityLabel: true,
   inherentLikelihood: true,
@@ -141,6 +167,8 @@ type RawFindingMember = RawScored & {
   id: string;
   identifier: string | null;
   title: string;
+  description?: string | null;
+  actionPlanLinks?: Array<{ actionPlanItem: { effort: string } | null }> | null;
   severity: string;
   severityLabel?: string | null;
 };
@@ -162,6 +190,8 @@ type NormalizedMember = {
   id: string;
   identifier: string | null;
   title: string;
+  description?: string;
+  remediationEffort?: string;
   severity?: string;
   severityLabel?: string;
   inherentLikelihood?: number;
@@ -184,6 +214,8 @@ function serializeJoinMember(row: {
       id: f.id,
       identifier: f.identifier,
       title: f.title,
+      description: f.description ?? undefined,
+      remediationEffort: remediationEffortLabel(f.actionPlanLinks),
       severity: f.severity ?? undefined,
       severityLabel: f.severityLabel ?? undefined,
       inherentLikelihood: decToNum(f.inherentLikelihood),

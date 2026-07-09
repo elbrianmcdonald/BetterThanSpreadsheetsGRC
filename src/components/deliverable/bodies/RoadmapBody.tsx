@@ -107,7 +107,11 @@ export function RoadmapBody({
             <p className="eyebrow mb-3" style={{ color: "var(--muted-foreground)" }}>
               Prioritization &mdash; effort vs. risk reduction
             </p>
-            <EffortImpactPlot actions={actions} onPick={onPick} />
+            {/* Cap the plot's rendered size — the SVG scales to its container, so
+                an uncapped 1fr column blows it up on wide screens. */}
+            <div className="mx-auto w-full max-w-[440px]">
+              <EffortImpactPlot actions={actions} onPick={onPick} />
+            </div>
           </div>
           <div
             className="grid grid-cols-3 gap-3 rounded-xl border p-4 lg:grid-cols-1 lg:content-start"

@@ -14,6 +14,10 @@ export interface PathwayMemberSummary {
   id: string;
   identifier: string | null;
   title: string;
+  /** Full finding/risk description (used to populate the finding drawer). */
+  description?: string;
+  /** Remediation effort derived from the finding's linked action-plan item(s). */
+  remediationEffort?: string;
   /** Coarse legacy categorical severity (HIGH/MEDIUM/LOW). */
   severity: string;
   /** Matrix threshold label, e.g. "Critical"/"High" (optional). */

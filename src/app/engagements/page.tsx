@@ -12,7 +12,7 @@ import { EngagementsClient } from "./client";
 
 export const metadata = {
   title: "Engagements | Consulting Accelerator",
-  description: "Create and manage consulting engagements that wrap an assessment",
+  description: "Create and manage engagements that wrap an assessment",
 };
 
 export default async function EngagementsPage() {

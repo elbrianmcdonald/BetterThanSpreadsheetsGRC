@@ -89,7 +89,7 @@ export function StartEngagementCard({
 }) {
   const createMutation = api.engagement.create.useMutation({
     onSuccess: () => {
-      toast.success("Consulting engagement started");
+      toast.success("Engagement started");
       onStarted();
     },
     onError: (e) => {
@@ -101,9 +101,9 @@ export function StartEngagementCard({
     <div className="flex justify-center py-12">
       <Card className="max-w-md text-center">
         <CardHeader>
-          <CardTitle className="text-base">No consulting engagement yet</CardTitle>
+          <CardTitle className="text-base">No engagement yet</CardTitle>
           <CardDescription>
-            Start a consulting engagement to plan the schedule, stakeholders,
+            Start an engagement to plan the schedule, stakeholders,
             and evidence for this assessment.
           </CardDescription>
         </CardHeader>
@@ -123,7 +123,7 @@ export function StartEngagementCard({
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            Start consulting engagement
+            Start engagement
           </Button>
         </CardContent>
       </Card>

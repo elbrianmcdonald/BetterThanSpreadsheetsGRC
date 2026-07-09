@@ -73,6 +73,20 @@ const ATTACH_INPUT = z.object({ projectId: z.string(), templateId: z.string() })
 const DETACH_INPUT = z.object({ projectId: z.string() });
 const GET_INPUT = z.object({ projectId: z.string() });
 
+// Interviewed-stakeholder editing (denormalized names, trimmed + de-duped).
+const INTERVIEWEES = z
+  .array(z.string().trim().min(1).max(120))
+  .max(50)
+  .transform((arr) => [...new Set(arr)]);
+const SET_INTERVIEWEES_INPUT = z.object({
+  questionId: z.string(),
+  interviewees: INTERVIEWEES,
+});
+const SET_DEFAULT_INTERVIEWEES_INPUT = z.object({
+  projectId: z.string(),
+  interviewees: INTERVIEWEES,
+});
+
 const SET_STATUS_INPUT = z.object({
   questionId: z.string(),
   status: z.nativeEnum(RiskQuestionStatus).nullable(),
@@ -339,6 +353,32 @@ export const riskAssessmentQuestionnaireRouter = createTRPCRouter({
       return ctx.db.riskAssessmentQuestion.update({
         where: { id: input.questionId },
         data: { notes: input.notes },
+      });
+    }),
+
+  // Per-question interviewed stakeholders. Empty array clears the override so
+  // the question falls back to the questionnaire's default set.
+  setInterviewees: organizationProcedure
+    .use(requireRole(ANSWER_ROLES))
+    .input(SET_INTERVIEWEES_INPUT)
+    .mutation(async ({ ctx, input }) => {
+      await loadQuestionForProject(ctx, input.questionId);
+      return ctx.db.riskAssessmentQuestion.update({
+        where: { id: input.questionId },
+        data: { interviewees: input.interviewees },
+      });
+    }),
+
+  // Questionnaire-level default interviewed stakeholders (inherited by every
+  // question that has no override of its own).
+  setDefaultInterviewees: organizationProcedure
+    .use(requireRole(ANSWER_ROLES))
+    .input(SET_DEFAULT_INTERVIEWEES_INPUT)
+    .mutation(async ({ ctx, input }) => {
+      await loadProjectForOrg(ctx, input.projectId);
+      return ctx.db.riskAssessmentQuestionnaire.update({
+        where: { riskAssessmentProjectId: input.projectId },
+        data: { defaultInterviewees: input.interviewees },
       });
     }),
 
