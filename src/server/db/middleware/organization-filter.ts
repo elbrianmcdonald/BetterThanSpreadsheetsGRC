@@ -124,6 +124,7 @@ const ALLOWLIST_TABLES = new Set([
   "LoginAttempt", // Authentication tracking - no organizationId
   "PasswordResetToken", // Password reset - no organizationId
   "User", // User lookups needed during authentication before org context
+  "OrganizationMembership", // Multi-Tenancy Epic 1: isolation is by userId; a user's memberships must be listable across orgs for the switcher
   "ControlDomain", // Global taxonomy table - not organization-specific
   "ControlDomainMapping", // Global mapping table - not organization-specific
   "ControlDomainControl", // Junction table - no organizationId, isolation via Control relation

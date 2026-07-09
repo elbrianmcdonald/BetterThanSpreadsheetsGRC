@@ -41,8 +41,10 @@ import {
   Settings,
   Server,
   ScrollText,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CompanySwitcher } from "@/components/layout/CompanySwitcher";
 
 interface NavItem {
   href: string;
@@ -50,6 +52,7 @@ interface NavItem {
   icon: React.ReactNode;
   roles?: UserRole[];
   group?: string; // Optional group name for visual separation within a section
+  platformAdmin?: boolean; // Visible only to platform admins (Multi-Tenancy Epic 3)
 }
 
 interface NavSection {
@@ -58,6 +61,7 @@ interface NavSection {
   icon: React.ReactNode;
   items: NavItem[];
   roles?: UserRole[];
+  platformAdmin?: boolean; // Section also visible to platform admins regardless of role
 }
 
 // Navigation sections with role-based visibility
@@ -271,12 +275,33 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Administration",
     icon: <Users className="h-5 w-5" />,
     roles: [UserRole.ORG_ADMIN],
+    platformAdmin: true, // also visible to platform admins (for the platform items below)
     items: [
       {
         href: "/admin/users",
         label: "User Management",
         icon: <Users className="h-4 w-4" />,
         roles: [UserRole.ORG_ADMIN],
+      },
+      {
+        href: "/admin/members",
+        label: "Company Members",
+        icon: <Building2 className="h-4 w-4" />,
+        roles: [UserRole.ORG_ADMIN],
+      },
+      {
+        href: "/admin/companies",
+        label: "Companies",
+        icon: <Building2 className="h-4 w-4" />,
+        platformAdmin: true,
+        group: "Platform",
+      },
+      {
+        href: "/admin/platform-admins",
+        label: "Platform Admins",
+        icon: <ShieldCheck className="h-4 w-4" />,
+        platformAdmin: true,
+        group: "Platform",
       },
       {
         href: "/admin/business-units",
@@ -400,13 +425,18 @@ export function AppSidebar() {
     return false;
   };
 
-  // Filter sections and items based on user role
+  const isPlatformAdmin = session?.user?.isPlatformAdmin === true;
+
+  // Filter sections and items based on user role (+ platform-admin visibility).
   const visibleSections = NAV_SECTIONS.filter((section) => {
-    if (!section.roles) return true;
-    return userRole && section.roles.includes(userRole);
+    const roleOk = !section.roles || (userRole && section.roles.includes(userRole));
+    const platformOk = section.platformAdmin && isPlatformAdmin;
+    return roleOk || platformOk;
   }).map((section) => ({
     ...section,
     items: section.items.filter((item) => {
+      // Platform-only items require platform admin, regardless of role.
+      if (item.platformAdmin) return isPlatformAdmin;
       if (!item.roles) return true;
       return userRole && item.roles.includes(userRole);
     }),
@@ -431,6 +461,9 @@ export function AppSidebar() {
           </span>
         </span>
       </Link>
+
+      {/* Company switcher — above Home; only shown for multi-company users (Story 1.4) */}
+      <CompanySwitcher />
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-3">

@@ -1,5 +1,6 @@
 import { postRouter } from "@/server/api/routers/post";
 import { userRouter } from "@/server/api/routers/user";
+import { organizationRouter } from "@/server/api/routers/organization";
 import { passwordResetRouter } from "@/server/api/routers/passwordReset";
 import { auditRouter } from "@/server/api/routers/audit";
 import { frameworkRouter } from "@/server/api/routers/framework";
@@ -72,6 +73,7 @@ import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 export const appRouter = createTRPCRouter({
   post: postRouter,
   user: userRouter,
+  organization: organizationRouter, // Multi-Tenancy Epic 1: company switcher
   passwordReset: passwordResetRouter,
   audit: auditRouter,
   framework: frameworkRouter, // Story 2.1: OSCAL Catalog Import Pipeline

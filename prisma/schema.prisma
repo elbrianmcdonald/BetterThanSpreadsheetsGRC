@@ -437,9 +437,32 @@ model Organization {
   Engagement Engagement[]
   // Epic 19: Exploitation Pathway
   Pathway Pathway[]
+  // Multi-Tenancy Epic 1: per-user company memberships
+  OrganizationMembership OrganizationMembership[]
 
   @@index([active])
   @@index([slug])
+}
+
+/// Multi-Tenancy Epic 1 (Story 1.1): a user's membership in a company, carrying
+/// a per-organization role. Enables a user to belong to multiple companies and
+/// hold a different role in each. Isolation for this table is by `userId`
+/// (it is allowlisted from the org-context filter so a user's memberships can be
+/// listed across organizations — see organization-filter.ts ALLOWLIST_TABLES).
+model OrganizationMembership {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           UserRole @default(AUDITOR)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  User         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([userId])
+  @@index([organizationId])
 }
 
 // ============================================================================
@@ -1460,6 +1483,9 @@ model User {
   hashedPassword                          String?
   role                                    UserRole                    @default(AUDITOR)
   organizationId                          String
+  // Multi-Tenancy Epic 1 (Story 1.1): platform (super) admin can access & switch
+  // into every organization regardless of explicit membership.
+  isPlatformAdmin                         Boolean                     @default(false)
   // Story 7.0.2: Business Unit assignment (AC1-AC4)
   businessUnitId                          String? // Optional - user not yet assigned to BU
   // Story 3.7: Assigned framework codes for auditor role access control (AC19-AC21)
@@ -1616,6 +1642,9 @@ model User {
 
   // Epic 18: Consulting Engagements led by this user (analyst)
   EngagementsLed Engagement[] @relation("EngagementAnalyst")
+
+  // Multi-Tenancy Epic 1 (Story 1.1): companies this user belongs to
+  OrganizationMembership OrganizationMembership[]
 
   @@index([email])
   @@index([organizationId])
@@ -1865,6 +1894,15 @@ enum AuditAction {
   CREATE_ENTERPRISE_RISK
   UPDATE_ENTERPRISE_RISK
   REVIEW_ENTERPRISE_RISK
+  // Multi-Tenancy Epic 1: company switching + creation
+  SWITCH_ORGANIZATION
+  CREATE_ORGANIZATION
+  DELETE_ORGANIZATION
+  // Multi-Tenancy Epic 3: membership management + platform admin
+  MEMBERSHIP_GRANTED
+  MEMBERSHIP_ROLE_UPDATED
+  MEMBERSHIP_REVOKED
+  UPDATE_PLATFORM_ADMIN
   // Note: Application changelog is now file-backed (CHANGELOG.md), not DB-backed.
 }
 

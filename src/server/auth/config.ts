@@ -5,6 +5,7 @@ import { type UserRole } from "@prisma/client";
 
 import { db } from "@/server/db";
 import { env } from "@/env";
+import { resolveActiveRole } from "@/server/services/organization/access";
 import { verifyPassword } from "@/server/services/auth/passwordService";
 import {
   isRateLimited,
@@ -27,6 +28,8 @@ declare module "next-auth" {
       organizationId: string;
       // Story 3.7: Assigned framework codes for auditor role access control
       assignedFrameworks: string[];
+      // Multi-Tenancy Epic 3: platform admin flag (UI gating; server is authoritative)
+      isPlatformAdmin?: boolean;
     } & DefaultSession["user"];
   }
 
@@ -35,6 +38,8 @@ declare module "next-auth" {
     organizationId: string;
     // Story 3.7: Assigned framework codes for auditor role access control
     assignedFrameworks: string[];
+    // Multi-Tenancy Epic 3: platform admin flag
+    isPlatformAdmin?: boolean;
   }
 }
 
@@ -137,6 +142,8 @@ export const authConfig = {
           organizationId: user.organizationId,
           // Story 3.7: Include assigned frameworks for auditor role access control
           assignedFrameworks: user.assignedFrameworks ?? [],
+          // Multi-Tenancy Epic 3: surface platform-admin for UI gating
+          isPlatformAdmin: user.isPlatformAdmin ?? false,
         };
       },
     }),
@@ -164,7 +171,7 @@ export const authConfig = {
      * For Credentials provider, we need to add user data to the JWT token
      * since we're not using the database adapter for Credentials auth.
      */
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       // On sign-in, add user data to token
       if (user) {
         token.id = user.id;
@@ -172,7 +179,25 @@ export const authConfig = {
         token.organizationId = user.organizationId;
         // Story 3.7: Include assigned frameworks for auditor role access control
         token.assignedFrameworks = user.assignedFrameworks ?? [];
+        // Multi-Tenancy Epic 3: platform-admin flag
+        token.isPlatformAdmin = user.isPlatformAdmin ?? false;
       }
+
+      // Multi-Tenancy Epic 1 (Story 1.3): the client calls `update({ organizationId })`
+      // to switch companies. Re-validate access server-side here (NFR5) — a forged
+      // target the user cannot access is ignored, leaving the claim unchanged.
+      if (trigger === "update" && token.id) {
+        const requestedOrgId = (session as { organizationId?: string } | undefined)
+          ?.organizationId;
+        if (requestedOrgId && requestedOrgId !== token.organizationId) {
+          const role = await resolveActiveRole(db, token.id as string, requestedOrgId);
+          if (role) {
+            token.organizationId = requestedOrgId;
+            token.role = role;
+          }
+        }
+      }
+
       return token;
     },
     /**
@@ -188,6 +213,8 @@ export const authConfig = {
         session.user.organizationId = token.organizationId as string;
         // Story 3.7: Include assigned frameworks for auditor role access control
         session.user.assignedFrameworks = (token.assignedFrameworks as string[]) ?? [];
+        // Multi-Tenancy Epic 3: platform-admin flag for UI gating
+        session.user.isPlatformAdmin = (token.isPlatformAdmin as boolean) ?? false;
       }
       return session;
     },

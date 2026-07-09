@@ -7,6 +7,29 @@ import { seedNist80053Controls } from './seeds/nist-800-53-r5';
 import { seedC2m2Framework } from './seeds/c2m2';
 import { seedOwaspSammFramework } from './seeds/owasp-samm';
 import { seedDemoData } from './seeds/demo-data';
+import { seedGlobexDemoData } from './seeds/demo-data-globex';
+
+// NOTE: the seed runs via `tsx prisma/seed.ts` in the standalone runner image,
+// which tree-shakes out `src/`. So we can't import from `@/server/...` here —
+// the membership backfill is inlined below (kept in sync with
+// src/server/services/organization/backfill.ts, which the app + tests use).
+async function backfillMemberships(
+  db: PrismaClient,
+): Promise<{ created: number }> {
+  const users = await db.user.findMany({
+    select: { id: true, organizationId: true, role: true },
+  });
+  if (users.length === 0) return { created: 0 };
+  const result = await db.organizationMembership.createMany({
+    data: users.map((u) => ({
+      userId: u.id,
+      organizationId: u.organizationId,
+      role: u.role,
+    })),
+    skipDuplicates: true,
+  });
+  return { created: result.count };
+}
 import { seedEnterpriseRisks } from './seeds/enterprise-risks';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
@@ -1112,6 +1135,14 @@ async function main() {
 
   // Seed demo data for all features (BUs, People, Strategy, Findings, etc.)
   await seedDemoData(prisma);
+
+  // Distinct demo dataset for Globex (Org B) so the two companies differ.
+  await seedGlobexDemoData(prisma);
+
+  // Multi-Tenancy Epic 1 (Story 1.2): give every seeded user a membership row
+  // mirroring their org + role, so the company switcher works out of the box.
+  const membershipBackfill = await backfillMemberships(prisma);
+  console.log(`✅ Backfilled ${membershipBackfill.created} organization membership(s)\n`);
 
   // Durable fix: advance identifier counters past the seeded rows so the next
   // create (finding/risk/assessment) doesn't collide on a re-issued identifier.
