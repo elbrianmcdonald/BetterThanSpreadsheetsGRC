@@ -72,30 +72,44 @@ beforeAll(async () => {
   });
 
   // Create auditor user (no assigned frameworks = can see all evidence)
-  auditorUser = await db.user.create({
+  auditorUser = {
+    ...(await db.user.create({
+      data: {
+        id: auditorUserId,
+        name: "Test Auditor",
+        email: `auditor-${randomUUID().slice(0, 8)}@test.com`,
+        organizationId: testOrg.id,
+        assignedFrameworks: [], // Empty = access to all frameworks
+        updatedAt: new Date(),
+      },
+    })),
+    role: "BUSINESS_USER" as UserRole,
+  };
+  // Business user derives role from org membership existence
+  await db.organizationMembership.create({
     data: {
-      id: auditorUserId,
-      name: "Test Auditor",
-      email: `auditor-${randomUUID().slice(0, 8)}@test.com`,
-      role: "BUSINESS_USER",
+      id: randomUUID(),
+      userId: auditorUserId,
       organizationId: testOrg.id,
-      assignedFrameworks: [], // Empty = access to all frameworks
       updatedAt: new Date(),
     },
   });
 
   // Create analyst user (can modify evidence)
-  analystUser = await db.user.create({
-    data: {
-      id: analystUserId,
-      name: "Test Analyst",
-      email: `analyst-${randomUUID().slice(0, 8)}@test.com`,
-      role: "ANALYST",
-      organizationId: testOrg.id,
-      assignedFrameworks: [],
-      updatedAt: new Date(),
-    },
-  });
+  analystUser = {
+    ...(await db.user.create({
+      data: {
+        id: analystUserId,
+        name: "Test Analyst",
+        email: `analyst-${randomUUID().slice(0, 8)}@test.com`,
+        platformRole: "ANALYST",
+        organizationId: testOrg.id,
+        assignedFrameworks: [],
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ANALYST" as UserRole,
+  };
 
   // Find an existing control domain
   const existingDomain = await db.controlDomain.findFirst({

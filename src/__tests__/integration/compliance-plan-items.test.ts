@@ -40,7 +40,7 @@ describe("Compliance Plan Items — Epic 1 Stories 1.3/1.4", () => {
   beforeAll(async () => {
     const s = `${Date.now()}-${Math.round(performance.now())}`;
     org = await db.organization.create({ data: { id: randomUUID(), name: `CPI ${s}`, slug: `cpi-${s}`, updatedAt: new Date() } });
-    const u = await db.user.create({ data: { id: randomUUID(), email: `cpi-${s}@example.com`, name: "cpiadmin", organizationId: org.id, role: UserRole.ADMINISTRATOR, updatedAt: new Date() } });
+    const u = await db.user.create({ data: { id: randomUUID(), email: `cpi-${s}@example.com`, name: "cpiadmin", organizationId: org.id, platformRole: UserRole.ADMINISTRATOR, updatedAt: new Date() } });
     admin = { id: u.id, email: u.email!, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {

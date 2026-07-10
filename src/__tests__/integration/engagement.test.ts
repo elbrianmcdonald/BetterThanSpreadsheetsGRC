@@ -73,12 +73,18 @@ describe("Engagement Router - Polymorphic Wrapper", () => {
     orgB = await db.organization.create({
       data: { id: randomUUID(), name: `Eng Org B ${stamp}`, slug: `eng-b-${stamp}`, updatedAt: new Date() },
     });
-    analystA = await db.user.create({
-      data: { id: randomUUID(), email: `eng-a-${stamp}@example.com`, name: "Analyst A", organizationId: orgA.id, role: UserRole.ANALYST, updatedAt: new Date() },
-    });
-    analystB = await db.user.create({
-      data: { id: randomUUID(), email: `eng-b-${stamp}@example.com`, name: "Analyst B", organizationId: orgB.id, role: UserRole.ANALYST, updatedAt: new Date() },
-    });
+    analystA = {
+      ...(await db.user.create({
+        data: { id: randomUUID(), email: `eng-a-${stamp}@example.com`, name: "Analyst A", organizationId: orgA.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
+      })),
+      role: UserRole.ANALYST,
+    };
+    analystB = {
+      ...(await db.user.create({
+        data: { id: randomUUID(), email: `eng-b-${stamp}@example.com`, name: "Analyst B", organizationId: orgB.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
+      })),
+      role: UserRole.ANALYST,
+    };
 
     // Org A: Framework + ComplianceAssessment (the primary wrap target).
     await runWithOrganizationContext(orgA.id, async () => {

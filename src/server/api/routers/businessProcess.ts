@@ -665,7 +665,7 @@ export const businessProcessRouter = createTRPCRouter({
           id: true,
           name: true,
           email: true,
-          role: true,
+          platformRole: true,
         },
         orderBy: { name: "asc" },
         take: 50,

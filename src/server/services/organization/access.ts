@@ -40,12 +40,13 @@ export async function resolveActiveRole(
     return org ? user.platformRole : null;
   }
 
-  // Org-bound Business User: a membership for this org grants access.
+  // Org-bound Business User: membership EXISTENCE implies the BUSINESS_USER role
+  // (role is not stored on the membership — the user is a read-only org viewer).
   const membership = await db.organizationMembership.findUnique({
     where: { userId_organizationId: { userId, organizationId } },
-    select: { role: true },
+    select: { id: true },
   });
-  if (membership) return membership.role;
+  if (membership) return UserRole.BUSINESS_USER;
 
   return null;
 }

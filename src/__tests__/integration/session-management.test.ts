@@ -48,7 +48,7 @@ describe('Session Management Integration Tests', () => {
         id: randomUUID(),
         email: 'session-test@example.com',
         name: 'Session Test User',
-        role: 'BUSINESS_USER' as UserRole,
+        // Role Consolidation Epic 2: Business User → null platformRole (no role column).
         organizationId: testOrgId,
         updatedAt: new Date(),
       },
@@ -123,7 +123,8 @@ describe('Session Management Integration Tests', () => {
     expect(session?.User.id).toBeDefined();
     expect(session?.User.email).toBe('session-test@example.com');
     expect(session?.User.name).toBe('Session Test User');
-    expect(session?.User.role).toBe('BUSINESS_USER');
+    // Role Consolidation Epic 2: active role derives from platformRole (null => Business User).
+    expect(session?.User.platformRole ?? 'BUSINESS_USER').toBe('BUSINESS_USER');
     expect(session?.User.organizationId).toBe(testOrgId);
   });
 
@@ -242,12 +243,13 @@ describe('Session Management Integration Tests', () => {
       include: { User: true },
     });
 
-    expect(session?.User.role).toBe('BUSINESS_USER');
+    // Role Consolidation Epic 2: active role derives from platformRole (null => Business User).
+    expect(session?.User.platformRole ?? 'BUSINESS_USER').toBe('BUSINESS_USER');
 
-    // Update user role
+    // Update user role (staff role writes platformRole)
     await db.user.update({
       where: { id: testUserId },
-      data: { role: 'ANALYST' as UserRole },
+      data: { platformRole: 'ANALYST' as UserRole },
     });
 
     // Fetch session again (simulates next request)
@@ -257,12 +259,12 @@ describe('Session Management Integration Tests', () => {
     });
 
     // Role should be updated (database is source of truth)
-    expect(session?.User.role).toBe('ANALYST');
+    expect(session?.User.platformRole ?? 'BUSINESS_USER').toBe('ANALYST');
 
-    // Reset role for other tests
+    // Reset role for other tests (back to Business User => null platformRole)
     await db.user.update({
       where: { id: testUserId },
-      data: { role: 'BUSINESS_USER' as UserRole },
+      data: { platformRole: null },
     });
   });
 

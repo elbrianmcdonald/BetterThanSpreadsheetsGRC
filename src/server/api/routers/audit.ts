@@ -83,7 +83,7 @@ export const auditRouter = createTRPCRouter({
             select: {
               name: true,
               email: true,
-              role: true,
+              platformRole: true,
             },
           },
         },
@@ -171,7 +171,7 @@ export const auditRouter = createTRPCRouter({
               id: true,
               name: true,
               email: true,
-              role: true,
+              platformRole: true,
             },
           },
         },
@@ -314,7 +314,7 @@ export const auditRouter = createTRPCRouter({
             select: {
               name: true,
               email: true,
-              role: true,
+              platformRole: true,
             },
           },
         },
@@ -390,7 +390,7 @@ export const auditRouter = createTRPCRouter({
             select: {
               name: true,
               email: true,
-              role: true,
+              platformRole: true,
             },
           },
         },
@@ -496,7 +496,7 @@ function convertAuditLogsToCsv(logs: any[]): string {
       return [
         log.timestamp.toISOString(),
         log.user.email || "",
-        log.user.role || "",
+        log.user.platformRole ?? "BUSINESS_USER",
         log.action,
         log.entityType,
         log.entityId,

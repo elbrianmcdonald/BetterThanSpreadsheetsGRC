@@ -36,7 +36,7 @@ describe("Story 5.6: CSV Risk Export", () => {
 
     // Create test user
     const userResult = await prisma.$queryRaw<Array<{ id: string }>>`
-      INSERT INTO "User" (id, email, name, role, "organizationId", "createdAt", "updatedAt")
+      INSERT INTO "User" (id, email, name, "platformRole", "organizationId", "createdAt", "updatedAt")
       VALUES (gen_random_uuid(), 'csv-test@example.com', 'CSV Test User', 'ANALYST', ${testOrgId}, NOW(), NOW())
       RETURNING id
     `;

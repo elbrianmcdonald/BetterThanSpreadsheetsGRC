@@ -116,7 +116,7 @@ describe("Compliance Deliverable data service (AC8, AC11, AC19)", () => {
         email: `owner-a-${stamp}@example.com`,
         name: "Owner A",
         organizationId: orgA.id,
-        role: UserRole.ANALYST,
+        platformRole: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });

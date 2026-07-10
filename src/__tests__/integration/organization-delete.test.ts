@@ -27,7 +27,7 @@ const createCaller = (user: TestUser) =>
 async function mkUser(orgId: string, role: UserRole, tag: string, platformRole: UserRole | null = null): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
   const u = await db.user.create({
-    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, platformRole, updatedAt: new Date() },
+    data: { id: randomUUID(), email, name: tag, organizationId: orgId, platformRole, updatedAt: new Date() },
   });
   return { id: u.id, email, organizationId: orgId, role };
 }
@@ -46,7 +46,7 @@ describe("Multi-Tenancy — delete company + listCompanies", () => {
     orgAdmin = await mkUser(homeOrg.id, UserRole.ADMINISTRATOR, "oa");
     // A user + membership inside the victim org, to prove cascade removal.
     const victimUser = await mkUser(victimOrg.id, UserRole.BUSINESS_USER, "victim");
-    await db.organizationMembership.create({ data: { id: randomUUID(), userId: victimUser.id, organizationId: victimOrg.id, role: UserRole.BUSINESS_USER } });
+    await db.organizationMembership.create({ data: { id: randomUUID(), userId: victimUser.id, organizationId: victimOrg.id, updatedAt: new Date() } });
   });
 
   afterAll(async () => {

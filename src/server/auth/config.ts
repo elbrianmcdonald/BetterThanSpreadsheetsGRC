@@ -134,12 +134,18 @@ export const authConfig = {
         await recordLoginAttempt(email, true);
         await clearFailedAttempts(email);
 
+        // Role Consolidation Epic 2: role is derived — platformRole for staff, or
+        // BUSINESS_USER via org membership. No stored User.role.
+        const activeRole =
+          (await resolveActiveRole(db, user.id, user.organizationId)) ??
+          UserRole.BUSINESS_USER;
+
         // Return user object (NextAuth will create session)
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: activeRole,
           organizationId: user.organizationId,
           // Story 3.7: Include assigned frameworks for auditor role access control
           assignedFrameworks: user.assignedFrameworks ?? [],
@@ -176,10 +182,10 @@ export const authConfig = {
       // On sign-in, add user data to token
       if (user) {
         token.id = user.id;
-        // Role Consolidation Epic 2: staff act at their platformRole; org-bound
-        // Business Users act at their stored role.
+        // Role Consolidation Epic 2: role is the derived active role (platformRole
+        // for staff, else BUSINESS_USER); platformRole marks all-org staff scope.
         token.platformRole = user.platformRole ?? null;
-        token.role = user.platformRole ?? user.role;
+        token.role = user.role;
         token.organizationId = user.organizationId;
         // Story 3.7: Include assigned frameworks for auditor role access control
         token.assignedFrameworks = user.assignedFrameworks ?? [];

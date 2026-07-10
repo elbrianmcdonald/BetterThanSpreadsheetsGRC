@@ -61,39 +61,41 @@ beforeAll(async () => {
     },
   });
 
-  // Create test users
-  adminA = await db.user.create({
+  // Create test users. Role Consolidation Epic 2: staff carry platformRole; the
+  // intended `role` is attached to each JS object so createCaller can build
+  // session.user.role.
+  adminA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Admin A",
       email: "admin-a@test-user-mgmt.com",
-      role: "ADMINISTRATOR",
+      platformRole: "ADMINISTRATOR",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ADMINISTRATOR" };
 
-  analystA = await db.user.create({
+  analystA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Analyst A",
       email: "analyst-a@test-user-mgmt.com",
-      role: "ANALYST",
+      platformRole: "ANALYST",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ANALYST" };
 
-  adminB = await db.user.create({
+  adminB = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Admin B",
       email: "admin-b@test-user-mgmt.com",
-      role: "ADMINISTRATOR",
+      platformRole: "ADMINISTRATOR",
       organizationId: orgB.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ADMINISTRATOR" };
 });
 
 afterAll(async () => {

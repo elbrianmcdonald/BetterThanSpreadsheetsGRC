@@ -61,29 +61,30 @@ describe("Risk Matrix Template Management - Story 7.8.2", () => {
       },
     });
 
-    // Create admin user (ORG_ADMIN role)
-    adminUser = await db.user.create({
+    // Create admin user (ORG_ADMIN role) — staff → platformRole; role attached to
+    // the JS object so createCaller can build session.user.role.
+    adminUser = { ...(await db.user.create({
       data: {
         id: randomUUID(),
         email: `admin-matrix-test-${Date.now()}@example.com`,
         name: "Admin Test User",
         organizationId: testOrg.id,
-        role: UserRole.ADMINISTRATOR,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
-    });
+    })), role: UserRole.ADMINISTRATOR };
 
     // Create analyst user (GRC_ANALYST role) - should NOT have permission
-    analystUser = await db.user.create({
+    analystUser = { ...(await db.user.create({
       data: {
         id: randomUUID(),
         email: `analyst-matrix-test-${Date.now()}@example.com`,
         name: "Analyst Test User",
         organizationId: testOrg.id,
-        role: UserRole.ANALYST,
+        platformRole: UserRole.ANALYST,
         updatedAt: new Date(),
       },
-    });
+    })), role: UserRole.ANALYST };
   });
 
   afterAll(async () => {
@@ -601,16 +602,16 @@ describe("Risk Matrix Template Management - Story 7.8.2", () => {
         },
       });
 
-      otherOrgUser = await db.user.create({
+      otherOrgUser = { ...(await db.user.create({
         data: {
           id: randomUUID(),
           email: `other-org-matrix-${Date.now()}@example.com`,
           name: "Other Org User",
           organizationId: otherOrg.id,
-          role: UserRole.ADMINISTRATOR,
+          platformRole: UserRole.ADMINISTRATOR,
           updatedAt: new Date(),
         },
-      });
+      })), role: UserRole.ADMINISTRATOR };
     });
 
     afterAll(async () => {

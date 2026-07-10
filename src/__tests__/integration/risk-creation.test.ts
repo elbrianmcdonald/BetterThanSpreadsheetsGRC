@@ -76,12 +76,16 @@ beforeAll(async () => {
     role: UserRole,
     orgId: string
   ) => {
+    // Role Consolidation Epic 2: staff carry platformRole; Business Users have a
+    // null platformRole. `role` is attached to the returned JS object so the
+    // caller can still build session.user.role.
+    const isStaff = role !== "BUSINESS_USER";
     const user = await db.user.create({
       data: {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: isStaff ? role : null,
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -89,7 +93,7 @@ beforeAll(async () => {
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role,
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,

@@ -43,7 +43,7 @@ const createUser = async (
       id: randomUUID(),
       name,
       email,
-      role,
+      platformRole: role === UserRole.BUSINESS_USER ? null : role,
       organizationId: orgId,
       updatedAt: new Date(),
     },
@@ -51,7 +51,7 @@ const createUser = async (
   return {
     id: user.id,
     email: user.email!,
-    role: user.role,
+    role,
     organizationId: user.organizationId,
     name: user.name!,
     assignedFrameworks: user.assignedFrameworks,

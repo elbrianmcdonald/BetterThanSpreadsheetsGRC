@@ -120,10 +120,8 @@ export const organizationRouter = createTRPCRouter({
         data: { id: organizationId, name: input.name, slug, active: true, updatedAt: new Date() },
       });
 
-      // Creator becomes ADMIN of the new company (FR12).
-      await ctx.db.organizationMembership.create({
-        data: { id: randomUUID(), userId, organizationId, role: UserRole.ADMINISTRATOR },
-      });
+      // Role Consolidation Epic 2: the creator is a platform Administrator (staff)
+      // and reaches every org via platformRole — no per-org membership needed (FR12).
 
       // Provision baseline defaults inside the new org's context so the org-filter
       // scopes the seeded rows to it (FR11).
@@ -153,15 +151,15 @@ export const organizationRouter = createTRPCRouter({
       where: { organizationId: ctx.organizationId! },
       select: {
         userId: true,
-        role: true,
         createdAt: true,
         User: { select: { name: true, email: true } },
       },
       orderBy: { createdAt: "asc" },
     });
+    // Role Consolidation Epic 2: members are org-bound Business Users (no stored role).
     return memberships.map((m) => ({
       userId: m.userId,
-      role: m.role,
+      role: UserRole.BUSINESS_USER,
       name: m.User.name,
       email: m.User.email,
     }));
@@ -186,8 +184,10 @@ export const organizationRouter = createTRPCRouter({
         throw new TRPCError({ code: "CONFLICT", message: "User is already a member of this company" });
       }
 
+      // A member is an org-bound Business User (no stored role). To grant staff
+      // authority instead, use setPlatformAdmin / platformRole.
       await ctx.db.organizationMembership.create({
-        data: { id: randomUUID(), userId: user.id, organizationId: ctx.organizationId!, role: input.role },
+        data: { id: randomUUID(), userId: user.id, organizationId: ctx.organizationId! },
       });
 
       void createAuditLog({
@@ -196,27 +196,40 @@ export const organizationRouter = createTRPCRouter({
         action: AuditAction.MEMBERSHIP_GRANTED,
         entityType: "OrganizationMembership",
         entityId: user.id,
-        changes: { after: { userId: user.id, role: input.role } },
+        changes: { after: { userId: user.id, role: UserRole.BUSINESS_USER } },
       });
 
       return { userId: user.id };
     }),
 
-  /** Change a member's role in the active company (FR14). */
+  /**
+   * Change a user's role (FR14). Role Consolidation Epic 2: a staff role is set on
+   * `User.platformRole` (all-org, membership removed); BUSINESS_USER clears
+   * platformRole and ensures an org membership.
+   */
   updateMemberRole: adminProcedure
     .input(z.object({ userId: z.string().min(1), role: z.nativeEnum(UserRole) }))
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.organizationMembership.findUnique({
-        where: { userId_organizationId: { userId: input.userId, organizationId: ctx.organizationId! } },
-      });
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "User is not a member of this company" });
+      const isStaff = input.role !== UserRole.BUSINESS_USER;
+      if (isStaff) {
+        await ctx.db.user.update({
+          where: { id: input.userId },
+          data: { platformRole: input.role },
+        });
+        await ctx.db.organizationMembership.deleteMany({
+          where: { userId: input.userId, organizationId: ctx.organizationId! },
+        });
+      } else {
+        await ctx.db.user.update({
+          where: { id: input.userId },
+          data: { platformRole: null },
+        });
+        await ctx.db.organizationMembership.upsert({
+          where: { userId_organizationId: { userId: input.userId, organizationId: ctx.organizationId! } },
+          create: { id: randomUUID(), userId: input.userId, organizationId: ctx.organizationId! },
+          update: {},
+        });
       }
-
-      await ctx.db.organizationMembership.update({
-        where: { userId_organizationId: { userId: input.userId, organizationId: ctx.organizationId! } },
-        data: { role: input.role },
-      });
 
       void createAuditLog({
         organizationId: ctx.organizationId!,
@@ -224,7 +237,7 @@ export const organizationRouter = createTRPCRouter({
         action: AuditAction.MEMBERSHIP_ROLE_UPDATED,
         entityType: "OrganizationMembership",
         entityId: input.userId,
-        changes: { before: { role: existing.role }, after: { role: input.role } },
+        changes: { after: { role: input.role } },
       });
 
       return { userId: input.userId, role: input.role };
@@ -251,7 +264,7 @@ export const organizationRouter = createTRPCRouter({
         action: AuditAction.MEMBERSHIP_REVOKED,
         entityType: "OrganizationMembership",
         entityId: input.userId,
-        changes: { before: { role: existing.role } },
+        changes: { before: { userId: input.userId } },
       });
 
       return { userId: input.userId };

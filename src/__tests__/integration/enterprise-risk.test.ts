@@ -50,10 +50,10 @@ beforeAll(async () => {
 
   const mkUser = async (role: UserRole, orgId: string, email: string, name: string) => {
     const u = await rawPrisma.user.create({
-      data: { id: randomUUID(), name, email, role, organizationId: orgId, updatedAt: new Date() },
+      data: { id: randomUUID(), name, email, platformRole: role === "BUSINESS_USER" ? null : role, organizationId: orgId, updatedAt: new Date() },
     });
     return {
-      id: u.id, email: u.email!, role: u.role, organizationId: u.organizationId,
+      id: u.id, email: u.email!, role, organizationId: u.organizationId,
       name: u.name!, assignedFrameworks: u.assignedFrameworks,
     };
   };

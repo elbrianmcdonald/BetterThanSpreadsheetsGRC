@@ -66,49 +66,61 @@ beforeAll(async () => {
   });
 
   // Create test users with different roles
-  adminA = await db.user.create({
-    data: {
-      id: randomUUID(),
-      name: "Admin A",
-      email: "admin-a@rbac-test.com",
-      role: "ADMINISTRATOR",
-      organizationId: orgA.id,
-      updatedAt: new Date(),
-    },
-  });
+  adminA = {
+    ...(await db.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Admin A",
+        email: "admin-a@rbac-test.com",
+        platformRole: "ADMINISTRATOR",
+        organizationId: orgA.id,
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ADMINISTRATOR" as UserRole,
+  };
 
-  analystA = await db.user.create({
-    data: {
-      id: randomUUID(),
-      name: "Analyst A",
-      email: "analyst-a@rbac-test.com",
-      role: "ANALYST",
-      organizationId: orgA.id,
-      updatedAt: new Date(),
-    },
-  });
+  analystA = {
+    ...(await db.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Analyst A",
+        email: "analyst-a@rbac-test.com",
+        platformRole: "ANALYST",
+        organizationId: orgA.id,
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ANALYST" as UserRole,
+  };
 
-  auditorA = await db.user.create({
-    data: {
-      id: randomUUID(),
-      name: "Auditor A",
-      email: "auditor-a@rbac-test.com",
-      role: "BUSINESS_USER",
-      organizationId: orgA.id,
-      updatedAt: new Date(),
-    },
-  });
+  // Business User: no platformRole (null); existence implies BUSINESS_USER.
+  auditorA = {
+    ...(await db.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Auditor A",
+        email: "auditor-a@rbac-test.com",
+        organizationId: orgA.id,
+        updatedAt: new Date(),
+      },
+    })),
+    role: "BUSINESS_USER" as UserRole,
+  };
 
-  adminB = await db.user.create({
-    data: {
-      id: randomUUID(),
-      name: "Admin B",
-      email: "admin-b@rbac-test.com",
-      role: "ADMINISTRATOR",
-      organizationId: orgB.id,
-      updatedAt: new Date(),
-    },
-  });
+  adminB = {
+    ...(await db.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Admin B",
+        email: "admin-b@rbac-test.com",
+        platformRole: "ADMINISTRATOR",
+        organizationId: orgB.id,
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ADMINISTRATOR" as UserRole,
+  };
 });
 
 afterAll(async () => {

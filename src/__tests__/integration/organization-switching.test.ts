@@ -47,7 +47,6 @@ async function mkUser(
       email,
       name: tag,
       organizationId: orgId,
-      role,
       platformRole,
       updatedAt: new Date(),
     },
@@ -55,9 +54,9 @@ async function mkUser(
   return { id: u.id, email, organizationId: orgId, role };
 }
 
-async function mkMembership(userId: string, organizationId: string, role: UserRole) {
+async function mkMembership(userId: string, organizationId: string) {
   await db.organizationMembership.create({
-    data: { id: randomUUID(), userId, organizationId, role },
+    data: { id: randomUUID(), userId, organizationId, updatedAt: new Date() },
   });
 }
 
@@ -79,15 +78,15 @@ describe("Epic 1 — organization switching + membership isolation", () => {
       data: { id: randomUUID(), name: `B-Corp ${stamp}`, slug: `b-corp-${stamp}`, updatedAt: new Date() },
     });
 
-    userBoth = await mkUser(orgA.id, UserRole.ADMINISTRATOR, "both");
-    await mkMembership(userBoth.id, orgA.id, UserRole.ADMINISTRATOR);
-    await mkMembership(userBoth.id, orgB.id, UserRole.BUSINESS_USER);
+    userBoth = await mkUser(orgA.id, UserRole.BUSINESS_USER, "both");
+    await mkMembership(userBoth.id, orgA.id);
+    await mkMembership(userBoth.id, orgB.id);
 
-    userAOnly = await mkUser(orgA.id, UserRole.ADMINISTRATOR, "aonly");
-    await mkMembership(userAOnly.id, orgA.id, UserRole.ADMINISTRATOR);
+    userAOnly = await mkUser(orgA.id, UserRole.BUSINESS_USER, "aonly");
+    await mkMembership(userAOnly.id, orgA.id);
 
     platformAdmin = await mkUser(orgA.id, UserRole.ADMINISTRATOR, "super", UserRole.ADMINISTRATOR);
-    await mkMembership(platformAdmin.id, orgA.id, UserRole.ADMINISTRATOR);
+    await mkMembership(platformAdmin.id, orgA.id);
 
     // One framework in each org to prove isolation across a switch.
     aFrameworkId = randomUUID();

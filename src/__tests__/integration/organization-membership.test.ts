@@ -28,13 +28,13 @@ const createCaller = (user: TestUser) =>
 async function mkUser(orgId: string, role: UserRole, tag: string, platformRole: UserRole | null = null): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
   const u = await db.user.create({
-    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, platformRole, updatedAt: new Date() },
+    data: { id: randomUUID(), email, name: tag, organizationId: orgId, platformRole, updatedAt: new Date() },
   });
   return { id: u.id, email, organizationId: orgId, role };
 }
 
-async function mkMembership(userId: string, organizationId: string, role: UserRole) {
-  await db.organizationMembership.create({ data: { id: randomUUID(), userId, organizationId, role } });
+async function mkMembership(userId: string, organizationId: string) {
+  await db.organizationMembership.create({ data: { id: randomUUID(), userId, organizationId, updatedAt: new Date() } });
 }
 
 describe("Epic 3 — membership management + platform admin", () => {
@@ -54,18 +54,18 @@ describe("Epic 3 — membership management + platform admin", () => {
     orgOther = await db.organization.create({ data: { id: randomUUID(), name: `Other ${s}`, slug: `other-${s}`, updatedAt: new Date() } });
 
     admin = await mkUser(orgHome.id, UserRole.ADMINISTRATOR, "admin");
-    await mkMembership(admin.id, orgHome.id, UserRole.ADMINISTRATOR);
+    await mkMembership(admin.id, orgHome.id);
     auditor = await mkUser(orgHome.id, UserRole.BUSINESS_USER, "auditor");
     platformAdmin = await mkUser(orgHome.id, UserRole.ADMINISTRATOR, "platform", UserRole.ADMINISTRATOR);
 
     t1 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t1");
     t2 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t2");
-    await mkMembership(t2.id, orgHome.id, UserRole.BUSINESS_USER);
+    await mkMembership(t2.id, orgHome.id);
     t3 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t3");
-    await mkMembership(t3.id, orgHome.id, UserRole.BUSINESS_USER);
+    await mkMembership(t3.id, orgHome.id);
     t4 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t4");
-    await mkMembership(t4.id, orgHome.id, UserRole.BUSINESS_USER);
-    await mkMembership(t4.id, orgOther.id, UserRole.BUSINESS_USER);
+    await mkMembership(t4.id, orgHome.id);
+    await mkMembership(t4.id, orgOther.id);
   });
 
   afterAll(async () => {
@@ -79,12 +79,13 @@ describe("Epic 3 — membership management + platform admin", () => {
 
   // ---- Story 3.1 ----
   it("an admin attaches an existing user to the active company (FR13)", async () => {
-    await createCaller(admin).organization.addMember({ email: t1.email, role: UserRole.ANALYST });
+    await createCaller(admin).organization.addMember({ email: t1.email, role: UserRole.BUSINESS_USER });
 
+    // A member is an org-bound Business User (membership exists, no stored role).
     const membership = await db.organizationMembership.findUnique({
       where: { userId_organizationId: { userId: t1.id, organizationId: orgHome.id } },
     });
-    expect(membership?.role).toBe(UserRole.ANALYST);
+    expect(membership).not.toBeNull();
 
     const members = await createCaller(admin).organization.listMembers();
     expect(members.map((m) => m.userId)).toContain(t1.id);
@@ -109,12 +110,15 @@ describe("Epic 3 — membership management + platform admin", () => {
   });
 
   // ---- Story 3.2 ----
-  it("an admin changes a member's role (FR14)", async () => {
+  it("an admin promotes a member to a staff role (FR14)", async () => {
     await createCaller(admin).organization.updateMemberRole({ userId: t2.id, role: UserRole.MANAGER });
+    // Staff authority is stored on platformRole; the org membership is removed.
+    const user = await db.user.findUnique({ where: { id: t2.id }, select: { platformRole: true } });
+    expect(user?.platformRole).toBe(UserRole.MANAGER);
     const membership = await db.organizationMembership.findUnique({
       where: { userId_organizationId: { userId: t2.id, organizationId: orgHome.id } },
     });
-    expect(membership?.role).toBe(UserRole.MANAGER);
+    expect(membership).toBeNull();
   });
 
   it("an admin removes a member (FR14)", async () => {

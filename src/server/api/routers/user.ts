@@ -74,13 +74,18 @@ export const userRouter = createTRPCRouter({
       const generatedPassword = generateSecurePassword();
       const hashedPassword = await hashPassword(generatedPassword);
 
+      // Role Consolidation Epic 2: staff (ANALYST/MANAGER/ADMINISTRATOR) carry
+      // platformRole and have NO org membership. Business Users have platformRole
+      // null and are provisioned with an OrganizationMembership in this org.
+      const isStaff = input.role !== UserRole.BUSINESS_USER;
+
       // Story 3.8: Create user with organization isolation and framework assignments
       const newUser = await ctx.db.user.create({
         data: {
           id: randomUUID(),
           name: input.name,
           email: input.email,
-          role: input.role,
+          platformRole: isStaff ? input.role : null,
           hashedPassword, // Store hashed password for local auth
           organizationId: ctx.organizationId!, // CRITICAL: Multi-tenant isolation
           // Story 3.8: Assign frameworks for AUDITOR role access restriction
@@ -91,13 +96,27 @@ export const userRouter = createTRPCRouter({
           id: true,
           name: true,
           email: true,
-          role: true,
+          platformRole: true,
           organizationId: true,
           assignedFrameworks: true,
           createdAt: true,
           updatedAt: true,
         },
       });
+
+      // Business Users are represented by an OrganizationMembership (no role column).
+      if (!isStaff) {
+        await ctx.db.organizationMembership.create({
+          data: {
+            id: randomUUID(),
+            userId: newUser.id,
+            organizationId: ctx.organizationId!,
+            updatedAt: new Date(),
+          },
+        });
+      }
+
+      const resolvedRole = newUser.platformRole ?? UserRole.BUSINESS_USER;
 
       // Audit log entry (Story 3.8: Include assignedFrameworks)
       await ctx.db.auditLog.create({
@@ -113,7 +132,7 @@ export const userRouter = createTRPCRouter({
               id: newUser.id,
               name: newUser.name,
               email: newUser.email,
-              role: newUser.role,
+              role: resolvedRole,
               assignedFrameworks: newUser.assignedFrameworks,
             },
           },
@@ -123,6 +142,7 @@ export const userRouter = createTRPCRouter({
       // Return user with generated password (one-time display to admin)
       return {
         ...newUser,
+        role: resolvedRole, // Derived active role for the client
         generatedPassword, // IMPORTANT: Only shown once, admin must communicate to user
       };
     }),
@@ -168,7 +188,7 @@ export const userRouter = createTRPCRouter({
           id: true,
           name: true,
           email: true,
-          role: true,
+          platformRole: true,
           assignedFrameworks: true,
           createdAt: true,
           updatedAt: true,
@@ -214,7 +234,11 @@ export const userRouter = createTRPCRouter({
       });
 
       return {
-        users,
+        // Derive the active role from platformRole (null => Business User)
+        users: users.map((u) => ({
+          ...u,
+          role: u.platformRole ?? UserRole.BUSINESS_USER,
+        })),
         total,
         skip: input.skip ?? 0,
         take: input.take ?? 50,
@@ -246,7 +270,7 @@ export const userRouter = createTRPCRouter({
           id: true,
           name: true,
           email: true,
-          role: true,
+          platformRole: true,
           assignedFrameworks: true,
           createdAt: true,
           updatedAt: true,
@@ -290,7 +314,8 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      return user;
+      // Derive the active role from platformRole (null => Business User)
+      return { ...user, role: user.platformRole ?? UserRole.BUSINESS_USER };
     }),
 
   /**
@@ -363,7 +388,7 @@ export const userRouter = createTRPCRouter({
       const beforeState = {
         name: existingUser.name,
         email: existingUser.email,
-        role: existingUser.role,
+        role: existingUser.platformRole ?? UserRole.BUSINESS_USER,
         assignedFrameworks: existingUser.assignedFrameworks,
         businessUnitId: existingUser.businessUnitId,
       };
@@ -373,6 +398,11 @@ export const userRouter = createTRPCRouter({
         ? await hashPassword(input.newPassword)
         : undefined;
 
+      // Role Consolidation Epic 2: a role change writes platformRole (staff) or null
+      // (Business User) — never the removed User.role column.
+      const roleChanged = input.role !== undefined;
+      const isStaff = roleChanged && input.role !== UserRole.BUSINESS_USER;
+
       // Story 3.8: Update user with optional assignedFrameworks
       // Story 7.0.4: Update user with optional businessUnitId (AC10, AC19)
       const updatedUser = await ctx.db.user.update({
@@ -380,7 +410,7 @@ export const userRouter = createTRPCRouter({
         data: {
           name: input.name,
           email: input.email,
-          role: input.role,
+          ...(roleChanged ? { platformRole: isStaff ? input.role : null } : {}),
           ...(input.assignedFrameworks !== undefined
             ? { assignedFrameworks: input.assignedFrameworks }
             : {}),
@@ -393,7 +423,7 @@ export const userRouter = createTRPCRouter({
           id: true,
           name: true,
           email: true,
-          role: true,
+          platformRole: true,
           organizationId: true,
           assignedFrameworks: true,
           createdAt: true,
@@ -407,6 +437,34 @@ export const userRouter = createTRPCRouter({
           },
         },
       });
+
+      // Sync org membership to match the new role: staff have none, Business Users
+      // have exactly one membership in this org (no role column).
+      if (roleChanged) {
+        if (isStaff) {
+          await ctx.db.organizationMembership.deleteMany({
+            where: { userId: input.id, organizationId: ctx.organizationId! },
+          });
+        } else {
+          await ctx.db.organizationMembership.upsert({
+            where: {
+              userId_organizationId: {
+                userId: input.id,
+                organizationId: ctx.organizationId!,
+              },
+            },
+            create: {
+              id: randomUUID(),
+              userId: input.id,
+              organizationId: ctx.organizationId!,
+              updatedAt: new Date(),
+            },
+            update: {},
+          });
+        }
+      }
+
+      const resolvedRole = updatedUser.platformRole ?? UserRole.BUSINESS_USER;
 
       // Audit log entry with before/after state (Story 3.8: Include assignedFrameworks, Story 7.0.4: Include businessUnitId - AC22)
       await ctx.db.auditLog.create({
@@ -422,7 +480,7 @@ export const userRouter = createTRPCRouter({
             after: {
               name: updatedUser.name,
               email: updatedUser.email,
-              role: updatedUser.role,
+              role: resolvedRole,
               assignedFrameworks: updatedUser.assignedFrameworks,
               businessUnitId: updatedUser.businessUnitId,
               ...(input.newPassword ? { passwordChanged: true } : {}),
@@ -431,7 +489,7 @@ export const userRouter = createTRPCRouter({
         },
       });
 
-      return updatedUser;
+      return { ...updatedUser, role: resolvedRole };
     }),
 
   /**
@@ -473,22 +531,51 @@ export const userRouter = createTRPCRouter({
         });
       }
 
-      const oldRole = existingUser.role;
+      const oldRole = existingUser.platformRole ?? UserRole.BUSINESS_USER;
+
+      // Role Consolidation Epic 2: staff carry platformRole; Business Users carry null
+      // platformRole + an org membership. Never write the removed User.role column.
+      const isStaff = input.role !== UserRole.BUSINESS_USER;
 
       // Update role
       const updatedUser = await ctx.db.user.update({
         where: { id: input.id },
-        data: { role: input.role },
+        data: { platformRole: isStaff ? input.role : null },
         select: {
           id: true,
           name: true,
           email: true,
-          role: true,
+          platformRole: true,
           organizationId: true,
           createdAt: true,
           updatedAt: true,
         },
       });
+
+      // Sync membership: staff have none, Business Users have exactly one in this org.
+      if (isStaff) {
+        await ctx.db.organizationMembership.deleteMany({
+          where: { userId: input.id, organizationId: ctx.organizationId! },
+        });
+      } else {
+        await ctx.db.organizationMembership.upsert({
+          where: {
+            userId_organizationId: {
+              userId: input.id,
+              organizationId: ctx.organizationId!,
+            },
+          },
+          create: {
+            id: randomUUID(),
+            userId: input.id,
+            organizationId: ctx.organizationId!,
+            updatedAt: new Date(),
+          },
+          update: {},
+        });
+      }
+
+      const newRole = updatedUser.platformRole ?? UserRole.BUSINESS_USER;
 
       // Audit log entry for role change
       await ctx.db.auditLog.create({
@@ -503,12 +590,12 @@ export const userRouter = createTRPCRouter({
             userId: updatedUser.id,
             userName: updatedUser.name,
             oldRole,
-            newRole: updatedUser.role,
+            newRole,
           },
         },
       });
 
-      return updatedUser;
+      return { ...updatedUser, role: newRole };
     }),
 
   /**
@@ -566,7 +653,7 @@ export const userRouter = createTRPCRouter({
               id: existingUser.id,
               name: existingUser.name,
               email: existingUser.email,
-              role: existingUser.role,
+              role: existingUser.platformRole ?? UserRole.BUSINESS_USER,
             },
           },
         },
@@ -615,7 +702,7 @@ export const userRouter = createTRPCRouter({
       }
 
       // Verify user has AUDITOR role
-      if (existingUser.role !== UserRole.BUSINESS_USER) {
+      if ((existingUser.platformRole ?? UserRole.BUSINESS_USER) !== UserRole.BUSINESS_USER) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Framework assignments can only be set for AUDITOR role users",
@@ -656,7 +743,7 @@ export const userRouter = createTRPCRouter({
           id: true,
           name: true,
           email: true,
-          role: true,
+          platformRole: true,
           organizationId: true,
           assignedFrameworks: true,
           createdAt: true,
@@ -685,7 +772,7 @@ export const userRouter = createTRPCRouter({
         },
       });
 
-      return updatedUser;
+      return { ...updatedUser, role: updatedUser.platformRole ?? UserRole.BUSINESS_USER };
     }),
 
   /**
@@ -722,11 +809,13 @@ export const userRouter = createTRPCRouter({
           }
         : {};
 
-      // Fetch users with role filter and count their assigned risks
+      // Fetch users with role filter and count their assigned risks.
+      // Role Consolidation Epic 2: the only supported filter value is BUSINESS_USER,
+      // which is represented by a null platformRole (staff carry a platformRole).
       const users = await ctx.db.user.findMany({
         where: {
           organizationId: ctx.organizationId!, // CRITICAL: Multi-tenant isolation
-          role: input.role as UserRole,
+          platformRole: null,
           ...searchFilter,
         },
         select: {
@@ -734,7 +823,7 @@ export const userRouter = createTRPCRouter({
           name: true,
           email: true,
           image: true,
-          role: true,
+          platformRole: true,
         },
         orderBy: { name: "asc" },
       });
@@ -745,7 +834,7 @@ export const userRouter = createTRPCRouter({
         name: user.name,
         email: user.email,
         image: user.image,
-        role: user.role,
+        role: user.platformRole ?? UserRole.BUSINESS_USER,
         assignedRiskCount: 0,
       }));
     }),
@@ -910,7 +999,7 @@ export const userRouter = createTRPCRouter({
           name: true,
           email: true,
           image: true,
-          role: true,
+          platformRole: true,
           businessUnitId: true,
           businessUnit: {
             select: {
@@ -944,11 +1033,17 @@ export const userRouter = createTRPCRouter({
         orderBy: { name: "asc" },
       });
 
-      // Split into suggested and others (AC23)
-      const suggested: typeof users = [];
-      const others: typeof users = [];
+      // Attach the derived active role (platformRole null => Business User)
+      const withRole = users.map((user) => ({
+        ...user,
+        role: user.platformRole ?? UserRole.BUSINESS_USER,
+      }));
 
-      for (const user of users) {
+      // Split into suggested and others (AC23)
+      const suggested: typeof withRole = [];
+      const others: typeof withRole = [];
+
+      for (const user of withRole) {
         if (
           user.businessUnitId &&
           prioritizedBUIds.length > 0 &&

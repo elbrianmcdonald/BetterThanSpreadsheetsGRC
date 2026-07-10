@@ -14,21 +14,12 @@ import { seedGlobexDemoData } from './seeds/demo-data-globex';
 // the membership backfill is inlined below (kept in sync with
 // src/server/services/organization/backfill.ts, which the app + tests use).
 async function backfillMemberships(
-  db: PrismaClient,
+  _db: PrismaClient,
 ): Promise<{ created: number }> {
-  const users = await db.user.findMany({
-    select: { id: true, organizationId: true, role: true },
-  });
-  if (users.length === 0) return { created: 0 };
-  const result = await db.organizationMembership.createMany({
-    data: users.map((u) => ({
-      userId: u.id,
-      organizationId: u.organizationId,
-      role: u.role,
-    })),
-    skipDuplicates: true,
-  });
-  return { created: result.count };
+  // Role Consolidation Epic 2: obsolete. There is no stored User.role to backfill
+  // from — staff carry platformRole (all-org, no membership) and Business Users are
+  // provisioned with a membership directly. Retained as a no-op for callers.
+  return { created: 0 };
 }
 import { seedEnterpriseRisks } from './seeds/enterprise-risks';
 
@@ -126,7 +117,7 @@ async function main() {
       email: 'admin@acme-corp.com',
       name: 'Alice Admin',
       hashedPassword: DEFAULT_PASSWORD_HASH,
-      role: 'ADMINISTRATOR',
+      platformRole: 'ADMINISTRATOR',
       organizationId: orgA.id,
       emailVerified: new Date(),
       updatedAt: new Date(),
@@ -141,7 +132,7 @@ async function main() {
       email: 'analyst@acme-corp.com',
       name: 'Bob Analyst',
       hashedPassword: DEFAULT_PASSWORD_HASH,
-      role: 'ANALYST',
+      platformRole: 'ANALYST',
       organizationId: orgA.id,
       emailVerified: new Date(),
       updatedAt: new Date(),
@@ -159,7 +150,7 @@ async function main() {
       email: 'admin@globex-inc.com',
       name: 'Carol Admin',
       hashedPassword: DEFAULT_PASSWORD_HASH,
-      role: 'ADMINISTRATOR',
+      platformRole: 'ADMINISTRATOR',
       organizationId: orgB.id,
       emailVerified: new Date(),
       updatedAt: new Date(),
@@ -174,7 +165,7 @@ async function main() {
       email: 'engineer@globex-inc.com',
       name: 'David Engineer',
       hashedPassword: DEFAULT_PASSWORD_HASH,
-      role: 'ANALYST',
+      platformRole: 'ANALYST',
       organizationId: orgB.id,
       emailVerified: new Date(),
       updatedAt: new Date(),

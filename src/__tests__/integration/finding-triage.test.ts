@@ -15,7 +15,7 @@
 import { db } from "@/server/db";
 import { appRouter } from "@/server/api/root";
 import { randomUUID } from "crypto";
-import { type UserRole, Severity, FindingSource, FindingStatus, AuditAction } from "@prisma/client";
+import { UserRole, Severity, FindingSource, FindingStatus, AuditAction } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 import {
@@ -95,7 +95,7 @@ beforeAll(async () => {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: role === UserRole.BUSINESS_USER ? null : role,
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -103,7 +103,7 @@ beforeAll(async () => {
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role,
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,

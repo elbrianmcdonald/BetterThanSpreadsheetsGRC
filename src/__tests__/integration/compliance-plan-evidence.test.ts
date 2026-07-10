@@ -25,7 +25,12 @@ const createCaller = (user: TestUser) =>
 
 async function mkUser(orgId: string, role: UserRole, tag: string): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
-  const u = await db.user.create({ data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, updatedAt: new Date() } });
+  const isStaff = role !== UserRole.BUSINESS_USER;
+  const u = await db.user.create({ data: { id: randomUUID(), email, name: tag, organizationId: orgId, platformRole: isStaff ? role : null, updatedAt: new Date() } });
+  if (!isStaff) {
+    // Business user derives role from org membership existence
+    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgId, updatedAt: new Date() } });
+  }
   return { id: u.id, email, organizationId: orgId, role };
 }
 

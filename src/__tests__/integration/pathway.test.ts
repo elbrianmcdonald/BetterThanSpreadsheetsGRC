@@ -141,10 +141,10 @@ describe("Pathway router - Epic 19", () => {
       data: { id: randomUUID(), name: `Pathway Org B ${stamp}`, slug: `pw-b-${stamp}`, updatedAt: new Date() },
     });
     const uA = await db.user.create({
-      data: { id: randomUUID(), email: `pwa-${stamp}@example.com`, name: "PW A", organizationId: orgA.id, role: UserRole.ANALYST, updatedAt: new Date() },
+      data: { id: randomUUID(), email: `pwa-${stamp}@example.com`, name: "PW A", organizationId: orgA.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
     });
     const uB = await db.user.create({
-      data: { id: randomUUID(), email: `pwb-${stamp}@example.com`, name: "PW B", organizationId: orgB.id, role: UserRole.ANALYST, updatedAt: new Date() },
+      data: { id: randomUUID(), email: `pwb-${stamp}@example.com`, name: "PW B", organizationId: orgB.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
     });
     userA = { id: uA.id, email: uA.email, organizationId: orgA.id, role: UserRole.ANALYST };
     userB = { id: uB.id, email: uB.email, organizationId: orgB.id, role: UserRole.ANALYST };

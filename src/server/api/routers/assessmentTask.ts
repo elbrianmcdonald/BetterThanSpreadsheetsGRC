@@ -131,7 +131,7 @@ export const assessmentTaskRouter = createTRPCRouter({
             id: input.assignedToId,
             organizationId: ctx.organizationId,
           },
-          select: { id: true, role: true },
+          select: { id: true, platformRole: true },
         });
 
         if (!assignee) {
@@ -141,7 +141,7 @@ export const assessmentTaskRouter = createTRPCRouter({
           });
         }
 
-        if (!ASSIGNEE_ROLES.includes(assignee.role as UserRole)) {
+        if (!ASSIGNEE_ROLES.includes(assignee.platformRole ?? UserRole.BUSINESS_USER)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "User cannot be assigned to assessment tasks",
@@ -327,7 +327,7 @@ export const assessmentTaskRouter = createTRPCRouter({
           id: input.assignedToId,
           organizationId: ctx.organizationId,
         },
-        select: { id: true, role: true, name: true, email: true },
+        select: { id: true, platformRole: true, name: true, email: true },
       });
 
       if (!assignee) {
@@ -337,7 +337,7 @@ export const assessmentTaskRouter = createTRPCRouter({
         });
       }
 
-      if (!ASSIGNEE_ROLES.includes(assignee.role as UserRole)) {
+      if (!ASSIGNEE_ROLES.includes(assignee.platformRole ?? UserRole.BUSINESS_USER)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "User cannot be assigned to assessment tasks",
@@ -544,18 +544,22 @@ export const assessmentTaskRouter = createTRPCRouter({
     const users = await ctx.db.user.findMany({
       where: {
         organizationId: ctx.organizationId,
-        role: { in: ASSIGNEE_ROLES },
+        // ASSIGNEE_ROLES are staff roles (ANALYST/MANAGER) — carried on platformRole.
+        platformRole: { in: ASSIGNEE_ROLES },
       },
       select: {
         id: true,
         name: true,
         email: true,
-        role: true,
+        platformRole: true,
       },
       orderBy: { name: "asc" },
     });
 
-    return users;
+    return users.map((u) => ({
+      ...u,
+      role: u.platformRole ?? UserRole.BUSINESS_USER,
+    }));
   }),
 
   /**
@@ -1094,7 +1098,7 @@ export const assessmentTaskRouter = createTRPCRouter({
             id: input.assignedToId,
             organizationId: ctx.organizationId,
           },
-          select: { id: true, role: true },
+          select: { id: true, platformRole: true },
         });
 
         if (!assignee) {
@@ -1104,7 +1108,7 @@ export const assessmentTaskRouter = createTRPCRouter({
           });
         }
 
-        if (!ASSIGNEE_ROLES.includes(assignee.role as UserRole)) {
+        if (!ASSIGNEE_ROLES.includes(assignee.platformRole ?? UserRole.BUSINESS_USER)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "User cannot be assigned to assessment tasks",

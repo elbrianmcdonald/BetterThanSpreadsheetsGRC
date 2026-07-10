@@ -65,7 +65,7 @@ beforeAll(async () => {
   // Create test users using raw SQL to bypass organization middleware
   const grcUserId = randomUUID();
   await db.$executeRaw`
-    INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
+    INSERT INTO "User" (id, name, email, "platformRole", "organizationId", "hashedPassword", "updatedAt")
     VALUES (${grcUserId}, 'GRC Analyst', 'grc@test.com', 'ANALYST'::"UserRole", ${testOrg.id}, 'hash', NOW())
   `;
   testUserGRC = {
@@ -78,8 +78,8 @@ beforeAll(async () => {
 
   const itUserId = randomUUID();
   await db.$executeRaw`
-    INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
-    VALUES (${itUserId}, 'IT Stakeholder', 'it@test.com', 'BUSINESS_USER'::"UserRole", ${testOrg.id}, 'hash', NOW())
+    INSERT INTO "User" (id, name, email, "organizationId", "hashedPassword", "updatedAt")
+    VALUES (${itUserId}, 'IT Stakeholder', 'it@test.com', ${testOrg.id}, 'hash', NOW())
   `;
   testUserIT = {
     id: itUserId,
@@ -98,7 +98,7 @@ beforeAll(async () => {
 
   const otherOrgUserId = randomUUID();
   await db.$executeRaw`
-    INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
+    INSERT INTO "User" (id, name, email, "platformRole", "organizationId", "hashedPassword", "updatedAt")
     VALUES (${otherOrgUserId}, 'Other Org User', 'other@test.com', 'ANALYST'::"UserRole", ${testOrg2.id}, 'hash', NOW())
   `;
   testUserOtherOrg = {

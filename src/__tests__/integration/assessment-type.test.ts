@@ -61,28 +61,34 @@ describe("Assessment Type Management - Story 7.8.1", () => {
     });
 
     // Create admin user (ORG_ADMIN role)
-    adminUser = await db.user.create({
-      data: {
-        id: randomUUID(),
-        email: `admin-type-test-${Date.now()}@example.com`,
-        name: "Admin Test User",
-        organizationId: testOrg.id,
-        role: UserRole.ADMINISTRATOR,
-        updatedAt: new Date(),
-      },
-    });
+    adminUser = {
+      ...(await db.user.create({
+        data: {
+          id: randomUUID(),
+          email: `admin-type-test-${Date.now()}@example.com`,
+          name: "Admin Test User",
+          organizationId: testOrg.id,
+          platformRole: UserRole.ADMINISTRATOR,
+          updatedAt: new Date(),
+        },
+      })),
+      role: UserRole.ADMINISTRATOR,
+    };
 
     // Create analyst user (GRC_ANALYST role) - should NOT have permission
-    analystUser = await db.user.create({
-      data: {
-        id: randomUUID(),
-        email: `analyst-type-test-${Date.now()}@example.com`,
-        name: "Analyst Test User",
-        organizationId: testOrg.id,
-        role: UserRole.ANALYST,
-        updatedAt: new Date(),
-      },
-    });
+    analystUser = {
+      ...(await db.user.create({
+        data: {
+          id: randomUUID(),
+          email: `analyst-type-test-${Date.now()}@example.com`,
+          name: "Analyst Test User",
+          organizationId: testOrg.id,
+          platformRole: UserRole.ANALYST,
+          updatedAt: new Date(),
+        },
+      })),
+      role: UserRole.ANALYST,
+    };
   });
 
   afterAll(async () => {
@@ -441,16 +447,19 @@ describe("Assessment Type Management - Story 7.8.1", () => {
         },
       });
 
-      otherOrgUser = await db.user.create({
-        data: {
-          id: randomUUID(),
-          email: `other-org-type-${Date.now()}@example.com`,
-          name: "Other Org User",
-          organizationId: otherOrg.id,
-          role: UserRole.ADMINISTRATOR,
-          updatedAt: new Date(),
-        },
-      });
+      otherOrgUser = {
+        ...(await db.user.create({
+          data: {
+            id: randomUUID(),
+            email: `other-org-type-${Date.now()}@example.com`,
+            name: "Other Org User",
+            organizationId: otherOrg.id,
+            platformRole: UserRole.ADMINISTRATOR,
+            updatedAt: new Date(),
+          },
+        })),
+        role: UserRole.ADMINISTRATOR,
+      };
     });
 
     afterAll(async () => {

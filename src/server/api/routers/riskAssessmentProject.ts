@@ -553,7 +553,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
         id: true,
         name: true,
         email: true,
-        role: true,
+        platformRole: true,
       },
       orderBy: {
         name: "asc",

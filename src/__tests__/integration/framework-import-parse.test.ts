@@ -72,7 +72,7 @@ describe("Framework Import Parse - Story 24.1", () => {
         email: adminEmail,
         name: "Admin Test User",
         organizationId: testOrg.id,
-        role: UserRole.ADMINISTRATOR,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
@@ -80,7 +80,7 @@ describe("Framework Import Parse - Story 24.1", () => {
       id: createdAdmin.id,
       email: adminEmail,
       organizationId: createdAdmin.organizationId,
-      role: createdAdmin.role,
+      role: UserRole.ADMINISTRATOR,
     };
 
     const analystEmail = `analyst-fwimport-${Date.now()}@example.com`;
@@ -90,7 +90,7 @@ describe("Framework Import Parse - Story 24.1", () => {
         email: analystEmail,
         name: "Analyst Test User",
         organizationId: testOrg.id,
-        role: UserRole.ANALYST,
+        platformRole: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });
@@ -98,7 +98,7 @@ describe("Framework Import Parse - Story 24.1", () => {
       id: createdAnalyst.id,
       email: analystEmail,
       organizationId: createdAnalyst.organizationId,
-      role: createdAnalyst.role,
+      role: UserRole.ANALYST,
     };
   });
 

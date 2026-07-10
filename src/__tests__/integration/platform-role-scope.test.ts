@@ -45,7 +45,6 @@ beforeAll(async () => {
       id: randomUUID(),
       email: "staff@plat-scope.test",
       name: "Staff Analyst",
-      role: UserRole.ANALYST,
       platformRole: UserRole.ANALYST,
       organizationId: orgA.id,
       updatedAt: new Date(),
@@ -59,7 +58,6 @@ beforeAll(async () => {
       id: randomUUID(),
       email: "biz@plat-scope.test",
       name: "Business User",
-      role: UserRole.BUSINESS_USER,
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
@@ -70,7 +68,6 @@ beforeAll(async () => {
       id: randomUUID(),
       userId: biz.id,
       organizationId: orgA.id,
-      role: UserRole.BUSINESS_USER,
       updatedAt: new Date(),
     },
   });

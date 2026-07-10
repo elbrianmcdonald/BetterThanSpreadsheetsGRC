@@ -52,11 +52,11 @@ describe("Epic 1 — Story 1.3 switch session claim + audit", () => {
     orgC = await db.organization.create({ data: { id: randomUUID(), name: `SC ${stamp}`, slug: `sc-${stamp}`, updatedAt: new Date() } });
 
     const u = await db.user.create({
-      data: { id: randomUUID(), email: `both-${stamp}@example.com`, name: "both", organizationId: orgA.id, role: UserRole.ADMINISTRATOR, updatedAt: new Date() },
+      data: { id: randomUUID(), email: `both-${stamp}@example.com`, name: "both", organizationId: orgA.id, updatedAt: new Date() },
     });
     userBoth = { id: u.id, email: u.email!, organizationId: orgA.id, role: UserRole.ADMINISTRATOR };
-    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgA.id, role: UserRole.ADMINISTRATOR } });
-    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgB.id, role: UserRole.BUSINESS_USER } });
+    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgA.id, updatedAt: new Date() } });
+    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgB.id, updatedAt: new Date() } });
   });
 
   afterAll(async () => {

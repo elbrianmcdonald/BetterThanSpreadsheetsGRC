@@ -107,7 +107,7 @@ beforeAll(async () => {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: role === "BUSINESS_USER" ? null : role,
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -115,7 +115,7 @@ beforeAll(async () => {
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role,
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,

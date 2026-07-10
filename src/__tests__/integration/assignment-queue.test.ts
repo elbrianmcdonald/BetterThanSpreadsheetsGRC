@@ -58,20 +58,32 @@ beforeAll(async () => {
     role: UserRole,
     orgId: string
   ) => {
+    const isStaff = role !== UserRole.BUSINESS_USER;
     const user = await db.user.create({
       data: {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: isStaff ? role : null,
         organizationId: orgId,
         updatedAt: new Date(),
       },
     });
+    if (!isStaff) {
+      // Business user derives role from org membership existence
+      await db.organizationMembership.create({
+        data: {
+          id: randomUUID(),
+          userId: user.id,
+          organizationId: orgId,
+          updatedAt: new Date(),
+        },
+      });
+    }
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role, // JS property for session/caller building
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,

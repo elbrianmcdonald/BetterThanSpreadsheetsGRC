@@ -75,17 +75,20 @@ beforeAll(async () => {
 
   // Create test user
   const testEmail = `user-${randomUUID().slice(0, 8)}@test.com`;
-  testUser = await db.user.create({
-    data: {
-      id: testUserId,
-      name: "Test User",
-      email: testEmail,
-      role: "ANALYST",
-      organizationId: testOrg.id,
-      assignedFrameworks: [],
-      updatedAt: now,
-    },
-  });
+  testUser = {
+    ...(await db.user.create({
+      data: {
+        id: testUserId,
+        name: "Test User",
+        email: testEmail,
+        platformRole: "ANALYST",
+        organizationId: testOrg.id,
+        assignedFrameworks: [],
+        updatedAt: now,
+      },
+    })),
+    role: "ANALYST" as UserRole,
+  };
 
   // Find an existing control domain
   const existingDomain = await db.controlDomain.findFirst({
@@ -243,7 +246,7 @@ describe("Evidence Audit Trail (Story 3.9)", () => {
           id: otherUserId,
           email: `other-${randomUUID().slice(0, 8)}@test.com`,
           name: "Other User",
-          role: "ANALYST",
+          platformRole: "ANALYST",
           organizationId: otherOrgId,
           assignedFrameworks: [],
           updatedAt: new Date(),
@@ -434,7 +437,6 @@ describe("Evidence Audit Trail (Story 3.9)", () => {
           id: itStakeholderId,
           email: `it-stake-${randomUUID().slice(0, 8)}@test.com`,
           name: "IT Stakeholder",
-          role: "BUSINESS_USER",
           organizationId: testOrgId,
           assignedFrameworks: [],
           updatedAt: new Date(),
@@ -481,7 +483,6 @@ describe("Evidence Audit Trail (Story 3.9)", () => {
           id: auditorId,
           email: `auditor-${randomUUID().slice(0, 8)}@test.com`,
           name: "Test Auditor",
-          role: "BUSINESS_USER",
           organizationId: testOrgId,
           assignedFrameworks: [], // Empty = access all frameworks
           updatedAt: new Date(),

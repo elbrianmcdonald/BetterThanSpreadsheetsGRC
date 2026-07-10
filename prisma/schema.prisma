@@ -456,7 +456,7 @@ model OrganizationMembership {
   id             String   @id @default(cuid())
   userId         String
   organizationId String
-  role           UserRole @default(AUDITOR)
+  // Role Consolidation Epic 2: membership existence implies BUSINESS_USER (no stored role).
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -1487,7 +1487,8 @@ model User {
   emailVerified                           DateTime?
   image                                   String?
   hashedPassword                          String?
-  role                                    UserRole                    @default(BUSINESS_USER)
+  // Role Consolidation Epic 2: no stored role — staff carry platformRole, Business
+  // Users are implied by OrganizationMembership; active role is derived.
   organizationId                          String
   // Role Consolidation Epic 2: staff platform role (ANALYST/MANAGER/ADMINISTRATOR)
   // grants that authority across ALL organizations. When set, the user is staff and

@@ -65,7 +65,12 @@ export function CreateUserDialog({
                   id: "temp-id", // Temporary ID
                   name: newUser.name,
                   email: newUser.email,
-                  role: newUser.role ?? UserRole.BUSINESS_USER, // Default to AUDITOR if undefined
+                  role: newUser.role ?? UserRole.BUSINESS_USER, // Default to most-restrictive
+                  // Role Consolidation Epic 2: staff carry platformRole; BUSINESS_USER is null.
+                  platformRole:
+                    newUser.role && newUser.role !== UserRole.BUSINESS_USER
+                      ? newUser.role
+                      : null,
                   assignedFrameworks: newUser.assignedFrameworks ?? [], // Story 3.8
                   createdAt: new Date(),
                   updatedAt: new Date(),

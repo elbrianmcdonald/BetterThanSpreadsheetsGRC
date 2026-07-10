@@ -91,94 +91,93 @@ beforeAll(async () => {
     },
   });
 
-  // Create test users with all roles in Org A
-  cisoA = await db.user.create({
+  // Create test users with all roles in Org A. Role Consolidation Epic 2: staff
+  // carry platformRole; Business Users have null platformRole. The intended `role`
+  // is attached to each JS object so createCaller can build session.user.role.
+  cisoA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "CISO A",
       email: "ciso-a@strategy-test.com",
-      role: "MANAGER",
+      platformRole: "MANAGER",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "MANAGER" };
 
-  analystA = await db.user.create({
+  analystA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Analyst A",
       email: "analyst-a@strategy-test.com",
-      role: "ANALYST",
+      platformRole: "ANALYST",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ANALYST" };
 
-  adminA = await db.user.create({
+  adminA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Admin A",
       email: "admin-a@strategy-test.com",
-      role: "ADMINISTRATOR",
+      platformRole: "ADMINISTRATOR",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ADMINISTRATOR" };
 
-  secEngA = await db.user.create({
+  secEngA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Security Engineer A",
       email: "seceng-a@strategy-test.com",
-      role: "ANALYST",
+      platformRole: "ANALYST",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ANALYST" };
 
-  itStakeA = await db.user.create({
+  itStakeA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "IT Stakeholder A",
       email: "itstake-a@strategy-test.com",
-      role: "BUSINESS_USER",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "BUSINESS_USER" };
 
-  bizStakeA = await db.user.create({
+  bizStakeA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Business Stakeholder A",
       email: "bizstake-a@strategy-test.com",
-      role: "BUSINESS_USER",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "BUSINESS_USER" };
 
-  auditorA = await db.user.create({
+  auditorA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Auditor A",
       email: "auditor-a@strategy-test.com",
-      role: "BUSINESS_USER",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "BUSINESS_USER" };
 
-  adminB = await db.user.create({
+  adminB = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Admin B",
       email: "admin-b@strategy-test.com",
-      role: "ADMINISTRATOR",
+      platformRole: "ADMINISTRATOR",
       organizationId: orgB.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ADMINISTRATOR" };
 });
 
 afterAll(async () => {

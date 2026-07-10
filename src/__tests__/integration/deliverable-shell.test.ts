@@ -79,12 +79,18 @@ describe("Deliverable Shell - Story 17.1", () => {
     orgB = await db.organization.create({
       data: { id: randomUUID(), name: `Deliverable Org B ${stamp}`, slug: `deliv-b-${stamp}`, updatedAt: new Date() },
     });
-    analystA = await db.user.create({
-      data: { id: randomUUID(), email: `a-${stamp}@example.com`, name: "Analyst A", organizationId: orgA.id, role: UserRole.ANALYST, updatedAt: new Date() },
-    });
-    analystB = await db.user.create({
-      data: { id: randomUUID(), email: `b-${stamp}@example.com`, name: "Analyst B", organizationId: orgB.id, role: UserRole.ANALYST, updatedAt: new Date() },
-    });
+    analystA = {
+      ...(await db.user.create({
+        data: { id: randomUUID(), email: `a-${stamp}@example.com`, name: "Analyst A", organizationId: orgA.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
+      })),
+      role: UserRole.ANALYST,
+    };
+    analystB = {
+      ...(await db.user.create({
+        data: { id: randomUUID(), email: `b-${stamp}@example.com`, name: "Analyst B", organizationId: orgB.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
+      })),
+      role: UserRole.ANALYST,
+    };
   });
 
   afterAll(async () => {
