@@ -30,6 +30,8 @@ declare module "next-auth" {
       assignedFrameworks: string[];
       // Multi-Tenancy Epic 3: platform admin flag (UI gating; server is authoritative)
       isPlatformAdmin?: boolean;
+      // Role Consolidation Epic 2: staff platform role (all-org authority), or null for org-bound Business Users
+      platformRole?: UserRole | null;
     } & DefaultSession["user"];
   }
 
@@ -40,6 +42,8 @@ declare module "next-auth" {
     assignedFrameworks: string[];
     // Multi-Tenancy Epic 3: platform admin flag
     isPlatformAdmin?: boolean;
+    // Role Consolidation Epic 2: staff platform role
+    platformRole?: UserRole | null;
   }
 }
 
@@ -144,6 +148,8 @@ export const authConfig = {
           assignedFrameworks: user.assignedFrameworks ?? [],
           // Multi-Tenancy Epic 3: surface platform-admin for UI gating
           isPlatformAdmin: user.isPlatformAdmin ?? false,
+          // Role Consolidation Epic 2: staff platform role (all-org authority)
+          platformRole: user.platformRole ?? null,
         };
       },
     }),
@@ -175,7 +181,10 @@ export const authConfig = {
       // On sign-in, add user data to token
       if (user) {
         token.id = user.id;
-        token.role = user.role;
+        // Role Consolidation Epic 2: staff act at their platformRole; org-bound
+        // Business Users act at their stored role.
+        token.platformRole = user.platformRole ?? null;
+        token.role = user.platformRole ?? user.role;
         token.organizationId = user.organizationId;
         // Story 3.7: Include assigned frameworks for auditor role access control
         token.assignedFrameworks = user.assignedFrameworks ?? [];
@@ -215,6 +224,8 @@ export const authConfig = {
         session.user.assignedFrameworks = (token.assignedFrameworks as string[]) ?? [];
         // Multi-Tenancy Epic 3: platform-admin flag for UI gating
         session.user.isPlatformAdmin = (token.isPlatformAdmin as boolean) ?? false;
+        // Role Consolidation Epic 2: staff platform role
+        session.user.platformRole = (token.platformRole as UserRole | null) ?? null;
       }
       return session;
     },
