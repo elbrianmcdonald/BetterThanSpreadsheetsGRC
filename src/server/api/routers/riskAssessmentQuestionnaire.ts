@@ -24,15 +24,11 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-const ANSWER_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-];
+const ANSWER_ROLES: UserRole[] = [...WRITE_ROLES];
 
-const VIEW_ROLES = [...ANSWER_ROLES, UserRole.AUDITOR];
+const VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
 // Helper: load a project the caller has access to (org-scoped).
 async function loadProjectForOrg(

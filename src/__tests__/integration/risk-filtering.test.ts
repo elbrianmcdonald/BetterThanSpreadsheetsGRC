@@ -63,7 +63,7 @@ beforeAll(async () => {
     id: userIdGRC,
     email: `grc-analyst-risk-filter-${userIdGRC.slice(0, 8)}@test.com`,
     name: "GRC Analyst for Risk Filter Test",
-    role: "GRC_ANALYST",
+    role: "ANALYST",
     organizationId: testOrg.id,
   };
 
@@ -83,7 +83,7 @@ beforeAll(async () => {
     id: userIdIT,
     email: `it-owner-risk-filter-${userIdIT.slice(0, 8)}@test.com`,
     name: "IT Stakeholder for Risk Filter Test",
-    role: "IT_STAKEHOLDER",
+    role: "BUSINESS_USER",
     organizationId: testOrg.id,
   };
 
@@ -103,7 +103,7 @@ beforeAll(async () => {
     id: userIdBusiness,
     email: `business-owner-risk-filter-${userIdBusiness.slice(0, 8)}@test.com`,
     name: "Business Stakeholder for Risk Filter Test",
-    role: "BUSINESS_STAKEHOLDER",
+    role: "BUSINESS_USER",
     organizationId: testOrg.id,
   };
 

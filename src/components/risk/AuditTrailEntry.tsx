@@ -113,7 +113,7 @@ function formatRole(role: string): string {
     IT_STAKEHOLDER: "IT Stakeholder",
     BUSINESS_STAKEHOLDER: "Business Stakeholder",
     AUDITOR: "Auditor",
-    CISO: "CISO",
+    CISO: "MANAGER",
     SYSTEM: "System",
     UNKNOWN: "Unknown",
   };

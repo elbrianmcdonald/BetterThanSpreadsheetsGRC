@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MatrixSelector } from "@/components/assessment/MatrixSelector";
 import { RiskScoreHeatmap, type HeatmapItem } from "@/components/risk/RiskScoreHeatmap";
 
-const WRITE_ROLES: UserRole[] = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER];
+const WRITE_ROLES: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST];
 
 function Sparkline({ points }: { points: Array<{ score: number | null; capturedAt: Date }> }) {
   const valid = points.filter((p) => p.score !== null) as Array<{ score: number; capturedAt: Date }>;

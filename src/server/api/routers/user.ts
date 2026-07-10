@@ -615,7 +615,7 @@ export const userRouter = createTRPCRouter({
       }
 
       // Verify user has AUDITOR role
-      if (existingUser.role !== UserRole.AUDITOR) {
+      if (existingUser.role !== UserRole.BUSINESS_USER) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Framework assignments can only be set for AUDITOR role users",
@@ -707,7 +707,7 @@ export const userRouter = createTRPCRouter({
   listUsersWithWorkload: organizationProcedure
     .input(
       z.object({
-        role: z.enum(["IT_STAKEHOLDER", "BUSINESS_STAKEHOLDER"]),
+        role: z.enum(["BUSINESS_USER"]),
         search: z.string().optional(),
       })
     )

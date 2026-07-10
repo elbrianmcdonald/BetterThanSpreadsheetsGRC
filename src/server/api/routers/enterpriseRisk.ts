@@ -20,12 +20,9 @@ import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 import { recomputeEnterpriseRiskScore } from "@/server/services/enterpriseRiskScore";
 import { PUBLISHED_FINDINGS_AND } from "@/server/services/findingVisibility";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
-const ENTERPRISE_RISK_WRITE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
+const ENTERPRISE_RISK_WRITE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 function addDays(base: Date, days: number): Date {
   const d = new Date(base);

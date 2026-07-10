@@ -34,9 +34,9 @@ export const metadata = {
  * - Org Admin
  */
 const FINDING_CREATE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 export default async function CreateFindingPage({

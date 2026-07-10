@@ -47,9 +47,9 @@ import {
 
 // Role arrays for permission checks
 const ASSET_MANAGE_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 // Asset type display config

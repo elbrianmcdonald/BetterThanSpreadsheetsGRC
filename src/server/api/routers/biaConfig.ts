@@ -24,25 +24,13 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-/**
- * Roles that can view BIA configuration (FR58)
- */
-const BIA_CONFIG_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.AUDITOR,
-];
+/** Roles that can view BIA configuration — read tier. */
+const BIA_CONFIG_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-/**
- * Roles that can manage BIA configuration (FR58)
- */
-const BIA_CONFIG_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-];
+/** Roles that can manage BIA configuration — write tier. */
+const BIA_CONFIG_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Default BIA configuration seed data (Story 9.1 - FR7)

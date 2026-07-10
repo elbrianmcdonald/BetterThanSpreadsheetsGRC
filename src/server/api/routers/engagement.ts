@@ -35,25 +35,15 @@ import {
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { generateIdentifier } from "@/server/services/identifierService";
 import { MEETING_PLAN, DOC_REQUESTS } from "@/lib/engagement/assessment-methodology";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
 // =============================================================================
 // Roles
 // =============================================================================
 
-const ENGAGEMENT_VIEW_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-  UserRole.AUDITOR,
-];
+const ENGAGEMENT_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-const ENGAGEMENT_MANAGE_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-];
+const ENGAGEMENT_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // =============================================================================
 // Polymorphic assessment resolution

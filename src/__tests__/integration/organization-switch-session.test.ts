@@ -52,11 +52,11 @@ describe("Epic 1 — Story 1.3 switch session claim + audit", () => {
     orgC = await db.organization.create({ data: { id: randomUUID(), name: `SC ${stamp}`, slug: `sc-${stamp}`, updatedAt: new Date() } });
 
     const u = await db.user.create({
-      data: { id: randomUUID(), email: `both-${stamp}@example.com`, name: "both", organizationId: orgA.id, role: UserRole.ORG_ADMIN, updatedAt: new Date() },
+      data: { id: randomUUID(), email: `both-${stamp}@example.com`, name: "both", organizationId: orgA.id, role: UserRole.ADMINISTRATOR, updatedAt: new Date() },
     });
-    userBoth = { id: u.id, email: u.email!, organizationId: orgA.id, role: UserRole.ORG_ADMIN };
-    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgA.id, role: UserRole.ORG_ADMIN } });
-    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgB.id, role: UserRole.AUDITOR } });
+    userBoth = { id: u.id, email: u.email!, organizationId: orgA.id, role: UserRole.ADMINISTRATOR };
+    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgA.id, role: UserRole.ADMINISTRATOR } });
+    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgB.id, role: UserRole.BUSINESS_USER } });
   });
 
   afterAll(async () => {
@@ -83,23 +83,23 @@ describe("Epic 1 — Story 1.3 switch session claim + audit", () => {
   });
 
   it("JWT update switches the active-org claim + role when access is valid (FR5)", async () => {
-    const token = { id: userBoth.id, organizationId: orgA.id, role: UserRole.ORG_ADMIN };
+    const token = { id: userBoth.id, organizationId: orgA.id, role: UserRole.ADMINISTRATOR };
     const result = await callJwt({ token, trigger: "update", session: { organizationId: orgB.id } });
     expect(result.organizationId).toBe(orgB.id);
-    expect(result.role).toBe(UserRole.AUDITOR); // per-membership role in B
+    expect(result.role).toBe(UserRole.BUSINESS_USER); // per-membership role in B
   });
 
   it("JWT update refuses to switch into an org the user cannot access (FR9, NFR5)", async () => {
-    const token = { id: userBoth.id, organizationId: orgA.id, role: UserRole.ORG_ADMIN };
+    const token = { id: userBoth.id, organizationId: orgA.id, role: UserRole.ADMINISTRATOR };
     const result = await callJwt({ token, trigger: "update", session: { organizationId: orgC.id } });
     // Claim unchanged — the forged target is rejected server-side
     expect(result.organizationId).toBe(orgA.id);
-    expect(result.role).toBe(UserRole.ORG_ADMIN);
+    expect(result.role).toBe(UserRole.ADMINISTRATOR);
   });
 
   it("session callback surfaces isPlatformAdmin for UI gating (Story 3.3)", async () => {
     const session = { user: { name: "x" } } as Record<string, unknown>;
-    const token = { id: "x", role: UserRole.AUDITOR, organizationId: "o", isPlatformAdmin: true };
+    const token = { id: "x", role: UserRole.BUSINESS_USER, organizationId: "o", isPlatformAdmin: true };
     const sessionCb = authConfig.callbacks!.session as unknown as (
       a: Record<string, unknown>,
     ) => Promise<{ user: { isPlatformAdmin?: boolean } }>;

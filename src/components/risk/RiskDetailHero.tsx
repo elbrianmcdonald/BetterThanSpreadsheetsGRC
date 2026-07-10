@@ -64,23 +64,23 @@ interface RiskDetailHeroProps {
 
 /** Roles that can edit risks */
 const CAN_EDIT_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Roles that can change risk status */
 const CAN_CHANGE_STATUS_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.IT_STAKEHOLDER,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.BUSINESS_USER,
 ];
 
 /** Roles that can delete risks */
 const CAN_DELETE_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 export function RiskDetailHero({
@@ -97,7 +97,7 @@ export function RiskDetailHero({
   const canChangeStatus =
     userRole &&
     (CAN_CHANGE_STATUS_ROLES.includes(userRole) ||
-      userRole === UserRole.BUSINESS_STAKEHOLDER);
+      userRole === UserRole.BUSINESS_USER);
   const canDelete = userRole && CAN_DELETE_ROLES.includes(userRole);
 
   return (

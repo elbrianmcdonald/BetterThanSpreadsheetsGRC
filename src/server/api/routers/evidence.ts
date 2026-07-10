@@ -386,7 +386,7 @@ export const evidenceRouter = createTRPCRouter({
       const userRole = ctx.session?.user?.role;
       const assignedFrameworks = ctx.session?.user?.assignedFrameworks ?? [];
 
-      if (userRole === UserRole.AUDITOR && assignedFrameworks.length > 0) {
+      if (userRole === UserRole.BUSINESS_USER && assignedFrameworks.length > 0) {
         // If auditor requests a framework, verify it's in their assigned list
         if (frameworkCode && !assignedFrameworks.includes(frameworkCode)) {
           throw new TRPCError({
@@ -600,7 +600,7 @@ export const evidenceRouter = createTRPCRouter({
             evidenceTitle: evidence.title,
             viewedBy: ctx.session?.user?.email ?? "unknown",
             userRole: userRole ?? "unknown",
-            isAuditor: userRole === UserRole.AUDITOR,
+            isAuditor: userRole === UserRole.BUSINESS_USER,
             timestamp: new Date().toISOString(),
           },
         },

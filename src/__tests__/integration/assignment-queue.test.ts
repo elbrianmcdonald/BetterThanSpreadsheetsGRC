@@ -81,35 +81,35 @@ beforeAll(async () => {
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@assignment-queue.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@assignment-queue.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder",
     "it@assignment-queue.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserBusinessStakeholder = await createUser(
     "Business Stakeholder",
     "business@assignment-queue.test",
-    "BUSINESS_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@assignment-queue.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 
@@ -233,10 +233,14 @@ describe("Story 4.13: Risk Assignment Queue", () => {
       });
     });
 
-    it("AC34: IT_STAKEHOLDER attempts access - returns FORBIDDEN", async () => {
+    it("AC34/AC35: BUSINESS_USER can view the queue (read-only)", async () => {
+      // getAssignmentQueue is a read query; the consolidated role model grants
+      // read access to all roles including BUSINESS_USER (see AC35). Assignment
+      // *actions* remain gated to writers separately.
       const caller = createCaller(testUserITStakeholder);
 
-      await expect(caller.risk.getAssignmentQueue({})).rejects.toThrow();
+      const result = await caller.risk.getAssignmentQueue({});
+      expect(result.risks.length).toBeGreaterThan(0);
     });
 
     it("AC35: AUDITOR can view queue (read-only)", async () => {
@@ -349,10 +353,12 @@ describe("Story 4.13: Risk Assignment Queue", () => {
       expect(queue).toHaveProperty("risks");
     });
 
-    it("AC34: BUSINESS_STAKEHOLDER cannot access queue", async () => {
+    it("AC34/AC35: BUSINESS_USER can view queue (read-only)", async () => {
+      // Read query — BUSINESS_USER has read access under the consolidated model.
       const caller = createCaller(testUserBusinessStakeholder);
 
-      await expect(caller.risk.getAssignmentQueue({})).rejects.toThrow();
+      const result = await caller.risk.getAssignmentQueue({});
+      expect(result.risks.length).toBeGreaterThan(0);
     });
   });
 });

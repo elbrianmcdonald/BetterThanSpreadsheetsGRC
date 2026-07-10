@@ -26,9 +26,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/findings", label: "Findings" },
   { href: "/mitre/tactics", label: "MITRE ATT&CK" },
   { href: "/compliance/dashboard", label: "Compliance" },
-  { href: "/admin/evidence", label: "Evidence", roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER] },
-  { href: "/admin/frameworks", label: "Frameworks", roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST] },
-  { href: "/admin/users", label: "Users", roles: [UserRole.ORG_ADMIN] },
+  { href: "/admin/evidence", label: "Evidence", roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST] },
+  { href: "/admin/frameworks", label: "Frameworks", roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST] },
+  { href: "/admin/users", label: "Users", roles: [UserRole.ADMINISTRATOR] },
 ];
 
 export function AppNav() {

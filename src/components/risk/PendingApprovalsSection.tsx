@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/card";
 
 /** Manager roles that can view pending approvals */
-const MANAGER_ROLES: UserRole[] = [UserRole.ORG_ADMIN, UserRole.CISO];
+const MANAGER_ROLES: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.MANAGER];
 
 interface PendingApprovalsSectionProps {
   userRole: UserRole;

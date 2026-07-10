@@ -32,28 +32,17 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { calculateMaturityScore, sammAnswerWeight } from "@/server/services/maturityCalculator";
+import { READ_ROLES, WRITE_ROLES, ADMIN_ROLES } from "@/lib/auth/roles";
 
 /**
- * Roles that can manage maturity assessments
+ * Roles that can manage maturity assessments (any mutation)
  */
-const MATURITY_MANAGE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const MATURITY_MANAGE_ROLES: UserRole[] = WRITE_ROLES as UserRole[];
 
 /**
  * Roles that can view maturity assessments
  */
-const MATURITY_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+const MATURITY_VIEW_ROLES: UserRole[] = READ_ROLES as UserRole[];
 
 /**
  * C2M2 Practice Implementation Levels
@@ -716,7 +705,7 @@ export const maturityRouter = createTRPCRouter({
    * on top of the upstream definition rather than mutating it.
    */
   updateDomainTestingFields: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(ADMIN_ROLES))
     .input(
       z.object({
         id: z.string(),
@@ -754,7 +743,7 @@ export const maturityRouter = createTRPCRouter({
    * practice / SAMM activity).
    */
   updateQuestionTestingFields: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(ADMIN_ROLES))
     .input(
       z.object({
         id: z.string(),
@@ -937,7 +926,7 @@ export const maturityRouter = createTRPCRouter({
    * Does NOT clone: assessments, responses, scores — those are runtime data.
    */
   cloneFramework: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(ADMIN_ROLES))
     .input(
       z.object({
         sourceFrameworkId: z.string(),
@@ -1799,7 +1788,7 @@ export const maturityRouter = createTRPCRouter({
    * Submit assessor's portion
    */
   submitAssessment: organizationProcedure
-    .use(requireRole(MATURITY_VIEW_ROLES))
+    .use(requireRole(MATURITY_MANAGE_ROLES))
     .input(z.object({ assessmentId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const { db, organizationId, session } = ctx;
@@ -1900,7 +1889,7 @@ export const maturityRouter = createTRPCRouter({
    * Submit question response
    */
   submitQuestionResponse: organizationProcedure
-    .use(requireRole(MATURITY_VIEW_ROLES))
+    .use(requireRole(MATURITY_MANAGE_ROLES))
     .input(
       z.object({
         assessmentId: z.string(),

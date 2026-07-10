@@ -100,7 +100,7 @@ import {
 /**
  * Roles that can create vendors
  */
-const VENDOR_MANAGE_ROLES = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST];
+const VENDOR_MANAGE_ROLES = [UserRole.ADMINISTRATOR, UserRole.ANALYST];
 
 /**
  * Vendor data shape from the list query

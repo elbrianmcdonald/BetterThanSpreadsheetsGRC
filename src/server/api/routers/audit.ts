@@ -24,6 +24,10 @@ import { UserRole } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure, requirePermission } from "@/server/api/trpc";
 import { requireRole } from "@/server/api/trpc";
 import { Permission } from "@/server/auth/permissions";
+import { READ_ROLES } from "@/lib/auth/roles";
+
+// Audit-log access is read/export of the org's own audit trail (read tier).
+const AUDIT_READ_ROLES: UserRole[] = [...READ_ROLES];
 
 /**
  * Audit log pagination response schema
@@ -53,7 +57,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   getByEntity: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         entityType: z.string(),
@@ -206,7 +210,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   getByUser: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         userId: z.string(),
@@ -276,7 +280,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   getByDateRange: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         startDate: z.date(),
@@ -353,7 +357,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   exportToCsv: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         startDate: z.date(),
@@ -409,7 +413,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   getStatistics: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         days: z.number().min(1).max(365).default(30),

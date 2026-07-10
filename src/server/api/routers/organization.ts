@@ -112,7 +112,7 @@ export const organizationRouter = createTRPCRouter({
       });
       const canCreate =
         me?.isPlatformAdmin === true ||
-        ctx.session.user.role === UserRole.ORG_ADMIN;
+        ctx.session.user.role === UserRole.ADMINISTRATOR;
       if (!canCreate) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -129,7 +129,7 @@ export const organizationRouter = createTRPCRouter({
 
       // Creator becomes ADMIN of the new company (FR12).
       await ctx.db.organizationMembership.create({
-        data: { id: randomUUID(), userId, organizationId, role: UserRole.ORG_ADMIN },
+        data: { id: randomUUID(), userId, organizationId, role: UserRole.ADMINISTRATOR },
       });
 
       // Provision baseline defaults inside the new org's context so the org-filter
@@ -149,7 +149,7 @@ export const organizationRouter = createTRPCRouter({
         });
       });
 
-      return { organizationId, role: UserRole.ORG_ADMIN };
+      return { organizationId, role: UserRole.ADMINISTRATOR };
     }),
 
   // ---- Epic 3: membership management (active company) ----

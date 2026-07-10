@@ -66,26 +66,26 @@ beforeAll(async () => {
   const grcUserId = randomUUID();
   await db.$executeRaw`
     INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
-    VALUES (${grcUserId}, 'GRC Analyst', 'grc@test.com', 'GRC_ANALYST'::"UserRole", ${testOrg.id}, 'hash', NOW())
+    VALUES (${grcUserId}, 'GRC Analyst', 'grc@test.com', 'ANALYST'::"UserRole", ${testOrg.id}, 'hash', NOW())
   `;
   testUserGRC = {
     id: grcUserId,
     name: "GRC Analyst",
     email: "grc@test.com",
-    role: UserRole.GRC_ANALYST,
+    role: UserRole.ANALYST,
     organizationId: testOrg.id,
   };
 
   const itUserId = randomUUID();
   await db.$executeRaw`
     INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
-    VALUES (${itUserId}, 'IT Stakeholder', 'it@test.com', 'IT_STAKEHOLDER'::"UserRole", ${testOrg.id}, 'hash', NOW())
+    VALUES (${itUserId}, 'IT Stakeholder', 'it@test.com', 'BUSINESS_USER'::"UserRole", ${testOrg.id}, 'hash', NOW())
   `;
   testUserIT = {
     id: itUserId,
     name: "IT Stakeholder",
     email: "it@test.com",
-    role: UserRole.IT_STAKEHOLDER,
+    role: UserRole.BUSINESS_USER,
     organizationId: testOrg.id,
   };
 
@@ -99,13 +99,13 @@ beforeAll(async () => {
   const otherOrgUserId = randomUUID();
   await db.$executeRaw`
     INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
-    VALUES (${otherOrgUserId}, 'Other Org User', 'other@test.com', 'GRC_ANALYST'::"UserRole", ${testOrg2.id}, 'hash', NOW())
+    VALUES (${otherOrgUserId}, 'Other Org User', 'other@test.com', 'ANALYST'::"UserRole", ${testOrg2.id}, 'hash', NOW())
   `;
   testUserOtherOrg = {
     id: otherOrgUserId,
     name: "Other Org User",
     email: "other@test.com",
-    role: UserRole.GRC_ANALYST,
+    role: UserRole.ANALYST,
     organizationId: testOrg2.id,
   };
 });
@@ -189,7 +189,7 @@ describe("Story 4.12: Risk Audit Trail", () => {
       });
 
       expect(auditLog!.actorName).toBe("GRC Analyst");
-      expect(auditLog!.actorRole).toBe("GRC_ANALYST");
+      expect(auditLog!.actorRole).toBe("ANALYST");
     });
   });
 
@@ -287,7 +287,7 @@ describe("Story 4.12: Risk Audit Trail", () => {
       // Create audit log for other org risk
       await db.$executeRaw`
         INSERT INTO "AuditLog" (id, action, "entityType", "entityId", "organizationId", "userId", "actorName", "actorRole", timestamp)
-        VALUES (${randomUUID()}, 'CREATE_RISK'::"AuditAction", 'Risk', ${otherOrgRiskId}, ${testOrg2.id}, ${testUserOtherOrg.id}, 'Other User', 'GRC_ANALYST', NOW())
+        VALUES (${randomUUID()}, 'CREATE_RISK'::"AuditAction", 'Risk', ${otherOrgRiskId}, ${testOrg2.id}, ${testUserOtherOrg.id}, 'Other User', 'ANALYST', NOW())
       `;
 
       // Query from testOrg should NOT see other org's logs
@@ -348,13 +348,15 @@ describe("Story 4.12: Risk Audit Trail", () => {
       expect(result.data).toContain("CREATE_RISK");
     });
 
-    it("AC26: Export only available to GRC_ANALYST, ORG_ADMIN, AUDITOR", async () => {
-      // IT_STAKEHOLDER should NOT be able to export
-      const itCaller = createCaller(testUserIT);
+    it("AC26: Export available to staff and BUSINESS_USER (read-only download)", async () => {
+      // Consolidated role model: export/download is a read-only capability that
+      // BUSINESS_USER retains (rubric: BUSINESS_USER may EXPORT/download).
+      const buCaller = createCaller(testUserIT);
 
-      await expect(
-        itCaller.risk.exportRiskAuditTrail({ riskId: testRisk.id })
-      ).rejects.toThrow();
+      const result = await buCaller.risk.exportRiskAuditTrail({ riskId: testRisk.id });
+
+      expect(result.filename).toMatch(/audit-trail-\d{4}-\d{2}-\d{2}\.csv$/);
+      expect(result.data).toContain("CREATE_RISK");
     });
 
     it("AC27: Export filename follows pattern", async () => {

@@ -37,7 +37,7 @@ describe("Story 5.6: CSV Risk Export", () => {
     // Create test user
     const userResult = await prisma.$queryRaw<Array<{ id: string }>>`
       INSERT INTO "User" (id, email, name, role, "organizationId", "createdAt", "updatedAt")
-      VALUES (gen_random_uuid(), 'csv-test@example.com', 'CSV Test User', 'GRC_ANALYST', ${testOrgId}, NOW(), NOW())
+      VALUES (gen_random_uuid(), 'csv-test@example.com', 'CSV Test User', 'ANALYST', ${testOrgId}, NOW(), NOW())
       RETURNING id
     `;
     testUserId = userResult[0]!.id;
@@ -451,7 +451,7 @@ describe("Story 5.6: CSV Risk Export", () => {
         VALUES (
           gen_random_uuid(), 'EXPORT_RISKS', 'Risk', 'CSV_EXPORT',
           '{"filters": {"severity": ["HIGH"]}, "rowCount": 10}'::jsonb,
-          'Test User', 'GRC_ANALYST', ${testUserId}, ${testOrgId}, NOW()
+          'Test User', 'ANALYST', ${testUserId}, ${testOrgId}, NOW()
         )
       `;
 
@@ -558,33 +558,33 @@ describe("Story 5.6: CSV Risk Export", () => {
   describe("Role-Based Access Control", () => {
     // AC18: Test role validation
     it("should allow GRC_ANALYST to export", () => {
-      const allowedRoles = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles).toContain("GRC_ANALYST");
+      const allowedRoles = ["ANALYST", "ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles).toContain("ANALYST");
     });
 
     it("should allow SECURITY_ENGINEER to export", () => {
-      const allowedRoles = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles).toContain("SECURITY_ENGINEER");
+      const allowedRoles = ["ANALYST", "ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles).toContain("ANALYST");
     });
 
     it("should allow ORG_ADMIN to export", () => {
-      const allowedRoles = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles).toContain("ORG_ADMIN");
+      const allowedRoles = ["ANALYST", "ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles).toContain("ADMINISTRATOR");
     });
 
     it("should allow AUDITOR to export", () => {
-      const allowedRoles = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles).toContain("AUDITOR");
+      const allowedRoles = ["ANALYST", "ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles).toContain("BUSINESS_USER");
     });
 
-    it("should not allow IT_STAKEHOLDER to export", () => {
-      const allowedRoles = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles).not.toContain("IT_STAKEHOLDER");
+    it("should allow BUSINESS_USER (read-only) to export", () => {
+      const allowedRoles = ["ANALYST", "ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles).toContain("BUSINESS_USER");
     });
 
-    it("should not allow BUSINESS_STAKEHOLDER to export", () => {
-      const allowedRoles = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles).not.toContain("BUSINESS_STAKEHOLDER");
+    it("should allow all four roles to export", () => {
+      const allowedRoles = ["ANALYST", "ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles).toEqual(expect.arrayContaining(["ANALYST", "ADMINISTRATOR", "BUSINESS_USER"]));
     });
   });
 });

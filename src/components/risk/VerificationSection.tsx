@@ -98,7 +98,7 @@ export function VerificationSection({
 
   // Check if user can verify (AC38)
   const canVerify =
-    userRole === UserRole.GRC_ANALYST || userRole === UserRole.ORG_ADMIN;
+    userRole === UserRole.ANALYST || userRole === UserRole.ADMINISTRATOR;
 
   // Check if this is a REMEDIATED risk that needs verification
   const needsVerification = currentStatus === RiskStatus.REMEDIATED;

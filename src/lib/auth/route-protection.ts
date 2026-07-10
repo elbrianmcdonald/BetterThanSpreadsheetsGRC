@@ -50,7 +50,7 @@ export function requireOrgAdmin(
   session: Session | null,
   callbackUrl?: string
 ): void {
-  requireRole(session, [UserRole.ORG_ADMIN], callbackUrl);
+  requireRole(session, [UserRole.ADMINISTRATOR], callbackUrl);
 }
 
 /**

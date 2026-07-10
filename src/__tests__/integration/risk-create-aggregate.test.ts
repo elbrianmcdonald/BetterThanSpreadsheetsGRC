@@ -55,7 +55,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "AggRisk Analyst",
       email: `aggrisk-analyst-${stamp}@example.com`,
-      role: "GRC_ANALYST",
+      role: "ANALYST",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },

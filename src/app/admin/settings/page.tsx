@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function SettingsHubPage() {
   const session = await auth();
-  requireRole(session, [UserRole.ORG_ADMIN], "/admin/settings");
+  requireRole(session, [UserRole.ADMINISTRATOR], "/admin/settings");
 
   return (
     <Suspense

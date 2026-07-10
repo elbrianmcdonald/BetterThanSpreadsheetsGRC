@@ -100,17 +100,17 @@ import { ExecutiveSummaryTab } from "@/components/deliverable/ExecutiveSummaryTa
  * Roles that can manage assessments
  */
 const ASSESSMENT_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 /**
  * Roles that can complete assessments
  */
 const ASSESSMENT_COMPLETE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
 ];
 
 interface AssessmentDetailClientProps {

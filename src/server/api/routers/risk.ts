@@ -35,6 +35,7 @@ import {
   AssessmentProjectStatus,
   Prisma
 } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 // Story 5.6: CSV Export imports
 import {
   formatRisksForCSV,
@@ -98,9 +99,9 @@ import {
  * - Org Admin
  */
 const RISK_UPDATE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**
@@ -110,9 +111,9 @@ const RISK_UPDATE_ROLES = [
  * - Org Admin
  */
 const LINK_EVIDENCE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**
@@ -125,9 +126,9 @@ const LINK_EVIDENCE_ROLES = [
  * AC23: AUDITOR cannot create risks (view-only role)
  */
 const RISK_CREATE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**
@@ -137,9 +138,9 @@ const RISK_CREATE_ROLES = [
  * - Org Admin: Full access
  */
 const REMEDIATION_OPTION_ROLES = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**
@@ -148,19 +149,17 @@ const REMEDIATION_OPTION_ROLES = [
  * - Security Engineer: Can also assign risks
  * - Org Admin: Full access
  */
-const RISK_ASSIGN_ROLES = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-];
+// Assigning risk owners is staff work (Manager gap fix). NOTE: whether ANALYST
+// should retain assign vs. Manager+-only is an open model question (see epics doc).
+const RISK_ASSIGN_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Story 4.5: Roles that can delete remediation options (AC20)
  * More restrictive - only GRC Analyst and Org Admin
  */
 const REMEDIATION_OPTION_DELETE_ROLES = [
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**
@@ -169,21 +168,15 @@ const REMEDIATION_OPTION_DELETE_ROLES = [
  * - Security Engineer: Can comment on all org risks
  * - Org Admin: Full access
  */
-const COMMENT_FULL_ACCESS_ROLES = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-];
+const COMMENT_FULL_ACCESS_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Story 4.11: Roles that can comment on org risks (AC39-AC40)
  * - IT Stakeholder: Can comment on any risk in their org
  * - Business Stakeholder: Can comment on any risk in their org
  */
-const COMMENT_RESTRICTED_ROLES = [
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-];
+// Read-only Business Users may NOT comment (commenting is a write action).
+const COMMENT_RESTRICTED_ROLES: UserRole[] = [];
 
 /**
  * Story 4.11: All roles that can add comments (AC39-AC42)
@@ -485,7 +478,7 @@ export const riskRouter = createTRPCRouter({
     .use(
       requireRole([
         ...LINK_EVIDENCE_ROLES,
-        UserRole.IT_STAKEHOLDER, // Can link remediation evidence to assigned risks (AC25)
+        UserRole.BUSINESS_USER, // Can link remediation evidence to assigned risks (AC25)
       ])
     )
     .input(
@@ -546,7 +539,7 @@ export const riskRouter = createTRPCRouter({
       }
 
       // IT Stakeholder role check for remediation-only linking (AC25)
-      if (ctx.session!.user.role === UserRole.IT_STAKEHOLDER) {
+      if (ctx.session!.user.role === UserRole.BUSINESS_USER) {
         if (input.linkType !== RiskEvidenceLinkType.REMEDIATION) {
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -2219,7 +2212,7 @@ export const riskRouter = createTRPCRouter({
    * AC18: Returns updated risk with new owner details
    */
   reassignRisk: organizationProcedure
-    .use(requireRole([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN]))
+    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR]))
     .input(
       z.object({
         riskId: z.string().min(1, "Risk ID is required"),
@@ -2840,7 +2833,7 @@ export const riskRouter = createTRPCRouter({
    * AC36: Manual edits saved to businessImpactStatement field with override flag
    */
   updateBusinessImpact: organizationProcedure
-    .use(requireRole([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN]))
+    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR]))
     .input(
       z.object({
         riskId: z.string().min(1, "Risk ID is required"),
@@ -2926,7 +2919,7 @@ export const riskRouter = createTRPCRouter({
    * Used for the "My Assigned Risks" dashboard widget.
    */
   getMyRisksSummary: organizationProcedure
-    .use(requireRole([UserRole.IT_STAKEHOLDER, UserRole.ORG_ADMIN]))
+    .use(requireRole([UserRole.BUSINESS_USER, UserRole.ADMINISTRATOR]))
     .query(async ({ ctx }) => {
       const organizationId = ctx.organizationId!;
 
@@ -2982,7 +2975,7 @@ export const riskRouter = createTRPCRouter({
    * Used for the "Decisions Pending" dashboard widget.
    */
   getDecisionsSummary: organizationProcedure
-    .use(requireRole([UserRole.BUSINESS_STAKEHOLDER, UserRole.ORG_ADMIN]))
+    .use(requireRole([UserRole.BUSINESS_USER, UserRole.ADMINISTRATOR]))
     .query(async ({ ctx }) => {
       const organizationId = ctx.organizationId!;
 
@@ -3344,7 +3337,7 @@ export const riskRouter = createTRPCRouter({
    * Allows GRC_ANALYST to add verification comments when verifying remediation.
    */
   addVerificationComments: organizationProcedure
-    .use(requireRole([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN]))
+    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR]))
     .input(
       z.object({
         riskId: z.string().min(1, "Risk ID is required"),
@@ -3608,7 +3601,7 @@ export const riskRouter = createTRPCRouter({
 
       // AC14: Validate user is author or has edit permission
       const isAuthor = existingComment.authorId === userId;
-      const canEditAny = ([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN] as UserRole[]).includes(userRole);
+      const canEditAny = ([UserRole.ANALYST, UserRole.ADMINISTRATOR] as UserRole[]).includes(userRole);
 
       if (!isAuthor && !canEditAny) {
         throw new TRPCError({
@@ -3717,7 +3710,7 @@ export const riskRouter = createTRPCRouter({
 
       // AC19: Validate user is author or has delete permission
       const isAuthor = existingComment.authorId === userId;
-      const canDeleteAny = ([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN] as UserRole[]).includes(userRole);
+      const canDeleteAny = ([UserRole.ANALYST, UserRole.ADMINISTRATOR] as UserRole[]).includes(userRole);
 
       if (!isAuthor && !canDeleteAny) {
         throw new TRPCError({
@@ -3932,7 +3925,7 @@ export const riskRouter = createTRPCRouter({
    * AC27: Export filename: `risk-${riskId}-audit-trail-${date}.csv`
    */
   exportRiskAuditTrail: organizationProcedure
-    .use(requireRole([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN, UserRole.AUDITOR])) // AC26
+    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR, UserRole.BUSINESS_USER])) // AC26
     .input(z.object({ riskId: z.string().min(1, "Risk ID is required") }))
     .mutation(async ({ ctx, input }) => {
       // Fetch all audit logs for this risk (no pagination)
@@ -4048,10 +4041,10 @@ export const riskRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       // AC33-AC35: Check authorization
       const allowedRoles: UserRole[] = [
-        UserRole.GRC_ANALYST,
-        UserRole.SECURITY_ENGINEER,
-        UserRole.ORG_ADMIN,
-        UserRole.AUDITOR, // AC35: Read-only access
+        UserRole.ANALYST,
+        UserRole.ANALYST,
+        UserRole.ADMINISTRATOR,
+        UserRole.BUSINESS_USER, // AC35: Read-only access
       ];
 
       if (!allowedRoles.includes(ctx.session!.user.role)) {
@@ -4156,10 +4149,10 @@ export const riskRouter = createTRPCRouter({
   getAssignmentQueueMetrics: organizationProcedure.query(async ({ ctx }) => {
     // Check authorization (same as getAssignmentQueue)
     const allowedRoles: UserRole[] = [
-      UserRole.GRC_ANALYST,
-      UserRole.SECURITY_ENGINEER,
-      UserRole.ORG_ADMIN,
-      UserRole.AUDITOR,
+      UserRole.ANALYST,
+      UserRole.ANALYST,
+      UserRole.ADMINISTRATOR,
+      UserRole.BUSINESS_USER,
     ];
 
     if (!allowedRoles.includes(ctx.session!.user.role)) {
@@ -4424,7 +4417,7 @@ export const riskRouter = createTRPCRouter({
    * Cascades to RiskEvidence, RemediationOptions, Comments, StatusHistory.
    */
   delete: organizationProcedure
-    .use(requireRole([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN]))
+    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR]))
     .input(
       z.object({
         id: z.string().min(1, "Risk ID is required"),
@@ -4520,10 +4513,10 @@ export const riskRouter = createTRPCRouter({
   exportRisks: organizationProcedure
     .use(
       requireRole([
-        UserRole.GRC_ANALYST,
-        UserRole.SECURITY_ENGINEER,
-        UserRole.ORG_ADMIN,
-        UserRole.AUDITOR,
+        UserRole.ANALYST,
+        UserRole.ANALYST,
+        UserRole.ADMINISTRATOR,
+        UserRole.BUSINESS_USER,
       ])
     )
     .input(
@@ -5376,7 +5369,7 @@ export const riskRouter = createTRPCRouter({
       const userRole = ctx.session!.user.role as UserRole;
 
       // Only managers can assign assessments
-      if (userRole !== UserRole.GRC_ANALYST && userRole !== UserRole.ORG_ADMIN) {
+      if (userRole !== UserRole.ANALYST && userRole !== UserRole.ADMINISTRATOR) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only GRC Analysts and Admins can assign risk assessments",
@@ -5520,7 +5513,7 @@ export const riskRouter = createTRPCRouter({
       const userRole = ctx.session!.user.role as UserRole;
 
       // Only managers can view the review queue
-      if (userRole !== UserRole.GRC_ANALYST && userRole !== UserRole.ORG_ADMIN) {
+      if (userRole !== UserRole.ANALYST && userRole !== UserRole.ADMINISTRATOR) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only GRC Analysts and Admins can view the review queue",
@@ -5661,7 +5654,7 @@ export const riskRouter = createTRPCRouter({
       const userRole = ctx.session!.user.role as UserRole;
 
       // Only managers can approve
-      if (userRole !== UserRole.GRC_ANALYST && userRole !== UserRole.ORG_ADMIN) {
+      if (userRole !== UserRole.ANALYST && userRole !== UserRole.ADMINISTRATOR) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only GRC Analysts and Admins can approve assessments",
@@ -5749,7 +5742,7 @@ export const riskRouter = createTRPCRouter({
       const userRole = ctx.session!.user.role as UserRole;
 
       // Only managers can reject
-      if (userRole !== UserRole.GRC_ANALYST && userRole !== UserRole.ORG_ADMIN) {
+      if (userRole !== UserRole.ANALYST && userRole !== UserRole.ADMINISTRATOR) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only GRC Analysts and Admins can reject assessments",

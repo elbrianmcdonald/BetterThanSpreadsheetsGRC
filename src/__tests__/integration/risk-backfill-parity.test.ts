@@ -32,7 +32,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Backfill Analyst",
       email: `backfill-analyst-${stamp}@example.com`,
-      role: "GRC_ANALYST",
+      role: "ANALYST",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },

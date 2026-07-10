@@ -45,9 +45,9 @@ import { LinkFindingToRiskDialog } from "./LinkFindingToRiskDialog";
  * Roles that can triage findings (AC29)
  */
 const FINDING_TRIAGE_ROLES: UserRole[] = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**

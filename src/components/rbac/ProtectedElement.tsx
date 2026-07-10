@@ -16,12 +16,12 @@
  * </ProtectedElement>
  *
  * // Role-based protection
- * <ProtectedElement role={UserRole.ORG_ADMIN}>
+ * <ProtectedElement role={UserRole.ADMINISTRATOR}>
  *   <button>Admin Panel</button>
  * </ProtectedElement>
  *
  * // Multiple roles
- * <ProtectedElement roles={[UserRole.ORG_ADMIN, UserRole.GRC_ANALYST]}>
+ * <ProtectedElement roles={[UserRole.ADMINISTRATOR, UserRole.ANALYST]}>
  *   <div>Analyst Features</div>
  * </ProtectedElement>
  *
@@ -100,14 +100,14 @@ export interface ProtectedElementProps {
  *
  * Role-based:
  * ```tsx
- * <ProtectedElement role={UserRole.ORG_ADMIN}>
+ * <ProtectedElement role={UserRole.ADMINISTRATOR}>
  *   <AdminDashboard />
  * </ProtectedElement>
  * ```
  *
  * Multiple roles:
  * ```tsx
- * <ProtectedElement roles={[UserRole.ORG_ADMIN, UserRole.GRC_ANALYST]}>
+ * <ProtectedElement roles={[UserRole.ADMINISTRATOR, UserRole.ANALYST]}>
  *   <RiskManagement />
  * </ProtectedElement>
  * ```
@@ -126,7 +126,7 @@ export interface ProtectedElementProps {
  * ```tsx
  * <ProtectedElement
  *   permission={Permission.USER_CREATE}
- *   role={UserRole.ORG_ADMIN}
+ *   role={UserRole.ADMINISTRATOR}
  *   requireBoth={true}
  * >
  *   <AdvancedUserCreation />

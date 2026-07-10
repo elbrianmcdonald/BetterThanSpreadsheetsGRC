@@ -247,14 +247,14 @@ describe("Finding Assignment (Story 7.0.8)", () => {
     });
 
     it("AC23: GRC role can reassign during triage", () => {
-      const grcRoles = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN"];
+      const grcRoles = ["ANALYST", "ANALYST", "ADMINISTRATOR"];
 
       const canReassign = (role: string): boolean => {
         return grcRoles.includes(role);
       };
 
-      expect(canReassign("GRC_ANALYST")).toBe(true);
-      expect(canReassign("AUDITOR")).toBe(false);
+      expect(canReassign("ANALYST")).toBe(true);
+      expect(canReassign("BUSINESS_USER")).toBe(false);
     });
   });
 });

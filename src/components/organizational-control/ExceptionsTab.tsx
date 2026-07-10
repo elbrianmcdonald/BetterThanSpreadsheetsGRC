@@ -52,11 +52,11 @@ import {
 } from "./enum-labels";
 
 const REQUESTER_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
-const APPROVER_ROLES: UserRole[] = [UserRole.ORG_ADMIN];
+const APPROVER_ROLES: UserRole[] = [UserRole.ADMINISTRATOR];
 
 const ANY = "__any__";
 const RENEWAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;

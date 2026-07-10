@@ -55,8 +55,8 @@ import { PageHeader, StatTile } from "@/components/layout";
  * Roles that can create/edit questionnaire templates
  */
 const TEMPLATE_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
 ];
 
 /**

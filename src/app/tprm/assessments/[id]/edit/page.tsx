@@ -19,9 +19,9 @@ import { EditAssessmentClient } from "./client";
  * Roles that can edit assessments
  */
 const ASSESSMENT_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 export const metadata = {

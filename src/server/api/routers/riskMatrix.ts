@@ -29,19 +29,15 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { AuditAction, Prisma, UserRole } from "@prisma/client";
+import { READ_ROLES } from "@/lib/auth/roles";
 
 /**
  * Roles allowed to READ a matrix version (drives the severity-scoring selects
  * in the identified-risk / questionnaire risk dialogs). Editing matrices stays
- * ORG_ADMIN-only — analysts/managers just need to read the scales to score.
+ * ADMINISTRATOR-only (adminProcedure) — everyone else just needs to read the
+ * scales to score, so this aligns to the canonical read tier (incl. BUSINESS_USER).
  */
-const MATRIX_READ_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_MANAGER,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-];
+const MATRIX_READ_ROLES: UserRole[] = [...READ_ROLES];
 import {
   matrixScalesSchema,
   thresholdArraySchema,

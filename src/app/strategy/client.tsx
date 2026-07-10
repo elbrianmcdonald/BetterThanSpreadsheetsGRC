@@ -71,9 +71,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 /** Roles that can create/manage strategies (FR58) */
 const CAN_MANAGE_STRATEGY_ROLES: UserRole[] = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Status badge configuration */

@@ -38,7 +38,7 @@ export async function resolveActiveRole(
       where: { id: organizationId },
       select: { id: true },
     });
-    if (org) return UserRole.ORG_ADMIN;
+    if (org) return UserRole.ADMINISTRATOR;
   }
 
   return null;

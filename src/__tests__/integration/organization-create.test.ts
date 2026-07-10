@@ -45,9 +45,9 @@ describe("Epic 2 — Story 2.1 create a new company", () => {
   beforeAll(async () => {
     const stamp = `${Date.now()}-${Math.round(performance.now())}`;
     homeOrg = await db.organization.create({ data: { id: randomUUID(), name: `Home ${stamp}`, slug: `home-${stamp}`, updatedAt: new Date() } });
-    admin = await mkUser(homeOrg.id, UserRole.ORG_ADMIN, "admin");
-    auditor = await mkUser(homeOrg.id, UserRole.AUDITOR, "auditor");
-    platformAuditor = await mkUser(homeOrg.id, UserRole.AUDITOR, "platform", true);
+    admin = await mkUser(homeOrg.id, UserRole.ADMINISTRATOR, "admin");
+    auditor = await mkUser(homeOrg.id, UserRole.BUSINESS_USER, "auditor");
+    platformAuditor = await mkUser(homeOrg.id, UserRole.BUSINESS_USER, "platform", true);
   });
 
   afterAll(async () => {
@@ -67,7 +67,7 @@ describe("Epic 2 — Story 2.1 create a new company", () => {
     createdOrgIds.push(res.organizationId);
 
     expect(res.organizationId).toBeTruthy();
-    expect(res.role).toBe(UserRole.ORG_ADMIN);
+    expect(res.role).toBe(UserRole.ADMINISTRATOR);
 
     const org = await db.organization.findUnique({ where: { id: res.organizationId } });
     expect(org?.name).toBe("Newco One");
@@ -75,7 +75,7 @@ describe("Epic 2 — Story 2.1 create a new company", () => {
     const membership = await db.organizationMembership.findUnique({
       where: { userId_organizationId: { userId: admin.id, organizationId: res.organizationId } },
     });
-    expect(membership?.role).toBe(UserRole.ORG_ADMIN);
+    expect(membership?.role).toBe(UserRole.ADMINISTRATOR);
 
     const switchable = await createCaller(admin).organization.listSwitchable();
     expect(switchable.map((o) => o.id)).toContain(res.organizationId);

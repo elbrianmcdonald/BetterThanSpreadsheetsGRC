@@ -85,7 +85,7 @@ describe("RiskMatrixVersion Integration Tests", () => {
         email: `test-version-${Date.now()}@example.com`,
         name: "Test User Version",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        role: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });

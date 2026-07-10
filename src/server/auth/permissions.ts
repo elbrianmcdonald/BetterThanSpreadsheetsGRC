@@ -263,6 +263,107 @@ export enum Permission {
  *   - No write access (independence requirement)
  */
 export const PERMISSION_MATRIX: Record<UserRole, Permission[]> = {
+  // ============================================================
+  // Consolidated four-role model (Role Consolidation — Epic 1).
+  // Coarse tiers live in src/lib/auth/roles.ts; this fine-grained
+  // matrix is the per-resource projection of those tiers.
+  // ============================================================
+
+  /**
+   * ADMINISTRATOR (staff): everything Manager can do + all administration.
+   * Superset of every permission.
+   */
+  [UserRole.ADMINISTRATOR]: [
+    Permission.USER_CREATE,
+    Permission.USER_READ,
+    Permission.USER_UPDATE,
+    Permission.USER_DELETE,
+    Permission.FRAMEWORK_MANAGE,
+    Permission.FRAMEWORK_READ,
+    Permission.EVIDENCE_CREATE,
+    Permission.EVIDENCE_READ,
+    Permission.EVIDENCE_UPDATE,
+    Permission.EVIDENCE_DELETE,
+    Permission.EVIDENCE_REQUEST_CREATE,
+    Permission.EVIDENCE_REQUEST_READ,
+    Permission.EVIDENCE_REQUEST_FULFILL,
+    Permission.EVIDENCE_REQUEST_CANCEL,
+    Permission.RISK_CREATE,
+    Permission.RISK_READ_ALL,
+    Permission.RISK_UPDATE,
+    Permission.RISK_DELETE,
+    Permission.RISK_ASSIGN,
+    Permission.DASHBOARD_COMPLIANCE,
+    Permission.DASHBOARD_RISK,
+    Permission.EXPORT_CSV,
+    Permission.EXPORT_PDF,
+  ],
+
+  /**
+   * MANAGER (staff): full GRC workflow + approve/assign/reject. No user/framework admin.
+   */
+  [UserRole.MANAGER]: [
+    Permission.EVIDENCE_CREATE,
+    Permission.EVIDENCE_READ,
+    Permission.EVIDENCE_UPDATE,
+    Permission.EVIDENCE_DELETE,
+    Permission.EVIDENCE_REQUEST_CREATE,
+    Permission.EVIDENCE_REQUEST_READ,
+    Permission.EVIDENCE_REQUEST_FULFILL,
+    Permission.EVIDENCE_REQUEST_CANCEL,
+    Permission.RISK_CREATE,
+    Permission.RISK_READ_ALL,
+    Permission.RISK_UPDATE,
+    Permission.RISK_DELETE,
+    Permission.RISK_ASSIGN,
+    Permission.FRAMEWORK_READ,
+    Permission.DASHBOARD_COMPLIANCE,
+    Permission.DASHBOARD_RISK,
+    Permission.EXPORT_CSV,
+    Permission.EXPORT_PDF,
+  ],
+
+  /**
+   * ANALYST (staff): performs work (full CRUD on evidence & risk) but cannot
+   * approve/assign/reject (RISK_ASSIGN is a Manager+ capability) or administer.
+   */
+  [UserRole.ANALYST]: [
+    Permission.EVIDENCE_CREATE,
+    Permission.EVIDENCE_READ,
+    Permission.EVIDENCE_UPDATE,
+    Permission.EVIDENCE_DELETE,
+    Permission.EVIDENCE_REQUEST_CREATE,
+    Permission.EVIDENCE_REQUEST_READ,
+    Permission.EVIDENCE_REQUEST_FULFILL,
+    Permission.EVIDENCE_REQUEST_CANCEL,
+    Permission.RISK_CREATE,
+    Permission.RISK_READ_ALL,
+    Permission.RISK_UPDATE,
+    Permission.RISK_DELETE,
+    Permission.FRAMEWORK_READ,
+    Permission.DASHBOARD_COMPLIANCE,
+    Permission.DASHBOARD_RISK,
+    Permission.EXPORT_CSV,
+    Permission.EXPORT_PDF,
+  ],
+
+  /**
+   * BUSINESS_USER (org-bound): read-only view of their assigned organization.
+   * No write, approve, or administer.
+   */
+  [UserRole.BUSINESS_USER]: [
+    Permission.EVIDENCE_READ,
+    Permission.EVIDENCE_REQUEST_READ,
+    Permission.RISK_READ_ALL,
+    Permission.FRAMEWORK_READ,
+    Permission.DASHBOARD_COMPLIANCE,
+    Permission.DASHBOARD_RISK,
+    // Exports are read-only data extractions of what they can already view
+    // (preserves the folded-in Auditor's export capability).
+    Permission.EXPORT_CSV,
+    Permission.EXPORT_PDF,
+  ],
+
   /**
    * ORG_ADMIN: Organization Administrator
    * - Manages users, roles, and organization settings

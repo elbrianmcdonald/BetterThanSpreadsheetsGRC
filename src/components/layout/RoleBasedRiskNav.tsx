@@ -61,15 +61,10 @@ export function RoleBasedRiskNav({
   // Define risk navigation links based on role
   const getRiskNavItems = (): Array<{ href: string; label: string }> => {
     switch (userRole) {
-      case UserRole.IT_STAKEHOLDER:
-        return [{ href: "/risks/my-risks", label: "My Assigned Risks" }];
-
-      case UserRole.BUSINESS_STAKEHOLDER:
-        return [{ href: "/risks/decisions", label: "Decisions Pending" }];
-
-      case UserRole.GRC_ANALYST:
-      case UserRole.SECURITY_ENGINEER:
-      case UserRole.ORG_ADMIN:
+      // Staff (platform-scoped) see the full risk workspace.
+      case UserRole.ADMINISTRATOR:
+      case UserRole.MANAGER:
+      case UserRole.ANALYST:
         return [
           { href: "/risks/enterprise", label: "Enterprise Risks" },
           { href: "/risks/register", label: "Risk Register" },
@@ -77,7 +72,8 @@ export function RoleBasedRiskNav({
           { href: "/risks/my-risks", label: "My Risks" },
         ];
 
-      case UserRole.AUDITOR:
+      // Business Users get read-only register views for their organization.
+      case UserRole.BUSINESS_USER:
         return [
           { href: "/risks/enterprise", label: "Enterprise Risks" },
           { href: "/risks/register", label: "Risk Register" },
@@ -127,16 +123,6 @@ export function RoleBasedRiskNav({
  */
 export function getDefaultRiskPage(role: UserRole | undefined): string {
   switch (role) {
-    case UserRole.IT_STAKEHOLDER:
-      return "/risks/my-risks";
-
-    case UserRole.BUSINESS_STAKEHOLDER:
-      return "/risks/decisions";
-
-    case UserRole.GRC_ANALYST:
-    case UserRole.SECURITY_ENGINEER:
-    case UserRole.ORG_ADMIN:
-    case UserRole.AUDITOR:
     default:
       return "/risks";
   }

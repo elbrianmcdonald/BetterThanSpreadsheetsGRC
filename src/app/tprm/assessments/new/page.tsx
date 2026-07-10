@@ -18,9 +18,9 @@ import { NewAssessmentClient } from "./client";
  * Roles that can create assessments
  */
 const ASSESSMENT_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 export const metadata = {

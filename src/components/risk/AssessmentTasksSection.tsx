@@ -52,9 +52,9 @@ import {
 
 /** Roles that can create/manage assessment tasks */
 const MANAGER_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
 ];
 
 /** Status badge configuration */

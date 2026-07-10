@@ -16,7 +16,7 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { Permission } from "@/server/auth/permissions";
-import { UserRole } from "@prisma/client";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { migrateOrganizationToBUScoped } from "@/server/services/buScopedMigration";
 
@@ -420,7 +420,7 @@ export const businessUnitFrameworkRouter = createTRPCRouter({
    * @requires ORG_ADMIN role
    */
   migrateToScoped: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(ADMIN_ROLES))
     .mutation(async ({ ctx }) => {
       const result = await migrateOrganizationToBUScoped(
         ctx.organizationId!,

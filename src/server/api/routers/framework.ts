@@ -1341,7 +1341,7 @@ export const frameworkRouter = createTRPCRouter({
       };
 
       // If auditor has assigned frameworks, filter to only those (AC21)
-      if (userRole === UserRole.AUDITOR && assignedFrameworks.length > 0) {
+      if (userRole === UserRole.BUSINESS_USER && assignedFrameworks.length > 0) {
         where.code = { in: assignedFrameworks };
       }
 

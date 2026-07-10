@@ -106,7 +106,7 @@ describe("crosswalk router - Story 25.2", () => {
         email: adminEmail,
         name: "Admin",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        role: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
@@ -119,7 +119,7 @@ describe("crosswalk router - Story 25.2", () => {
         email: auditorEmail,
         name: "Auditor",
         organizationId: testOrg.id,
-        role: UserRole.AUDITOR,
+        role: UserRole.BUSINESS_USER,
         updatedAt: new Date(),
       },
     });
@@ -278,7 +278,7 @@ describe("crosswalk workbench procedures - Story 25.3", () => {
         email: adminEmail,
         name: "Admin",
         organizationId: org.id,
-        role: UserRole.ORG_ADMIN,
+        role: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
@@ -529,7 +529,7 @@ describe("crosswalk org-control procedures - Story 25.4", () => {
         email: adminEmail,
         name: "Admin",
         organizationId: org.id,
-        role: UserRole.ORG_ADMIN,
+        role: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });

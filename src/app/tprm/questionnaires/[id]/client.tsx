@@ -73,8 +73,8 @@ import { useHasRole } from "@/hooks/useHasRole";
  * Roles that can manage questionnaire templates
  */
 const TEMPLATE_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
 ];
 
 interface QuestionnaireDetailClientProps {

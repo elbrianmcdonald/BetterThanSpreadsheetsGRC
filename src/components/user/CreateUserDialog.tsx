@@ -24,7 +24,7 @@ export function CreateUserDialog({
 }: CreateUserDialogProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<UserRole>(UserRole.AUDITOR);
+  const [role, setRole] = useState<UserRole>(UserRole.BUSINESS_USER);
   const [error, setError] = useState<string | null>(null);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [passwordCopied, setPasswordCopied] = useState(false);
@@ -65,7 +65,7 @@ export function CreateUserDialog({
                   id: "temp-id", // Temporary ID
                   name: newUser.name,
                   email: newUser.email,
-                  role: newUser.role ?? UserRole.AUDITOR, // Default to AUDITOR if undefined
+                  role: newUser.role ?? UserRole.BUSINESS_USER, // Default to AUDITOR if undefined
                   assignedFrameworks: newUser.assignedFrameworks ?? [], // Story 3.8
                   createdAt: new Date(),
                   updatedAt: new Date(),

@@ -22,29 +22,13 @@ import {
 import { UserRole, AuditAction, BusinessProcessStatus, BIAAssessmentStatus } from "@prisma/client";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { generateIdentifier } from "@/server/services/identifierService";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-// Roles that can view business processes
-const BP_VIEW_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+// Roles that can view business processes — read tier
+const BP_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-// Roles that can manage all business processes
-const BP_MANAGE_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-];
-
-// Roles that can edit their own processes
-const BP_OWNER_EDIT_ROLES: UserRole[] = [
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-];
+// Roles that can manage all business processes — write tier
+const BP_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // Input schemas
 const createBusinessProcessSchema = z.object({
@@ -101,18 +85,11 @@ export const businessProcessRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
       const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role as UserRole;
 
-      // Build where clause
+      // Build where clause. Read tier (incl. BUSINESS_USER) sees all org processes.
       const where: any = {
         organizationId,
       };
-
-      // Role-based filtering (FR17, Story 10.7)
-      // Stakeholders only see their own processes
-      if (BP_OWNER_EDIT_ROLES.includes(userRole) && !BP_MANAGE_ROLES.includes(userRole)) {
-        where.ownerId = userId;
-      }
 
       // "My processes only" filter
       if (input.myProcessesOnly) {
@@ -223,7 +200,6 @@ export const businessProcessRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
       const userRole = ctx.session!.user.role as UserRole;
 
       const process = await ctx.db.businessProcess.findFirst({
@@ -294,18 +270,8 @@ export const businessProcessRouter = createTRPCRouter({
         });
       }
 
-      // Role-based access check (Story 10.7)
-      if (BP_OWNER_EDIT_ROLES.includes(userRole) && !BP_MANAGE_ROLES.includes(userRole)) {
-        if (process.ownerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only view processes you own",
-          });
-        }
-      }
-
-      // Determine edit permissions
-      const canEdit = BP_MANAGE_ROLES.includes(userRole) || process.ownerId === userId;
+      // Determine edit permissions (write tier only; BUSINESS_USER is read-only)
+      const canEdit = BP_MANAGE_ROLES.includes(userRole);
       const canChangeOwner = BP_MANAGE_ROLES.includes(userRole);
       const canDelete = BP_MANAGE_ROLES.includes(userRole);
 
@@ -405,12 +371,10 @@ export const businessProcessRouter = createTRPCRouter({
    * Update a business process (FR17 - owner-based edit)
    */
   update: organizationProcedure
-    .use(requireRole([...BP_MANAGE_ROLES, ...BP_OWNER_EDIT_ROLES]))
+    .use(requireRole(BP_MANAGE_ROLES))
     .input(updateBusinessProcessSchema)
     .mutation(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role as UserRole;
 
       // Get existing process
       const existing = await ctx.db.businessProcess.findFirst({
@@ -425,23 +389,6 @@ export const businessProcessRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Business process not found",
         });
-      }
-
-      // Permission check (Story 10.7)
-      if (!BP_MANAGE_ROLES.includes(userRole)) {
-        if (existing.ownerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only edit processes you own",
-          });
-        }
-        // Owners can only edit certain fields
-        if (input.businessFunctionId !== undefined) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Only GRC Analysts can change the business function",
-          });
-        }
       }
 
       // Validate business function if changing

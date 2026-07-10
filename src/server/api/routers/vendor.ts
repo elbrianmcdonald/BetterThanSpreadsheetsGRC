@@ -22,6 +22,7 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { generateIdentifier } from "@/server/services/identifierService";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { enqueueEmail } from "@/server/services/emailQueue.service";
@@ -57,24 +58,13 @@ function calculateNextReviewDate(tier: VendorRiskTier, fromDate: Date = new Date
  * Roles that can view vendors (FR8)
  * Most roles can view vendors for context and reporting
  */
-const VENDOR_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+const VENDOR_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
 /**
  * Roles that can create/edit vendors (FR9)
- * Only GRC Analysts and Org Admins can manage vendor records
+ * Write tier — MANAGER/ANALYST/ADMINISTRATOR can manage vendor records
  */
-const VENDOR_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-];
+const VENDOR_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Create Vendor Input Schema (Story 1.1 - FR1)

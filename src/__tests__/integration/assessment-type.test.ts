@@ -67,7 +67,7 @@ describe("Assessment Type Management - Story 7.8.1", () => {
         email: `admin-type-test-${Date.now()}@example.com`,
         name: "Admin Test User",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        role: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
@@ -79,7 +79,7 @@ describe("Assessment Type Management - Story 7.8.1", () => {
         email: `analyst-type-test-${Date.now()}@example.com`,
         name: "Analyst Test User",
         organizationId: testOrg.id,
-        role: UserRole.GRC_ANALYST,
+        role: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });
@@ -447,7 +447,7 @@ describe("Assessment Type Management - Story 7.8.1", () => {
           email: `other-org-type-${Date.now()}@example.com`,
           name: "Other Org User",
           organizationId: otherOrg.id,
-          role: UserRole.ORG_ADMIN,
+          role: UserRole.ADMINISTRATOR,
           updatedAt: new Date(),
         },
       });

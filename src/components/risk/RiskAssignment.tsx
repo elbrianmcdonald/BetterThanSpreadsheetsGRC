@@ -56,7 +56,7 @@ interface RiskAssignmentProps {
 /**
  * Roles that can assign/reassign risks (AC30, AC36)
  */
-const ASSIGN_ROLES: UserRole[] = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN"];
+const ASSIGN_ROLES: UserRole[] = ["ANALYST", "ANALYST", "ADMINISTRATOR"];
 
 export function RiskAssignment({
   riskId,

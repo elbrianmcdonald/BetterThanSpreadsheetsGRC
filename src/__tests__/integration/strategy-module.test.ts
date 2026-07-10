@@ -97,7 +97,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "CISO A",
       email: "ciso-a@strategy-test.com",
-      role: "CISO",
+      role: "MANAGER",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
@@ -108,7 +108,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Analyst A",
       email: "analyst-a@strategy-test.com",
-      role: "GRC_ANALYST",
+      role: "ANALYST",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
@@ -119,7 +119,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Admin A",
       email: "admin-a@strategy-test.com",
-      role: "ORG_ADMIN",
+      role: "ADMINISTRATOR",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
@@ -130,7 +130,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Security Engineer A",
       email: "seceng-a@strategy-test.com",
-      role: "SECURITY_ENGINEER",
+      role: "ANALYST",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
@@ -141,7 +141,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "IT Stakeholder A",
       email: "itstake-a@strategy-test.com",
-      role: "IT_STAKEHOLDER",
+      role: "BUSINESS_USER",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
@@ -152,7 +152,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Business Stakeholder A",
       email: "bizstake-a@strategy-test.com",
-      role: "BUSINESS_STAKEHOLDER",
+      role: "BUSINESS_USER",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
@@ -163,7 +163,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Auditor A",
       email: "auditor-a@strategy-test.com",
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
@@ -174,7 +174,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Admin B",
       email: "admin-b@strategy-test.com",
-      role: "ORG_ADMIN",
+      role: "ADMINISTRATOR",
       organizationId: orgB.id,
       updatedAt: new Date(),
     },
@@ -329,16 +329,16 @@ describe("AC1: Permission Integration Tests", () => {
       await rawPrisma.strategy.deleteMany({ where: { id: strategy.id } });
     });
 
-    it("SECURITY_ENGINEER cannot create strategies", async () => {
+    it("ANALYST (formerly SECURITY_ENGINEER) can create strategies", async () => {
       const caller = createCaller(secEngA);
-      await expect(
-        caller.strategy.create({
-          title: "Should Fail",
-          fiscalYearStart: 2025,
-          fiscalYearEnd: 2026,
-          status: StrategyStatus.DRAFT,
-        })
-      ).rejects.toThrow(/requires one of these roles|FORBIDDEN/i);
+      const strategy = await caller.strategy.create({
+        title: "Analyst-tier Strategy",
+        fiscalYearStart: 2025,
+        fiscalYearEnd: 2026,
+        status: StrategyStatus.DRAFT,
+      });
+      expect(strategy).toBeDefined();
+      await rawPrisma.strategy.deleteMany({ where: { id: strategy.id } });
     });
 
     it("IT_STAKEHOLDER cannot create strategies", async () => {

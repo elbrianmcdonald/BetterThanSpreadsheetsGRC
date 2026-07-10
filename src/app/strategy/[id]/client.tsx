@@ -125,9 +125,9 @@ import { List, CalendarDays, GanttChart } from "lucide-react";
 
 /** Roles that can manage strategies (FR58) */
 const CAN_MANAGE_STRATEGY_ROLES: UserRole[] = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Status badge configuration */

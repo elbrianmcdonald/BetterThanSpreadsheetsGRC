@@ -42,7 +42,7 @@ export function CompanySwitcher() {
 
   const activeId = session?.user?.organizationId;
   const canCreate =
-    session?.user?.role === UserRole.ORG_ADMIN ||
+    session?.user?.role === UserRole.ADMINISTRATOR ||
     session?.user?.isPlatformAdmin === true;
 
   // AR2: the switcher exists only when there's something to do — switch between

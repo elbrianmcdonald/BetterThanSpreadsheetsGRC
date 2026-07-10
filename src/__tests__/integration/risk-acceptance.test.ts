@@ -74,7 +74,7 @@ async function mkUser(label: string): Promise<TestUser> {
       id: randomUUID(),
       name: `Acceptance ${label}`,
       email: `acceptance-${label}-${Date.now()}-${randomUUID().slice(0, 6)}@example.com`,
-      role: "GRC_ANALYST",
+      role: "ANALYST",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },

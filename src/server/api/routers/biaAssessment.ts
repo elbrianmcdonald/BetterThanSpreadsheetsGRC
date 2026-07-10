@@ -20,31 +20,16 @@ import {
   BIAAssessmentRequestStatus,
 } from "@prisma/client";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-// Roles that can view assessments
-const ASSESSMENT_VIEW_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+// Roles that can view assessments — read tier (all org users incl. Business User)
+const ASSESSMENT_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-// Roles that can request assessments
-const ASSESSMENT_REQUEST_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-];
+// Roles that can request assessments — write tier
+const ASSESSMENT_REQUEST_ROLES: UserRole[] = [...WRITE_ROLES];
 
-// Roles that can complete assessments (includes process owners)
-const ASSESSMENT_COMPLETE_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-];
+// Roles that can complete assessments — write tier (mutation; Business User is read-only)
+const ASSESSMENT_COMPLETE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // Input schemas
 const impactScoreInputSchema = z.object({
@@ -180,8 +165,8 @@ export const biaAssessmentRouter = createTRPCRouter({
       const isOwner = process.ownerId === userId;
       const canEdit =
         isOwner ||
-        userRole === UserRole.ORG_ADMIN ||
-        userRole === UserRole.GRC_ANALYST;
+        userRole === UserRole.ADMINISTRATOR ||
+        userRole === UserRole.ANALYST;
 
       // Get the effective tier (override takes precedence)
       const effectiveTier = process.overrideTier ?? process.calculatedTier;
@@ -250,8 +235,8 @@ export const biaAssessmentRouter = createTRPCRouter({
       const isOwner = process.ownerId === userId;
       const canEdit =
         isOwner ||
-        userRole === UserRole.ORG_ADMIN ||
-        userRole === UserRole.GRC_ANALYST;
+        userRole === UserRole.ADMINISTRATOR ||
+        userRole === UserRole.ANALYST;
 
       if (!canEdit) {
         throw new TRPCError({
@@ -343,8 +328,8 @@ export const biaAssessmentRouter = createTRPCRouter({
       const isOwner = process.ownerId === userId;
       const canEdit =
         isOwner ||
-        userRole === UserRole.ORG_ADMIN ||
-        userRole === UserRole.GRC_ANALYST;
+        userRole === UserRole.ADMINISTRATOR ||
+        userRole === UserRole.ANALYST;
 
       if (!canEdit) {
         throw new TRPCError({
@@ -715,8 +700,8 @@ export const biaAssessmentRouter = createTRPCRouter({
 
       // For stakeholders, only show their owned processes
       if (
-        userRole === UserRole.IT_STAKEHOLDER ||
-        userRole === UserRole.BUSINESS_STAKEHOLDER
+        userRole === UserRole.BUSINESS_USER ||
+        userRole === UserRole.BUSINESS_USER
       ) {
         where.ownerId = userId;
       }

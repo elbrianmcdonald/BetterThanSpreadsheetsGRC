@@ -19,8 +19,8 @@ import { EditQuestionnaireClient } from "./client";
  * Roles that can edit questionnaire templates
  */
 const TEMPLATE_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
 ];
 
 export const metadata = {

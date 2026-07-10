@@ -21,13 +21,13 @@ import { TPRMDashboardClient } from "./client";
  * Roles that can view the TPRM Dashboard
  */
 const TPRM_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.MANAGER,
+  UserRole.BUSINESS_USER,
+  UserRole.BUSINESS_USER,
+  UserRole.BUSINESS_USER,
 ];
 
 export const metadata = {

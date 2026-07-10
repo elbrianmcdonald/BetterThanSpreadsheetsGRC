@@ -11,7 +11,7 @@ export const metadata = {
   description: "Author a custom framework using controls from your organization library",
 };
 
-const ROLES = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST];
+const ROLES = [UserRole.ADMINISTRATOR, UserRole.ANALYST];
 
 export default async function NewFrameworkPage() {
   const session = await auth();

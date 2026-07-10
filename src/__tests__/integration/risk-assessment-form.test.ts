@@ -125,35 +125,35 @@ beforeAll(async () => {
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@risk-assessment-form.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@risk-assessment-form.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserOrgAdmin = await createUser(
     "Org Admin",
     "admin@risk-assessment-form.test",
-    "ORG_ADMIN",
+    "ADMINISTRATOR",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder",
     "it@risk-assessment-form.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@risk-assessment-form.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 

@@ -15,6 +15,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { UserRole } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure, requireRole } from "@/server/api/trpc";
+import { ADMIN_ROLES } from "@/lib/auth/roles";
+
+// Email-queue monitoring/management is platform/system infrastructure (admin tier).
+const EMAIL_QUEUE_ADMIN_ROLES: UserRole[] = [...ADMIN_ROLES];
 
 /**
  * Color indicator thresholds for success rate
@@ -86,7 +90,7 @@ export const emailQueueRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN only
    */
   getMetrics: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(EMAIL_QUEUE_ADMIN_ROLES))
     .query(async ({ ctx }): Promise<EmailQueueMetrics> => {
       const now = new Date();
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -215,7 +219,7 @@ export const emailQueueRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN only
    */
   getFailedEmails: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(EMAIL_QUEUE_ADMIN_ROLES))
     .input(
       z.object({
         page: z.number().min(1).default(1),
@@ -272,7 +276,7 @@ export const emailQueueRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN only
    */
   getPendingEmails: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(EMAIL_QUEUE_ADMIN_ROLES))
     .input(
       z.object({
         page: z.number().min(1).default(1),
@@ -326,7 +330,7 @@ export const emailQueueRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN only
    */
   retryEmail: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(EMAIL_QUEUE_ADMIN_ROLES))
     .input(
       z.object({
         emailId: z.string(),
@@ -386,7 +390,7 @@ export const emailQueueRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN only
    */
   deleteFailedEmail: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(EMAIL_QUEUE_ADMIN_ROLES))
     .input(
       z.object({
         emailId: z.string(),
@@ -439,7 +443,7 @@ export const emailQueueRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN only
    */
   bulkRetryEmails: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(EMAIL_QUEUE_ADMIN_ROLES))
     .input(
       z.object({
         emailIds: z.array(z.string()).min(1).max(50),
@@ -491,7 +495,7 @@ export const emailQueueRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN only
    */
   getById: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(EMAIL_QUEUE_ADMIN_ROLES))
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const email = await ctx.db.emailQueue.findUnique({
@@ -522,7 +526,7 @@ export const emailQueueRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN only
    */
   getStatsByType: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(EMAIL_QUEUE_ADMIN_ROLES))
     .query(async ({ ctx }) => {
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
       // organizationId filtering is automatic via middleware (Story 1.9)

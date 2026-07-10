@@ -36,8 +36,8 @@ describe("Compliance Plan Bridge — Epic 2 Story 2.1/2.5 (compliance)", () => {
   beforeAll(async () => {
     const s = `${Date.now()}-${Math.round(performance.now())}`;
     org = await db.organization.create({ data: { id: randomUUID(), name: `CPB ${s}`, slug: `cpb-${s}`, updatedAt: new Date() } });
-    const u = await db.user.create({ data: { id: randomUUID(), email: `cpb-${s}@example.com`, name: "cpbadmin", organizationId: org.id, role: UserRole.ORG_ADMIN, updatedAt: new Date() } });
-    admin = { id: u.id, email: u.email!, organizationId: org.id, role: UserRole.ORG_ADMIN };
+    const u = await db.user.create({ data: { id: randomUUID(), email: `cpb-${s}@example.com`, name: "cpbadmin", organizationId: org.id, role: UserRole.ADMINISTRATOR, updatedAt: new Date() } });
+    admin = { id: u.id, email: u.email!, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {
       const fw = await db.framework.create({ data: { id: randomUUID(), organizationId: org.id, name: "FW", code: `FW${s}`, version: "1", isActive: true, updatedAt: new Date() } });

@@ -587,7 +587,7 @@ export const evidenceRequestRouter = createTRPCRouter({
 
       // Verify user is the requester (creator) or is ORG_ADMIN
       const isRequester = request.requestedById === ctx.session!.user.id;
-      const isAdmin = ctx.session!.user.role === "ORG_ADMIN";
+      const isAdmin = ctx.session!.user.role === "ADMINISTRATOR";
 
       if (!isRequester && !isAdmin) {
         throw new TRPCError({

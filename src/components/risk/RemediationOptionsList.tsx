@@ -30,12 +30,12 @@ import { EditRemediationOptionDialog } from "./EditRemediationOptionDialog";
  * Roles that can manage remediation options
  */
 const CAN_ADD_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
-const CAN_DELETE_ROLES: UserRole[] = [UserRole.GRC_ANALYST, UserRole.ORG_ADMIN];
+const CAN_DELETE_ROLES: UserRole[] = [UserRole.ANALYST, UserRole.ADMINISTRATOR];
 
 interface RemediationOptionsListProps {
   /** The risk ID to fetch options for */

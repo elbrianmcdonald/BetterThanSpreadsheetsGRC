@@ -19,11 +19,11 @@ import { QuestionnaireDetailClient } from "./client";
  * Roles that can view questionnaire templates
  */
 const TEMPLATE_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.AUDITOR,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.MANAGER,
+  UserRole.BUSINESS_USER,
 ];
 
 export const metadata = {

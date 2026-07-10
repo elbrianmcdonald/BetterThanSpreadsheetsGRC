@@ -43,24 +43,14 @@ import {
   OLIR_EXPORT_LABEL,
   type ExportFormat,
 } from "@/lib/crosswalk-export";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-// Roles that can create/delete crosswalk mappings (writes)
-const CROSSWALK_MANAGE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+// Roles that can create/delete/confirm crosswalk mappings (writes; mapping
+// promotion is a write per product decision, not a governance approval gate)
+const CROSSWALK_MANAGE_ROLES: UserRole[] = WRITE_ROLES as UserRole[];
 
 // Roles that can view crosswalks (reads)
-const CROSSWALK_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+const CROSSWALK_VIEW_ROLES: UserRole[] = READ_ROLES as UserRole[];
 
 const pairInput = z.object({
   sourceFrameworkId: z.string().min(1),

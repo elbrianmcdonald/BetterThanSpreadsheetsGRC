@@ -68,7 +68,7 @@ describe("Risk Matrix Template Management - Story 7.8.2", () => {
         email: `admin-matrix-test-${Date.now()}@example.com`,
         name: "Admin Test User",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        role: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
@@ -80,7 +80,7 @@ describe("Risk Matrix Template Management - Story 7.8.2", () => {
         email: `analyst-matrix-test-${Date.now()}@example.com`,
         name: "Analyst Test User",
         organizationId: testOrg.id,
-        role: UserRole.GRC_ANALYST,
+        role: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });
@@ -607,7 +607,7 @@ describe("Risk Matrix Template Management - Story 7.8.2", () => {
           email: `other-org-matrix-${Date.now()}@example.com`,
           name: "Other Org User",
           organizationId: otherOrg.id,
-          role: UserRole.ORG_ADMIN,
+          role: UserRole.ADMINISTRATOR,
           updatedAt: new Date(),
         },
       });

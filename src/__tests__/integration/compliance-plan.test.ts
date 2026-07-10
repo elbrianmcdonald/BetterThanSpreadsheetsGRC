@@ -41,8 +41,8 @@ describe("Compliance Plan — Epic 1 Stories 1.1/1.2", () => {
   beforeAll(async () => {
     const s = `${Date.now()}-${Math.round(performance.now())}`;
     org = await db.organization.create({ data: { id: randomUUID(), name: `CP ${s}`, slug: `cp-${s}`, updatedAt: new Date() } });
-    admin = await mkUser(org.id, UserRole.ORG_ADMIN, "cpadmin");
-    auditor = await mkUser(org.id, UserRole.AUDITOR, "cpauditor");
+    admin = await mkUser(org.id, UserRole.ADMINISTRATOR, "cpadmin");
+    auditor = await mkUser(org.id, UserRole.BUSINESS_USER, "cpauditor");
     ownerPersonId = await runWithOrganizationContext(org.id, async () => {
       const p = await db.person.create({ data: { organizationId: org.id, name: "Plan Owner" } });
       return p.id;

@@ -11,7 +11,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 const mockDelete = jest.fn().mockResolvedValue({ organizationId: "orgB" });
-const mockCreate = jest.fn().mockResolvedValue({ organizationId: "orgNew", role: "ORG_ADMIN" });
+const mockCreate = jest.fn().mockResolvedValue({ organizationId: "orgNew", role: "ADMINISTRATOR" });
 const mockInvalidate = jest.fn();
 
 jest.mock("sonner", () => ({ toast: { success: jest.fn(), error: jest.fn() } }));

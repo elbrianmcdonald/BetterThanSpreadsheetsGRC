@@ -78,7 +78,7 @@ describe("Audit Logging Integration Tests", () => {
           email: "user1@testorg1.com",
           name: "Test User 1",
           organizationId: testOrg1.id,
-          role: "GRC_ANALYST",
+          role: "ANALYST",
           updatedAt: new Date(),
         },
       });
@@ -91,7 +91,7 @@ describe("Audit Logging Integration Tests", () => {
           email: "user2@testorg2.com",
           name: "Test User 2",
           organizationId: testOrg2.id,
-          role: "GRC_ANALYST",
+          role: "ANALYST",
           updatedAt: new Date(),
         },
       });
@@ -284,8 +284,8 @@ describe("Audit Logging Integration Tests", () => {
           before: null,
           after: {
             attemptedAction: "DELETE_USER",
-            requiredRoles: ["ORG_ADMIN"],
-            userRole: "AUDITOR",
+            requiredRoles: ["ADMINISTRATOR"],
+            userRole: "BUSINESS_USER",
           },
         },
       });

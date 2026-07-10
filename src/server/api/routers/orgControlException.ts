@@ -16,9 +16,10 @@ import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { AuditAction, ControlExceptionStatus } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure } from "@/server/api/trpc";
+import { WRITE_ROLES, APPROVE_ROLES } from "@/lib/auth/roles";
 
-const REQUESTER_ROLES = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
-const APPROVER_ROLES = ["ORG_ADMIN"];
+const REQUESTER_ROLES: readonly string[] = WRITE_ROLES;
+const APPROVER_ROLES: readonly string[] = APPROVE_ROLES;
 
 function assertRequester(role: string | undefined): void {
   if (!role || !REQUESTER_ROLES.includes(role)) {

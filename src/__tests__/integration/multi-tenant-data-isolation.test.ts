@@ -71,7 +71,7 @@ describe("Multi-Tenant Data Isolation", () => {
           id: USER_A_ID,
           email: "alice@acme-corp.example.com",
           name: "Alice Acme",
-          role: "ORG_ADMIN",
+          role: "ADMINISTRATOR",
           organizationId: ORG_A_ID,
           updatedAt: new Date(),
         },
@@ -83,7 +83,7 @@ describe("Multi-Tenant Data Isolation", () => {
           id: USER_B_ID,
           email: "bob@globex-corp.example.com",
           name: "Bob Globex",
-          role: "ORG_ADMIN",
+          role: "ADMINISTRATOR",
           organizationId: ORG_B_ID,
           updatedAt: new Date(),
         },
@@ -289,7 +289,7 @@ describe("Multi-Tenant Data Isolation", () => {
             id: randomUUID(),
             email: "test@example.com",
             name: "Test User",
-            role: "AUDITOR",
+            role: "BUSINESS_USER",
             updatedAt: new Date(),
             // Missing organizationId - should fail
           } as any,
@@ -304,7 +304,7 @@ describe("Multi-Tenant Data Isolation", () => {
             id: randomUUID(),
             email: "test2@example.com",
             name: "Test User 2",
-            role: "AUDITOR",
+            role: "BUSINESS_USER",
             organizationId: "invalid-org-id",
             updatedAt: new Date(),
           },
@@ -441,7 +441,7 @@ describe("Multi-Tenant Data Isolation", () => {
             id: randomUUID(),
             email: `test-cascade-${Date.now()}@example.com`,
             name: "Test User for Cascade",
-            role: "AUDITOR",
+            role: "BUSINESS_USER",
             organizationId: testOrgId,
             updatedAt: new Date(),
           },
@@ -565,7 +565,7 @@ describe("Data Integrity and Performance", () => {
   it("should enforce NOT NULL on organizationId for User", async () => {
     await expect(
       db.$executeRaw`INSERT INTO "User" (id, email, name, role, "createdAt", "updatedAt")
-                     VALUES ('test-id', 'test@test.com', 'Test', 'AUDITOR', NOW(), NOW())`
+                     VALUES ('test-id', 'test@test.com', 'Test', 'BUSINESS_USER', NOW(), NOW())`
     ).rejects.toThrow();
   });
 

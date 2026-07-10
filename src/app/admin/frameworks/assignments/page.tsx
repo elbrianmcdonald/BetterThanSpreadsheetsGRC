@@ -20,7 +20,7 @@ export default async function FrameworkAssignmentsPage() {
   const session = await auth();
 
   // Only ORG_ADMIN can manage framework assignments
-  requireRole(session, [UserRole.ORG_ADMIN], "/admin/frameworks/assignments");
+  requireRole(session, [UserRole.ADMINISTRATOR], "/admin/frameworks/assignments");
 
   return (
     <AppLayout breadcrumbs={[{ label: "Admin" }, { label: "Framework Assignments" }]}>

@@ -48,7 +48,7 @@ describe('Session Management Integration Tests', () => {
         id: randomUUID(),
         email: 'session-test@example.com',
         name: 'Session Test User',
-        role: 'AUDITOR' as UserRole,
+        role: 'BUSINESS_USER' as UserRole,
         organizationId: testOrgId,
         updatedAt: new Date(),
       },
@@ -123,7 +123,7 @@ describe('Session Management Integration Tests', () => {
     expect(session?.User.id).toBeDefined();
     expect(session?.User.email).toBe('session-test@example.com');
     expect(session?.User.name).toBe('Session Test User');
-    expect(session?.User.role).toBe('AUDITOR');
+    expect(session?.User.role).toBe('BUSINESS_USER');
     expect(session?.User.organizationId).toBe(testOrgId);
   });
 
@@ -242,12 +242,12 @@ describe('Session Management Integration Tests', () => {
       include: { User: true },
     });
 
-    expect(session?.User.role).toBe('AUDITOR');
+    expect(session?.User.role).toBe('BUSINESS_USER');
 
     // Update user role
     await db.user.update({
       where: { id: testUserId },
-      data: { role: 'GRC_ANALYST' as UserRole },
+      data: { role: 'ANALYST' as UserRole },
     });
 
     // Fetch session again (simulates next request)
@@ -257,12 +257,12 @@ describe('Session Management Integration Tests', () => {
     });
 
     // Role should be updated (database is source of truth)
-    expect(session?.User.role).toBe('GRC_ANALYST');
+    expect(session?.User.role).toBe('ANALYST');
 
     // Reset role for other tests
     await db.user.update({
       where: { id: testUserId },
-      data: { role: 'AUDITOR' as UserRole },
+      data: { role: 'BUSINESS_USER' as UserRole },
     });
   });
 

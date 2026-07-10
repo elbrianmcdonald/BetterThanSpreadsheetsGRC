@@ -24,21 +24,15 @@ import {
   organizationProcedure,
 } from "@/server/api/trpc";
 import { UserRole, AssessmentTaskStatus, UnifiedAssessmentType } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
-// Roles that can create and manage assessment tasks
-const MANAGER_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-  UserRole.GRC_MANAGER,
-  UserRole.GRC_ANALYST, // Senior analysts can also create tasks
-];
+// Roles that can create and manage assessment tasks (staff writers).
+const MANAGER_ROLES: UserRole[] = [...WRITE_ROLES];
 
-// Roles that can be assigned to assessment tasks
-const ASSIGNEE_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.GRC_MANAGER,
-  UserRole.SECURITY_ENGINEER,
-];
+// Roles that can be assigned to assessment tasks. This is a domain concept
+// (who performs assessment work), not an authorization tier: analysts and
+// managers are assignable; administrators are not a task-worker pool.
+const ASSIGNEE_ROLES: UserRole[] = [UserRole.ANALYST, UserRole.MANAGER];
 
 // Helper to check if user has manager role
 function hasManagerRole(role: UserRole): boolean {

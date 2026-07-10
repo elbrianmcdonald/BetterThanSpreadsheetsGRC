@@ -139,7 +139,7 @@ beforeAll(async () => {
         id: randomUUID(),
         name: "Rescore Analyst",
         email,
-        role: "GRC_ANALYST",
+        role: "ANALYST",
         organizationId: orgId,
         updatedAt: new Date(),
       },

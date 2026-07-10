@@ -13,24 +13,13 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { UserRole } from "@prisma/client";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-// Roles that can view asset owners
-const OWNER_VIEW_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+// Roles that can view asset owners (read tier)
+const OWNER_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-// Roles that can manage asset owners
-const OWNER_MANAGE_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
+// Roles that can manage asset owners (write tier)
+const OWNER_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // Input schemas
 const createOwnerSchema = z.object({

@@ -59,10 +59,10 @@ interface EvidenceItem {
 
 /** Roles that can link/unlink evidence */
 const CAN_LINK_ROLES: UserRole[] = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.IT_STAKEHOLDER,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.BUSINESS_USER,
 ];
 
 /**

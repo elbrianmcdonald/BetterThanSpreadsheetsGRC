@@ -72,7 +72,7 @@ describe("Framework Import Parse - Story 24.1", () => {
         email: adminEmail,
         name: "Admin Test User",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        role: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
@@ -90,7 +90,7 @@ describe("Framework Import Parse - Story 24.1", () => {
         email: analystEmail,
         name: "Analyst Test User",
         organizationId: testOrg.id,
-        role: UserRole.GRC_ANALYST,
+        role: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });

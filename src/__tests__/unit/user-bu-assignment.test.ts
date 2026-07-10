@@ -45,7 +45,7 @@ describe("User BU Assignment (Story 7.0.4)", () => {
         id: "user-1",
         name: "Test User",
         email: "test@example.com",
-        role: "GRC_ANALYST",
+        role: "ANALYST",
         businessUnitId: null,
         organizationId: "org-1",
         assignedFrameworks: [],

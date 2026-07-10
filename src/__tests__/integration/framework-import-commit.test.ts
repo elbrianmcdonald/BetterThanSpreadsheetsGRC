@@ -75,7 +75,7 @@ describe("Framework Import Commit - Story 24.3", () => {
         email: adminEmail,
         name: "Admin",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        role: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
@@ -88,7 +88,7 @@ describe("Framework Import Commit - Story 24.3", () => {
         email: analystEmail,
         name: "Analyst",
         organizationId: testOrg.id,
-        role: UserRole.GRC_ANALYST,
+        role: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });

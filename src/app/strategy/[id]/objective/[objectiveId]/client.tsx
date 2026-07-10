@@ -99,15 +99,15 @@ import { HistoryViewer } from "@/components/strategy/HistoryViewer";
 
 /** Roles that can manage objectives (FR58) */
 const CAN_MANAGE_ROLES: UserRole[] = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Roles that can update assigned objectives (FR59) */
 const CAN_UPDATE_ROLES: UserRole[] = [
   ...CAN_MANAGE_ROLES,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ANALYST,
 ];
 
 /** Story 2.5 AC8: Objective status badge configuration */
@@ -184,7 +184,7 @@ export function ObjectiveDetailClient() {
 
   // Check if user can update (manager or assigned SECURITY_ENGINEER)
   const isAssigned = objective?.assignees?.some(a => a.id === session?.user?.id);
-  const canUpdate = canManage || (userRole === UserRole.SECURITY_ENGINEER && isAssigned);
+  const canUpdate = canManage || (userRole === UserRole.ANALYST && isAssigned);
 
   // Fetch organization users for assignee selection
   const { data: orgUsers } = api.user.listUsers.useQuery(

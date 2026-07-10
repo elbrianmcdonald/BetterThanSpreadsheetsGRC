@@ -97,7 +97,7 @@ import {
 /**
  * Roles that can manage vendors
  */
-const VENDOR_MANAGE_ROLES: UserRole[] = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST];
+const VENDOR_MANAGE_ROLES: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.ANALYST];
 
 interface VendorDetailContentProps {
   vendor: {

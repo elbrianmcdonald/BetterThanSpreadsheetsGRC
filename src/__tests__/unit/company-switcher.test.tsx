@@ -16,8 +16,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 const mockUpdate = jest.fn();
 const mockRefresh = jest.fn();
 const mockInvalidate = jest.fn();
-const mockMutateAsync = jest.fn().mockResolvedValue({ organizationId: "orgB", role: "AUDITOR" });
-const mockCreateAsync = jest.fn().mockResolvedValue({ organizationId: "orgNew", role: "ORG_ADMIN" });
+const mockMutateAsync = jest.fn().mockResolvedValue({ organizationId: "orgB", role: "BUSINESS_USER" });
+const mockCreateAsync = jest.fn().mockResolvedValue({ organizationId: "orgNew", role: "ADMINISTRATOR" });
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mockRefresh, push: jest.fn() }),
@@ -49,7 +49,7 @@ const setSwitchable = (orgs: Array<{ id: string; name: string }> | undefined) =>
   });
 };
 
-const setSession = (organizationId: string, role = "AUDITOR") => {
+const setSession = (organizationId: string, role = "BUSINESS_USER") => {
   (useSession as jest.Mock).mockReturnValue({
     data: { user: { organizationId, role } },
     update: mockUpdate,
@@ -113,14 +113,14 @@ describe("CompanySwitcher (Story 1.4 + 2.1)", () => {
   });
 
   it("shows the switcher for a single-company ORG_ADMIN so they can create (FR10)", () => {
-    setSession("orgA", "ORG_ADMIN");
+    setSession("orgA", "ADMINISTRATOR");
     setSwitchable([{ id: "orgA", name: "Acme" }]);
     render(<CompanySwitcher />);
     expect(screen.getByRole("button", { name: /new company/i })).toBeInTheDocument();
   });
 
   it("creates a company: create → session update → refresh (FR10, FR12)", async () => {
-    setSession("orgA", "ORG_ADMIN");
+    setSession("orgA", "ADMINISTRATOR");
     setSwitchable([{ id: "orgA", name: "Acme" }]);
     render(<CompanySwitcher />);
 

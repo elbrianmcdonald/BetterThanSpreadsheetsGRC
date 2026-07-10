@@ -125,14 +125,14 @@ describe("User-BusinessUnit Relationship Service (Story 7.0.2)", () => {
           id: "user-1",
           name: "Alice",
           email: "alice@example.com",
-          role: "GRC_ANALYST",
+          role: "ANALYST",
           businessUnit: { id: "bu-1", name: "Engineering", parentId: null },
         },
         {
           id: "user-2",
           name: "Bob",
           email: "bob@example.com",
-          role: "IT_STAKEHOLDER",
+          role: "BUSINESS_USER",
           businessUnit: { id: "bu-1", name: "Engineering", parentId: null },
         },
       ];
@@ -183,14 +183,14 @@ describe("User-BusinessUnit Relationship Service (Story 7.0.2)", () => {
           id: "user-1",
           name: "Alice",
           email: "alice@example.com",
-          role: "GRC_ANALYST",
+          role: "ANALYST",
           businessUnit: { id: "bu-parent", name: "Engineering", parentId: null },
         },
         {
           id: "user-2",
           name: "Bob",
           email: "bob@example.com",
-          role: "IT_STAKEHOLDER",
+          role: "BUSINESS_USER",
           businessUnit: {
             id: "bu-child1",
             name: "Platform",
@@ -201,7 +201,7 @@ describe("User-BusinessUnit Relationship Service (Story 7.0.2)", () => {
           id: "user-3",
           name: "Carol",
           email: "carol@example.com",
-          role: "SECURITY_ENGINEER",
+          role: "ANALYST",
           businessUnit: {
             id: "bu-child2",
             name: "Frontend",

@@ -21,28 +21,17 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
 /**
- * Roles that can manage base framework mappings
+ * Roles that can manage base framework mappings (mapping writes)
  */
-const MAPPING_MANAGE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const MAPPING_MANAGE_ROLES: UserRole[] = WRITE_ROLES as UserRole[];
 
 /**
  * Roles that can view base framework mappings
  */
-const MAPPING_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+const MAPPING_VIEW_ROLES: UserRole[] = READ_ROLES as UserRole[];
 
 // =============================================================================
 // Input Schemas

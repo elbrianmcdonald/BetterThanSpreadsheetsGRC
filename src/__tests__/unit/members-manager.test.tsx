@@ -11,7 +11,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 const mockAdd = jest.fn().mockResolvedValue({ userId: "u9" });
-const mockUpdateRole = jest.fn().mockResolvedValue({ userId: "u2", role: "CISO" });
+const mockUpdateRole = jest.fn().mockResolvedValue({ userId: "u2", role: "MANAGER" });
 const mockRemove = jest.fn().mockResolvedValue({ userId: "u2" });
 const mockInvalidate = jest.fn();
 
@@ -33,8 +33,8 @@ import { api } from "@/trpc/react";
 import { MembersManager } from "@/components/admin/MembersManager";
 
 const members = [
-  { userId: "u1", name: "Alice", email: "alice@acme.test", role: "ORG_ADMIN" },
-  { userId: "u2", name: "Bob", email: "bob@acme.test", role: "AUDITOR" },
+  { userId: "u1", name: "Alice", email: "alice@acme.test", role: "ADMINISTRATOR" },
+  { userId: "u2", name: "Bob", email: "bob@acme.test", role: "BUSINESS_USER" },
 ];
 
 describe("MembersManager (Story 3.1 / 3.2)", () => {
@@ -55,21 +55,21 @@ describe("MembersManager (Story 3.1 / 3.2)", () => {
   it("adds a member by email + role (FR13)", async () => {
     render(<MembersManager />);
     fireEvent.change(screen.getByLabelText(/member email/i), { target: { value: "carol@acme.test" } });
-    fireEvent.change(screen.getByLabelText(/new member role/i), { target: { value: "GRC_ANALYST" } });
+    fireEvent.change(screen.getByLabelText(/new member role/i), { target: { value: "ANALYST" } });
     fireEvent.click(screen.getByRole("button", { name: /add member/i }));
 
     await waitFor(() => {
-      expect(mockAdd).toHaveBeenCalledWith({ email: "carol@acme.test", role: "GRC_ANALYST" });
+      expect(mockAdd).toHaveBeenCalledWith({ email: "carol@acme.test", role: "ANALYST" });
     });
     expect(mockInvalidate).toHaveBeenCalled();
   });
 
   it("changes a member's role (FR14)", async () => {
     render(<MembersManager />);
-    fireEvent.change(screen.getByLabelText(/role for bob@acme.test/i), { target: { value: "CISO" } });
+    fireEvent.change(screen.getByLabelText(/role for bob@acme.test/i), { target: { value: "MANAGER" } });
 
     await waitFor(() => {
-      expect(mockUpdateRole).toHaveBeenCalledWith({ userId: "u2", role: "CISO" });
+      expect(mockUpdateRole).toHaveBeenCalledWith({ userId: "u2", role: "MANAGER" });
     });
   });
 

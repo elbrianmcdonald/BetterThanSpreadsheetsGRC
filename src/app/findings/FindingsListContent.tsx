@@ -113,19 +113,19 @@ const COLUMN_ORDER_KEY = "findings-table-column-order";
  * Roles that can create findings
  */
 const FINDING_CREATE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**
  * Roles that can export findings
  */
 const FINDING_EXPORT_ROLES = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.AUDITOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.BUSINESS_USER,
 ];
 
 /**

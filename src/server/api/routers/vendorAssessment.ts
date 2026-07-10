@@ -28,6 +28,7 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES, APPROVE_ROLES } from "@/lib/auth/roles";
 import { generateIdentifier } from "@/server/services/identifierService";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { enqueueEmail } from "@/server/services/emailQueue.service";
@@ -37,32 +38,17 @@ import { renderAssessmentStatusChangedEmail } from "@/server/email/templates";
  * Roles that can view assessments
  * Includes assessors, analysts, and stakeholders
  */
-const ASSESSMENT_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+const ASSESSMENT_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
 /**
- * Roles that can create/manage assessments
+ * Roles that can create/manage assessments (write tier)
  */
-const ASSESSMENT_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
+const ASSESSMENT_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
- * Roles that can complete assessments (final approval)
+ * Roles that can complete assessments (final approval / sign-off gate)
  */
-const ASSESSMENT_COMPLETE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-];
+const ASSESSMENT_COMPLETE_ROLES: UserRole[] = [...APPROVE_ROLES];
 
 /**
  * Create Assessment Input Schema (Story 3.1 - FR17)

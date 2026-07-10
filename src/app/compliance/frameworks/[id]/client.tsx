@@ -63,7 +63,7 @@ import { AppLayout } from "@/components/layout";
 /**
  * Story 5.7 AC28: Roles that can export evidence packages
  */
-const CAN_EXPORT_PDF_ROLES = ["GRC_ANALYST", "ORG_ADMIN", "AUDITOR"] as const;
+const CAN_EXPORT_PDF_ROLES = ["ANALYST", "ADMINISTRATOR", "BUSINESS_USER"] as const;
 
 interface FrameworkDetailClientProps {
   frameworkId: string;

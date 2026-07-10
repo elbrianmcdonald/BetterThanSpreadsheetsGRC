@@ -22,7 +22,7 @@ export function MembersManager() {
   const { data: members, isLoading } = api.organization.listMembers.useQuery();
 
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<UserRole>(UserRole.AUDITOR);
+  const [role, setRole] = useState<UserRole>(UserRole.BUSINESS_USER);
 
   const addMember = api.organization.addMember.useMutation();
   const updateRole = api.organization.updateMemberRole.useMutation();

@@ -39,40 +39,22 @@ import {
 } from "@/lib/excel-parser";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { AuditAction } from "@prisma/client";
+import { READ_ROLES, WRITE_ROLES, APPROVE_ROLES } from "@/lib/auth/roles";
 
 /**
- * Roles that can manage standards
- * - CISO: Full CRUD access
- * - GRC_ANALYST: Full CRUD access
- * - ORG_ADMIN: Full CRUD access
+ * Roles that can manage standards (create/update/delete/import — writes)
  */
-const STANDARD_MANAGE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const STANDARD_MANAGE_ROLES: UserRole[] = WRITE_ROLES as UserRole[];
 
 /**
  * Roles that can view standards
  */
-const STANDARD_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+const STANDARD_VIEW_ROLES: UserRole[] = READ_ROLES as UserRole[];
 
 /**
- * Roles that can approve exceptions
+ * Roles that can approve/deny exceptions (explicit decision gate → Manager+)
  */
-const EXCEPTION_APPROVE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const EXCEPTION_APPROVE_ROLES: UserRole[] = APPROVE_ROLES as UserRole[];
 
 // =============================================================================
 // Input Schemas
@@ -1188,7 +1170,7 @@ export const standardRouter = createTRPCRouter({
    * Create an exception request
    */
   createException: organizationProcedure
-    .use(requireRole(STANDARD_VIEW_ROLES))
+    .use(requireRole(STANDARD_MANAGE_ROLES))
     .input(createExceptionSchema)
     .mutation(async ({ ctx, input }) => {
       // Verify standard control exists and belongs to org

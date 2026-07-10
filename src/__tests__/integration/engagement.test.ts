@@ -74,10 +74,10 @@ describe("Engagement Router - Polymorphic Wrapper", () => {
       data: { id: randomUUID(), name: `Eng Org B ${stamp}`, slug: `eng-b-${stamp}`, updatedAt: new Date() },
     });
     analystA = await db.user.create({
-      data: { id: randomUUID(), email: `eng-a-${stamp}@example.com`, name: "Analyst A", organizationId: orgA.id, role: UserRole.GRC_ANALYST, updatedAt: new Date() },
+      data: { id: randomUUID(), email: `eng-a-${stamp}@example.com`, name: "Analyst A", organizationId: orgA.id, role: UserRole.ANALYST, updatedAt: new Date() },
     });
     analystB = await db.user.create({
-      data: { id: randomUUID(), email: `eng-b-${stamp}@example.com`, name: "Analyst B", organizationId: orgB.id, role: UserRole.GRC_ANALYST, updatedAt: new Date() },
+      data: { id: randomUUID(), email: `eng-b-${stamp}@example.com`, name: "Analyst B", organizationId: orgB.id, role: UserRole.ANALYST, updatedAt: new Date() },
     });
 
     // Org A: Framework + ComplianceAssessment (the primary wrap target).
@@ -334,7 +334,7 @@ describe("Engagement Router - Polymorphic Wrapper", () => {
       const sh = await caller.engagement.stakeholder.create({
         engagementId: eng!.id,
         name: "Jane Doe",
-        role: "CISO",
+        role: "MANAGER",
         raci: "A",
         isApprover: true,
       });

@@ -74,9 +74,9 @@ import { api } from "@/trpc/react";
  * Roles that can create findings from responses
  */
 const FINDING_CREATE_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 interface QuestionnaireResponsesClientProps {

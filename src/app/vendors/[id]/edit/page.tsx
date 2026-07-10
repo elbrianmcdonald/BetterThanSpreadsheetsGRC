@@ -23,7 +23,7 @@ import { Building2 } from "lucide-react";
 /**
  * Roles that can edit vendors
  */
-const VENDOR_MANAGE_ROLES = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST];
+const VENDOR_MANAGE_ROLES = [UserRole.ADMINISTRATOR, UserRole.ANALYST];
 
 export async function generateMetadata({
   params,

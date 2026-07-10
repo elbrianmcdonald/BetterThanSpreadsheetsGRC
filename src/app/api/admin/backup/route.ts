@@ -48,7 +48,7 @@ export async function GET(_req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
-  if (session.user.role !== "ORG_ADMIN") {
+  if (session.user.role !== "ADMINISTRATOR") {
     return NextResponse.json(
       { error: "Only organization admins can download backups" },
       { status: 403 }

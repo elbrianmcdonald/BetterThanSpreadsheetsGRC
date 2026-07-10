@@ -70,17 +70,17 @@ import { PendingApprovalsSection } from "@/components/risk/PendingApprovalsSecti
 
 /** Roles that can access the assignment queue */
 const QUEUE_ACCESS_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.AUDITOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.BUSINESS_USER,
 ];
 
 /** Roles that can assign risks */
 const ASSIGN_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Severity badge colors */
@@ -164,7 +164,7 @@ export function AssignmentQueueClient() {
   const userRole = session?.user?.role as UserRole | undefined;
   const canAccessQueue = userRole && QUEUE_ACCESS_ROLES.includes(userRole);
   const canAssign = userRole && ASSIGN_ROLES.includes(userRole);
-  const isAuditor = userRole === UserRole.AUDITOR;
+  const isAuditor = userRole === UserRole.BUSINESS_USER;
 
   // Fetch queue data (AC1-AC6)
   // NOTE: All hooks must be called before any early returns

@@ -601,7 +601,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       const { id, assigneeId } = input;
 
       // Check if user has permission to assign (ORG_ADMIN or CISO)
-      const allowedRoles: UserRole[] = [UserRole.ORG_ADMIN, UserRole.CISO];
+      const allowedRoles: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.MANAGER];
       if (!allowedRoles.includes(ctx.session.user.role as UserRole)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -756,7 +756,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       }
 
       // Allow ORG_ADMIN OR the assigned worker to edit
-      const isAdmin = ctx.session?.user?.role === UserRole.ORG_ADMIN;
+      const isAdmin = ctx.session?.user?.role === UserRole.ADMINISTRATOR;
       const isAssignee = assessment.assigneeId === ctx.session?.user?.id;
       if (!isAdmin && !isAssignee) {
         throw new TRPCError({
@@ -848,7 +848,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Assessment project not found" });
       }
 
-      const isAdmin = ctx.session?.user?.role === UserRole.ORG_ADMIN;
+      const isAdmin = ctx.session?.user?.role === UserRole.ADMINISTRATOR;
       const isAssignee = assessment.assigneeId === ctx.session?.user?.id;
       if (!isAdmin && !isAssignee) {
         throw new TRPCError({
@@ -885,7 +885,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Assessment project not found" });
       }
 
-      const isAdmin = ctx.session?.user?.role === UserRole.ORG_ADMIN;
+      const isAdmin = ctx.session?.user?.role === UserRole.ADMINISTRATOR;
       const isAssignee = assessment.assigneeId === ctx.session?.user?.id;
       if (!isAdmin && !isAssignee) {
         throw new TRPCError({
@@ -1007,7 +1007,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       }
 
       // Verify user is the assignee or an org admin
-      const isAdmin = ctx.session.user.role === UserRole.ORG_ADMIN;
+      const isAdmin = ctx.session.user.role === UserRole.ADMINISTRATOR;
       const isAssignee = assessment.assigneeId === ctx.session.user.id;
       if (!isAdmin && !isAssignee) {
         throw new TRPCError({
@@ -1188,7 +1188,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       const { limit, offset } = input;
 
       // Verify user is a manager
-      const managerRoles: UserRole[] = [UserRole.ORG_ADMIN, UserRole.CISO];
+      const managerRoles: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.MANAGER];
       if (!managerRoles.includes(ctx.session.user.role as UserRole)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -1244,7 +1244,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
   getPendingApprovalCount: organizationProcedure
     .query(async ({ ctx }) => {
       // Verify user is a manager
-      const managerRoles: UserRole[] = [UserRole.ORG_ADMIN, UserRole.CISO];
+      const managerRoles: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.MANAGER];
       if (!managerRoles.includes(ctx.session.user.role as UserRole)) {
         return { count: 0 };
       }
@@ -1272,7 +1272,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       const { id } = input;
 
       // Verify user is a manager
-      const managerRoles: UserRole[] = [UserRole.ORG_ADMIN, UserRole.CISO];
+      const managerRoles: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.MANAGER];
       if (!managerRoles.includes(ctx.session.user.role as UserRole)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -1308,7 +1308,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
 
       // Org admins can approve directly from IN_PROGRESS (skip submit step);
       // CISO and other managers require an explicit submission first.
-      const isAdmin = ctx.session.user.role === UserRole.ORG_ADMIN;
+      const isAdmin = ctx.session.user.role === UserRole.ADMINISTRATOR;
       const isApprovableStatus =
         assessment.status === AssessmentProjectStatus.SUBMITTED ||
         (isAdmin && assessment.status === AssessmentProjectStatus.IN_PROGRESS);
@@ -1501,7 +1501,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       const { id, rejectionNotes } = input;
 
       // Verify user is a manager
-      const managerRoles: UserRole[] = [UserRole.ORG_ADMIN, UserRole.CISO];
+      const managerRoles: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.MANAGER];
       if (!managerRoles.includes(ctx.session.user.role as UserRole)) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -2002,7 +2002,7 @@ export const riskAssessmentProjectRouter = createTRPCRouter({
       if (!comment) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Comment not found" });
       }
-      const isAdmin = ctx.session.user.role === UserRole.ORG_ADMIN;
+      const isAdmin = ctx.session.user.role === UserRole.ADMINISTRATOR;
       const isAuthor = comment.authorId === ctx.session.user.id;
       if (!isAdmin && !isAuthor) {
         throw new TRPCError({

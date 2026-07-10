@@ -15,8 +15,9 @@ import {
   HasBCP,
 } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure } from "@/server/api/trpc";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
-const ALLOWED_MUTATION_ROLES = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
+const ALLOWED_MUTATION_ROLES: string[] = [...WRITE_ROLES];
 
 function assertCanMutate(role: string | undefined): void {
   if (!role || !ALLOWED_MUTATION_ROLES.includes(role)) {

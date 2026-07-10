@@ -11,7 +11,7 @@ export const metadata = {
   title: "Edit Control | BetterThanSpreadsheetsGRC",
 };
 
-const ROLES = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER];
+const ROLES = [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST];
 
 interface Props {
   params: Promise<{ id: string }>;

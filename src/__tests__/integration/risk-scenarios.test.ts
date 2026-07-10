@@ -68,7 +68,7 @@ describe("Risk Scenario Management - Story 7.7", () => {
         email: `scenario-test-${Date.now()}@example.com`,
         name: "Scenario Test User",
         organizationId: testOrg.id,
-        role: UserRole.GRC_ANALYST,
+        role: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });
@@ -511,7 +511,7 @@ describe("Risk Scenario Management - Story 7.7", () => {
           email: `sec-eng-${Date.now()}@example.com`,
           name: "Security Engineer",
           organizationId: testOrg.id,
-          role: UserRole.SECURITY_ENGINEER,
+          role: UserRole.ANALYST,
           updatedAt: new Date(),
         },
       });
@@ -543,7 +543,7 @@ describe("Risk Scenario Management - Story 7.7", () => {
           email: `other-user-${Date.now()}@example.com`,
           name: "Other Org User",
           organizationId: otherOrg.id,
-          role: UserRole.GRC_ANALYST,
+          role: UserRole.ANALYST,
           updatedAt: new Date(),
         },
       });

@@ -101,21 +101,21 @@ const COLUMN_ORDER_KEY = "risk-table-column-order";
  * assessment workflow to discover and document risks.
  */
 const CAN_CREATE_RISK_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Story 5.6 AC18: Roles that can export risks */
 const CAN_EXPORT_RISK_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.AUDITOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.BUSINESS_USER,
 ];
 
 /** Roles that can assign risk assessments to other users */
 const CAN_ASSIGN_ASSESSMENT_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Severity badge variants */
@@ -411,10 +411,10 @@ export function RiskRegistryClient() {
 
   // Story 5.5 AC16-AC18: Check if user can see owner filters
   const canFilterByOwner = userRole && (
-    userRole === UserRole.GRC_ANALYST ||
-    userRole === UserRole.SECURITY_ENGINEER ||
-    userRole === UserRole.ORG_ADMIN ||
-    userRole === UserRole.AUDITOR
+    userRole === UserRole.ANALYST ||
+    userRole === UserRole.ANALYST ||
+    userRole === UserRole.ADMINISTRATOR ||
+    userRole === UserRole.BUSINESS_USER
   );
 
   // Story 5.6: Export mutation

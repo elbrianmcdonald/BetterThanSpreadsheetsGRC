@@ -75,9 +75,9 @@ import {
 } from "@/components/organizational-control/enum-labels";
 
 const CAN_CREATE_CONTROL_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 const ANY = "__any__";

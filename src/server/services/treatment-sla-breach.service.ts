@@ -301,7 +301,7 @@ async function sendSlaBreachedNotifications(
   const grcAnalysts = await db.user.findMany({
     where: {
       organizationId: treatment.organizationId,
-      role: UserRole.GRC_ANALYST,
+      role: UserRole.ANALYST,
     },
     select: { id: true, email: true, name: true },
   });
@@ -404,7 +404,7 @@ async function sendSlaAtRiskNotifications(
   const grcAnalysts = await db.user.findMany({
     where: {
       organizationId: treatment.organizationId,
-      role: UserRole.GRC_ANALYST,
+      role: UserRole.ANALYST,
     },
     select: { id: true, email: true, name: true },
   });

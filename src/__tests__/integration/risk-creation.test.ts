@@ -99,49 +99,49 @@ beforeAll(async () => {
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@risk-creation.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@risk-creation.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserOrgAdmin = await createUser(
     "Org Admin",
     "admin@risk-creation.test",
-    "ORG_ADMIN",
+    "ADMINISTRATOR",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder",
     "it@risk-creation.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserBusinessStakeholder = await createUser(
     "Business Stakeholder",
     "business@risk-creation.test",
-    "BUSINESS_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@risk-creation.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserOrg2 = await createUser(
     "User Org 2",
     "user@risk-creation-org2.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg2.id
   );
 });

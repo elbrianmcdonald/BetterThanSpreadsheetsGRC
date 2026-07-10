@@ -111,8 +111,8 @@ export function CommentCard({
   const isAuthor = comment.Author?.id === currentUserId;
   const canModify =
     isAuthor ||
-    currentUserRole === UserRole.GRC_ANALYST ||
-    currentUserRole === UserRole.ORG_ADMIN;
+    currentUserRole === UserRole.ANALYST ||
+    currentUserRole === UserRole.ADMINISTRATOR;
 
   // AC21: Show deleted placeholder
   if (isDeleted) {

@@ -60,15 +60,15 @@ interface RiskActionsSidebarProps {
 
 /** Roles that can assign risks (AC58) */
 const CAN_ASSIGN_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Roles that can close risks (AC62) */
 const CAN_CLOSE_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 export function RiskActionsSidebar({
@@ -92,20 +92,20 @@ export function RiskActionsSidebar({
 
   // IT Stakeholder can mark remediated based on role alone; owner check happens server-side
   const canMarkRemediated =
-    userRole === UserRole.IT_STAKEHOLDER &&
+    userRole === UserRole.BUSINESS_USER &&
     risk.status === RiskStatus.ASSIGNED;
 
   // Business Stakeholder can approve/reject based on role alone; owner check happens server-side
   const canApproveReject =
-    userRole === UserRole.BUSINESS_STAKEHOLDER &&
+    userRole === UserRole.BUSINESS_USER &&
     hasRemediationOptions;
 
   // General status change permission (for the dialog)
   const canChangeStatus =
     userRole &&
     (CAN_ASSIGN_ROLES.includes(userRole) ||
-      userRole === UserRole.IT_STAKEHOLDER ||
-      userRole === UserRole.BUSINESS_STAKEHOLDER);
+      userRole === UserRole.BUSINESS_USER ||
+      userRole === UserRole.BUSINESS_USER);
 
   // Story 16.7: Can start treatment if user can assign and risk is OPEN
   const canStartTreatment = canAssign && risk.status === RiskStatus.OPEN;

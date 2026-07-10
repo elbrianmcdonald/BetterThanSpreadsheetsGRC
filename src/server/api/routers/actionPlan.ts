@@ -22,6 +22,7 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { generateIdentifier } from "@/server/services/identifierService";
 import {
   effortFor,
@@ -31,17 +32,9 @@ import {
 } from "@/server/services/deliverableRoadmapData";
 import type { FindingLike } from "@/components/deliverable/types";
 
-// Authoring roles per the established pattern (risk.ts / pathway.ts); reads add AUDITOR.
-const ACTION_PLAN_MANAGE_ROLES: UserRole[] = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-];
-const ACTION_PLAN_READ_ROLES: UserRole[] = [
-  ...ACTION_PLAN_MANAGE_ROLES,
-  UserRole.AUDITOR,
-];
+// Authoring roles per the established pattern (risk.ts / pathway.ts); reads add BUSINESS_USER.
+const ACTION_PLAN_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
+const ACTION_PLAN_READ_ROLES: UserRole[] = [...READ_ROLES];
 
 type Db = PrismaClient;
 

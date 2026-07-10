@@ -11,6 +11,7 @@
 
 import { useSession } from "next-auth/react";
 import { UserRole } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { useMemo } from "react";
 
 export interface UserPermissions {
@@ -58,27 +59,14 @@ export function useUserPermissions(): UserPermissions {
 
   return useMemo(() => {
     const isAuthenticated = status === "authenticated" && !!role;
-    const isAuditor = role === UserRole.AUDITOR;
-    const isBusinessStakeholder = role === UserRole.BUSINESS_STAKEHOLDER;
+    const isAuditor = role === UserRole.BUSINESS_USER;
+    const isBusinessStakeholder = role === UserRole.BUSINESS_USER;
 
-    // Define role sets for permission checks
-    const UPLOAD_ROLES: UserRole[] = [
-      UserRole.GRC_ANALYST,
-      UserRole.SECURITY_ENGINEER,
-      UserRole.ORG_ADMIN,
-      UserRole.IT_STAKEHOLDER,
-    ];
-
-    const EDIT_ROLES: UserRole[] = [
-      UserRole.GRC_ANALYST,
-      UserRole.SECURITY_ENGINEER,
-      UserRole.ORG_ADMIN,
-    ];
-
-    const DELETE_ROLES: UserRole[] = [
-      UserRole.GRC_ANALYST,
-      UserRole.ORG_ADMIN,
-    ];
+    // Evidence write actions are staff-only (write tier); read-only Business
+    // Users are excluded. Single source of truth: @/lib/auth/roles.
+    const UPLOAD_ROLES: UserRole[] = [...WRITE_ROLES];
+    const EDIT_ROLES: UserRole[] = [...WRITE_ROLES];
+    const DELETE_ROLES: UserRole[] = [...WRITE_ROLES];
 
     // Roles that can upload evidence
     // GRC_ANALYST, SECURITY_ENGINEER, ORG_ADMIN, IT_STAKEHOLDER can upload

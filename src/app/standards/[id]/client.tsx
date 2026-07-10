@@ -102,9 +102,9 @@ import { BulkControlUpload } from "@/components/standards/BulkControlUpload";
 
 /** Roles that can manage standards */
 const CAN_MANAGE_STANDARD_ROLES: UserRole[] = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Status badge configuration */

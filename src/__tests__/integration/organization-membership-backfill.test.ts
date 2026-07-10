@@ -20,7 +20,7 @@ describe("Epic 1 — Story 1.2 membership backfill", () => {
     org = await db.organization.create({
       data: { id: randomUUID(), name: `BF ${stamp}`, slug: `bf-${stamp}`, updatedAt: new Date() },
     });
-    for (const role of [UserRole.ORG_ADMIN, UserRole.AUDITOR]) {
+    for (const role of [UserRole.ADMINISTRATOR, UserRole.BUSINESS_USER]) {
       const u = await db.user.create({
         data: {
           id: randomUUID(),

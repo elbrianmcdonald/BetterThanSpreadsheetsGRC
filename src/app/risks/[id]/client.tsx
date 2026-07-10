@@ -69,26 +69,26 @@ interface RiskDetailClientProps {
 
 /** Roles that can attach/link evidence */
 const CAN_ATTACH_EVIDENCE_ROLES: UserRole[] = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.IT_STAKEHOLDER,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.BUSINESS_USER,
 ];
 
 /** Roles that can export audit trail */
 const CAN_EXPORT_AUDIT_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.AUDITOR,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.BUSINESS_USER,
 ];
 
 /** Roles that can comment */
 const CAN_COMMENT_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.BUSINESS_USER,
+  UserRole.BUSINESS_USER,
 ];
 
 export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
@@ -115,14 +115,14 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
   const canExportAudit = userRole && CAN_EXPORT_AUDIT_ROLES.includes(userRole);
   const canComment = userRole && CAN_COMMENT_ROLES.includes(userRole);
   const canEditImpactStatement =
-    userRole && (userRole === UserRole.GRC_ANALYST || userRole === UserRole.ORG_ADMIN);
+    userRole && (userRole === UserRole.ANALYST || userRole === UserRole.ADMINISTRATOR);
   // Story 23.5 (review MJ-5): mirrors the server's RISK_UPDATE_ROLES —
   // Security Engineers may override scores, accept risk, and manage links.
   const canManageRisk =
     userRole &&
-    (userRole === UserRole.SECURITY_ENGINEER ||
-      userRole === UserRole.GRC_ANALYST ||
-      userRole === UserRole.ORG_ADMIN);
+    (userRole === UserRole.ANALYST ||
+      userRole === UserRole.ANALYST ||
+      userRole === UserRole.ADMINISTRATOR);
 
   // Fetch risk data with all relations
   const {
@@ -396,7 +396,7 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
           <RiskComments
             riskId={riskId}
             currentUserId={userId ?? ""}
-            currentUserRole={userRole ?? UserRole.AUDITOR}
+            currentUserRole={userRole ?? UserRole.BUSINESS_USER}
             canComment={!!canComment}
           />
         );

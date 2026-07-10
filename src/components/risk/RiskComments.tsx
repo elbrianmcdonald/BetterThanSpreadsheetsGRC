@@ -39,7 +39,7 @@ interface RiskCommentsProps {
 /**
  * Roles that cannot add comments (AC42)
  */
-const NO_COMMENT_ROLES = [UserRole.AUDITOR];
+const NO_COMMENT_ROLES = [UserRole.BUSINESS_USER];
 
 export function RiskComments({
   riskId,
@@ -149,7 +149,7 @@ export function RiskComments({
           <>
             <Separator className="my-6" />
             <p className="text-sm text-muted-foreground text-center py-4">
-              {currentUserRole === UserRole.AUDITOR
+              {currentUserRole === UserRole.BUSINESS_USER
                 ? "Auditors have read-only access and cannot add comments."
                 : "You don't have permission to comment on this risk."}
             </p>

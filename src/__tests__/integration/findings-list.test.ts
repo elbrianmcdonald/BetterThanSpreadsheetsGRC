@@ -343,22 +343,22 @@ describe("Story 7.12: Findings List Page", () => {
   describe("Permissions (AC32-AC33)", () => {
     it("AC32: SecurityOrg roles can view findings list", () => {
       const allowedRoles = [
-        UserRole.SECURITY_ENGINEER,
-        UserRole.GRC_ANALYST,
-        UserRole.ORG_ADMIN,
+        UserRole.ANALYST,
+        UserRole.ANALYST,
+        UserRole.ADMINISTRATOR,
       ];
 
       allowedRoles.forEach((role) => {
-        expect([UserRole.SECURITY_ENGINEER, UserRole.GRC_ANALYST, UserRole.ORG_ADMIN]).toContain(role);
+        expect([UserRole.ANALYST, UserRole.ANALYST, UserRole.ADMINISTRATOR]).toContain(role);
       });
     });
 
     it("AC33: New Finding button hidden for non-permitted roles", () => {
       const userRole = UserRole.VIEWER;
       const canCreateRoles = [
-        UserRole.SECURITY_ENGINEER,
-        UserRole.GRC_ANALYST,
-        UserRole.ORG_ADMIN,
+        UserRole.ANALYST,
+        UserRole.ANALYST,
+        UserRole.ADMINISTRATOR,
       ];
 
       const canCreate = canCreateRoles.includes(userRole);
@@ -367,11 +367,11 @@ describe("Story 7.12: Findings List Page", () => {
     });
 
     it("AC4: New Finding button visible for permitted roles", () => {
-      const userRole = UserRole.GRC_ANALYST;
+      const userRole = UserRole.ANALYST;
       const canCreateRoles = [
-        UserRole.SECURITY_ENGINEER,
-        UserRole.GRC_ANALYST,
-        UserRole.ORG_ADMIN,
+        UserRole.ANALYST,
+        UserRole.ANALYST,
+        UserRole.ADMINISTRATOR,
       ];
 
       const canCreate = canCreateRoles.includes(userRole);

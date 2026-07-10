@@ -33,6 +33,7 @@ import {
   publicProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { enqueueEmail } from "@/server/services/emailQueue.service";
 import { renderQuestionnaireAssignedEmail } from "@/server/email/templates";
@@ -41,30 +42,17 @@ import { getBaseUrl } from "@/server/email/templates/renderer";
 /**
  * Roles that can view questionnaire templates
  */
-const TEMPLATE_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.AUDITOR,
-];
+const TEMPLATE_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
 /**
- * Roles that can manage questionnaire templates
+ * Roles that can manage questionnaire templates (write tier)
  */
-const TEMPLATE_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-];
+const TEMPLATE_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
- * Roles that can send questionnaires (assessors)
+ * Roles that can send questionnaires (assessors — write tier action)
  */
-const QUESTIONNAIRE_SEND_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
+const QUESTIONNAIRE_SEND_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // ============================================================================
 // Input Schemas

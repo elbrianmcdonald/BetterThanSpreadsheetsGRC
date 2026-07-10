@@ -440,7 +440,7 @@ export const mitreRouter = createTRPCRouter({
    */
   syncFromStix: protectedProcedure.mutation(async ({ ctx }) => {
     // Check admin permission
-    if (ctx.session?.user?.role !== UserRole.ORG_ADMIN) {
+    if (ctx.session?.user?.role !== UserRole.ADMINISTRATOR) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "Only Organization Administrators can sync MITRE data",

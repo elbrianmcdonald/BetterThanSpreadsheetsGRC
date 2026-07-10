@@ -77,7 +77,7 @@ beforeAll(async () => {
       id: auditorUserId,
       name: "Test Auditor",
       email: `auditor-${randomUUID().slice(0, 8)}@test.com`,
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
       organizationId: testOrg.id,
       assignedFrameworks: [], // Empty = access to all frameworks
       updatedAt: new Date(),
@@ -90,7 +90,7 @@ beforeAll(async () => {
       id: analystUserId,
       name: "Test Analyst",
       email: `analyst-${randomUUID().slice(0, 8)}@test.com`,
-      role: "GRC_ANALYST",
+      role: "ANALYST",
       organizationId: testOrg.id,
       assignedFrameworks: [],
       updatedAt: new Date(),
@@ -290,7 +290,7 @@ describe("Story 3.8: View-Only Evidence Access for Auditor Role", () => {
         : auditLog?.changes;
 
       // Verify role info is captured
-      expect(changes?.after?.userRole).toBe("AUDITOR");
+      expect(changes?.after?.userRole).toBe("BUSINESS_USER");
       expect(changes?.after?.isAuditor).toBe(true);
       expect(changes?.after?.timestamp).toBeDefined();
     });

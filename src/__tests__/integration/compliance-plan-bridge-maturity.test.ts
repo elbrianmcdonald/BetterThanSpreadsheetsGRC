@@ -37,8 +37,8 @@ describe("Compliance Plan Bridge — Epic 2 Story 2.2 (maturity, domain-level)",
   beforeAll(async () => {
     const s = `${Date.now()}-${Math.round(performance.now())}`;
     org = await db.organization.create({ data: { id: randomUUID(), name: `CPBM ${s}`, slug: `cpbm-${s}`, updatedAt: new Date() } });
-    const u = await db.user.create({ data: { id: randomUUID(), email: `cpbm-${s}@example.com`, name: "cpbmadmin", organizationId: org.id, role: UserRole.ORG_ADMIN, updatedAt: new Date() } });
-    admin = { id: u.id, email: u.email!, organizationId: org.id, role: UserRole.ORG_ADMIN };
+    const u = await db.user.create({ data: { id: randomUUID(), email: `cpbm-${s}@example.com`, name: "cpbmadmin", organizationId: org.id, role: UserRole.ADMINISTRATOR, updatedAt: new Date() } });
+    admin = { id: u.id, email: u.email!, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {
       const mfw = await db.maturityFramework.create({ data: { id: randomUUID(), organizationId: org.id, name: "MFW", version: "1", type: "NIST_CSF_2", minLevel: 1, maxLevel: 4, scoringLevels: [{ value: 1, label: "Partial" }], updatedAt: new Date() } });

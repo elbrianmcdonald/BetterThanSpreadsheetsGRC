@@ -30,7 +30,7 @@ export const userRoleSchema = z.nativeEnum(UserRole);
 export const createUserSchema = z.object({
   name: z.string().min(1, "Name is required").max(255, "Name is too long"),
   email: z.string().email("Invalid email address"),
-  role: userRoleSchema.default(UserRole.AUDITOR), // Default to most restrictive role
+  role: userRoleSchema.default(UserRole.BUSINESS_USER), // Default to most restrictive role
   // Story 3.8: Framework codes for AUDITOR role access restriction
   assignedFrameworks: z.array(z.string()).optional().default([]),
 });
@@ -222,44 +222,24 @@ export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
  * Used by RoleBadge component.
  */
 export const roleDisplayConfig = {
-  [UserRole.ORG_ADMIN]: {
-    label: "Org Admin",
+  [UserRole.ADMINISTRATOR]: {
+    label: "Administrator",
     color: "purple" as const,
-    description: "Full administrative access",
+    description: "Full administrative access across all organizations",
   },
-  [UserRole.GRC_MANAGER]: {
-    label: "GRC Manager",
+  [UserRole.MANAGER]: {
+    label: "Manager",
     color: "violet" as const,
-    description: "GRC team management and task assignment",
+    description: "Performs and approves/assigns/rejects GRC work across all organizations",
   },
-  [UserRole.GRC_ANALYST]: {
-    label: "GRC Analyst",
+  [UserRole.ANALYST]: {
+    label: "Analyst",
     color: "blue" as const,
-    description: "Full GRC operational access",
+    description: "Performs GRC work across all organizations",
   },
-  [UserRole.SECURITY_ENGINEER]: {
-    label: "Security Engineer",
-    color: "cyan" as const,
-    description: "Security assessment and risk documentation",
-  },
-  [UserRole.CISO]: {
-    label: "CISO",
-    color: "indigo" as const,
-    description: "Executive reporting and strategic oversight",
-  },
-  [UserRole.IT_STAKEHOLDER]: {
-    label: "IT Stakeholder",
+  [UserRole.BUSINESS_USER]: {
+    label: "Business User",
     color: "green" as const,
-    description: "Risk remediation for assigned items",
-  },
-  [UserRole.BUSINESS_STAKEHOLDER]: {
-    label: "Business Stakeholder",
-    color: "yellow" as const,
-    description: "Risk approval decisions",
-  },
-  [UserRole.AUDITOR]: {
-    label: "Auditor",
-    color: "gray" as const,
-    description: "Read-only audit access",
+    description: "Read-only view of their assigned organization",
   },
 } as const;

@@ -87,25 +87,25 @@ import {
 
 /** Roles that can access the backlog */
 const BACKLOG_ACCESS_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.GRC_MANAGER,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
+  UserRole.ANALYST,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /** Roles that can self-assign */
 const SELF_ASSIGN_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.GRC_MANAGER,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ANALYST,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
 ];
 
 /** Roles that can assign to others */
 const ADMIN_ASSIGN_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-  UserRole.GRC_MANAGER,
-  UserRole.GRC_ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.MANAGER,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
 ];
 
 /** Assessment type configuration */
@@ -181,7 +181,7 @@ export function BacklogClient() {
   const canAccessBacklog = userRole && BACKLOG_ACCESS_ROLES.includes(userRole);
   const canSelfAssign = userRole && SELF_ASSIGN_ROLES.includes(userRole);
   const canAssignOthers = userRole && ADMIN_ASSIGN_ROLES.includes(userRole);
-  const canCreateTask = userRole && ([UserRole.ORG_ADMIN, UserRole.CISO, UserRole.GRC_MANAGER, UserRole.GRC_ANALYST] as UserRole[]).includes(userRole);
+  const canCreateTask = userRole && ([UserRole.ADMINISTRATOR, UserRole.MANAGER, UserRole.MANAGER, UserRole.ANALYST] as UserRole[]).includes(userRole);
 
   // Fetch backlog data
   const { data, isLoading, error } = api.assessmentTask.getUnifiedBacklog.useQuery(

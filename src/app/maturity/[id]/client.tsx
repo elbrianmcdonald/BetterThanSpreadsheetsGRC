@@ -223,9 +223,9 @@ const CONFIDENCE_OPTIONS = [
 ];
 
 const CAN_MANAGE_ROLES: UserRole[] = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 // =============================================================================

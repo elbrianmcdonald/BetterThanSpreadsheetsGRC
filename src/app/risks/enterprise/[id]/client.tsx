@@ -25,7 +25,7 @@ import { TagItemsDialog } from "@/components/enterprise-risk/TagItemsDialog";
 import { calculateInherentScore, isScoreResult } from "@/lib/matrix/scoring";
 import { score2D, thresholdForScore } from "@/lib/matrix/heatmap";
 
-const WRITE_ROLES: UserRole[] = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER];
+const WRITE_ROLES: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST];
 
 function TrendChart({ snapshots }: { snapshots: Array<{ score: unknown; capturedAt: Date }> }) {
   const valid = snapshots

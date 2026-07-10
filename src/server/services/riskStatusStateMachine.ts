@@ -71,7 +71,7 @@ export interface TransitionValidationResult {
  * const result = validateTransition(
  *   RiskStatus.ASSIGNED,
  *   RiskStatus.REMEDIATED,
- *   UserRole.IT_STAKEHOLDER,
+ *   UserRole.BUSINESS_USER,
  *   true // is owner
  * );
  * // { allowed: true, requiresRemediationEvidence: true }
@@ -112,8 +112,8 @@ export function validateTransition(
   // Check role permissions (AC19-AC24)
   // AC22, AC23: BUSINESS_STAKEHOLDER and AUDITOR cannot change status
   if (
-    userRole === UserRole.BUSINESS_STAKEHOLDER ||
-    userRole === UserRole.AUDITOR
+    userRole === UserRole.BUSINESS_USER ||
+    userRole === UserRole.BUSINESS_USER
   ) {
     return {
       allowed: false,
@@ -122,13 +122,13 @@ export function validateTransition(
   }
 
   // AC19: GRC_ANALYST and ORG_ADMIN can perform any valid transition
-  if (userRole === UserRole.GRC_ANALYST || userRole === UserRole.ORG_ADMIN) {
+  if (userRole === UserRole.ANALYST || userRole === UserRole.ADMINISTRATOR) {
     return buildSuccessResult(currentStatus, newStatus);
   }
 
   // AC20: SECURITY_ENGINEER can transition OPEN → ASSIGNED
   if (
-    userRole === UserRole.SECURITY_ENGINEER &&
+    userRole === UserRole.ANALYST &&
     currentStatus === RiskStatus.OPEN &&
     newStatus === RiskStatus.ASSIGNED
   ) {
@@ -137,7 +137,7 @@ export function validateTransition(
 
   // AC21: IT_STAKEHOLDER can transition ASSIGNED → REMEDIATED (for assigned risks only)
   if (
-    userRole === UserRole.IT_STAKEHOLDER &&
+    userRole === UserRole.BUSINESS_USER &&
     currentStatus === RiskStatus.ASSIGNED &&
     newStatus === RiskStatus.REMEDIATED
   ) {
@@ -198,7 +198,7 @@ function buildSuccessResult(
  * ```typescript
  * const available = getAvailableTransitions(
  *   RiskStatus.ASSIGNED,
- *   UserRole.IT_STAKEHOLDER,
+ *   UserRole.BUSINESS_USER,
  *   true
  * );
  * // [RiskStatus.REMEDIATED]

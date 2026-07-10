@@ -48,9 +48,9 @@ import {
 } from "./enum-labels";
 
 const CAN_MUTATE: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 function formatDate(date: Date | string | null | undefined): string {

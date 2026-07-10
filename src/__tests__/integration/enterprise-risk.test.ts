@@ -57,9 +57,9 @@ beforeAll(async () => {
       name: u.name!, assignedFrameworks: u.assignedFrameworks,
     };
   };
-  analyst = await mkUser("GRC_ANALYST", testOrg.id, "analyst@er.test", "ER Analyst");
-  auditor = await mkUser("AUDITOR", testOrg.id, "auditor@er.test", "ER Auditor");
-  analystOrg2 = await mkUser("GRC_ANALYST", testOrg2.id, "analyst@er2.test", "ER Analyst Org2");
+  analyst = await mkUser("ANALYST", testOrg.id, "analyst@er.test", "ER Analyst");
+  auditor = await mkUser("BUSINESS_USER", testOrg.id, "auditor@er.test", "ER Auditor");
+  analystOrg2 = await mkUser("ANALYST", testOrg2.id, "analyst@er2.test", "ER Analyst Org2");
 });
 
 afterAll(async () => {

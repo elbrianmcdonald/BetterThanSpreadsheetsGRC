@@ -41,8 +41,8 @@ describe("Compliance Plan Evidence — Epic 3 Story 3.1 (FR19/FR20)", () => {
   beforeAll(async () => {
     const s = `${Date.now()}-${Math.round(performance.now())}`;
     org = await db.organization.create({ data: { id: randomUUID(), name: `CPE ${s}`, slug: `cpe-${s}`, updatedAt: new Date() } });
-    admin = await mkUser(org.id, UserRole.ORG_ADMIN, "cpeadmin");
-    recipient = await mkUser(org.id, UserRole.GRC_ANALYST, "cperecipient");
+    admin = await mkUser(org.id, UserRole.ADMINISTRATOR, "cpeadmin");
+    recipient = await mkUser(org.id, UserRole.ANALYST, "cperecipient");
 
     await runWithOrganizationContext(org.id, async () => {
       const fw = await db.framework.create({ data: { id: randomUUID(), organizationId: org.id, name: "FW", code: `FW${s}`, version: "1", isActive: true, updatedAt: new Date() } });

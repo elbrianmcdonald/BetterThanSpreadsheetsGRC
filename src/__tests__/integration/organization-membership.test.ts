@@ -53,19 +53,19 @@ describe("Epic 3 — membership management + platform admin", () => {
     orgHome = await db.organization.create({ data: { id: randomUUID(), name: `Home ${s}`, slug: `home-${s}`, updatedAt: new Date() } });
     orgOther = await db.organization.create({ data: { id: randomUUID(), name: `Other ${s}`, slug: `other-${s}`, updatedAt: new Date() } });
 
-    admin = await mkUser(orgHome.id, UserRole.ORG_ADMIN, "admin");
-    await mkMembership(admin.id, orgHome.id, UserRole.ORG_ADMIN);
-    auditor = await mkUser(orgHome.id, UserRole.AUDITOR, "auditor");
-    platformAdmin = await mkUser(orgHome.id, UserRole.ORG_ADMIN, "platform", true);
+    admin = await mkUser(orgHome.id, UserRole.ADMINISTRATOR, "admin");
+    await mkMembership(admin.id, orgHome.id, UserRole.ADMINISTRATOR);
+    auditor = await mkUser(orgHome.id, UserRole.BUSINESS_USER, "auditor");
+    platformAdmin = await mkUser(orgHome.id, UserRole.ADMINISTRATOR, "platform", true);
 
-    t1 = await mkUser(orgOther.id, UserRole.AUDITOR, "t1");
-    t2 = await mkUser(orgOther.id, UserRole.AUDITOR, "t2");
-    await mkMembership(t2.id, orgHome.id, UserRole.AUDITOR);
-    t3 = await mkUser(orgOther.id, UserRole.AUDITOR, "t3");
-    await mkMembership(t3.id, orgHome.id, UserRole.AUDITOR);
-    t4 = await mkUser(orgOther.id, UserRole.AUDITOR, "t4");
-    await mkMembership(t4.id, orgHome.id, UserRole.AUDITOR);
-    await mkMembership(t4.id, orgOther.id, UserRole.AUDITOR);
+    t1 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t1");
+    t2 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t2");
+    await mkMembership(t2.id, orgHome.id, UserRole.BUSINESS_USER);
+    t3 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t3");
+    await mkMembership(t3.id, orgHome.id, UserRole.BUSINESS_USER);
+    t4 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t4");
+    await mkMembership(t4.id, orgHome.id, UserRole.BUSINESS_USER);
+    await mkMembership(t4.id, orgOther.id, UserRole.BUSINESS_USER);
   });
 
   afterAll(async () => {
@@ -79,12 +79,12 @@ describe("Epic 3 — membership management + platform admin", () => {
 
   // ---- Story 3.1 ----
   it("an admin attaches an existing user to the active company (FR13)", async () => {
-    await createCaller(admin).organization.addMember({ email: t1.email, role: UserRole.GRC_ANALYST });
+    await createCaller(admin).organization.addMember({ email: t1.email, role: UserRole.ANALYST });
 
     const membership = await db.organizationMembership.findUnique({
       where: { userId_organizationId: { userId: t1.id, organizationId: orgHome.id } },
     });
-    expect(membership?.role).toBe(UserRole.GRC_ANALYST);
+    expect(membership?.role).toBe(UserRole.ANALYST);
 
     const members = await createCaller(admin).organization.listMembers();
     expect(members.map((m) => m.userId)).toContain(t1.id);
@@ -92,29 +92,29 @@ describe("Epic 3 — membership management + platform admin", () => {
 
   it("attaching a non-existent email returns NOT_FOUND", async () => {
     await expect(
-      createCaller(admin).organization.addMember({ email: "nobody@nowhere.test", role: UserRole.AUDITOR }),
+      createCaller(admin).organization.addMember({ email: "nobody@nowhere.test", role: UserRole.BUSINESS_USER }),
     ).rejects.toThrow(/not found|no user/i);
   });
 
   it("attaching a user who is already a member is rejected", async () => {
     await expect(
-      createCaller(admin).organization.addMember({ email: t2.email, role: UserRole.AUDITOR }),
+      createCaller(admin).organization.addMember({ email: t2.email, role: UserRole.BUSINESS_USER }),
     ).rejects.toThrow(/already|member|exists|conflict/i);
   });
 
   it("a non-admin cannot add members (NFR3)", async () => {
     await expect(
-      createCaller(auditor).organization.addMember({ email: t1.email, role: UserRole.AUDITOR }),
+      createCaller(auditor).organization.addMember({ email: t1.email, role: UserRole.BUSINESS_USER }),
     ).rejects.toThrow(/FORBIDDEN|role|permission/i);
   });
 
   // ---- Story 3.2 ----
   it("an admin changes a member's role (FR14)", async () => {
-    await createCaller(admin).organization.updateMemberRole({ userId: t2.id, role: UserRole.CISO });
+    await createCaller(admin).organization.updateMemberRole({ userId: t2.id, role: UserRole.MANAGER });
     const membership = await db.organizationMembership.findUnique({
       where: { userId_organizationId: { userId: t2.id, organizationId: orgHome.id } },
     });
-    expect(membership?.role).toBe(UserRole.CISO);
+    expect(membership?.role).toBe(UserRole.MANAGER);
   });
 
   it("an admin removes a member (FR14)", async () => {

@@ -26,7 +26,7 @@ export const metadata = {
 /**
  * Roles that can create vendors
  */
-const VENDOR_MANAGE_ROLES = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST];
+const VENDOR_MANAGE_ROLES = [UserRole.ADMINISTRATOR, UserRole.ANALYST];
 
 export default async function CreateVendorPage() {
   const session = await auth();
