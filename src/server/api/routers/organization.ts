@@ -38,14 +38,18 @@ function slugify(name: string): string {
   );
 }
 
-/** Throw FORBIDDEN unless the given user is a platform admin (authoritative DB check). */
+/**
+ * Throw FORBIDDEN unless the user is a platform Administrator (authoritative DB
+ * check). Role Consolidation Epic 2: the single ADMINISTRATOR staff role IS the
+ * platform admin — full authority including org create/delete/modify.
+ */
 async function assertPlatformAdmin(db: PrismaClient, userId: string): Promise<void> {
   const me = await db.user.findUnique({
     where: { id: userId },
-    select: { isPlatformAdmin: true },
+    select: { platformRole: true },
   });
-  if (!me?.isPlatformAdmin) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Platform admin access required" });
+  if (me?.platformRole !== UserRole.ADMINISTRATOR) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Administrator access required" });
   }
 }
 
@@ -105,20 +109,9 @@ export const organizationRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      // FR10 / NFR3: only platform admins or org admins may create companies.
-      const me = await ctx.db.user.findUnique({
-        where: { id: userId },
-        select: { isPlatformAdmin: true },
-      });
-      const canCreate =
-        me?.isPlatformAdmin === true ||
-        ctx.session.user.role === UserRole.ADMINISTRATOR;
-      if (!canCreate) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Only platform admins or organization admins can create a company",
-        });
-      }
+      // FR10 / NFR3: only an Administrator may create companies (the single admin
+      // role carries full platform authority). Authoritative platformRole check.
+      await assertPlatformAdmin(ctx.db, userId);
 
       const organizationId = randomUUID();
       const slug = `${slugify(input.name)}-${organizationId.slice(0, 8)}`;
@@ -328,17 +321,20 @@ export const organizationRouter = createTRPCRouter({
 
   // ---- Epic 3, Story 3.3: platform admin management ----
 
-  /** List all platform admins. Platform-admin only (NFR3, NFR5). */
+  /** List all platform Administrators. Administrator only (NFR3, NFR5). */
   listPlatformAdmins: protectedProcedure.query(async ({ ctx }) => {
     await assertPlatformAdmin(ctx.db, ctx.session.user.id);
     return ctx.db.user.findMany({
-      where: { isPlatformAdmin: true },
+      where: { platformRole: UserRole.ADMINISTRATOR },
       select: { id: true, name: true, email: true },
       orderBy: { email: "asc" },
     });
   }),
 
-  /** Grant or revoke platform-admin status for a user by email. Platform-admin only (FR16). */
+  /**
+   * Grant or revoke platform-Administrator status for a user by email.
+   * Administrator only (FR16). Stored as platformRole = ADMINISTRATOR | null.
+   */
   setPlatformAdmin: protectedProcedure
     .input(z.object({ email: z.string().email(), isPlatformAdmin: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
@@ -354,7 +350,7 @@ export const organizationRouter = createTRPCRouter({
 
       await ctx.db.user.update({
         where: { id: target.id },
-        data: { isPlatformAdmin: input.isPlatformAdmin },
+        data: { platformRole: input.isPlatformAdmin ? UserRole.ADMINISTRATOR : null },
       });
 
       // Platform-level event, homed in the acting admin's current org for the trail.

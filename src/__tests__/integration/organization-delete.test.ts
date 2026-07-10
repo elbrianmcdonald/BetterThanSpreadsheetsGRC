@@ -24,10 +24,10 @@ const createCaller = (user: TestUser) =>
     headers: new Headers(),
   });
 
-async function mkUser(orgId: string, role: UserRole, tag: string, isPlatformAdmin = false): Promise<TestUser> {
+async function mkUser(orgId: string, role: UserRole, tag: string, platformRole: UserRole | null = null): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
   const u = await db.user.create({
-    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, isPlatformAdmin, updatedAt: new Date() },
+    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, platformRole, updatedAt: new Date() },
   });
   return { id: u.id, email, organizationId: orgId, role };
 }
@@ -42,7 +42,7 @@ describe("Multi-Tenancy — delete company + listCompanies", () => {
     const s = `${Date.now()}-${Math.round(performance.now())}`;
     homeOrg = await db.organization.create({ data: { id: randomUUID(), name: `DelHome ${s}`, slug: `delhome-${s}`, updatedAt: new Date() } });
     victimOrg = await db.organization.create({ data: { id: randomUUID(), name: `DelVictim ${s}`, slug: `delvictim-${s}`, updatedAt: new Date() } });
-    platformAdmin = await mkUser(homeOrg.id, UserRole.ADMINISTRATOR, "pa", true);
+    platformAdmin = await mkUser(homeOrg.id, UserRole.ADMINISTRATOR, "pa", UserRole.ADMINISTRATOR);
     orgAdmin = await mkUser(homeOrg.id, UserRole.ADMINISTRATOR, "oa");
     // A user + membership inside the victim org, to prove cascade removal.
     const victimUser = await mkUser(victimOrg.id, UserRole.BUSINESS_USER, "victim");
@@ -66,10 +66,10 @@ describe("Multi-Tenancy — delete company + listCompanies", () => {
   });
 
   it("a non-platform-admin cannot list companies or delete (NFR3)", async () => {
-    await expect(createCaller(orgAdmin).organization.listCompanies()).rejects.toThrow(/FORBIDDEN|platform/i);
+    await expect(createCaller(orgAdmin).organization.listCompanies()).rejects.toThrow(/FORBIDDEN|platform|Administrator|access required/i);
     await expect(
       createCaller(orgAdmin).organization.delete({ organizationId: victimOrg.id }),
-    ).rejects.toThrow(/FORBIDDEN|platform/i);
+    ).rejects.toThrow(/FORBIDDEN|platform|Administrator|access required/i);
   });
 
   it("refuses to delete the caller's currently-active company", async () => {

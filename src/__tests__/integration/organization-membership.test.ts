@@ -25,10 +25,10 @@ const createCaller = (user: TestUser) =>
     headers: new Headers(),
   });
 
-async function mkUser(orgId: string, role: UserRole, tag: string, isPlatformAdmin = false): Promise<TestUser> {
+async function mkUser(orgId: string, role: UserRole, tag: string, platformRole: UserRole | null = null): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
   const u = await db.user.create({
-    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, isPlatformAdmin, updatedAt: new Date() },
+    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, platformRole, updatedAt: new Date() },
   });
   return { id: u.id, email, organizationId: orgId, role };
 }
@@ -56,7 +56,7 @@ describe("Epic 3 — membership management + platform admin", () => {
     admin = await mkUser(orgHome.id, UserRole.ADMINISTRATOR, "admin");
     await mkMembership(admin.id, orgHome.id, UserRole.ADMINISTRATOR);
     auditor = await mkUser(orgHome.id, UserRole.BUSINESS_USER, "auditor");
-    platformAdmin = await mkUser(orgHome.id, UserRole.ADMINISTRATOR, "platform", true);
+    platformAdmin = await mkUser(orgHome.id, UserRole.ADMINISTRATOR, "platform", UserRole.ADMINISTRATOR);
 
     t1 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t1");
     t2 = await mkUser(orgOther.id, UserRole.BUSINESS_USER, "t2");
@@ -140,8 +140,8 @@ describe("Epic 3 — membership management + platform admin", () => {
   // ---- Story 3.3 ----
   it("a platform admin grants platform-admin to another user by email (FR16)", async () => {
     await createCaller(platformAdmin).organization.setPlatformAdmin({ email: t1.email, isPlatformAdmin: true });
-    const u = await db.user.findUnique({ where: { id: t1.id }, select: { isPlatformAdmin: true } });
-    expect(u?.isPlatformAdmin).toBe(true);
+    const u = await db.user.findUnique({ where: { id: t1.id }, select: { platformRole: true } });
+    expect(u?.platformRole).toBe(UserRole.ADMINISTRATOR);
 
     const admins = await createCaller(platformAdmin).organization.listPlatformAdmins();
     expect(admins.map((a) => a.id)).toContain(t1.id);
@@ -156,9 +156,9 @@ describe("Epic 3 — membership management + platform admin", () => {
   it("a non-platform-admin cannot manage platform admins (NFR3, NFR5)", async () => {
     await expect(
       createCaller(admin).organization.listPlatformAdmins(),
-    ).rejects.toThrow(/FORBIDDEN|platform|permission/i);
+    ).rejects.toThrow(/FORBIDDEN|platform|permission|Administrator|access required/i);
     await expect(
       createCaller(admin).organization.setPlatformAdmin({ email: t1.email, isPlatformAdmin: false }),
-    ).rejects.toThrow(/FORBIDDEN|platform|permission/i);
+    ).rejects.toThrow(/FORBIDDEN|platform|permission|Administrator|access required/i);
   });
 });

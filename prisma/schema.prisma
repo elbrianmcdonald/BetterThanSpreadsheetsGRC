@@ -1489,10 +1489,6 @@ model User {
   hashedPassword                          String?
   role                                    UserRole                    @default(BUSINESS_USER)
   organizationId                          String
-  // Multi-Tenancy Epic 1 (Story 1.1): platform (super) admin can access & switch
-  // into every organization regardless of explicit membership.
-  // Role Consolidation Epic 2: superseded by platformRole; retained during migration.
-  isPlatformAdmin                         Boolean                     @default(false)
   // Role Consolidation Epic 2: staff platform role (ANALYST/MANAGER/ADMINISTRATOR)
   // grants that authority across ALL organizations. When set, the user is staff and
   // supersedes any org membership. Null => org-bound Business User (via membership).

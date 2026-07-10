@@ -97,13 +97,13 @@ describe("Epic 1 — Story 1.3 switch session claim + audit", () => {
     expect(result.role).toBe(UserRole.ADMINISTRATOR);
   });
 
-  it("session callback surfaces isPlatformAdmin for UI gating (Story 3.3)", async () => {
+  it("session callback surfaces platformRole for UI gating (Story 3.3)", async () => {
     const session = { user: { name: "x" } } as Record<string, unknown>;
-    const token = { id: "x", role: UserRole.BUSINESS_USER, organizationId: "o", isPlatformAdmin: true };
+    const token = { id: "x", role: UserRole.BUSINESS_USER, organizationId: "o", platformRole: UserRole.ADMINISTRATOR };
     const sessionCb = authConfig.callbacks!.session as unknown as (
       a: Record<string, unknown>,
-    ) => Promise<{ user: { isPlatformAdmin?: boolean } }>;
+    ) => Promise<{ user: { platformRole?: UserRole | null } }>;
     const result = await sessionCb({ session, token });
-    expect(result.user.isPlatformAdmin).toBe(true);
+    expect(result.user.platformRole).toBe(UserRole.ADMINISTRATOR);
   });
 });

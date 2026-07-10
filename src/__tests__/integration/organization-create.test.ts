@@ -27,10 +27,10 @@ const createCaller = (user: TestUser) =>
     headers: new Headers(),
   });
 
-async function mkUser(orgId: string, role: UserRole, tag: string, isPlatformAdmin = false): Promise<TestUser> {
+async function mkUser(orgId: string, role: UserRole, tag: string, platformRole: UserRole | null = null): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
   const u = await db.user.create({
-    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, isPlatformAdmin, updatedAt: new Date() },
+    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, platformRole, updatedAt: new Date() },
   });
   return { id: u.id, email, organizationId: orgId, role };
 }
@@ -45,9 +45,10 @@ describe("Epic 2 — Story 2.1 create a new company", () => {
   beforeAll(async () => {
     const stamp = `${Date.now()}-${Math.round(performance.now())}`;
     homeOrg = await db.organization.create({ data: { id: randomUUID(), name: `Home ${stamp}`, slug: `home-${stamp}`, updatedAt: new Date() } });
-    admin = await mkUser(homeOrg.id, UserRole.ADMINISTRATOR, "admin");
+    // An Administrator is a platform admin (staff platformRole) under the one-admin model.
+    admin = await mkUser(homeOrg.id, UserRole.ADMINISTRATOR, "admin", UserRole.ADMINISTRATOR);
     auditor = await mkUser(homeOrg.id, UserRole.BUSINESS_USER, "auditor");
-    platformAuditor = await mkUser(homeOrg.id, UserRole.BUSINESS_USER, "platform", true);
+    platformAuditor = await mkUser(homeOrg.id, UserRole.BUSINESS_USER, "platform", UserRole.ADMINISTRATOR);
   });
 
   afterAll(async () => {

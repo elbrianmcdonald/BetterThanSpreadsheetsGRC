@@ -28,18 +28,16 @@ export async function resolveActiveRole(
 ): Promise<UserRole | null> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { platformRole: true, isPlatformAdmin: true },
+    select: { platformRole: true },
   });
 
   // Staff (platform-scoped) authority applies to every existing organization.
-  const staffRole =
-    user?.platformRole ?? (user?.isPlatformAdmin ? UserRole.ADMINISTRATOR : null);
-  if (staffRole) {
+  if (user?.platformRole) {
     const org = await db.organization.findUnique({
       where: { id: organizationId },
       select: { id: true },
     });
-    return org ? staffRole : null;
+    return org ? user.platformRole : null;
   }
 
   // Org-bound Business User: a membership for this org grants access.
@@ -62,11 +60,11 @@ export async function listAccessibleOrganizations(
 ): Promise<Array<{ id: string; name: string }>> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { platformRole: true, isPlatformAdmin: true },
+    select: { platformRole: true },
   });
 
-  // Staff (platformRole) — and legacy platform admins — reach every active org.
-  if (user?.platformRole || user?.isPlatformAdmin) {
+  // Staff (platformRole set) reach every active org; Business Users see only theirs.
+  if (user?.platformRole) {
     return db.organization.findMany({
       where: { active: true },
       select: { id: true, name: true },

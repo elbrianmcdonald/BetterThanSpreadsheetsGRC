@@ -38,7 +38,7 @@ async function mkUser(
   orgId: string,
   role: UserRole,
   tag: string,
-  isPlatformAdmin = false,
+  platformRole: UserRole | null = null,
 ): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
   const u = await db.user.create({
@@ -48,7 +48,7 @@ async function mkUser(
       name: tag,
       organizationId: orgId,
       role,
-      isPlatformAdmin,
+      platformRole,
       updatedAt: new Date(),
     },
   });
@@ -86,7 +86,7 @@ describe("Epic 1 — organization switching + membership isolation", () => {
     userAOnly = await mkUser(orgA.id, UserRole.ADMINISTRATOR, "aonly");
     await mkMembership(userAOnly.id, orgA.id, UserRole.ADMINISTRATOR);
 
-    platformAdmin = await mkUser(orgA.id, UserRole.ADMINISTRATOR, "super", true);
+    platformAdmin = await mkUser(orgA.id, UserRole.ADMINISTRATOR, "super", UserRole.ADMINISTRATOR);
     await mkMembership(platformAdmin.id, orgA.id, UserRole.ADMINISTRATOR);
 
     // One framework in each org to prove isolation across a switch.

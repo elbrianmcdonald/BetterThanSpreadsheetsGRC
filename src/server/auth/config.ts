@@ -28,9 +28,8 @@ declare module "next-auth" {
       organizationId: string;
       // Story 3.7: Assigned framework codes for auditor role access control
       assignedFrameworks: string[];
-      // Multi-Tenancy Epic 3: platform admin flag (UI gating; server is authoritative)
-      isPlatformAdmin?: boolean;
-      // Role Consolidation Epic 2: staff platform role (all-org authority), or null for org-bound Business Users
+      // Role Consolidation Epic 2: staff platform role (all-org authority), or null
+      // for org-bound Business Users. platformRole === ADMINISTRATOR is the platform admin.
       platformRole?: UserRole | null;
     } & DefaultSession["user"];
   }
@@ -40,8 +39,6 @@ declare module "next-auth" {
     organizationId: string;
     // Story 3.7: Assigned framework codes for auditor role access control
     assignedFrameworks: string[];
-    // Multi-Tenancy Epic 3: platform admin flag
-    isPlatformAdmin?: boolean;
     // Role Consolidation Epic 2: staff platform role
     platformRole?: UserRole | null;
   }
@@ -146,8 +143,6 @@ export const authConfig = {
           organizationId: user.organizationId,
           // Story 3.7: Include assigned frameworks for auditor role access control
           assignedFrameworks: user.assignedFrameworks ?? [],
-          // Multi-Tenancy Epic 3: surface platform-admin for UI gating
-          isPlatformAdmin: user.isPlatformAdmin ?? false,
           // Role Consolidation Epic 2: staff platform role (all-org authority)
           platformRole: user.platformRole ?? null,
         };
@@ -188,8 +183,6 @@ export const authConfig = {
         token.organizationId = user.organizationId;
         // Story 3.7: Include assigned frameworks for auditor role access control
         token.assignedFrameworks = user.assignedFrameworks ?? [];
-        // Multi-Tenancy Epic 3: platform-admin flag
-        token.isPlatformAdmin = user.isPlatformAdmin ?? false;
       }
 
       // Multi-Tenancy Epic 1 (Story 1.3): the client calls `update({ organizationId })`
@@ -222,9 +215,7 @@ export const authConfig = {
         session.user.organizationId = token.organizationId as string;
         // Story 3.7: Include assigned frameworks for auditor role access control
         session.user.assignedFrameworks = (token.assignedFrameworks as string[]) ?? [];
-        // Multi-Tenancy Epic 3: platform-admin flag for UI gating
-        session.user.isPlatformAdmin = (token.isPlatformAdmin as boolean) ?? false;
-        // Role Consolidation Epic 2: staff platform role
+        // Role Consolidation Epic 2: staff platform role (ADMINISTRATOR = platform admin)
         session.user.platformRole = (token.platformRole as UserRole | null) ?? null;
       }
       return session;

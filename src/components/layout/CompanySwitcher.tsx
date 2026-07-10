@@ -41,9 +41,7 @@ export function CompanySwitcher() {
   const createOrg = api.organization.create.useMutation();
 
   const activeId = session?.user?.organizationId;
-  const canCreate =
-    session?.user?.role === UserRole.ADMINISTRATOR ||
-    session?.user?.isPlatformAdmin === true;
+  const canCreate = session?.user?.role === UserRole.ADMINISTRATOR;
 
   // AR2: the switcher exists only when there's something to do — switch between
   // 2+ companies, or (for an admin) create a second one. Everyone else, and the

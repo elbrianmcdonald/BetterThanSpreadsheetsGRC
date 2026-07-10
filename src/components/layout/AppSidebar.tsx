@@ -430,7 +430,8 @@ export function AppSidebar() {
     return false;
   };
 
-  const isPlatformAdmin = session?.user?.isPlatformAdmin === true;
+  // Role Consolidation Epic 2: the platform admin is simply an ADMINISTRATOR.
+  const isPlatformAdmin = session?.user?.platformRole === "ADMINISTRATOR";
 
   // Filter sections and items based on user role (+ platform-admin visibility).
   const visibleSections = NAV_SECTIONS.filter((section) => {
