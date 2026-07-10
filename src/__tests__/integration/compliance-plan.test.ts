@@ -89,6 +89,11 @@ describe("Compliance Plan — Epic 1 Stories 1.1/1.2", () => {
     ).rejects.toThrow(/FORBIDDEN|role|permission/i);
   });
 
+  it("listPeople returns org people for the owner picker", async () => {
+    const people = await createCaller(admin).compliancePlan.listPeople();
+    expect(people.some((p) => p.id === ownerPersonId)).toBe(true);
+  });
+
   it("lists plans with owner, item count, and progress (FR3, FR18)", async () => {
     const created = await createCaller(admin).compliancePlan.create({ name: "Listable", ownerId: ownerPersonId });
     const plans = await createCaller(admin).compliancePlan.list();

@@ -479,6 +479,15 @@ export const compliancePlanRouter = createTRPCRouter({
       return results;
     }),
 
+  /** List the org's people for the item-owner picker. */
+  listPeople: organizationProcedure.query(async ({ ctx }) => {
+    return ctx.db.person.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  }),
+
   /** List the org's users for the Evidence Request recipient picker (FR20). */
   listOrgUsers: organizationProcedure.query(async ({ ctx }) => {
     return ctx.db.user.findMany({

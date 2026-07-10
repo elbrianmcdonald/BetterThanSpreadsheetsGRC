@@ -11,7 +11,7 @@
 import { Fragment, useState } from "react";
 import { CompliancePlanItemStatus } from "@prisma/client";
 import { toast } from "sonner";
-import { Trash2, Plus, Download, FileUp } from "lucide-react";
+import { Trash2, Plus, Download, FileUp, Save } from "lucide-react";
 
 import { api } from "@/trpc/react";
 
@@ -26,6 +26,15 @@ function downloadCsv(filename: string, content: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/** Local, unsaved edits for a single item — persisted only when Save is clicked. */
+type ItemDraft = Partial<{
+  ownerId: string;
+  status: string;
+  targetDate: string; // yyyy-mm-dd
+  evidenceNeeded: string;
+  acceptanceCriteria: string;
+}>;
 
 export function CompliancePlanDetail({ planId }: { planId: string }) {
   const utils = api.useUtils();
@@ -42,6 +51,7 @@ export function CompliancePlanDetail({ planId }: { planId: string }) {
   const removeItem = api.compliancePlan.removeItem.useMutation();
   const raiseRequest = api.compliancePlan.raiseEvidenceRequest.useMutation();
   const { data: orgUsers } = api.compliancePlan.listOrgUsers.useQuery();
+  const { data: people } = api.compliancePlan.listPeople.useQuery();
 
   const [requestingItemId, setRequestingItemId] = useState<string | null>(null);
   const [reqRecipient, setReqRecipient] = useState("");
@@ -75,12 +85,43 @@ export function CompliancePlanDetail({ planId }: { planId: string }) {
     }
   };
 
-  const handleStatus = async (id: string, status: string) => {
+  // Per-item draft edits; persisted only when the row's Save button is clicked.
+  const [drafts, setDrafts] = useState<Record<string, ItemDraft>>({});
+
+  const setField = (id: string, field: keyof ItemDraft, value: string) =>
+    setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+
+  // Items with unsaved edits.
+  const dirtyIds = Object.keys(drafts).filter((id) => Object.keys(drafts[id] ?? {}).length > 0);
+
+  const buildItemData = (d: ItemDraft) => {
+    const data: {
+      ownerId?: string | null;
+      status?: CompliancePlanItemStatus;
+      targetDate?: Date | null;
+      evidenceNeeded?: string;
+      acceptanceCriteria?: string;
+    } = {};
+    if (d.ownerId !== undefined) data.ownerId = d.ownerId || null;
+    if (d.status !== undefined) data.status = d.status as CompliancePlanItemStatus;
+    if (d.targetDate !== undefined) data.targetDate = d.targetDate ? new Date(d.targetDate) : null;
+    if (d.evidenceNeeded !== undefined) data.evidenceNeeded = d.evidenceNeeded;
+    if (d.acceptanceCriteria !== undefined) data.acceptanceCriteria = d.acceptanceCriteria;
+    return data;
+  };
+
+  // One plan-level Save: persist every item that has unsaved edits.
+  const handleSaveAll = async () => {
+    if (dirtyIds.length === 0) return;
     try {
-      await updateItem.mutateAsync({ id, status: status as never });
+      for (const id of dirtyIds) {
+        await updateItem.mutateAsync({ id, ...buildItemData(drafts[id]!) });
+      }
+      setDrafts({});
       await refresh();
+      toast.success(`Saved ${dirtyIds.length} item${dirtyIds.length === 1 ? "" : "s"}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not update status");
+      toast.error(e instanceof Error ? e.message : "Could not save changes");
     }
   };
 
@@ -125,14 +166,25 @@ export function CompliancePlanDetail({ planId }: { planId: string }) {
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => void handleExport()}
-          className="inline-flex items-center gap-1.5 rounded border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-secondary"
-        >
-          <Download className="h-4 w-4" />
-          Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void handleSaveAll()}
+            disabled={dirtyIds.length === 0 || updateItem.isPending}
+            className="inline-flex items-center gap-1.5 rounded bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-40"
+          >
+            <Save className="h-4 w-4" />
+            Save changes{dirtyIds.length > 0 ? ` (${dirtyIds.length})` : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleExport()}
+            className="inline-flex items-center gap-1.5 rounded border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-secondary"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Add control */}
@@ -212,8 +264,8 @@ export function CompliancePlanDetail({ planId }: { planId: string }) {
                       <td className="px-3 py-2">
                         <select
                           aria-label={`Status for ${label}`}
-                          value={item.status}
-                          onChange={(e) => void handleStatus(item.id, e.target.value)}
+                          value={drafts[item.id]?.status ?? item.status}
+                          onChange={(e) => setField(item.id, "status", e.target.value)}
                           className="rounded border border-input bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                         >
                           {STATUSES.map((s) => (
@@ -223,12 +275,42 @@ export function CompliancePlanDetail({ planId }: { planId: string }) {
                           ))}
                         </select>
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">{item.owner?.name ?? "—"}</td>
-                      <td className="px-3 py-2 text-muted-foreground">
-                        {item.targetDate ? new Date(item.targetDate).toLocaleDateString() : "—"}
+                      <td className="px-3 py-2">
+                        <select
+                          aria-label={`Owner for ${label}`}
+                          value={drafts[item.id]?.ownerId ?? item.ownerId ?? ""}
+                          onChange={(e) => setField(item.id, "ownerId", e.target.value)}
+                          className="rounded border border-input bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        >
+                          <option value="">Unassigned</option>
+                          {(people ?? []).map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">
-                        <div>{item.evidenceNeeded ?? "—"}</div>
+                      <td className="px-3 py-2">
+                        <input
+                          type="date"
+                          aria-label={`Target date for ${label}`}
+                          value={
+                            drafts[item.id]?.targetDate ??
+                            (item.targetDate ? new Date(item.targetDate).toISOString().slice(0, 10) : "")
+                          }
+                          onChange={(e) => setField(item.id, "targetDate", e.target.value)}
+                          className="rounded border border-input bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <textarea
+                          aria-label={`Evidence needed for ${label}`}
+                          value={drafts[item.id]?.evidenceNeeded ?? item.evidenceNeeded ?? ""}
+                          rows={2}
+                          placeholder="Evidence to collect…"
+                          onChange={(e) => setField(item.id, "evidenceNeeded", e.target.value)}
+                          className="w-full min-w-[9rem] resize-y rounded border border-input bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
                         {item.linkedEvidence.length > 0 && (
                           <ul className="mt-1 space-y-0.5">
                             {item.linkedEvidence.map((e) => (
@@ -239,7 +321,16 @@ export function CompliancePlanDetail({ planId }: { planId: string }) {
                           </ul>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">{item.acceptanceCriteria ?? "—"}</td>
+                      <td className="px-3 py-2">
+                        <textarea
+                          aria-label={`Acceptance criteria for ${label}`}
+                          value={drafts[item.id]?.acceptanceCriteria ?? item.acceptanceCriteria ?? ""}
+                          rows={2}
+                          placeholder="Acceptance criteria…"
+                          onChange={(e) => setField(item.id, "acceptanceCriteria", e.target.value)}
+                          className="w-full min-w-[9rem] resize-y rounded border border-input bg-background px-1.5 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </td>
                       <td className="px-3 py-2 text-right">
                         <div className="flex flex-col items-end gap-1">
                           <button

@@ -25,6 +25,7 @@ jest.mock("@/trpc/react", () => ({
       get: { useQuery: jest.fn() },
       searchControls: { useQuery: jest.fn() },
       listOrgUsers: { useQuery: jest.fn() },
+      listPeople: { useQuery: jest.fn() },
       addItem: { useMutation: jest.fn() },
       updateItem: { useMutation: jest.fn() },
       removeItem: { useMutation: jest.fn() },
@@ -59,6 +60,21 @@ const plan = {
       linkedEvidence: [{ id: "ev1", title: "MFA Screenshot" }],
       overdue: false,
     },
+    {
+      id: "it2",
+      controlKind: "FRAMEWORK_CONTROL",
+      controlId: "c2",
+      control: { identifier: "AU-02", title: "Event Logging", description: "d" },
+      ownerId: null,
+      owner: null,
+      status: "OPEN",
+      targetDate: null,
+      evidenceNeeded: null,
+      notes: null,
+      acceptanceCriteria: null,
+      linkedEvidence: [],
+      overdue: false,
+    },
   ],
 };
 
@@ -75,6 +91,7 @@ describe("CompliancePlanDetail (Story 1.3/1.4 UI)", () => {
     (api.compliancePlan.updateItem.useMutation as jest.Mock).mockReturnValue({ mutateAsync: mockUpdate, isPending: false });
     (api.compliancePlan.removeItem.useMutation as jest.Mock).mockReturnValue({ mutateAsync: mockRemove, isPending: false });
     (api.compliancePlan.listOrgUsers.useQuery as jest.Mock).mockReturnValue({ data: [{ id: "u1", name: "Bob", email: "bob@x.test" }], isLoading: false });
+    (api.compliancePlan.listPeople.useQuery as jest.Mock).mockReturnValue({ data: [{ id: "pp1", name: "Sarah Chen" }], isLoading: false });
     (api.compliancePlan.raiseEvidenceRequest.useMutation as jest.Mock).mockReturnValue({ mutateAsync: mockRaise, isPending: false });
   });
 
@@ -82,16 +99,52 @@ describe("CompliancePlanDetail (Story 1.3/1.4 UI)", () => {
     render(<CompliancePlanDetail planId="p1" />);
     expect(screen.getByText("AC-01")).toBeInTheDocument();
     expect(screen.getByText("Access Control")).toBeInTheDocument();
-    expect(screen.getByText("Signed policy PDF")).toBeInTheDocument();
+    expect(screen.getByLabelText(/evidence needed for AC-01/i)).toHaveValue("Signed policy PDF");
   });
 
-  it("changes an item's status inline (FR7)", async () => {
+  it("the plan Save button is disabled until a field changes, then persists (FR7/FR11)", async () => {
     render(<CompliancePlanDetail planId="p1" />);
+    const save = screen.getByRole("button", { name: /save changes/i });
+    expect(save).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/owner for AC-01/i), { target: { value: "pp1" } });
+    expect(save).toBeEnabled();
+    // Editing alone does not persist — no mutation yet.
+    expect(mockUpdate).not.toHaveBeenCalled();
+
     fireEvent.change(screen.getByLabelText(/status for AC-01/i), { target: { value: "IN_PROGRESS" } });
+    fireEvent.change(screen.getByLabelText(/target date for AC-01/i), { target: { value: "2026-12-31" } });
+    fireEvent.change(screen.getByLabelText(/evidence needed for AC-01/i), { target: { value: "Updated evidence" } });
+    fireEvent.change(screen.getByLabelText(/acceptance criteria for AC-01/i), { target: { value: "Reviewed and signed" } });
+
+    fireEvent.click(save);
     await waitFor(() => {
-      expect(mockUpdate).toHaveBeenCalledWith({ id: "it1", status: "IN_PROGRESS" });
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "it1",
+          ownerId: "pp1",
+          status: "IN_PROGRESS",
+          evidenceNeeded: "Updated evidence",
+          acceptanceCriteria: "Reviewed and signed",
+          targetDate: expect.any(Date),
+        }),
+      );
     });
     expect(mockInvalidate).toHaveBeenCalled();
+  });
+
+  it("one plan Save persists edits across multiple items at once", async () => {
+    render(<CompliancePlanDetail planId="p1" />);
+    // Edit fields on two different items.
+    fireEvent.change(screen.getByLabelText(/owner for AC-01/i), { target: { value: "pp1" } });
+    fireEvent.change(screen.getByLabelText(/status for AU-02/i), { target: { value: "IN_REVIEW" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: "it1", ownerId: "pp1" }));
+    });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: "it2", status: "IN_REVIEW" }));
+    expect(mockUpdate).toHaveBeenCalledTimes(2);
   });
 
   it("removes an item (FR11)", async () => {
