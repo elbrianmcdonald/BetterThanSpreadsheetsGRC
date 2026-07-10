@@ -24,10 +24,12 @@ import { UserRole } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure, requirePermission } from "@/server/api/trpc";
 import { requireRole } from "@/server/api/trpc";
 import { Permission } from "@/server/auth/permissions";
-import { READ_ROLES } from "@/lib/auth/roles";
+import { APPROVE_ROLES } from "@/lib/auth/roles";
 
-// Audit-log access is read/export of the org's own audit trail (read tier).
-const AUDIT_READ_ROLES: UserRole[] = [...READ_ROLES];
+// Audit logs are administration data — NOT part of a Business User's read-only
+// view ("read-only view ... but not including administration"). Restricted to
+// Administrator + Manager (the original admin/manager-only intent).
+const AUDIT_READ_ROLES: UserRole[] = [...APPROVE_ROLES];
 
 /**
  * Audit log pagination response schema

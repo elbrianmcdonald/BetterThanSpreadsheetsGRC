@@ -348,15 +348,18 @@ describe("Story 4.12: Risk Audit Trail", () => {
       expect(result.data).toContain("CREATE_RISK");
     });
 
-    it("AC26: Export available to staff and BUSINESS_USER (read-only download)", async () => {
-      // Consolidated role model: export/download is a read-only capability that
-      // BUSINESS_USER retains (rubric: BUSINESS_USER may EXPORT/download).
+    it("AC26: Audit-trail export is staff-only; read-only BUSINESS_USER is denied", async () => {
+      // Audit trail is administration data — NOT part of a Business User's
+      // read-only view ("...but not including administration"). Staff export it.
       const buCaller = createCaller(testUserIT);
+      await expect(
+        buCaller.risk.exportRiskAuditTrail({ riskId: testRisk.id }),
+      ).rejects.toThrow(/FORBIDDEN|requires one of these roles/);
 
-      const result = await buCaller.risk.exportRiskAuditTrail({ riskId: testRisk.id });
-
-      expect(result.filename).toMatch(/audit-trail-\d{4}-\d{2}-\d{2}\.csv$/);
-      expect(result.data).toContain("CREATE_RISK");
+      const staffResult = await createCaller(testUserGRC).risk.exportRiskAuditTrail({
+        riskId: testRisk.id,
+      });
+      expect(staffResult.data).toContain("CREATE_RISK");
     });
 
     it("AC27: Export filename follows pattern", async () => {

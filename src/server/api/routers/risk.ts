@@ -98,11 +98,7 @@ import {
  * - GRC Analyst
  * - Org Admin
  */
-const RISK_UPDATE_ROLES = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const RISK_UPDATE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Roles that can link evidence to risks (Story 3.6 AC24)
@@ -110,11 +106,7 @@ const RISK_UPDATE_ROLES = [
  * - GRC Analyst
  * - Org Admin
  */
-const LINK_EVIDENCE_ROLES = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const LINK_EVIDENCE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Roles that can create risks (Story 4.1 AC21)
@@ -125,11 +117,7 @@ const LINK_EVIDENCE_ROLES = [
  * AC22: IT_STAKEHOLDER and BUSINESS_STAKEHOLDER cannot create risks
  * AC23: AUDITOR cannot create risks (view-only role)
  */
-const RISK_CREATE_ROLES = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const RISK_CREATE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Story 4.5: Roles that can manage remediation options (AC9, AC15, AC20)
@@ -137,11 +125,7 @@ const RISK_CREATE_ROLES = [
  * - Security Engineer: Can add, update options
  * - Org Admin: Full access
  */
-const REMEDIATION_OPTION_ROLES = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const REMEDIATION_OPTION_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Story 4.6: Roles that can assign risks (AC8, AC36)
@@ -157,10 +141,7 @@ const RISK_ASSIGN_ROLES: UserRole[] = [...WRITE_ROLES];
  * Story 4.5: Roles that can delete remediation options (AC20)
  * More restrictive - only GRC Analyst and Org Admin
  */
-const REMEDIATION_OPTION_DELETE_ROLES = [
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const REMEDIATION_OPTION_DELETE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Story 4.11: Roles that can comment on all risks (AC41)
@@ -2212,7 +2193,7 @@ export const riskRouter = createTRPCRouter({
    * AC18: Returns updated risk with new owner details
    */
   reassignRisk: organizationProcedure
-    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR]))
+    .use(requireRole([...WRITE_ROLES]))
     .input(
       z.object({
         riskId: z.string().min(1, "Risk ID is required"),
@@ -2833,7 +2814,7 @@ export const riskRouter = createTRPCRouter({
    * AC36: Manual edits saved to businessImpactStatement field with override flag
    */
   updateBusinessImpact: organizationProcedure
-    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR]))
+    .use(requireRole([...WRITE_ROLES]))
     .input(
       z.object({
         riskId: z.string().min(1, "Risk ID is required"),
@@ -3337,7 +3318,7 @@ export const riskRouter = createTRPCRouter({
    * Allows GRC_ANALYST to add verification comments when verifying remediation.
    */
   addVerificationComments: organizationProcedure
-    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR]))
+    .use(requireRole([...WRITE_ROLES]))
     .input(
       z.object({
         riskId: z.string().min(1, "Risk ID is required"),
@@ -3925,7 +3906,7 @@ export const riskRouter = createTRPCRouter({
    * AC27: Export filename: `risk-${riskId}-audit-trail-${date}.csv`
    */
   exportRiskAuditTrail: organizationProcedure
-    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR, UserRole.BUSINESS_USER])) // AC26
+    .use(requireRole([...WRITE_ROLES])) // AC26
     .input(z.object({ riskId: z.string().min(1, "Risk ID is required") }))
     .mutation(async ({ ctx, input }) => {
       // Fetch all audit logs for this risk (no pagination)
@@ -4417,7 +4398,7 @@ export const riskRouter = createTRPCRouter({
    * Cascades to RiskEvidence, RemediationOptions, Comments, StatusHistory.
    */
   delete: organizationProcedure
-    .use(requireRole([UserRole.ANALYST, UserRole.ADMINISTRATOR]))
+    .use(requireRole([...WRITE_ROLES]))
     .input(
       z.object({
         id: z.string().min(1, "Risk ID is required"),
