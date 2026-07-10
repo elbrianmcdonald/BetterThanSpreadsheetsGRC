@@ -100,34 +100,44 @@ beforeAll(async () => {
   });
 
   // Create test users
+  const createdGRCAnalyst = await db.user.create({
+    data: {
+      id: randomUUID(),
+      email: `grc-analyst-detail-${randomUUID()}@test.com`,
+      name: "GRC Analyst Detail",
+      platformRole: "ANALYST",
+      organizationId: testOrg.id,
+      updatedAt: new Date(),
+      assignedFrameworks: [],
+    },
+  });
   testUserGRCAnalyst = {
-    ...(await db.user.create({
-      data: {
-        id: randomUUID(),
-        email: `grc-analyst-detail-${randomUUID()}@test.com`,
-        name: "GRC Analyst Detail",
-        platformRole: "ANALYST",
-        organizationId: testOrg.id,
-        updatedAt: new Date(),
-        assignedFrameworks: [],
-      },
-    })),
+    id: createdGRCAnalyst.id,
+    email: createdGRCAnalyst.email!,
     role: "ANALYST",
+    organizationId: createdGRCAnalyst.organizationId,
+    name: createdGRCAnalyst.name!,
+    assignedFrameworks: createdGRCAnalyst.assignedFrameworks,
   };
 
+  const createdOtherOrgUser = await db.user.create({
+    data: {
+      id: randomUUID(),
+      email: `other-org-user-${randomUUID()}@test.com`,
+      name: "Other Org User",
+      platformRole: "ANALYST",
+      organizationId: otherOrg.id,
+      updatedAt: new Date(),
+      assignedFrameworks: [],
+    },
+  });
   testUserFromOtherOrg = {
-    ...(await db.user.create({
-      data: {
-        id: randomUUID(),
-        email: `other-org-user-${randomUUID()}@test.com`,
-        name: "Other Org User",
-        platformRole: "ANALYST",
-        organizationId: otherOrg.id,
-        updatedAt: new Date(),
-        assignedFrameworks: [],
-      },
-    })),
+    id: createdOtherOrgUser.id,
+    email: createdOtherOrgUser.email!,
     role: "ANALYST",
+    organizationId: createdOtherOrgUser.organizationId,
+    name: createdOtherOrgUser.name!,
+    assignedFrameworks: createdOtherOrgUser.assignedFrameworks,
   };
 
   // Create test business unit

@@ -138,7 +138,49 @@ async function main() {
       updatedAt: new Date(),
     },
   });
-  console.log(`✅ Created ${userA1.name} and ${userA2.name}\n`);
+  // Manager (staff, all-org) — demonstrates the approve/assign tier.
+  const userA3 = await prisma.user.upsert({
+    where: { email: 'manager@acme-corp.com' },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440013',
+      email: 'manager@acme-corp.com',
+      name: 'Maria Manager',
+      hashedPassword: DEFAULT_PASSWORD_HASH,
+      platformRole: 'MANAGER',
+      organizationId: orgA.id,
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  // Business User — read-only, org-bound via membership (no platformRole).
+  const userA4 = await prisma.user.upsert({
+    where: { email: 'viewer@acme-corp.com' },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440014',
+      email: 'viewer@acme-corp.com',
+      name: 'Vera Viewer',
+      hashedPassword: DEFAULT_PASSWORD_HASH,
+      organizationId: orgA.id,
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+  await prisma.organizationMembership.upsert({
+    where: { userId_organizationId: { userId: userA4.id, organizationId: orgA.id } },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440015',
+      userId: userA4.id,
+      organizationId: orgA.id,
+      updatedAt: new Date(),
+    },
+  });
+  console.log(
+    `✅ Created ${userA1.name} (Administrator), ${userA2.name} (Analyst), ${userA3.name} (Manager), ${userA4.name} (Business User)\n`,
+  );
 
   // Create Users for Organization B
   console.log('Creating users for Organization B...');
@@ -171,7 +213,31 @@ async function main() {
       updatedAt: new Date(),
     },
   });
-  console.log(`✅ Created ${userB1.name} and ${userB2.name}\n`);
+  // Business User for Organization B — read-only, org-bound via membership.
+  const userB3 = await prisma.user.upsert({
+    where: { email: 'viewer@globex-inc.com' },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440023',
+      email: 'viewer@globex-inc.com',
+      name: 'Walt Viewer',
+      hashedPassword: DEFAULT_PASSWORD_HASH,
+      organizationId: orgB.id,
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+  await prisma.organizationMembership.upsert({
+    where: { userId_organizationId: { userId: userB3.id, organizationId: orgB.id } },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440024',
+      userId: userB3.id,
+      organizationId: orgB.id,
+      updatedAt: new Date(),
+    },
+  });
+  console.log(`✅ Created ${userB1.name} and ${userB2.name} and ${userB3.name} (Business User)\n`);
 
   // Create Evidence records for Organization A
   console.log('Creating evidence records for Organization A...');

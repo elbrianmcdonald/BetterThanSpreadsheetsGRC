@@ -63,7 +63,7 @@ describe("Risk Scenario Management - Story 7.7", () => {
 
     // Create test user with GRC_ANALYST role (staff → platformRole; role attached
     // to the JS object so createCaller can build session.user.role).
-    testUser = { ...(await db.user.create({
+    const testUserRow = await db.user.create({
       data: {
         id: randomUUID(),
         email: `scenario-test-${Date.now()}@example.com`,
@@ -72,7 +72,13 @@ describe("Risk Scenario Management - Story 7.7", () => {
         platformRole: UserRole.ANALYST,
         updatedAt: new Date(),
       },
-    })), role: UserRole.ANALYST };
+    });
+    testUser = {
+      id: testUserRow.id,
+      email: testUserRow.email!,
+      organizationId: testUserRow.organizationId,
+      role: UserRole.ANALYST,
+    };
 
     // Create test finding and assessments within organization context
     await runWithOrganizationContext(testOrg.id, async () => {
@@ -506,7 +512,7 @@ describe("Risk Scenario Management - Story 7.7", () => {
     });
 
     it("AC32: should allow SECURITY_ENGINEER to modify scenarios", async () => {
-      const securityEngineer = { ...(await db.user.create({
+      const securityEngineerRow = await db.user.create({
         data: {
           id: randomUUID(),
           email: `sec-eng-${Date.now()}@example.com`,
@@ -515,7 +521,13 @@ describe("Risk Scenario Management - Story 7.7", () => {
           platformRole: UserRole.ANALYST,
           updatedAt: new Date(),
         },
-      })), role: UserRole.ANALYST };
+      });
+      const securityEngineer = {
+        id: securityEngineerRow.id,
+        email: securityEngineerRow.email!,
+        organizationId: securityEngineerRow.organizationId,
+        role: UserRole.ANALYST,
+      };
 
       const caller = createCaller(securityEngineer);
 
@@ -538,7 +550,7 @@ describe("Risk Scenario Management - Story 7.7", () => {
         },
       });
 
-      const otherUser = { ...(await db.user.create({
+      const otherUserRow = await db.user.create({
         data: {
           id: randomUUID(),
           email: `other-user-${Date.now()}@example.com`,
@@ -547,7 +559,13 @@ describe("Risk Scenario Management - Story 7.7", () => {
           platformRole: UserRole.ANALYST,
           updatedAt: new Date(),
         },
-      })), role: UserRole.ANALYST };
+      });
+      const otherUser = {
+        id: otherUserRow.id,
+        email: otherUserRow.email!,
+        organizationId: otherUserRow.organizationId,
+        role: UserRole.ANALYST,
+      };
 
       const caller = createCaller(otherUser);
 

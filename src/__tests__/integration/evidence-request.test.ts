@@ -236,6 +236,7 @@ function createCaller(user: typeof testUserGRC) {
         email: user.email,
         role: user.role,
         organizationId: user.organizationId,
+        assignedFrameworks: [],
       },
       expires: new Date(Date.now() + 86400000).toISOString(),
     },

@@ -39,6 +39,7 @@ function createCaller(user: { id: string; role: UserRole; organizationId: string
     },
     db,
     organizationId: user.organizationId,
+    headers: new Headers(),
   });
 }
 
