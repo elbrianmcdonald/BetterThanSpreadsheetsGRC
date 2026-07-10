@@ -75,11 +75,11 @@ describe("Framework Import Commit - Story 24.3", () => {
         email: adminEmail,
         name: "Admin",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
-    adminUser = { id: admin.id, email: adminEmail, organizationId: testOrg.id, role: admin.role };
+    adminUser = { id: admin.id, email: adminEmail, organizationId: testOrg.id, role: UserRole.ADMINISTRATOR };
 
     const analystEmail = `analyst-fwcommit-${Date.now()}@example.com`;
     const analyst = await db.user.create({
@@ -88,7 +88,7 @@ describe("Framework Import Commit - Story 24.3", () => {
         email: analystEmail,
         name: "Analyst",
         organizationId: testOrg.id,
-        role: UserRole.GRC_ANALYST,
+        platformRole: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });
@@ -96,7 +96,7 @@ describe("Framework Import Commit - Story 24.3", () => {
       id: analyst.id,
       email: analystEmail,
       organizationId: testOrg.id,
-      role: analyst.role,
+      role: UserRole.ANALYST,
     };
   });
 

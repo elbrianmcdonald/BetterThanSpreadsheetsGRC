@@ -62,7 +62,7 @@ async function main() {
     // Pick the first ORG_ADMIN as assignee, fall back to any user
     const assignee =
       (await db.user.findFirst({
-        where: { organizationId: org.id, role: "ORG_ADMIN" },
+        where: { organizationId: org.id, platformRole: "ADMINISTRATOR" },
         select: { id: true },
       })) ??
       (await db.user.findFirst({

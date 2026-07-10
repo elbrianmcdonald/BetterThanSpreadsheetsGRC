@@ -24,21 +24,15 @@ import {
   organizationProcedure,
 } from "@/server/api/trpc";
 import { UserRole, AssessmentTaskStatus, UnifiedAssessmentType } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
-// Roles that can create and manage assessment tasks
-const MANAGER_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-  UserRole.GRC_MANAGER,
-  UserRole.GRC_ANALYST, // Senior analysts can also create tasks
-];
+// Roles that can create and manage assessment tasks (staff writers).
+const MANAGER_ROLES: UserRole[] = [...WRITE_ROLES];
 
-// Roles that can be assigned to assessment tasks
-const ASSIGNEE_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.GRC_MANAGER,
-  UserRole.SECURITY_ENGINEER,
-];
+// Roles that can be assigned to assessment tasks. This is a domain concept
+// (who performs assessment work), not an authorization tier: analysts and
+// managers are assignable; administrators are not a task-worker pool.
+const ASSIGNEE_ROLES: UserRole[] = [UserRole.ANALYST, UserRole.MANAGER];
 
 // Helper to check if user has manager role
 function hasManagerRole(role: UserRole): boolean {
@@ -137,7 +131,7 @@ export const assessmentTaskRouter = createTRPCRouter({
             id: input.assignedToId,
             organizationId: ctx.organizationId,
           },
-          select: { id: true, role: true },
+          select: { id: true, platformRole: true },
         });
 
         if (!assignee) {
@@ -147,7 +141,7 @@ export const assessmentTaskRouter = createTRPCRouter({
           });
         }
 
-        if (!ASSIGNEE_ROLES.includes(assignee.role as UserRole)) {
+        if (!ASSIGNEE_ROLES.includes(assignee.platformRole ?? UserRole.BUSINESS_USER)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "User cannot be assigned to assessment tasks",
@@ -333,7 +327,7 @@ export const assessmentTaskRouter = createTRPCRouter({
           id: input.assignedToId,
           organizationId: ctx.organizationId,
         },
-        select: { id: true, role: true, name: true, email: true },
+        select: { id: true, platformRole: true, name: true, email: true },
       });
 
       if (!assignee) {
@@ -343,7 +337,7 @@ export const assessmentTaskRouter = createTRPCRouter({
         });
       }
 
-      if (!ASSIGNEE_ROLES.includes(assignee.role as UserRole)) {
+      if (!ASSIGNEE_ROLES.includes(assignee.platformRole ?? UserRole.BUSINESS_USER)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "User cannot be assigned to assessment tasks",
@@ -550,18 +544,22 @@ export const assessmentTaskRouter = createTRPCRouter({
     const users = await ctx.db.user.findMany({
       where: {
         organizationId: ctx.organizationId,
-        role: { in: ASSIGNEE_ROLES },
+        // ASSIGNEE_ROLES are staff roles (ANALYST/MANAGER) — carried on platformRole.
+        platformRole: { in: ASSIGNEE_ROLES },
       },
       select: {
         id: true,
         name: true,
         email: true,
-        role: true,
+        platformRole: true,
       },
       orderBy: { name: "asc" },
     });
 
-    return users;
+    return users.map((u) => ({
+      ...u,
+      role: u.platformRole ?? UserRole.BUSINESS_USER,
+    }));
   }),
 
   /**
@@ -1100,7 +1098,7 @@ export const assessmentTaskRouter = createTRPCRouter({
             id: input.assignedToId,
             organizationId: ctx.organizationId,
           },
-          select: { id: true, role: true },
+          select: { id: true, platformRole: true },
         });
 
         if (!assignee) {
@@ -1110,7 +1108,7 @@ export const assessmentTaskRouter = createTRPCRouter({
           });
         }
 
-        if (!ASSIGNEE_ROLES.includes(assignee.role as UserRole)) {
+        if (!ASSIGNEE_ROLES.includes(assignee.platformRole ?? UserRole.BUSINESS_USER)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "User cannot be assigned to assessment tasks",

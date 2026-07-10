@@ -86,7 +86,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Test User GRC",
       email: "test-grc@evidence-risk-link.com",
-      role: "GRC_ANALYST",
+      platformRole: "ANALYST",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },
@@ -94,7 +94,7 @@ beforeAll(async () => {
   testUserGRC = {
     id: createdUserGRC.id,
     email: createdUserGRC.email!,
-    role: createdUserGRC.role,
+    role: "ANALYST" as UserRole,
     organizationId: createdUserGRC.organizationId,
     name: createdUserGRC.name!,
   };
@@ -104,7 +104,6 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Test User IT",
       email: "test-it@evidence-risk-link.com",
-      role: "IT_STAKEHOLDER",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },
@@ -112,7 +111,7 @@ beforeAll(async () => {
   testUserIT = {
     id: createdUserIT.id,
     email: createdUserIT.email!,
-    role: createdUserIT.role,
+    role: "BUSINESS_USER" as UserRole,
     organizationId: createdUserIT.organizationId,
     name: createdUserIT.name!,
   };
@@ -122,7 +121,6 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Test User Auditor",
       email: "test-auditor@evidence-risk-link.com",
-      role: "AUDITOR",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },
@@ -130,7 +128,7 @@ beforeAll(async () => {
   testUserAuditor = {
     id: createdUserAuditor.id,
     email: createdUserAuditor.email!,
-    role: createdUserAuditor.role,
+    role: "BUSINESS_USER" as UserRole,
     organizationId: createdUserAuditor.organizationId,
     name: createdUserAuditor.name!,
   };
@@ -140,7 +138,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Test User SE",
       email: "test-se@evidence-risk-link.com",
-      role: "SECURITY_ENGINEER",
+      platformRole: "ANALYST",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },
@@ -148,7 +146,7 @@ beforeAll(async () => {
   testUserSecurityEngineer = {
     id: createdUserSE.id,
     email: createdUserSE.email!,
-    role: createdUserSE.role,
+    role: "ANALYST" as UserRole,
     organizationId: createdUserSE.organizationId,
     name: createdUserSE.name!,
   };
@@ -158,7 +156,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Test User Org2",
       email: "test-org2@evidence-risk-link.com",
-      role: "GRC_ANALYST",
+      platformRole: "ANALYST",
       organizationId: testOrg2.id,
       updatedAt: new Date(),
     },
@@ -166,7 +164,7 @@ beforeAll(async () => {
   testUserOrg2 = {
     id: createdUserOrg2.id,
     email: createdUserOrg2.email!,
-    role: createdUserOrg2.role,
+    role: "ANALYST" as UserRole,
     organizationId: createdUserOrg2.organizationId,
     name: createdUserOrg2.name!,
   };

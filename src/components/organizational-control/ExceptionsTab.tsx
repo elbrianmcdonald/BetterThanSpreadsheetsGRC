@@ -17,6 +17,7 @@ import {
   ControlExceptionStatus,
   UserRole,
 } from "@prisma/client";
+import { APPROVE_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,12 +52,9 @@ import {
   labelForExceptionStatus,
 } from "./enum-labels";
 
-const REQUESTER_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
-const APPROVER_ROLES: UserRole[] = [UserRole.ORG_ADMIN];
+// Requesting an exception is a write action; approving/denying is a decision gate.
+const REQUESTER_ROLES: UserRole[] = WRITE_ROLES;
+const APPROVER_ROLES: UserRole[] = APPROVE_ROLES;
 
 const ANY = "__any__";
 const RENEWAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;

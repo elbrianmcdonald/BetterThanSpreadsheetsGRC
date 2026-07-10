@@ -66,49 +66,61 @@ beforeAll(async () => {
   });
 
   // Create test users with different roles
-  adminA = await db.user.create({
-    data: {
-      id: randomUUID(),
-      name: "Admin A",
-      email: "admin-a@rbac-test.com",
-      role: "ORG_ADMIN",
-      organizationId: orgA.id,
-      updatedAt: new Date(),
-    },
-  });
+  adminA = {
+    ...(await db.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Admin A",
+        email: "admin-a@rbac-test.com",
+        platformRole: "ADMINISTRATOR",
+        organizationId: orgA.id,
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ADMINISTRATOR" as UserRole,
+  };
 
-  analystA = await db.user.create({
-    data: {
-      id: randomUUID(),
-      name: "Analyst A",
-      email: "analyst-a@rbac-test.com",
-      role: "GRC_ANALYST",
-      organizationId: orgA.id,
-      updatedAt: new Date(),
-    },
-  });
+  analystA = {
+    ...(await db.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Analyst A",
+        email: "analyst-a@rbac-test.com",
+        platformRole: "ANALYST",
+        organizationId: orgA.id,
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ANALYST" as UserRole,
+  };
 
-  auditorA = await db.user.create({
-    data: {
-      id: randomUUID(),
-      name: "Auditor A",
-      email: "auditor-a@rbac-test.com",
-      role: "AUDITOR",
-      organizationId: orgA.id,
-      updatedAt: new Date(),
-    },
-  });
+  // Business User: no platformRole (null); existence implies BUSINESS_USER.
+  auditorA = {
+    ...(await db.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Auditor A",
+        email: "auditor-a@rbac-test.com",
+        organizationId: orgA.id,
+        updatedAt: new Date(),
+      },
+    })),
+    role: "BUSINESS_USER" as UserRole,
+  };
 
-  adminB = await db.user.create({
-    data: {
-      id: randomUUID(),
-      name: "Admin B",
-      email: "admin-b@rbac-test.com",
-      role: "ORG_ADMIN",
-      organizationId: orgB.id,
-      updatedAt: new Date(),
-    },
-  });
+  adminB = {
+    ...(await db.user.create({
+      data: {
+        id: randomUUID(),
+        name: "Admin B",
+        email: "admin-b@rbac-test.com",
+        platformRole: "ADMINISTRATOR",
+        organizationId: orgB.id,
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ADMINISTRATOR" as UserRole,
+  };
 });
 
 afterAll(async () => {
@@ -153,7 +165,7 @@ describe("RBAC Enforcement", () => {
       const newUser = await caller.user.createUser({
         email: "test-user@rbac-test.com",
         name: "Test User",
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       });
 
       expect(newUser).toBeDefined();
@@ -171,9 +183,9 @@ describe("RBAC Enforcement", () => {
         caller.user.createUser({
           email: "should-fail@rbac-test.com",
           name: "Should Fail",
-          role: "AUDITOR",
+          role: "BUSINESS_USER",
         })
-      ).rejects.toThrow(/FORBIDDEN|requires one of these roles: ORG_ADMIN/);
+      ).rejects.toThrow(/FORBIDDEN|requires one of these roles: ADMINISTRATOR/);
     });
 
     it("AUDITOR cannot create users (read-only role - AC12)", async () => {
@@ -183,9 +195,9 @@ describe("RBAC Enforcement", () => {
         caller.user.createUser({
           email: "should-fail@rbac-test.com",
           name: "Should Fail",
-          role: "AUDITOR",
+          role: "BUSINESS_USER",
         })
-      ).rejects.toThrow(/FORBIDDEN|requires one of these roles: ORG_ADMIN/);
+      ).rejects.toThrow(/FORBIDDEN|requires one of these roles: ADMINISTRATOR/);
     });
   });
 
@@ -197,7 +209,7 @@ describe("RBAC Enforcement", () => {
       const newUser = await callerA.user.createUser({
         email: "cross-org-test@rbac-test.com",
         name: "Cross Org Test",
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       });
 
       // Verify user is in Org A (admin's org), not Org B
@@ -250,7 +262,7 @@ describe("RBAC Enforcement", () => {
         caller.user.createUser({
           email: "audit-test@rbac-test.com",
           name: "Audit Test",
-          role: "AUDITOR",
+          role: "BUSINESS_USER",
         })
       ).rejects.toThrow();
 
@@ -284,7 +296,7 @@ describe("RBAC Enforcement", () => {
       const changes = latestLog!.changes as Record<string, unknown>;
       const afterChanges = changes.after as Record<string, unknown>;
       expect(afterChanges.attemptedAction).toBeDefined();
-      expect(afterChanges.userRole).toBe("GRC_ANALYST");
+      expect(afterChanges.userRole).toBe("ANALYST");
     });
   });
 
@@ -295,7 +307,7 @@ describe("RBAC Enforcement", () => {
       const adminUser = await adminCaller.user.createUser({
         email: "admin-test@rbac-test.com",
         name: "Admin Test",
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       });
       expect(adminUser).toBeDefined();
       await db.user.delete({ where: { id: adminUser.id } });
@@ -306,9 +318,9 @@ describe("RBAC Enforcement", () => {
         analystCaller.user.createUser({
           email: "analyst-test@rbac-test.com",
           name: "Analyst Test",
-          role: "AUDITOR",
+          role: "BUSINESS_USER",
         })
-      ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
+      ).rejects.toThrow(/requires one of these roles: ADMINISTRATOR/);
 
       // AUDITOR: Cannot create users (read-only) ✗
       const auditorCaller = createCaller(auditorA);
@@ -316,9 +328,9 @@ describe("RBAC Enforcement", () => {
         auditorCaller.user.createUser({
           email: "auditor-test@rbac-test.com",
           name: "Auditor Test",
-          role: "AUDITOR",
+          role: "BUSINESS_USER",
         })
-      ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
+      ).rejects.toThrow(/requires one of these roles: ADMINISTRATOR/);
     });
 
     it("all authenticated users can list users (AC6)", async () => {
@@ -364,7 +376,7 @@ describe("RBAC Enforcement", () => {
       const userA = await callerA.user.createUser({
         email: "org-context-test-a@rbac-test.com",
         name: "Org Context Test A",
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       });
 
       // Try to access with Admin B (different org)
@@ -385,7 +397,7 @@ describe("RBAC Enforcement", () => {
         await caller.user.createUser({
           email: "error-msg-test@rbac-test.com",
           name: "Error Msg Test",
-          role: "AUDITOR",
+          role: "BUSINESS_USER",
         });
         // Should not reach here
         expect(true).toBe(false);
@@ -393,7 +405,7 @@ describe("RBAC Enforcement", () => {
         expect(error).toBeInstanceOf(TRPCError);
         const trpcError = error as TRPCError;
         expect(trpcError.code).toBe("FORBIDDEN");
-        expect(trpcError.message).toMatch(/requires one of these roles.*ORG_ADMIN/i);
+        expect(trpcError.message).toMatch(/requires one of these roles.*ADMINISTRATOR/i);
       }
     });
 
@@ -404,12 +416,12 @@ describe("RBAC Enforcement", () => {
         await caller.user.createUser({
           email: "role-msg-test@rbac-test.com",
           name: "Role Msg Test",
-          role: "AUDITOR",
+          role: "BUSINESS_USER",
         });
         expect(true).toBe(false);
       } catch (error) {
         const trpcError = error as TRPCError;
-        expect(trpcError.message).toMatch(/your role.*GRC_ANALYST/i);
+        expect(trpcError.message).toMatch(/your role.*ANALYST/i);
       }
     });
   });
@@ -427,7 +439,7 @@ describe("RBAC Enforcement", () => {
       const caller = createCaller(adminA);
 
       await expect(
-        caller.user.updateUserRole({ id: adminA.id, role: "AUDITOR" })
+        caller.user.updateUserRole({ id: adminA.id, role: "BUSINESS_USER" })
       ).rejects.toThrow(/cannot change your own role/i);
     });
   });
@@ -459,7 +471,7 @@ describe("RBAC Middleware Stack", () => {
           user: {
             id: "test-id",
             email: "test@example.com",
-            role: "ORG_ADMIN" as UserRole,
+            role: "ADMINISTRATOR" as UserRole,
             organizationId: null as unknown as string, // Force null organizationId
             name: "",
             image: null,
@@ -486,9 +498,9 @@ describe("RBAC Middleware Stack", () => {
         analystCaller.user.createUser({
           email: "admin-proc-test@rbac-test.com",
           name: "Admin Proc Test",
-          role: "AUDITOR",
+          role: "BUSINESS_USER",
         })
-      ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
+      ).rejects.toThrow(/requires one of these roles: ADMINISTRATOR/);
 
       // Admin can use admin procedure
       const adminCaller = createCaller(adminA);
@@ -496,7 +508,7 @@ describe("RBAC Middleware Stack", () => {
       const user = await adminCaller.user.createUser({
         email: "admin-proc-test@rbac-test.com",
         name: "Admin Proc Test",
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       });
 
       expect(user).toBeDefined();

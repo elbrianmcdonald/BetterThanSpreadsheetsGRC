@@ -139,7 +139,7 @@ beforeAll(async () => {
         id: randomUUID(),
         name: "Rescore Analyst",
         email,
-        role: "GRC_ANALYST",
+        platformRole: "ANALYST",
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -147,7 +147,7 @@ beforeAll(async () => {
     return {
       id: u.id,
       email: u.email!,
-      role: u.role,
+      role: "ANALYST" as UserRole,
       organizationId: u.organizationId,
       name: u.name!,
       assignedFrameworks: u.assignedFrameworks,

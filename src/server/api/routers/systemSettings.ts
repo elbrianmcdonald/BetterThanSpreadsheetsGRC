@@ -24,7 +24,7 @@ import {
 const SINGLETON_ID = "hostname-config-singleton";
 
 function assertAdmin(role: string | undefined): void {
-  if (role !== UserRole.ORG_ADMIN) {
+  if (role !== UserRole.ADMINISTRATOR) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Only organization administrators can change deployment settings",

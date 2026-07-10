@@ -18,23 +18,13 @@ import {
 import { UserRole, AuditAction, BusinessProcessStatus } from "@prisma/client";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { generateIdentifier } from "@/server/services/identifierService";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-// Roles that can view business functions
-const BF_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+// Roles that can view business functions — read tier
+const BF_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-// Roles that can manage business functions
-const BF_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-];
+// Roles that can manage business functions — write tier
+const BF_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // Input schemas
 const createBusinessFunctionSchema = z.object({

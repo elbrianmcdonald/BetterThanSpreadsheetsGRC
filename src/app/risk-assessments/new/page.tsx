@@ -9,7 +9,7 @@
 
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
-import { UserRole } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout } from "@/components/layout";
 import { CreateAssessmentProjectForm } from "@/components/risk-assessment-project";
 
@@ -18,15 +18,10 @@ export const metadata = {
   description: "Create a new risk assessment container",
 };
 
-const ASSESSMENT_CREATE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
-
 export default async function CreateAssessmentPage() {
   const session = await auth();
-  requireRole(session, ASSESSMENT_CREATE_ROLES, "/risk-assessments/new");
+  // Write-tier access: staff (Analyst/Manager/Administrator) create assessments.
+  requireRole(session, WRITE_ROLES, "/risk-assessments/new");
 
   return (
     <AppLayout

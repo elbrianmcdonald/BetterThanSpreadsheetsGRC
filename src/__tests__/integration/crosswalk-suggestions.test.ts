@@ -120,11 +120,11 @@ describe("crosswalk suggestion generation - Story 26.1", () => {
         email,
         name: "Admin",
         organizationId: org.id,
-        role: UserRole.ORG_ADMIN,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
-    admin = { id: adminRow.id, email, organizationId: org.id, role: adminRow.role };
+    admin = { id: adminRow.id, email, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {
       const A = await mkFramework("A");
@@ -240,8 +240,8 @@ describe("crosswalk suggestion conflict merge - Epic 26 review", () => {
   beforeAll(async () => {
     org = await db.organization.create({ data: { id: randomUUID(), name: `Conflict Org ${Date.now()}`, slug: `conflict-${Date.now()}`, updatedAt: new Date() } });
     const email = `admin-conflict-${Date.now()}@example.com`;
-    const adminRow = await db.user.create({ data: { id: randomUUID(), email, name: "Admin", organizationId: org.id, role: UserRole.ORG_ADMIN, updatedAt: new Date() } });
-    admin = { id: adminRow.id, email, organizationId: org.id, role: adminRow.role };
+    const adminRow = await db.user.create({ data: { id: randomUUID(), email, name: "Admin", organizationId: org.id, platformRole: UserRole.ADMINISTRATOR, updatedAt: new Date() } });
+    admin = { id: adminRow.id, email, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {
       const A = await db.framework.create({ data: { id: randomUUID(), organizationId: org.id, name: "CA", code: `CA${Date.now()}`, version: "1", isActive: true, updatedAt: new Date() } });

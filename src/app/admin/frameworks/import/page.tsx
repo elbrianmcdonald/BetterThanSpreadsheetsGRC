@@ -12,7 +12,7 @@ export const metadata = {
 };
 
 // Matches the FRAMEWORK_MANAGE permission required by the parse/import mutations
-const ROLES = [UserRole.ORG_ADMIN];
+const ROLES = [UserRole.ADMINISTRATOR];
 
 export default async function FrameworkImportPage() {
   const session = await auth();

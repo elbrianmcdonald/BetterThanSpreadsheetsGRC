@@ -51,9 +51,9 @@ describe("crosswalk export - Story 26.4", () => {
     });
     const email = `admin-exp-${Date.now()}@example.com`;
     const adminRow = await db.user.create({
-      data: { id: randomUUID(), email, name: "Reviewer Rita", organizationId: org.id, role: UserRole.ORG_ADMIN, updatedAt: new Date() },
+      data: { id: randomUUID(), email, name: "Reviewer Rita", organizationId: org.id, platformRole: UserRole.ADMINISTRATOR, updatedAt: new Date() },
     });
-    admin = { id: adminRow.id, email, organizationId: org.id, role: adminRow.role };
+    admin = { id: adminRow.id, email, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {
       const mkFw = (code: string) =>

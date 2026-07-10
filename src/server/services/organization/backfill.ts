@@ -11,22 +11,10 @@
 import type { PrismaClient } from "@prisma/client";
 
 export async function backfillMemberships(
-  db: PrismaClient,
+  _db: PrismaClient,
 ): Promise<{ created: number }> {
-  const users = await db.user.findMany({
-    select: { id: true, organizationId: true, role: true },
-  });
-
-  if (users.length === 0) return { created: 0 };
-
-  const result = await db.organizationMembership.createMany({
-    data: users.map((u) => ({
-      userId: u.id,
-      organizationId: u.organizationId,
-      role: u.role,
-    })),
-    skipDuplicates: true,
-  });
-
-  return { created: result.count };
+  // Role Consolidation Epic 2: obsolete. There is no stored User.role to backfill
+  // from — staff carry platformRole (all-org, no membership) and Business Users are
+  // provisioned with a membership directly. Retained as a no-op for callers.
+  return { created: 0 };
 }

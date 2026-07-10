@@ -18,6 +18,7 @@
 
 import { z } from "zod";
 import { UserRole, ObjectiveStatus, StrategyStatus } from "@prisma/client";
+import { READ_ROLES } from "@/lib/auth/roles";
 
 import {
   createTRPCRouter,
@@ -26,18 +27,8 @@ import {
 } from "@/server/api/trpc";
 import { calculateObjectiveProgress } from "@/server/services/progressService";
 
-/**
- * Roles that can view dashboard (all authenticated org users)
- */
-const DASHBOARD_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+/** Roles that can view dashboard — read tier (all authenticated org users). */
+const DASHBOARD_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
 export const strategyDashboardRouter = createTRPCRouter({
   /**

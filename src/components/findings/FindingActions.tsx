@@ -23,6 +23,7 @@ import { FindingStatus, UserRole, type Severity } from "@prisma/client";
 import { Loader2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,13 +43,10 @@ import { RejectFindingDialog } from "./RejectFindingDialog";
 import { LinkFindingToRiskDialog } from "./LinkFindingToRiskDialog";
 
 /**
- * Roles that can triage findings (AC29)
+ * Roles that can triage findings (AC29) — triage transitions are write actions
+ * performed by staff (analysts keep it), so this maps to the write tier.
  */
-const FINDING_TRIAGE_ROLES: UserRole[] = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const FINDING_TRIAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 /**
  * Finding data structure for this component

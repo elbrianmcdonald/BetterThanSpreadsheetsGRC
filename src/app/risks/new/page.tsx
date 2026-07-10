@@ -12,7 +12,7 @@
 import { Suspense } from "react";
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
-import { UserRole } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { CreateRiskClient } from "./client";
 
 // Force dynamic rendering to ensure proper hydration with session-dependent UI
@@ -23,23 +23,11 @@ export const metadata = {
   description: "Document a new security finding or risk",
 };
 
-/**
- * Roles that can create risks (AC21-AC23)
- * - Security Engineer
- * - GRC Analyst
- * - Org Admin
- */
-const RISK_CREATE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
-
 export default async function CreateRiskPage() {
   const session = await auth();
 
-  // Require one of the allowed roles (AC21-AC23)
-  requireRole(session, RISK_CREATE_ROLES, "/risks/new");
+  // Require write-tier access (AC21-AC23): staff (Analyst/Manager/Administrator).
+  requireRole(session, WRITE_ROLES, "/risks/new");
 
   return (
     <Suspense

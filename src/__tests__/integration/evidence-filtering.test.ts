@@ -58,7 +58,7 @@ beforeAll(async () => {
     id: userIdGRC,
     email: `grc-analyst-fw-test-${userIdGRC.slice(0, 8)}@test.com`,
     name: "GRC Analyst for FW Test",
-    role: UserRole.GRC_ANALYST,
+    role: UserRole.ANALYST,
     organizationId: testOrg.id,
   };
 
@@ -67,7 +67,7 @@ beforeAll(async () => {
       id: testUserGRC.id,
       email: testUserGRC.email,
       name: testUserGRC.name,
-      role: testUserGRC.role,
+      platformRole: testUserGRC.role,
       organizationId: testUserGRC.organizationId,
       updatedAt: new Date(),
     },
@@ -78,7 +78,7 @@ beforeAll(async () => {
     id: userIdAuditor,
     email: `auditor-fw-test-${userIdAuditor.slice(0, 8)}@test.com`,
     name: "Auditor with Assigned Frameworks",
-    role: UserRole.AUDITOR,
+    role: UserRole.BUSINESS_USER,
     organizationId: testOrg.id,
     assignedFrameworks: ["ISO27001"], // Only assigned to ISO 27001
   };
@@ -88,7 +88,6 @@ beforeAll(async () => {
       id: testUserAuditor.id,
       email: testUserAuditor.email,
       name: testUserAuditor.name,
-      role: testUserAuditor.role,
       organizationId: testUserAuditor.organizationId,
       assignedFrameworks: testUserAuditor.assignedFrameworks,
       updatedAt: new Date(),
@@ -100,7 +99,7 @@ beforeAll(async () => {
     id: userIdAuditorNoAssign,
     email: `auditor-no-assign-${userIdAuditorNoAssign.slice(0, 8)}@test.com`,
     name: "Auditor No Assignments",
-    role: UserRole.AUDITOR,
+    role: UserRole.BUSINESS_USER,
     organizationId: testOrg.id,
     assignedFrameworks: [], // No framework assignments
   };
@@ -110,7 +109,6 @@ beforeAll(async () => {
       id: testUserAuditorNoAssignment.id,
       email: testUserAuditorNoAssignment.email,
       name: testUserAuditorNoAssignment.name,
-      role: testUserAuditorNoAssignment.role,
       organizationId: testUserAuditorNoAssignment.organizationId,
       assignedFrameworks: testUserAuditorNoAssignment.assignedFrameworks,
       updatedAt: new Date(),

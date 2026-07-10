@@ -110,7 +110,7 @@ export async function GET(
           fileSize: evidence.fileSize,
           downloadedBy: session.user.email,
           userRole: session.user.role,
-          isAuditor: session.user.role === "AUDITOR",
+          isAuditor: session.user.role === "BUSINESS_USER",
           timestamp: new Date().toISOString(),
         },
       },

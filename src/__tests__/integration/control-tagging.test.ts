@@ -89,7 +89,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
         email: "tester@control-tagging.com",
         name: "Test User",
         organizationId: testOrg.id,
-        role: "GRC_ANALYST",
+        platformRole: "ANALYST",
         updatedAt: new Date(),
       },
     });
@@ -671,7 +671,7 @@ describe("Control Taxonomy Tagging Integration Tests", () => {
         email: "tester2@control-tagging.com",
         name: "Test User 2",
         organizationId: testOrg2.id,
-        role: "GRC_ANALYST",
+        platformRole: "ANALYST",
         updatedAt: new Date(),
       },
     });

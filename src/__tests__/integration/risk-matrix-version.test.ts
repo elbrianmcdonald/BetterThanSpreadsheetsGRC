@@ -78,17 +78,24 @@ describe("RiskMatrixVersion Integration Tests", () => {
       },
     });
 
-    // Create test user
-    testUser = await db.user.create({
+    // Create test user (staff → platformRole; role attached to the JS object so
+    // createCaller can build session.user.role).
+    const testUserRow = await db.user.create({
       data: {
         id: randomUUID(),
         email: `test-version-${Date.now()}@example.com`,
         name: "Test User Version",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
+    testUser = {
+      id: testUserRow.id,
+      email: testUserRow.email!,
+      organizationId: testUserRow.organizationId,
+      role: UserRole.ADMINISTRATOR,
+    };
 
     // Create test template (within organization context)
     await runWithOrganizationContext(testOrg.id, async () => {

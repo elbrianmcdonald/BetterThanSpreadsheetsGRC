@@ -80,7 +80,7 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/assignments/backlog",
         label: "Backlog",
         icon: <Users className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST],
       },
     ],
   },
@@ -88,7 +88,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: "governance",
     label: "Governance",
     icon: <Shield className="h-5 w-5" />,
-    roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER],
+    roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST],
     items: [
       {
         href: "/strategy",
@@ -99,25 +99,25 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin/frameworks",
         label: "Frameworks",
         icon: <ClipboardList className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST],
       },
       {
         href: "/crosswalks",
         label: "Crosswalks",
         icon: <GitCompare className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST],
       },
       {
         href: "/controls",
         label: "Controls",
         icon: <Shield className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST],
       },
       {
         href: "/framework-controls",
         label: "Framework/Standard Control Library",
         icon: <Shield className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST],
       },
     ],
   },
@@ -204,13 +204,13 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/standards",
         label: "Standards",
         icon: <BookCheck className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.CISO],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER],
       },
       {
         href: "/admin/evidence",
         label: "Evidence",
         icon: <FileText className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST],
       },
       {
         href: "/compliance/velocity",
@@ -238,7 +238,7 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/tprm/questionnaires",
         label: "Questionnaires",
         icon: <FileQuestion className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER, UserRole.CISO, UserRole.AUDITOR],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST, UserRole.MANAGER, UserRole.BUSINESS_USER],
       },
     ],
   },
@@ -271,7 +271,7 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin/bia-config",
         label: "BIA Configuration",
         icon: <Settings className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST],
       },
     ],
   },
@@ -279,20 +279,20 @@ const NAV_SECTIONS: NavSection[] = [
     id: "admin",
     label: "Administration",
     icon: <Users className="h-5 w-5" />,
-    roles: [UserRole.ORG_ADMIN],
+    roles: [UserRole.ADMINISTRATOR],
     platformAdmin: true, // also visible to platform admins (for the platform items below)
     items: [
       {
         href: "/admin/users",
         label: "User Management",
         icon: <Users className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
       },
       {
         href: "/admin/members",
         label: "Company Members",
         icon: <Building2 className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
       },
       {
         href: "/admin/companies",
@@ -312,46 +312,46 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/admin/business-units",
         label: "Business Units",
         icon: <ClipboardList className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
       },
       {
         href: "/admin/risk-matrices",
         label: "Risk Matrices",
         icon: <BarChart3 className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
       },
       {
         href: "/admin/risk-assessment-templates",
         label: "RA Templates",
         icon: <ClipboardList className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
       },
       {
         href: "/admin/backups",
         label: "Backups",
         icon: <Database className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
       },
       // Data group
       {
         href: "/admin/mappings",
         label: "Mappings",
         icon: <GitMerge className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
         group: "Data",
       },
       {
         href: "/admin/taxonomy",
         label: "Taxonomy",
         icon: <Tag className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
         group: "Data",
       },
       {
         href: "/mitre/tactics",
         label: "MITRE ATT&CK",
         icon: <Crosshair className="h-4 w-4" />,
-        roles: [UserRole.ORG_ADMIN],
+        roles: [UserRole.ADMINISTRATOR],
         group: "Data",
       },
     ],
@@ -430,7 +430,8 @@ export function AppSidebar() {
     return false;
   };
 
-  const isPlatformAdmin = session?.user?.isPlatformAdmin === true;
+  // Role Consolidation Epic 2: the platform admin is simply an ADMINISTRATOR.
+  const isPlatformAdmin = session?.user?.platformRole === "ADMINISTRATOR";
 
   // Filter sections and items based on user role (+ platform-admin visibility).
   const visibleSections = NAV_SECTIONS.filter((section) => {

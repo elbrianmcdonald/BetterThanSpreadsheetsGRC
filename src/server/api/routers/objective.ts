@@ -54,6 +54,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { UserRole, AuditAction, KpiType, ObjectiveStatus, RiskStatus, Severity, OrgControlStatus, ChangeType } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { randomUUID } from "crypto";
 
 import {
@@ -77,9 +78,9 @@ import { calculateObjectiveProgress } from "@/server/services/progressService";
  * - ORG_ADMIN: Full CRUD access
  */
 const OBJECTIVE_MANAGE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**
@@ -87,10 +88,10 @@ const OBJECTIVE_MANAGE_ROLES = [
  * SECURITY_ENGINEER can update objectives they are assigned to
  */
 const OBJECTIVE_UPDATE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
 ];
 
 /**
@@ -98,27 +99,21 @@ const OBJECTIVE_UPDATE_ROLES = [
  * All authenticated org users can view objectives
  */
 const OBJECTIVE_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.BUSINESS_USER,
+  UserRole.BUSINESS_USER,
+  UserRole.BUSINESS_USER,
 ];
 
 /**
  * Roles that can add comments on objectives
  * Story 6.1 AC2: AUDITOR cannot add comments (read-only access)
  */
-const OBJECTIVE_COMMENT_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-];
+// Commenting is a write action: staff only, never read-only Business Users.
+const OBJECTIVE_COMMENT_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // =============================================================================
 // Input Schemas
@@ -801,7 +796,7 @@ export const objectiveRouter = createTRPCRouter({
 
       // Story 6.1 AC6: IT_STAKEHOLDER can only view objectives where they are assigned
       const userRole = ctx.session!.user.role as UserRole;
-      if (userRole === UserRole.IT_STAKEHOLDER) {
+      if (userRole === UserRole.BUSINESS_USER) {
         const isAssigned = objective.assignees.some(
           (a) => a.user.id === ctx.session!.user.id
         );
@@ -866,7 +861,7 @@ export const objectiveRouter = createTRPCRouter({
 
       // For SECURITY_ENGINEER, verify they are assigned to this objective (FR59)
       const userRole = ctx.session!.user.role as UserRole;
-      if (userRole === UserRole.SECURITY_ENGINEER) {
+      if (userRole === UserRole.ANALYST) {
         const isAssigned = existingObjective.assignees.some(
           (a) => a.userId === ctx.session!.user.id
         );
@@ -1253,7 +1248,7 @@ export const objectiveRouter = createTRPCRouter({
       const userRole = ctx.session!.user.role as UserRole;
       const whereClause: Record<string, unknown> = { goalId: input.goalId };
 
-      if (userRole === UserRole.IT_STAKEHOLDER) {
+      if (userRole === UserRole.BUSINESS_USER) {
         whereClause.assignees = {
           some: { userId: ctx.session!.user.id },
         };

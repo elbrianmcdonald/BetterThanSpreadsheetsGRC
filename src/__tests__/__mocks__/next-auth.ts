@@ -14,7 +14,7 @@ export const mockSession: Session = {
     id: "test-user-id",
     name: "Test User",
     email: "test@example.com",
-    role: "AUDITOR" as UserRole,
+    role: "BUSINESS_USER" as UserRole,
     organizationId: "test-org-id",
     assignedFrameworks: [], // Story 3.7: Auditor framework access
   },

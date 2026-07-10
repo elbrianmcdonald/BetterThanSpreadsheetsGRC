@@ -59,11 +59,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AppLayout } from "@/components/layout";
+import { READ_ROLES } from "@/lib/auth/roles";
 
 /**
- * Story 5.7 AC28: Roles that can export evidence packages
+ * Story 5.7 AC28: Roles that can export evidence packages.
+ * Export is a read-tier capability — Business Users may export.
  */
-const CAN_EXPORT_PDF_ROLES = ["GRC_ANALYST", "ORG_ADMIN", "AUDITOR"] as const;
+const CAN_EXPORT_PDF_ROLES = READ_ROLES;
 
 interface FrameworkDetailClientProps {
   frameworkId: string;

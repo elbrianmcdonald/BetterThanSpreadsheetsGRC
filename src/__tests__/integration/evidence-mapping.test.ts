@@ -72,7 +72,7 @@ describe("Evidence Framework Mapping Integration Tests", () => {
         email: "tester@evidence-mapping.com",
         name: "Test User",
         organizationId: testOrg.id,
-        role: "GRC_ANALYST",
+        platformRole: "ANALYST",
         updatedAt: new Date(),
       },
     });

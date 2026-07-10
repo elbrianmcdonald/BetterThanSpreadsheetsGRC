@@ -10,8 +10,8 @@
  * import { UserRole } from "@prisma/client";
  *
  * function MyComponent() {
- *   const isAdmin = useHasRole(UserRole.ORG_ADMIN);
- *   const isAnalystOrHigher = useHasRole([UserRole.ORG_ADMIN, UserRole.GRC_ANALYST]);
+ *   const isAdmin = useHasRole(UserRole.ADMINISTRATOR);
+ *   const isAnalystOrHigher = useHasRole([UserRole.ADMINISTRATOR, UserRole.ANALYST]);
  *
  *   return (
  *     <>
@@ -37,14 +37,14 @@ import { UserRole } from "@prisma/client";
  *
  * @example
  * // Check single role
- * const isAdmin = useHasRole(UserRole.ORG_ADMIN);
+ * const isAdmin = useHasRole(UserRole.ADMINISTRATOR);
  *
  * @example
  * // Check multiple roles
  * const canManageRisks = useHasRole([
- *   UserRole.ORG_ADMIN,
- *   UserRole.GRC_ANALYST,
- *   UserRole.SECURITY_ENGINEER
+ *   UserRole.ADMINISTRATOR,
+ *   UserRole.ANALYST,
+ *   UserRole.ANALYST
  * ]);
  */
 export function useHasRole(

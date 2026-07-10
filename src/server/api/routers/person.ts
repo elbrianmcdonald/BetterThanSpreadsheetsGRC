@@ -21,7 +21,8 @@ import {
   createTRPCRouter,
   organizationProcedure,
 } from "@/server/api/trpc";
-import { AuditAction } from "@prisma/client";
+import { AuditAction, UserRole } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
 // Zod schemas for input validation
 const createPersonSchema = z.object({
@@ -53,8 +54,8 @@ const listPersonSchema = z.object({
   limit: z.number().min(1).max(100).default(50),
 });
 
-// Allowed roles for person management
-const PERSON_MANAGEMENT_ROLES = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
+// Allowed roles for person management (write tier)
+const PERSON_MANAGEMENT_ROLES: UserRole[] = [...WRITE_ROLES];
 
 export const personRouter = createTRPCRouter({
   /**

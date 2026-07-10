@@ -39,6 +39,7 @@ function createCaller(user: { id: string; role: UserRole; organizationId: string
     },
     db,
     organizationId: user.organizationId,
+    headers: new Headers(),
   });
 }
 
@@ -65,27 +66,27 @@ beforeAll(async () => {
   // Create test users using raw SQL to bypass organization middleware
   const grcUserId = randomUUID();
   await db.$executeRaw`
-    INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
-    VALUES (${grcUserId}, 'GRC Analyst', 'grc@test.com', 'GRC_ANALYST'::"UserRole", ${testOrg.id}, 'hash', NOW())
+    INSERT INTO "User" (id, name, email, "platformRole", "organizationId", "hashedPassword", "updatedAt")
+    VALUES (${grcUserId}, 'GRC Analyst', 'grc@test.com', 'ANALYST'::"UserRole", ${testOrg.id}, 'hash', NOW())
   `;
   testUserGRC = {
     id: grcUserId,
     name: "GRC Analyst",
     email: "grc@test.com",
-    role: UserRole.GRC_ANALYST,
+    role: UserRole.ANALYST,
     organizationId: testOrg.id,
   };
 
   const itUserId = randomUUID();
   await db.$executeRaw`
-    INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
-    VALUES (${itUserId}, 'IT Stakeholder', 'it@test.com', 'IT_STAKEHOLDER'::"UserRole", ${testOrg.id}, 'hash', NOW())
+    INSERT INTO "User" (id, name, email, "organizationId", "hashedPassword", "updatedAt")
+    VALUES (${itUserId}, 'IT Stakeholder', 'it@test.com', ${testOrg.id}, 'hash', NOW())
   `;
   testUserIT = {
     id: itUserId,
     name: "IT Stakeholder",
     email: "it@test.com",
-    role: UserRole.IT_STAKEHOLDER,
+    role: UserRole.BUSINESS_USER,
     organizationId: testOrg.id,
   };
 
@@ -98,14 +99,14 @@ beforeAll(async () => {
 
   const otherOrgUserId = randomUUID();
   await db.$executeRaw`
-    INSERT INTO "User" (id, name, email, role, "organizationId", "hashedPassword", "updatedAt")
-    VALUES (${otherOrgUserId}, 'Other Org User', 'other@test.com', 'GRC_ANALYST'::"UserRole", ${testOrg2.id}, 'hash', NOW())
+    INSERT INTO "User" (id, name, email, "platformRole", "organizationId", "hashedPassword", "updatedAt")
+    VALUES (${otherOrgUserId}, 'Other Org User', 'other@test.com', 'ANALYST'::"UserRole", ${testOrg2.id}, 'hash', NOW())
   `;
   testUserOtherOrg = {
     id: otherOrgUserId,
     name: "Other Org User",
     email: "other@test.com",
-    role: UserRole.GRC_ANALYST,
+    role: UserRole.ANALYST,
     organizationId: testOrg2.id,
   };
 });
@@ -189,7 +190,7 @@ describe("Story 4.12: Risk Audit Trail", () => {
       });
 
       expect(auditLog!.actorName).toBe("GRC Analyst");
-      expect(auditLog!.actorRole).toBe("GRC_ANALYST");
+      expect(auditLog!.actorRole).toBe("ANALYST");
     });
   });
 
@@ -287,7 +288,7 @@ describe("Story 4.12: Risk Audit Trail", () => {
       // Create audit log for other org risk
       await db.$executeRaw`
         INSERT INTO "AuditLog" (id, action, "entityType", "entityId", "organizationId", "userId", "actorName", "actorRole", timestamp)
-        VALUES (${randomUUID()}, 'CREATE_RISK'::"AuditAction", 'Risk', ${otherOrgRiskId}, ${testOrg2.id}, ${testUserOtherOrg.id}, 'Other User', 'GRC_ANALYST', NOW())
+        VALUES (${randomUUID()}, 'CREATE_RISK'::"AuditAction", 'Risk', ${otherOrgRiskId}, ${testOrg2.id}, ${testUserOtherOrg.id}, 'Other User', 'ANALYST', NOW())
       `;
 
       // Query from testOrg should NOT see other org's logs
@@ -348,13 +349,18 @@ describe("Story 4.12: Risk Audit Trail", () => {
       expect(result.data).toContain("CREATE_RISK");
     });
 
-    it("AC26: Export only available to GRC_ANALYST, ORG_ADMIN, AUDITOR", async () => {
-      // IT_STAKEHOLDER should NOT be able to export
-      const itCaller = createCaller(testUserIT);
-
+    it("AC26: Audit-trail export is staff-only; read-only BUSINESS_USER is denied", async () => {
+      // Audit trail is administration data — NOT part of a Business User's
+      // read-only view ("...but not including administration"). Staff export it.
+      const buCaller = createCaller(testUserIT);
       await expect(
-        itCaller.risk.exportRiskAuditTrail({ riskId: testRisk.id })
-      ).rejects.toThrow();
+        buCaller.risk.exportRiskAuditTrail({ riskId: testRisk.id }),
+      ).rejects.toThrow(/FORBIDDEN|requires one of these roles/);
+
+      const staffResult = await createCaller(testUserGRC).risk.exportRiskAuditTrail({
+        riskId: testRisk.id,
+      });
+      expect(staffResult.data).toContain("CREATE_RISK");
     });
 
     it("AC27: Export filename follows pattern", async () => {

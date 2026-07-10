@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function BackupsPage() {
   const session = await auth();
-  requireRole(session, [UserRole.ORG_ADMIN], "/admin/backups");
+  requireRole(session, [UserRole.ADMINISTRATOR], "/admin/backups");
 
   return (
     <Suspense

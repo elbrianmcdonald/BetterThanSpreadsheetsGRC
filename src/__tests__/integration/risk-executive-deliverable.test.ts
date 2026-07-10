@@ -84,18 +84,20 @@ describe("Risk Executive Summary Deliverable (matrix-driven)", () => {
     orgB = await db.organization.create({
       data: { id: randomUUID(), name: `Exec B ${stamp}`, slug: `exec-b-${stamp}`, updatedAt: new Date() },
     });
-    assignee = await db.user.create({
-      data: { id: randomUUID(), email: `exec-assignee-${stamp}@example.com`, name: "Assignee", organizationId: orgA.id, role: UserRole.GRC_ANALYST, updatedAt: new Date() },
-    });
-    otherAnalyst = await db.user.create({
-      data: { id: randomUUID(), email: `exec-other-${stamp}@example.com`, name: "Other", organizationId: orgA.id, role: UserRole.GRC_ANALYST, updatedAt: new Date() },
-    });
-    admin = await db.user.create({
-      data: { id: randomUUID(), email: `exec-admin-${stamp}@example.com`, name: "Admin", organizationId: orgA.id, role: UserRole.ORG_ADMIN, updatedAt: new Date() },
-    });
-    analystB = await db.user.create({
-      data: { id: randomUUID(), email: `exec-b-${stamp}@example.com`, name: "Analyst B", organizationId: orgB.id, role: UserRole.GRC_ANALYST, updatedAt: new Date() },
-    });
+    // Role Consolidation Epic 2: staff carry platformRole; `role` is attached to
+    // the returned JS object so createCaller can still build session.user.role.
+    assignee = { ...(await db.user.create({
+      data: { id: randomUUID(), email: `exec-assignee-${stamp}@example.com`, name: "Assignee", organizationId: orgA.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
+    })), role: UserRole.ANALYST };
+    otherAnalyst = { ...(await db.user.create({
+      data: { id: randomUUID(), email: `exec-other-${stamp}@example.com`, name: "Other", organizationId: orgA.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
+    })), role: UserRole.ANALYST };
+    admin = { ...(await db.user.create({
+      data: { id: randomUUID(), email: `exec-admin-${stamp}@example.com`, name: "Admin", organizationId: orgA.id, platformRole: UserRole.ADMINISTRATOR, updatedAt: new Date() },
+    })), role: UserRole.ADMINISTRATOR };
+    analystB = { ...(await db.user.create({
+      data: { id: randomUUID(), email: `exec-b-${stamp}@example.com`, name: "Analyst B", organizationId: orgB.id, platformRole: UserRole.ANALYST, updatedAt: new Date() },
+    })), role: UserRole.ANALYST };
 
     const matrixVersionId = randomUUID();
     const templateId = randomUUID();

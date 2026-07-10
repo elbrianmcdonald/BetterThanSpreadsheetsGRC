@@ -15,7 +15,7 @@
 import { db } from "@/server/db";
 import { appRouter } from "@/server/api/root";
 import { randomUUID } from "crypto";
-import { type UserRole, Severity, FindingSource, FindingStatus, AuditAction } from "@prisma/client";
+import { UserRole, Severity, FindingSource, FindingStatus, AuditAction } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 import {
@@ -95,7 +95,7 @@ beforeAll(async () => {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: role === UserRole.BUSINESS_USER ? null : role,
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -103,7 +103,7 @@ beforeAll(async () => {
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role,
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,
@@ -113,49 +113,49 @@ beforeAll(async () => {
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@finding-triage.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@finding-triage.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserOrgAdmin = await createUser(
     "Org Admin",
     "admin@finding-triage.test",
-    "ORG_ADMIN",
+    "ADMINISTRATOR",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder",
     "it@finding-triage.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserBusinessStakeholder = await createUser(
     "Business Stakeholder",
     "business@finding-triage.test",
-    "BUSINESS_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@finding-triage.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserOrg2 = await createUser(
     "User Org 2",
     "user@finding-triage-org2.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg2.id
   );
 });

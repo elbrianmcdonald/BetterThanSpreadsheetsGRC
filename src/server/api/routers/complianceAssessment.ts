@@ -27,28 +27,17 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES, APPROVE_ROLES } from "@/lib/auth/roles";
 
 /**
- * Roles that can manage compliance assessments
+ * Roles that can manage compliance assessments (any mutation)
  */
-const COMPLIANCE_MANAGE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const COMPLIANCE_MANAGE_ROLES: UserRole[] = WRITE_ROLES as UserRole[];
 
 /**
  * Roles that can view compliance assessments
  */
-const COMPLIANCE_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+const COMPLIANCE_VIEW_ROLES: UserRole[] = READ_ROLES as UserRole[];
 
 // =============================================================================
 // Input Schemas
@@ -856,7 +845,7 @@ export const complianceAssessmentRouter = createTRPCRouter({
    * Approve assessment
    */
   approve: organizationProcedure
-    .use(requireRole([UserRole.CISO, UserRole.ORG_ADMIN]))
+    .use(requireRole(APPROVE_ROLES))
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const { db, session, organizationId } = ctx;

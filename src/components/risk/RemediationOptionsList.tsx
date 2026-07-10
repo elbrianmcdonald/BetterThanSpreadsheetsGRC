@@ -17,6 +17,7 @@ import { useState } from "react";
 import { Loader2, FileText, Plus } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,15 +28,11 @@ import { AddRemediationOptionDialog } from "./AddRemediationOptionDialog";
 import { EditRemediationOptionDialog } from "./EditRemediationOptionDialog";
 
 /**
- * Roles that can manage remediation options
+ * Roles that can manage remediation options (write tier)
  */
-const CAN_ADD_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-];
+const CAN_ADD_ROLES: UserRole[] = WRITE_ROLES;
 
-const CAN_DELETE_ROLES: UserRole[] = [UserRole.GRC_ANALYST, UserRole.ORG_ADMIN];
+const CAN_DELETE_ROLES: UserRole[] = WRITE_ROLES;
 
 interface RemediationOptionsListProps {
   /** The risk ID to fetch options for */

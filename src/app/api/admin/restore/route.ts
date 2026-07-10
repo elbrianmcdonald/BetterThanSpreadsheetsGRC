@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
-  if (session.user.role !== "ORG_ADMIN") {
+  if (session.user.role !== "ADMINISTRATOR") {
     return NextResponse.json(
       { error: "Only organization admins can restore backups" },
       { status: 403 }

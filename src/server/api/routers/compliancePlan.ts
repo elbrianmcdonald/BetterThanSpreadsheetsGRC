@@ -10,7 +10,6 @@ import { TRPCError } from "@trpc/server";
 import {
   Prisma,
   AuditAction,
-  UserRole,
   ComplianceStatus,
   ControlExceptionStatus,
   RemediationStatus,
@@ -143,10 +142,11 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
 /** Writes require a compliance-capable role (NFR2). */
 const complianceWriteProcedure = organizationProcedure.use(
-  requireRole([UserRole.ORG_ADMIN, UserRole.GRC_MANAGER, UserRole.GRC_ANALYST]),
+  requireRole(WRITE_ROLES),
 );
 
 const CLOSED_ITEM_STATUSES = ["COMPLETE", "RISK_ACCEPTED"] as const;

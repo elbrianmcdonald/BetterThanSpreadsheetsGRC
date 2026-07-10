@@ -41,6 +41,7 @@ import { UserRole, StrategyStatus, ObjectiveStatus, KpiType } from "@prisma/clie
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -124,11 +125,7 @@ import {
 import { List, CalendarDays, GanttChart } from "lucide-react";
 
 /** Roles that can manage strategies (FR58) */
-const CAN_MANAGE_STRATEGY_ROLES: UserRole[] = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const CAN_MANAGE_STRATEGY_ROLES: UserRole[] = WRITE_ROLES;
 
 /** Status badge configuration */
 const statusConfig: Record<StrategyStatus, { color: string; label: string }> = {

@@ -69,7 +69,7 @@ beforeAll(async () => {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: role === "BUSINESS_USER" ? null : role,
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -77,7 +77,7 @@ beforeAll(async () => {
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role,
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,
@@ -87,42 +87,42 @@ beforeAll(async () => {
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@risk-comments.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@risk-comments.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserOrgAdmin = await createUser(
     "Org Admin",
     "admin@risk-comments.test",
-    "ORG_ADMIN",
+    "ADMINISTRATOR",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder",
     "it@risk-comments.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserBusinessStakeholder = await createUser(
     "Business Stakeholder",
     "business@risk-comments.test",
-    "BUSINESS_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@risk-comments.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 
@@ -317,8 +317,11 @@ describe("Story 4.11: Risk Comments and Collaboration", () => {
   });
 
   describe("AC39-AC42: Role-Based Comment Access", () => {
-    it("AC39: IT_STAKEHOLDER can comment on assigned risk", async () => {
-      const caller = createCaller(testUserITStakeholder);
+    it("AC39: A writer (ANALYST) can comment on an assigned risk", async () => {
+      // Commenting is a write; the consolidated model restricts it to writers
+      // (ANALYST/MANAGER/ADMINISTRATOR). Formerly IT_STAKEHOLDER (now read-only
+      // BUSINESS_USER) no longer has comment access.
+      const caller = createCaller(testUserSecurityEngineer);
 
       const result = await caller.risk.addRiskComment({
         riskId: testRiskAssignedToIT.id,
@@ -327,7 +330,7 @@ describe("Story 4.11: Risk Comments and Collaboration", () => {
       });
 
       expect(result).toHaveProperty("id");
-      expect(result.authorId).toBe(testUserITStakeholder.id);
+      expect(result.authorId).toBe(testUserSecurityEngineer.id);
     });
 
     // NOTE: The former "IT_STAKEHOLDER cannot comment on unassigned risk" test was
@@ -335,8 +338,8 @@ describe("Story 4.11: Risk Comments and Collaboration", () => {
     // role may comment on any org risk) — there is no longer an ownership gate, so
     // restricted roles can comment on unassigned risks.
 
-    it("AC40: BUSINESS_STAKEHOLDER can comment on assigned risk", async () => {
-      const caller = createCaller(testUserBusinessStakeholder);
+    it("AC40: A writer (ADMINISTRATOR) can comment on an assigned risk", async () => {
+      const caller = createCaller(testUserOrgAdmin);
 
       const result = await caller.risk.addRiskComment({
         riskId: testRiskAssignedToBusiness.id,
@@ -345,7 +348,7 @@ describe("Story 4.11: Risk Comments and Collaboration", () => {
       });
 
       expect(result).toHaveProperty("id");
-      expect(result.authorId).toBe(testUserBusinessStakeholder.id);
+      expect(result.authorId).toBe(testUserOrgAdmin.id);
     });
 
     // NOTE: The former "BUSINESS_STAKEHOLDER cannot comment on unassigned risk" test

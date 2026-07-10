@@ -61,29 +61,42 @@ describe("Risk Matrix Template Management - Story 7.8.2", () => {
       },
     });
 
-    // Create admin user (ORG_ADMIN role)
-    adminUser = await db.user.create({
+    // Create admin user (ORG_ADMIN role) — staff → platformRole; role attached to
+    // the JS object so createCaller can build session.user.role.
+    const adminRow = await db.user.create({
       data: {
         id: randomUUID(),
         email: `admin-matrix-test-${Date.now()}@example.com`,
         name: "Admin Test User",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
+    adminUser = {
+      id: adminRow.id,
+      email: adminRow.email!,
+      organizationId: adminRow.organizationId,
+      role: UserRole.ADMINISTRATOR,
+    };
 
     // Create analyst user (GRC_ANALYST role) - should NOT have permission
-    analystUser = await db.user.create({
+    const analystRow = await db.user.create({
       data: {
         id: randomUUID(),
         email: `analyst-matrix-test-${Date.now()}@example.com`,
         name: "Analyst Test User",
         organizationId: testOrg.id,
-        role: UserRole.GRC_ANALYST,
+        platformRole: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });
+    analystUser = {
+      id: analystRow.id,
+      email: analystRow.email!,
+      organizationId: analystRow.organizationId,
+      role: UserRole.ANALYST,
+    };
   });
 
   afterAll(async () => {
@@ -601,16 +614,22 @@ describe("Risk Matrix Template Management - Story 7.8.2", () => {
         },
       });
 
-      otherOrgUser = await db.user.create({
+      const otherOrgRow = await db.user.create({
         data: {
           id: randomUUID(),
           email: `other-org-matrix-${Date.now()}@example.com`,
           name: "Other Org User",
           organizationId: otherOrg.id,
-          role: UserRole.ORG_ADMIN,
+          platformRole: UserRole.ADMINISTRATOR,
           updatedAt: new Date(),
         },
       });
+      otherOrgUser = {
+        id: otherOrgRow.id,
+        email: otherOrgRow.email!,
+        organizationId: otherOrgRow.organizationId,
+        role: UserRole.ADMINISTRATOR,
+      };
     });
 
     afterAll(async () => {

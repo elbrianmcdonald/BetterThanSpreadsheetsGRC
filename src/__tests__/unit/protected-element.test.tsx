@@ -90,7 +90,7 @@ describe("ProtectedElement Component", () => {
       mockUseHasRole.mockReturnValue(true);
 
       render(
-        <ProtectedElement role={UserRole.ORG_ADMIN}>
+        <ProtectedElement role={UserRole.ADMINISTRATOR}>
           <button>Admin Panel</button>
         </ProtectedElement>
       );
@@ -103,7 +103,7 @@ describe("ProtectedElement Component", () => {
       mockUseHasRole.mockReturnValue(false);
 
       render(
-        <ProtectedElement role={UserRole.ORG_ADMIN}>
+        <ProtectedElement role={UserRole.ADMINISTRATOR}>
           <button>Admin Panel</button>
         </ProtectedElement>
       );
@@ -117,7 +117,7 @@ describe("ProtectedElement Component", () => {
 
       render(
         <ProtectedElement
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
           fallback={<div>Admins Only</div>}
         >
           <button>Admin Panel</button>
@@ -136,7 +136,7 @@ describe("ProtectedElement Component", () => {
 
       render(
         <ProtectedElement
-          roles={[UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.CISO]}
+          roles={[UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER]}
         >
           <div>Management Features</div>
         </ProtectedElement>
@@ -151,7 +151,7 @@ describe("ProtectedElement Component", () => {
 
       render(
         <ProtectedElement
-          roles={[UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.CISO]}
+          roles={[UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER]}
         >
           <div>Management Features</div>
         </ProtectedElement>
@@ -169,7 +169,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
         >
           <button>Create User</button>
         </ProtectedElement>
@@ -185,7 +185,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
         >
           <button>Create User</button>
         </ProtectedElement>
@@ -201,7 +201,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
         >
           <button>Create User</button>
         </ProtectedElement>
@@ -217,7 +217,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
         >
           <button>Create User</button>
         </ProtectedElement>
@@ -235,7 +235,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
           requireBoth={true}
         >
           <button>Create User</button>
@@ -252,7 +252,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
           requireBoth={true}
         >
           <button>Create User</button>
@@ -269,7 +269,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
           requireBoth={true}
         >
           <button>Create User</button>
@@ -286,7 +286,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
           requireBoth={true}
         >
           <button>Create User</button>
@@ -303,7 +303,7 @@ describe("ProtectedElement Component", () => {
       render(
         <ProtectedElement
           permission={Permission.USER_CREATE}
-          role={UserRole.ORG_ADMIN}
+          role={UserRole.ADMINISTRATOR}
           requireBoth={true}
           fallback={<div>Insufficient Permissions</div>}
         >

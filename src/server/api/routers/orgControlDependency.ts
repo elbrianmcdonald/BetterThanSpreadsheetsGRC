@@ -12,8 +12,9 @@ import { TRPCError } from "@trpc/server";
 import { randomUUID } from "crypto";
 import { AuditAction } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure } from "@/server/api/trpc";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
-const ALLOWED_MUTATION_ROLES = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
+const ALLOWED_MUTATION_ROLES: readonly string[] = WRITE_ROLES;
 
 function assertMutationAllowed(role: string | undefined, action: string): void {
   if (!role || !ALLOWED_MUTATION_ROLES.includes(role)) {

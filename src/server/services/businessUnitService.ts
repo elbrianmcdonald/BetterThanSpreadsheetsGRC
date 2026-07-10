@@ -308,7 +308,7 @@ export async function getUsersByBusinessUnit(buId: string, organizationId: strin
       id: true,
       name: true,
       email: true,
-      role: true,
+      platformRole: true,
       businessUnit: {
         select: { id: true, name: true, parentId: true },
       },
@@ -333,7 +333,7 @@ export async function getUsersByBUWithDescendants(buId: string, organizationId: 
       id: true,
       name: true,
       email: true,
-      role: true,
+      platformRole: true,
       businessUnit: {
         select: { id: true, name: true, parentId: true },
       },

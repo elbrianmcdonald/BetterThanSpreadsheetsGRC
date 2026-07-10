@@ -32,20 +32,15 @@ import {
   getBUWithDescendants,
 } from "@/server/services/businessUnitService";
 import { AuditAction, UserRole } from "@prisma/client";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
 /**
  * Roles allowed to READ the business-unit tree (the `list` query backs the
- * BusinessUnitPicker used in finding/risk creation, etc.). Mutations remain
- * ORG_ADMIN-only. Analysts and managers — and the other roles that record
- * findings/risks — need read access so the pickers populate.
+ * BusinessUnitPicker used in finding/risk creation, etc.). Read tier — all org
+ * users, including the read-only Business User, need the tree so pickers populate.
+ * Mutations remain admin-only (adminProcedure).
  */
-const BU_READ_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_MANAGER,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-];
+const BU_READ_ROLES: UserRole[] = [...READ_ROLES];
 
 // Zod schemas for input validation
 const createBusinessUnitSchema = z.object({
@@ -546,8 +541,8 @@ export const businessUnitRouter = createTRPCRouter({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Check if user has permission (ORG_ADMIN, GRC_ANALYST, SECURITY_ENGINEER)
-      const allowedRoles = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
+      // Check if user has permission — write tier (staff only)
+      const allowedRoles: string[] = [...WRITE_ROLES];
       if (!allowedRoles.includes(ctx.session!.user.role)) {
         throw new TRPCError({
           code: "FORBIDDEN",

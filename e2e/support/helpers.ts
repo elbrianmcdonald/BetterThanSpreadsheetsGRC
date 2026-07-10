@@ -11,8 +11,8 @@ import { expect, type Browser, type BrowserContext, type Page } from '@playwrigh
  */
 
 export const USERS = {
-  admin: { email: 'admin@acme-corp.com', password: 'Admin123!@#', role: 'ORG_ADMIN' as const },
-  analyst: { email: 'analyst@acme-corp.com', password: 'Admin123!@#', role: 'GRC_ANALYST' as const },
+  admin: { email: 'admin@acme-corp.com', password: 'Admin123!@#', role: 'ADMINISTRATOR' as const },
+  analyst: { email: 'analyst@acme-corp.com', password: 'Admin123!@#', role: 'ANALYST' as const },
 };
 
 export type TestUser = { email: string; password: string };

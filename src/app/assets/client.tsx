@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import {
   Select,
   SelectContent,
@@ -46,11 +47,7 @@ import {
 } from "lucide-react";
 
 // Role arrays for permission checks
-const ASSET_MANAGE_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
+const ASSET_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 // Asset type display config
 const ASSET_TYPE_CONFIG: Record<

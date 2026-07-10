@@ -61,17 +61,24 @@ describe("Risk Scenario Management - Story 7.7", () => {
       },
     });
 
-    // Create test user with GRC_ANALYST role
-    testUser = await db.user.create({
+    // Create test user with GRC_ANALYST role (staff → platformRole; role attached
+    // to the JS object so createCaller can build session.user.role).
+    const testUserRow = await db.user.create({
       data: {
         id: randomUUID(),
         email: `scenario-test-${Date.now()}@example.com`,
         name: "Scenario Test User",
         organizationId: testOrg.id,
-        role: UserRole.GRC_ANALYST,
+        platformRole: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });
+    testUser = {
+      id: testUserRow.id,
+      email: testUserRow.email!,
+      organizationId: testUserRow.organizationId,
+      role: UserRole.ANALYST,
+    };
 
     // Create test finding and assessments within organization context
     await runWithOrganizationContext(testOrg.id, async () => {
@@ -505,16 +512,22 @@ describe("Risk Scenario Management - Story 7.7", () => {
     });
 
     it("AC32: should allow SECURITY_ENGINEER to modify scenarios", async () => {
-      const securityEngineer = await db.user.create({
+      const securityEngineerRow = await db.user.create({
         data: {
           id: randomUUID(),
           email: `sec-eng-${Date.now()}@example.com`,
           name: "Security Engineer",
           organizationId: testOrg.id,
-          role: UserRole.SECURITY_ENGINEER,
+          platformRole: UserRole.ANALYST,
           updatedAt: new Date(),
         },
       });
+      const securityEngineer = {
+        id: securityEngineerRow.id,
+        email: securityEngineerRow.email!,
+        organizationId: securityEngineerRow.organizationId,
+        role: UserRole.ANALYST,
+      };
 
       const caller = createCaller(securityEngineer);
 
@@ -537,16 +550,22 @@ describe("Risk Scenario Management - Story 7.7", () => {
         },
       });
 
-      const otherUser = await db.user.create({
+      const otherUserRow = await db.user.create({
         data: {
           id: randomUUID(),
           email: `other-user-${Date.now()}@example.com`,
           name: "Other Org User",
           organizationId: otherOrg.id,
-          role: UserRole.GRC_ANALYST,
+          platformRole: UserRole.ANALYST,
           updatedAt: new Date(),
         },
       });
+      const otherUser = {
+        id: otherUserRow.id,
+        email: otherUserRow.email!,
+        organizationId: otherUserRow.organizationId,
+        role: UserRole.ANALYST,
+      };
 
       const caller = createCaller(otherUser);
 

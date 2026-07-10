@@ -12,6 +12,7 @@
 
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
+import { READ_ROLES } from "@/lib/auth/roles";
 import { UserRole } from "@prisma/client";
 import { AppLayout } from "@/components/layout";
 import { QuestionnaireListClient } from "./client";
@@ -19,13 +20,7 @@ import { QuestionnaireListClient } from "./client";
 /**
  * Roles that can view questionnaire templates
  */
-const TEMPLATE_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.AUDITOR,
-];
+const TEMPLATE_VIEW_ROLES: UserRole[] = READ_ROLES;
 
 export const metadata = {
   title: "Questionnaire Templates | BetterThanSpreadsheetsGRC",

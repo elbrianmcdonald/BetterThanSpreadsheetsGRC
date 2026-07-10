@@ -29,15 +29,12 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
 /**
  * Roles that can create/update control links (AC23, AC31)
  */
-const CONTROL_LINK_ROLES = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-];
+const CONTROL_LINK_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Calculate control health based on linked risks and findings

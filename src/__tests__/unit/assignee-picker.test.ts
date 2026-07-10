@@ -17,7 +17,7 @@ const mockUsers = [
     name: "Alice Johnson",
     email: "alice@example.com",
     image: null,
-    role: "GRC_ANALYST",
+    role: "ANALYST",
     businessUnitId: "bu-1",
     businessUnit: {
       id: "bu-1",
@@ -31,7 +31,7 @@ const mockUsers = [
     name: "Bob Smith",
     email: "bob@example.com",
     image: null,
-    role: "IT_STAKEHOLDER",
+    role: "BUSINESS_USER",
     businessUnitId: "bu-1-1",
     businessUnit: {
       id: "bu-1-1",
@@ -50,7 +50,7 @@ const mockUsers = [
     name: "Charlie Brown",
     email: "charlie@example.com",
     image: null,
-    role: "BUSINESS_STAKEHOLDER",
+    role: "BUSINESS_USER",
     businessUnitId: "bu-2",
     businessUnit: {
       id: "bu-2",
@@ -64,7 +64,7 @@ const mockUsers = [
     name: "Diana Prince",
     email: "diana@example.com",
     image: null,
-    role: "AUDITOR",
+    role: "BUSINESS_USER",
     businessUnitId: null,
     businessUnit: null,
   },

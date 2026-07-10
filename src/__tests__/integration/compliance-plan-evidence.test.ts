@@ -25,7 +25,12 @@ const createCaller = (user: TestUser) =>
 
 async function mkUser(orgId: string, role: UserRole, tag: string): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
-  const u = await db.user.create({ data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, updatedAt: new Date() } });
+  const isStaff = role !== UserRole.BUSINESS_USER;
+  const u = await db.user.create({ data: { id: randomUUID(), email, name: tag, organizationId: orgId, platformRole: isStaff ? role : null, updatedAt: new Date() } });
+  if (!isStaff) {
+    // Business user derives role from org membership existence
+    await db.organizationMembership.create({ data: { id: randomUUID(), userId: u.id, organizationId: orgId, updatedAt: new Date() } });
+  }
   return { id: u.id, email, organizationId: orgId, role };
 }
 
@@ -41,8 +46,8 @@ describe("Compliance Plan Evidence — Epic 3 Story 3.1 (FR19/FR20)", () => {
   beforeAll(async () => {
     const s = `${Date.now()}-${Math.round(performance.now())}`;
     org = await db.organization.create({ data: { id: randomUUID(), name: `CPE ${s}`, slug: `cpe-${s}`, updatedAt: new Date() } });
-    admin = await mkUser(org.id, UserRole.ORG_ADMIN, "cpeadmin");
-    recipient = await mkUser(org.id, UserRole.GRC_ANALYST, "cperecipient");
+    admin = await mkUser(org.id, UserRole.ADMINISTRATOR, "cpeadmin");
+    recipient = await mkUser(org.id, UserRole.ANALYST, "cperecipient");
 
     await runWithOrganizationContext(org.id, async () => {
       const fw = await db.framework.create({ data: { id: randomUUID(), organizationId: org.id, name: "FW", code: `FW${s}`, version: "1", isActive: true, updatedAt: new Date() } });

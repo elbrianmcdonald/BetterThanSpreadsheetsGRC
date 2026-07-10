@@ -169,7 +169,7 @@ export function FindingDetailContent({
       <FindingSeverityPanel
         findingId={finding.id}
         status={finding.status}
-        canRescore={["SECURITY_ENGINEER", "GRC_ANALYST", "ORG_ADMIN"].includes(userRole)}
+        canRescore={["ANALYST", "ANALYST", "ADMINISTRATOR"].includes(userRole)}
         severityLabel={finding.severityLabel}
         matrixVersionId={finding.matrixVersionId}
         inherentLikelihood={finding.inherentLikelihood}
@@ -192,7 +192,7 @@ export function FindingDetailContent({
         status={finding.status}
         riskLinks={finding.riskLinks ?? []}
         onChanged={handleTransitionComplete}
-        canManage={["SECURITY_ENGINEER", "GRC_ANALYST", "ORG_ADMIN"].includes(userRole)}
+        canManage={["ANALYST", "ANALYST", "ADMINISTRATOR"].includes(userRole)}
       />
 
       {/* Story 12.7: Linked Controls Section (AC1-AC10) */}

@@ -31,6 +31,7 @@ import { formatDate } from "@/utils/date-format";
 import { useSession } from "next-auth/react";
 import { UserRole, type RiskEvidenceLinkType } from "@prisma/client";
 import toast from "react-hot-toast";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { LinkEvidenceModal } from "./LinkEvidenceModal";
 
 interface RiskEvidenceSectionProps {
@@ -57,13 +58,8 @@ interface EvidenceItem {
   isActive: boolean;
 }
 
-/** Roles that can link/unlink evidence */
-const CAN_LINK_ROLES: UserRole[] = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.IT_STAKEHOLDER,
-];
+/** Roles that can link/unlink evidence (write tier; BUSINESS_USER is read-only) */
+const CAN_LINK_ROLES: UserRole[] = WRITE_ROLES;
 
 /**
  * Evidence Card Component

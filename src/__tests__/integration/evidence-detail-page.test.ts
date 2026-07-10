@@ -110,45 +110,53 @@ beforeAll(async () => {
 
   // Create test user (GRC Analyst)
   const testEmail = `detail-user-${randomUUID().slice(0, 8)}@test.com`;
-  testUser = await db.user.create({
-    data: {
-      id: testUserId,
-      name: "Detail Test User",
-      email: testEmail,
-      role: "GRC_ANALYST",
-      organizationId: testOrg.id,
-      assignedFrameworks: [],
-      updatedAt: new Date(),
-    },
-  });
+  testUser = {
+    ...(await db.user.create({
+      data: {
+        id: testUserId,
+        name: "Detail Test User",
+        email: testEmail,
+        platformRole: "ANALYST",
+        organizationId: testOrg.id,
+        assignedFrameworks: [],
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ANALYST" as UserRole,
+  };
 
   // Create user in different organization
   const testEmail2 = `other-user-${randomUUID().slice(0, 8)}@test.com`;
-  testUser2 = await db.user.create({
-    data: {
-      id: testUserId2,
-      name: "Other Org User",
-      email: testEmail2,
-      role: "GRC_ANALYST",
-      organizationId: testOrg2.id,
-      assignedFrameworks: [],
-      updatedAt: new Date(),
-    },
-  });
+  testUser2 = {
+    ...(await db.user.create({
+      data: {
+        id: testUserId2,
+        name: "Other Org User",
+        email: testEmail2,
+        platformRole: "ANALYST",
+        organizationId: testOrg2.id,
+        assignedFrameworks: [],
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ANALYST" as UserRole,
+  };
 
   // Create auditor user
   const auditorEmail = `auditor-detail-${randomUUID().slice(0, 8)}@test.com`;
-  auditorUser = await db.user.create({
-    data: {
-      id: testAuditorId,
-      name: "Detail Auditor",
-      email: auditorEmail,
-      role: "AUDITOR",
-      organizationId: testOrg.id,
-      assignedFrameworks: [],
-      updatedAt: new Date(),
-    },
-  });
+  auditorUser = {
+    ...(await db.user.create({
+      data: {
+        id: testAuditorId,
+        name: "Detail Auditor",
+        email: auditorEmail,
+        organizationId: testOrg.id,
+        assignedFrameworks: [],
+        updatedAt: new Date(),
+      },
+    })),
+    role: "BUSINESS_USER" as UserRole,
+  };
 
   // Find an existing control domain
   const existingDomain = await db.controlDomain.findFirst({

@@ -27,10 +27,10 @@ const createCaller = (user: TestUser) =>
     headers: new Headers(),
   });
 
-async function mkUser(orgId: string, role: UserRole, tag: string, isPlatformAdmin = false): Promise<TestUser> {
+async function mkUser(orgId: string, role: UserRole, tag: string, platformRole: UserRole | null = null): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
   const u = await db.user.create({
-    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, isPlatformAdmin, updatedAt: new Date() },
+    data: { id: randomUUID(), email, name: tag, organizationId: orgId, platformRole, updatedAt: new Date() },
   });
   return { id: u.id, email, organizationId: orgId, role };
 }
@@ -45,9 +45,10 @@ describe("Epic 2 — Story 2.1 create a new company", () => {
   beforeAll(async () => {
     const stamp = `${Date.now()}-${Math.round(performance.now())}`;
     homeOrg = await db.organization.create({ data: { id: randomUUID(), name: `Home ${stamp}`, slug: `home-${stamp}`, updatedAt: new Date() } });
-    admin = await mkUser(homeOrg.id, UserRole.ORG_ADMIN, "admin");
-    auditor = await mkUser(homeOrg.id, UserRole.AUDITOR, "auditor");
-    platformAuditor = await mkUser(homeOrg.id, UserRole.AUDITOR, "platform", true);
+    // An Administrator is a platform admin (staff platformRole) under the one-admin model.
+    admin = await mkUser(homeOrg.id, UserRole.ADMINISTRATOR, "admin", UserRole.ADMINISTRATOR);
+    auditor = await mkUser(homeOrg.id, UserRole.BUSINESS_USER, "auditor");
+    platformAuditor = await mkUser(homeOrg.id, UserRole.BUSINESS_USER, "platform", UserRole.ADMINISTRATOR);
   });
 
   afterAll(async () => {
@@ -67,15 +68,17 @@ describe("Epic 2 — Story 2.1 create a new company", () => {
     createdOrgIds.push(res.organizationId);
 
     expect(res.organizationId).toBeTruthy();
-    expect(res.role).toBe(UserRole.ORG_ADMIN);
+    expect(res.role).toBe(UserRole.ADMINISTRATOR);
 
     const org = await db.organization.findUnique({ where: { id: res.organizationId } });
     expect(org?.name).toBe("Newco One");
 
+    // Role Consolidation Epic 2: a staff Administrator reaches every org via
+    // platformRole and is NOT given a per-org membership.
     const membership = await db.organizationMembership.findUnique({
       where: { userId_organizationId: { userId: admin.id, organizationId: res.organizationId } },
     });
-    expect(membership?.role).toBe(UserRole.ORG_ADMIN);
+    expect(membership).toBeNull();
 
     const switchable = await createCaller(admin).organization.listSwitchable();
     expect(switchable.map((o) => o.id)).toContain(res.organizationId);

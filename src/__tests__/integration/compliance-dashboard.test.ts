@@ -85,20 +85,32 @@ beforeAll(async () => {
     role: UserRole,
     orgId: string
   ) => {
+    const isStaff = role !== UserRole.BUSINESS_USER;
     const user = await db.user.create({
       data: {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: isStaff ? role : null,
         organizationId: orgId,
         updatedAt: new Date(),
       },
     });
+    if (!isStaff) {
+      // Business user derives role from org membership existence
+      await db.organizationMembership.create({
+        data: {
+          id: randomUUID(),
+          userId: user.id,
+          organizationId: orgId,
+          updatedAt: new Date(),
+        },
+      });
+    }
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role, // JS property for session/caller building
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,
@@ -108,42 +120,42 @@ beforeAll(async () => {
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@compliance-dashboard.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserCISO = await createUser(
-    "CISO",
+    "MANAGER",
     "ciso@compliance-dashboard.test",
-    "CISO",
+    "MANAGER",
     testOrg.id
   );
 
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@compliance-dashboard.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@compliance-dashboard.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder",
     "it@compliance-dashboard.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserBusinessStakeholder = await createUser(
     "Business Stakeholder",
     "business@compliance-dashboard.test",
-    "BUSINESS_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
@@ -715,10 +727,12 @@ describe("Story 5.1: Compliance Dashboard", () => {
       });
     });
 
-    it("Story 5.4: IT_STAKEHOLDER cannot access getRiskTrend", async () => {
+    it("Story 5.4: BUSINESS_USER can access getRiskTrend (read-only, has RISK_READ_ALL)", async () => {
       const caller = createCaller(testUserITStakeholder);
+      const result = await caller.compliance.getRiskTrend();
 
-      await expect(caller.compliance.getRiskTrend()).rejects.toThrow(TRPCError);
+      expect(result).toHaveProperty("dailyOpenCounts");
+      expect(result).toHaveProperty("weeklyClosedCounts");
     });
 
     it("Story 5.4: GRC_ANALYST can access getRiskTrend", async () => {
@@ -761,20 +775,18 @@ describe("Story 5.1: Compliance Dashboard", () => {
       expect(result).toHaveProperty("summary");
     });
 
-    it("AC33: IT_STAKEHOLDER cannot access compliance dashboard", async () => {
+    it("AC33: BUSINESS_USER can access compliance dashboard (read-only, has FRAMEWORK_READ)", async () => {
       const caller = createCaller(testUserITStakeholder);
+      const result = await caller.compliance.getComplianceSummary();
 
-      await expect(caller.compliance.getComplianceSummary()).rejects.toThrow(
-        TRPCError
-      );
+      expect(result).toHaveProperty("summary");
     });
 
-    it("AC33: BUSINESS_STAKEHOLDER cannot access compliance dashboard", async () => {
+    it("AC33: A second BUSINESS_USER can also access compliance dashboard (read-only)", async () => {
       const caller = createCaller(testUserBusinessStakeholder);
+      const result = await caller.compliance.getComplianceSummary();
 
-      await expect(caller.compliance.getComplianceSummary()).rejects.toThrow(
-        TRPCError
-      );
+      expect(result).toHaveProperty("summary");
     });
   });
 
@@ -1045,13 +1057,12 @@ describe("Story 5.2: On-Demand Compliance Refresh Button", () => {
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
     });
 
-    it("AC8: Validates user has FRAMEWORK_READ permission", async () => {
-      // IT_STAKEHOLDER doesn't have FRAMEWORK_READ permission
+    it("AC8: BUSINESS_USER has FRAMEWORK_READ and can refresh all coverage", async () => {
+      // BUSINESS_USER (read-only) holds FRAMEWORK_READ, so refresh is permitted
       const caller = createCaller(testUserITStakeholder);
+      const result = await caller.compliance.refreshAllCoverage();
 
-      await expect(caller.compliance.refreshAllCoverage()).rejects.toThrow(
-        TRPCError
-      );
+      expect(result.refreshedCount).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -1112,15 +1123,14 @@ describe("Story 5.2: On-Demand Compliance Refresh Button", () => {
       ).rejects.toThrow(TRPCError);
     });
 
-    it("AC12: Requires FRAMEWORK_READ permission", async () => {
-      // IT_STAKEHOLDER doesn't have FRAMEWORK_READ permission
+    it("AC12: BUSINESS_USER has FRAMEWORK_READ and can refresh framework coverage", async () => {
+      // BUSINESS_USER (read-only) holds FRAMEWORK_READ, so per-framework refresh is permitted
       const caller = createCaller(testUserITStakeholder);
+      const result = await caller.compliance.refreshFrameworkCoverage({
+        frameworkId: testFramework.id,
+      });
 
-      await expect(
-        caller.compliance.refreshFrameworkCoverage({
-          frameworkId: testFramework.id,
-        })
-      ).rejects.toThrow(TRPCError);
+      expect(result.frameworkId).toBe(testFramework.id);
     });
 
     it("GRC_ANALYST can refresh framework coverage", async () => {

@@ -107,7 +107,7 @@ export function AssetForm({
   });
 
   // Check if user can create owners and business units
-  const canCreate = useHasRole([UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER]);
+  const canCreate = useHasRole([UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST]);
 
   // Fetch owners
   const { data: owners } = api.asset.getAvailableOwners.useQuery({});

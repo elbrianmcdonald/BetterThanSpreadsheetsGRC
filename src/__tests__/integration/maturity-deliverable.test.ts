@@ -141,7 +141,7 @@ describe("getMaturityDeliverableData cross-org isolation (AC20)", () => {
         email: `mat-owner-${stamp}@example.com`,
         name: "Mat Owner",
         organizationId: orgA.id,
-        role: UserRole.GRC_ANALYST,
+        platformRole: UserRole.ANALYST,
         updatedAt: new Date(),
       },
     });

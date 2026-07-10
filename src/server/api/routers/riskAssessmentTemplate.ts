@@ -26,16 +26,11 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-const TEMPLATE_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.AUDITOR,
-];
+const TEMPLATE_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-const TEMPLATE_MANAGE_ROLES = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST];
+const TEMPLATE_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // ---------------------------------------------------------------------------
 // Input schemas

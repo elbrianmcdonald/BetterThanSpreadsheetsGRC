@@ -17,6 +17,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { UserRole, StrategyStatus, AuditAction, ChangeType } from "@prisma/client";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { randomUUID } from "crypto";
 
 import {
@@ -37,31 +38,11 @@ import {
   calculateStrategiesProgressBatch,
 } from "@/server/services/progressService";
 
-/**
- * Roles that can manage strategies (FR58)
- * - CISO: Full CRUD access
- * - GRC_ANALYST: Full CRUD access
- * - ORG_ADMIN: Full CRUD access
- */
-const STRATEGY_MANAGE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+/** Roles that can manage strategies (create/update/delete) — write tier. */
+const STRATEGY_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
-/**
- * Roles that can view strategies (FR59-FR62)
- * All authenticated org users can view strategies
- */
-const STRATEGY_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+/** Roles that can view strategies — read tier (all org users incl. Business User). */
+const STRATEGY_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
 // =============================================================================
 // Input Schemas

@@ -21,6 +21,7 @@ import { UserRole, RiskStatus } from "@prisma/client";
 import toast from "react-hot-toast";
 
 import { api } from "@/trpc/react";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,29 +68,14 @@ interface RiskDetailClientProps {
   riskId: string;
 }
 
-/** Roles that can attach/link evidence */
-const CAN_ATTACH_EVIDENCE_ROLES: UserRole[] = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.IT_STAKEHOLDER,
-];
+/** Roles that can attach/link evidence (write tier — Business Users are read-only). */
+const CAN_ATTACH_EVIDENCE_ROLES: UserRole[] = [...WRITE_ROLES];
 
-/** Roles that can export audit trail */
-const CAN_EXPORT_AUDIT_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.AUDITOR,
-];
+/** Roles that can export audit trail (read tier — Business Users may export). */
+const CAN_EXPORT_AUDIT_ROLES: UserRole[] = [...READ_ROLES];
 
-/** Roles that can comment */
-const CAN_COMMENT_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-];
+/** Roles that can comment (write tier — Business Users are read-only). */
+const CAN_COMMENT_ROLES: UserRole[] = [...WRITE_ROLES];
 
 export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
   const router = useRouter();
@@ -114,15 +100,10 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
   const canAttachEvidence = userRole && CAN_ATTACH_EVIDENCE_ROLES.includes(userRole);
   const canExportAudit = userRole && CAN_EXPORT_AUDIT_ROLES.includes(userRole);
   const canComment = userRole && CAN_COMMENT_ROLES.includes(userRole);
-  const canEditImpactStatement =
-    userRole && (userRole === UserRole.GRC_ANALYST || userRole === UserRole.ORG_ADMIN);
-  // Story 23.5 (review MJ-5): mirrors the server's RISK_UPDATE_ROLES —
-  // Security Engineers may override scores, accept risk, and manage links.
-  const canManageRisk =
-    userRole &&
-    (userRole === UserRole.SECURITY_ENGINEER ||
-      userRole === UserRole.GRC_ANALYST ||
-      userRole === UserRole.ORG_ADMIN);
+  const canEditImpactStatement = userRole && CAN_COMMENT_ROLES.includes(userRole);
+  // Story 23.5 (review MJ-5): mirrors the server's RISK_UPDATE_ROLES (write tier)
+  // — staff may override scores, accept risk, and manage links.
+  const canManageRisk = userRole && CAN_COMMENT_ROLES.includes(userRole);
 
   // Fetch risk data with all relations
   const {
@@ -396,7 +377,7 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
           <RiskComments
             riskId={riskId}
             currentUserId={userId ?? ""}
-            currentUserRole={userRole ?? UserRole.AUDITOR}
+            currentUserRole={userRole ?? UserRole.BUSINESS_USER}
             canComment={!!canComment}
           />
         );

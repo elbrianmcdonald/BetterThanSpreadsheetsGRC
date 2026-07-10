@@ -33,9 +33,16 @@ const createCaller = (user: TestUser) =>
 
 async function mkUser(orgId: string, role: UserRole, tag: string): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
+  const isStaff = role !== UserRole.BUSINESS_USER;
   const u = await db.user.create({
-    data: { id: randomUUID(), email, name: tag, organizationId: orgId, role, updatedAt: new Date() },
+    data: { id: randomUUID(), email, name: tag, organizationId: orgId, platformRole: isStaff ? role : null, updatedAt: new Date() },
   });
+  if (!isStaff) {
+    // Business user derives role from org membership existence
+    await db.organizationMembership.create({
+      data: { id: randomUUID(), userId: u.id, organizationId: orgId, updatedAt: new Date() },
+    });
+  }
   return { id: u.id, email, organizationId: orgId, role };
 }
 
@@ -65,9 +72,9 @@ describe("crosswalk authorization + isolation - Epic 26 review", () => {
   beforeAll(async () => {
     org1 = await db.organization.create({ data: { id: randomUUID(), name: `Authz1 ${Date.now()}`, slug: `authz1-${Date.now()}`, updatedAt: new Date() } });
     org2 = await db.organization.create({ data: { id: randomUUID(), name: `Authz2 ${Date.now()}`, slug: `authz2-${Date.now()}`, updatedAt: new Date() } });
-    admin1 = await mkUser(org1.id, UserRole.ORG_ADMIN, "admin1");
-    auditor1 = await mkUser(org1.id, UserRole.AUDITOR, "auditor1");
-    const admin2 = await mkUser(org2.id, UserRole.ORG_ADMIN, "admin2");
+    admin1 = await mkUser(org1.id, UserRole.ADMINISTRATOR, "admin1");
+    auditor1 = await mkUser(org1.id, UserRole.BUSINESS_USER, "auditor1");
+    const admin2 = await mkUser(org2.id, UserRole.ADMINISTRATOR, "admin2");
 
     const s1 = await seedSuggestion(org1.id);
     fw1 = s1.targetFrameworkId;

@@ -41,6 +41,7 @@ import { UserRole, ObjectiveStatus, KpiType } from "@prisma/client";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -97,18 +98,11 @@ import { EntityLinkingModal } from "./EntityLinkingModal";
 import { LinkedEntitiesSection } from "./LinkedEntitiesSection";
 import { HistoryViewer } from "@/components/strategy/HistoryViewer";
 
-/** Roles that can manage objectives (FR58) */
-const CAN_MANAGE_ROLES: UserRole[] = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+/** Roles that can manage objectives (FR58) — any mutation → write tier */
+const CAN_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
-/** Roles that can update assigned objectives (FR59) */
-const CAN_UPDATE_ROLES: UserRole[] = [
-  ...CAN_MANAGE_ROLES,
-  UserRole.SECURITY_ENGINEER,
-];
+/** Roles that can update assigned objectives (FR59) — write tier */
+const CAN_UPDATE_ROLES: UserRole[] = WRITE_ROLES;
 
 /** Story 2.5 AC8: Objective status badge configuration */
 const objectiveStatusConfig: Record<ObjectiveStatus, { color: string; label: string; icon: typeof Circle }> = {
@@ -184,7 +178,7 @@ export function ObjectiveDetailClient() {
 
   // Check if user can update (manager or assigned SECURITY_ENGINEER)
   const isAssigned = objective?.assignees?.some(a => a.id === session?.user?.id);
-  const canUpdate = canManage || (userRole === UserRole.SECURITY_ENGINEER && isAssigned);
+  const canUpdate = canManage || (userRole === UserRole.ANALYST && isAssigned);
 
   // Fetch organization users for assignee selection
   const { data: orgUsers } = api.user.listUsers.useQuery(

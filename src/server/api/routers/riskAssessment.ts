@@ -24,6 +24,7 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { checkApprovalGates, assertApprovalGates } from "@/server/services/assessmentStateMachine";
 import { generateIdentifier } from "@/server/services/identifierService";
 import { createAuditLog } from "@/server/services/audit-log.service";
@@ -41,11 +42,7 @@ import {
  * - GRC Analyst
  * - Org Admin
  */
-const ASSESSMENT_UPDATE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const ASSESSMENT_UPDATE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Update Assessment Input Schema (AC18)

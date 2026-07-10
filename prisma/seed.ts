@@ -14,21 +14,12 @@ import { seedGlobexDemoData } from './seeds/demo-data-globex';
 // the membership backfill is inlined below (kept in sync with
 // src/server/services/organization/backfill.ts, which the app + tests use).
 async function backfillMemberships(
-  db: PrismaClient,
+  _db: PrismaClient,
 ): Promise<{ created: number }> {
-  const users = await db.user.findMany({
-    select: { id: true, organizationId: true, role: true },
-  });
-  if (users.length === 0) return { created: 0 };
-  const result = await db.organizationMembership.createMany({
-    data: users.map((u) => ({
-      userId: u.id,
-      organizationId: u.organizationId,
-      role: u.role,
-    })),
-    skipDuplicates: true,
-  });
-  return { created: result.count };
+  // Role Consolidation Epic 2: obsolete. There is no stored User.role to backfill
+  // from — staff carry platformRole (all-org, no membership) and Business Users are
+  // provisioned with a membership directly. Retained as a no-op for callers.
+  return { created: 0 };
 }
 import { seedEnterpriseRisks } from './seeds/enterprise-risks';
 
@@ -126,7 +117,7 @@ async function main() {
       email: 'admin@acme-corp.com',
       name: 'Alice Admin',
       hashedPassword: DEFAULT_PASSWORD_HASH,
-      role: 'ORG_ADMIN',
+      platformRole: 'ADMINISTRATOR',
       organizationId: orgA.id,
       emailVerified: new Date(),
       updatedAt: new Date(),
@@ -141,13 +132,55 @@ async function main() {
       email: 'analyst@acme-corp.com',
       name: 'Bob Analyst',
       hashedPassword: DEFAULT_PASSWORD_HASH,
-      role: 'GRC_ANALYST',
+      platformRole: 'ANALYST',
       organizationId: orgA.id,
       emailVerified: new Date(),
       updatedAt: new Date(),
     },
   });
-  console.log(`✅ Created ${userA1.name} and ${userA2.name}\n`);
+  // Manager (staff, all-org) — demonstrates the approve/assign tier.
+  const userA3 = await prisma.user.upsert({
+    where: { email: 'manager@acme-corp.com' },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440013',
+      email: 'manager@acme-corp.com',
+      name: 'Maria Manager',
+      hashedPassword: DEFAULT_PASSWORD_HASH,
+      platformRole: 'MANAGER',
+      organizationId: orgA.id,
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+
+  // Business User — read-only, org-bound via membership (no platformRole).
+  const userA4 = await prisma.user.upsert({
+    where: { email: 'viewer@acme-corp.com' },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440014',
+      email: 'viewer@acme-corp.com',
+      name: 'Vera Viewer',
+      hashedPassword: DEFAULT_PASSWORD_HASH,
+      organizationId: orgA.id,
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+  await prisma.organizationMembership.upsert({
+    where: { userId_organizationId: { userId: userA4.id, organizationId: orgA.id } },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440015',
+      userId: userA4.id,
+      organizationId: orgA.id,
+      updatedAt: new Date(),
+    },
+  });
+  console.log(
+    `✅ Created ${userA1.name} (Administrator), ${userA2.name} (Analyst), ${userA3.name} (Manager), ${userA4.name} (Business User)\n`,
+  );
 
   // Create Users for Organization B
   console.log('Creating users for Organization B...');
@@ -159,7 +192,7 @@ async function main() {
       email: 'admin@globex-inc.com',
       name: 'Carol Admin',
       hashedPassword: DEFAULT_PASSWORD_HASH,
-      role: 'ORG_ADMIN',
+      platformRole: 'ADMINISTRATOR',
       organizationId: orgB.id,
       emailVerified: new Date(),
       updatedAt: new Date(),
@@ -174,13 +207,37 @@ async function main() {
       email: 'engineer@globex-inc.com',
       name: 'David Engineer',
       hashedPassword: DEFAULT_PASSWORD_HASH,
-      role: 'SECURITY_ENGINEER',
+      platformRole: 'ANALYST',
       organizationId: orgB.id,
       emailVerified: new Date(),
       updatedAt: new Date(),
     },
   });
-  console.log(`✅ Created ${userB1.name} and ${userB2.name}\n`);
+  // Business User for Organization B — read-only, org-bound via membership.
+  const userB3 = await prisma.user.upsert({
+    where: { email: 'viewer@globex-inc.com' },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440023',
+      email: 'viewer@globex-inc.com',
+      name: 'Walt Viewer',
+      hashedPassword: DEFAULT_PASSWORD_HASH,
+      organizationId: orgB.id,
+      emailVerified: new Date(),
+      updatedAt: new Date(),
+    },
+  });
+  await prisma.organizationMembership.upsert({
+    where: { userId_organizationId: { userId: userB3.id, organizationId: orgB.id } },
+    update: {},
+    create: {
+      id: '550e8400-e29b-41d4-a716-446655440024',
+      userId: userB3.id,
+      organizationId: orgB.id,
+      updatedAt: new Date(),
+    },
+  });
+  console.log(`✅ Created ${userB1.name} and ${userB2.name} and ${userB3.name} (Business User)\n`);
 
   // Create Evidence records for Organization A
   console.log('Creating evidence records for Organization A...');

@@ -24,6 +24,12 @@ import { UserRole } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure, requirePermission } from "@/server/api/trpc";
 import { requireRole } from "@/server/api/trpc";
 import { Permission } from "@/server/auth/permissions";
+import { APPROVE_ROLES } from "@/lib/auth/roles";
+
+// Audit logs are administration data — NOT part of a Business User's read-only
+// view ("read-only view ... but not including administration"). Restricted to
+// Administrator + Manager (the original admin/manager-only intent).
+const AUDIT_READ_ROLES: UserRole[] = [...APPROVE_ROLES];
 
 /**
  * Audit log pagination response schema
@@ -53,7 +59,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   getByEntity: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         entityType: z.string(),
@@ -77,7 +83,7 @@ export const auditRouter = createTRPCRouter({
             select: {
               name: true,
               email: true,
-              role: true,
+              platformRole: true,
             },
           },
         },
@@ -165,7 +171,7 @@ export const auditRouter = createTRPCRouter({
               id: true,
               name: true,
               email: true,
-              role: true,
+              platformRole: true,
             },
           },
         },
@@ -206,7 +212,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   getByUser: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         userId: z.string(),
@@ -276,7 +282,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   getByDateRange: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         startDate: z.date(),
@@ -308,7 +314,7 @@ export const auditRouter = createTRPCRouter({
             select: {
               name: true,
               email: true,
-              role: true,
+              platformRole: true,
             },
           },
         },
@@ -353,7 +359,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   exportToCsv: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         startDate: z.date(),
@@ -384,7 +390,7 @@ export const auditRouter = createTRPCRouter({
             select: {
               name: true,
               email: true,
-              role: true,
+              platformRole: true,
             },
           },
         },
@@ -409,7 +415,7 @@ export const auditRouter = createTRPCRouter({
    * **Authorization**: ORG_ADMIN or CISO only
    */
   getStatistics: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN, UserRole.CISO]))
+    .use(requireRole(AUDIT_READ_ROLES))
     .input(
       z.object({
         days: z.number().min(1).max(365).default(30),
@@ -490,7 +496,7 @@ function convertAuditLogsToCsv(logs: any[]): string {
       return [
         log.timestamp.toISOString(),
         log.user.email || "",
-        log.user.role || "",
+        log.user.platformRole ?? "BUSINESS_USER",
         log.action,
         log.entityType,
         log.entityId,

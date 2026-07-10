@@ -80,9 +80,9 @@ import { ExceptionsTab } from "@/components/organizational-control/ExceptionsTab
 import { DependenciesTab } from "@/components/organizational-control/DependenciesTab";
 
 const CAN_MUTATE: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 function formatDate(date: Date | string | null | undefined): string {
@@ -118,7 +118,7 @@ export function ControlDetailClient({ controlId }: { controlId: string }) {
   const { data: session } = useSession();
   const userRole = session?.user?.role as UserRole | undefined;
   const canMutate = !!userRole && CAN_MUTATE.includes(userRole);
-  const isAdmin = userRole === UserRole.ORG_ADMIN;
+  const isAdmin = userRole === UserRole.ADMINISTRATOR;
 
   const utils = api.useUtils();
   const [tab, setTab] = useState("overview");

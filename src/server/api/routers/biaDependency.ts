@@ -23,27 +23,13 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-/**
- * Roles that can view BIA dependencies
- */
-const DEPENDENCY_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+/** Roles that can view BIA dependencies — read tier. */
+const DEPENDENCY_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-/**
- * Roles that can manage BIA dependencies
- */
-const DEPENDENCY_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-];
+/** Roles that can manage BIA dependencies — write tier. */
+const DEPENDENCY_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Resource dependency schemas

@@ -106,11 +106,11 @@ describe("crosswalk router - Story 25.2", () => {
         email: adminEmail,
         name: "Admin",
         organizationId: testOrg.id,
-        role: UserRole.ORG_ADMIN,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
-    admin = { id: adminRow.id, email: adminEmail, organizationId: testOrg.id, role: adminRow.role };
+    admin = { id: adminRow.id, email: adminEmail, organizationId: testOrg.id, role: UserRole.ADMINISTRATOR };
 
     const auditorEmail = `auditor-xw-${Date.now()}@example.com`;
     const auditorRow = await db.user.create({
@@ -119,7 +119,6 @@ describe("crosswalk router - Story 25.2", () => {
         email: auditorEmail,
         name: "Auditor",
         organizationId: testOrg.id,
-        role: UserRole.AUDITOR,
         updatedAt: new Date(),
       },
     });
@@ -127,7 +126,7 @@ describe("crosswalk router - Story 25.2", () => {
       id: auditorRow.id,
       email: auditorEmail,
       organizationId: testOrg.id,
-      role: auditorRow.role,
+      role: UserRole.BUSINESS_USER,
     };
 
     const A = await makeFramework(testOrg.id, "AAA", ["A-1", "A-2"]);
@@ -278,11 +277,11 @@ describe("crosswalk workbench procedures - Story 25.3", () => {
         email: adminEmail,
         name: "Admin",
         organizationId: org.id,
-        role: UserRole.ORG_ADMIN,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
-    admin = { id: adminRow.id, email: adminEmail, organizationId: org.id, role: adminRow.role };
+    admin = { id: adminRow.id, email: adminEmail, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     // Source framework with a 3-level hierarchy: family AC → AC-1 → AC-1(1).
     await runWithOrganizationContext(org.id, async () => {
@@ -529,11 +528,11 @@ describe("crosswalk org-control procedures - Story 25.4", () => {
         email: adminEmail,
         name: "Admin",
         organizationId: org.id,
-        role: UserRole.ORG_ADMIN,
+        platformRole: UserRole.ADMINISTRATOR,
         updatedAt: new Date(),
       },
     });
-    admin = { id: adminRow.id, email: adminEmail, organizationId: org.id, role: adminRow.role };
+    admin = { id: adminRow.id, email: adminEmail, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {
       const c1 = await db.organizationalControl.create({

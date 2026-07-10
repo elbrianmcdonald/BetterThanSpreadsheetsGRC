@@ -10,6 +10,7 @@
 
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
+import { READ_ROLES } from "@/lib/auth/roles";
 import { UserRole } from "@prisma/client";
 import { AppLayout } from "@/components/layout";
 import { AssessmentDetailClient } from "./client";
@@ -17,15 +18,7 @@ import { AssessmentDetailClient } from "./client";
 /**
  * Roles that can view assessments
  */
-const ASSESSMENT_VIEW_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+const ASSESSMENT_VIEW_ROLES: UserRole[] = READ_ROLES;
 
 export const metadata = {
   title: "Assessment Details | BetterThanSpreadsheetsGRC",

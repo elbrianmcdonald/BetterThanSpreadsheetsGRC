@@ -185,7 +185,7 @@ export function UserList() {
         </div>
 
         {/* Bulk Action Button (AC12) */}
-        <ProtectedElement role={UserRole.ORG_ADMIN}>
+        <ProtectedElement role={UserRole.ADMINISTRATOR}>
           <Button
             variant="outline"
             size="sm"
@@ -213,7 +213,7 @@ export function UserList() {
           <thead className="bg-gray-50">
             <tr>
               {/* Story 7.0.4: Checkbox column (AC11) */}
-              <ProtectedElement role={UserRole.ORG_ADMIN}>
+              <ProtectedElement role={UserRole.ADMINISTRATOR}>
                 <th scope="col" className="w-12 px-3 py-3.5">
                   <Checkbox
                     checked={data?.users && data.users.length > 0 && selectedUserIds.size === data.users.length}
@@ -253,7 +253,7 @@ export function UserList() {
               >
                 Created
               </th>
-              <ProtectedElement role={UserRole.ORG_ADMIN}>
+              <ProtectedElement role={UserRole.ADMINISTRATOR}>
                 <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -264,7 +264,7 @@ export function UserList() {
             {data.users.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50">
                 {/* Story 7.0.4: Row checkbox (AC11) */}
-                <ProtectedElement role={UserRole.ORG_ADMIN}>
+                <ProtectedElement role={UserRole.ADMINISTRATOR}>
                   <td className="w-12 px-3 py-4">
                     <Checkbox
                       checked={selectedUserIds.has(user.id)}
@@ -289,7 +289,7 @@ export function UserList() {
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                   {new Date(user.createdAt).toLocaleDateString()}
                 </td>
-                <ProtectedElement role={UserRole.ORG_ADMIN}>
+                <ProtectedElement role={UserRole.ADMINISTRATOR}>
                   <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                     <button
                       onClick={() => setEditingUserId(user.id)}

@@ -61,39 +61,41 @@ beforeAll(async () => {
     },
   });
 
-  // Create test users
-  adminA = await db.user.create({
+  // Create test users. Role Consolidation Epic 2: staff carry platformRole; the
+  // intended `role` is attached to each JS object so createCaller can build
+  // session.user.role.
+  adminA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Admin A",
       email: "admin-a@test-user-mgmt.com",
-      role: "ORG_ADMIN",
+      platformRole: "ADMINISTRATOR",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ADMINISTRATOR" };
 
-  analystA = await db.user.create({
+  analystA = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Analyst A",
       email: "analyst-a@test-user-mgmt.com",
-      role: "GRC_ANALYST",
+      platformRole: "ANALYST",
       organizationId: orgA.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ANALYST" };
 
-  adminB = await db.user.create({
+  adminB = { ...(await db.user.create({
     data: {
       id: randomUUID(),
       name: "Admin B",
       email: "admin-b@test-user-mgmt.com",
-      role: "ORG_ADMIN",
+      platformRole: "ADMINISTRATOR",
       organizationId: orgB.id,
       updatedAt: new Date(),
     },
-  });
+  })), role: "ADMINISTRATOR" };
 });
 
 afterAll(async () => {
@@ -137,12 +139,12 @@ describe("User Management - CRUD Operations (AC17)", () => {
     const newUser = await caller.user.createUser({
       name: "New User A",
       email: "new-user-a@test.com",
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
     });
 
     expect(newUser).toBeDefined();
     expect(newUser.email).toBe("new-user-a@test.com");
-    expect(newUser.role).toBe("AUDITOR");
+    expect(newUser.role).toBe("BUSINESS_USER");
     expect(newUser.organizationId).toBe(orgA.id);
   });
 
@@ -163,11 +165,11 @@ describe("User Management - CRUD Operations (AC17)", () => {
     const updatedUser = await caller.user.updateUser({
       id: analystA.id,
       name: "Updated Analyst A",
-      role: "SECURITY_ENGINEER",
+      role: "ANALYST",
     });
 
     expect(updatedUser.name).toBe("Updated Analyst A");
-    expect(updatedUser.role).toBe("SECURITY_ENGINEER");
+    expect(updatedUser.role).toBe("ANALYST");
   });
 
   it("should allow ORG_ADMIN to delete user in their organization (AC4)", async () => {
@@ -177,7 +179,7 @@ describe("User Management - CRUD Operations (AC17)", () => {
     const userToDelete = await caller.user.createUser({
       name: "To Delete",
       email: "to-delete@test.com",
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
     });
 
     const result = await caller.user.deleteUser({ id: userToDelete.id });
@@ -238,9 +240,9 @@ describe("User Management - Role-Based Access Control (AC16, AC6)", () => {
       caller.user.createUser({
         name: "Unauthorized User",
         email: "unauthorized@test.com",
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       })
-    ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
+    ).rejects.toThrow(/requires one of these roles: ADMINISTRATOR/);
   });
 
   it("should prevent GRC_ANALYST from updating users", async () => {
@@ -251,7 +253,7 @@ describe("User Management - Role-Based Access Control (AC16, AC6)", () => {
         id: adminA.id,
         name: "Hacked Admin Name",
       })
-    ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
+    ).rejects.toThrow(/requires one of these roles: ADMINISTRATOR/);
   });
 
   it("should prevent GRC_ANALYST from deleting users", async () => {
@@ -259,7 +261,7 @@ describe("User Management - Role-Based Access Control (AC16, AC6)", () => {
 
     await expect(
       caller.user.deleteUser({ id: adminA.id })
-    ).rejects.toThrow(/requires one of these roles: ORG_ADMIN/);
+    ).rejects.toThrow(/requires one of these roles: ADMINISTRATOR/);
   });
 
   it("should allow GRC_ANALYST to list users (view-only)", async () => {
@@ -288,7 +290,7 @@ describe("User Management - Security Validations", () => {
     await caller.user.createUser({
       name: "User 1",
       email: "duplicate@test.com",
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
     });
 
     // Try to create second user with same email - should fail
@@ -296,7 +298,7 @@ describe("User Management - Security Validations", () => {
       caller.user.createUser({
         name: "User 2",
         email: "duplicate@test.com",
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       })
     ).rejects.toThrow("A user with this email already exists");
   });
@@ -309,7 +311,7 @@ describe("User Management - Security Validations", () => {
     await callerA.user.createUser({
       name: "User in A",
       email: "global-unique-email@test.com",
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
     });
 
     // Should NOT be able to create user with same email in Org B (global uniqueness)
@@ -317,7 +319,7 @@ describe("User Management - Security Validations", () => {
       callerB.user.createUser({
         name: "User in B",
         email: "global-unique-email@test.com",
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       })
     ).rejects.toThrow();
   });
@@ -330,7 +332,7 @@ describe("User Management - Audit Logging (AC9)", () => {
     const newUser = await caller.user.createUser({
       name: "Audit Test User",
       email: "audit-test@test.com",
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
     });
 
     // Check audit log
@@ -376,7 +378,7 @@ describe("User Management - Audit Logging (AC9)", () => {
     const userToDelete = await caller.user.createUser({
       name: "Audit Delete Test",
       email: "audit-delete@test.com",
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
     });
 
     await caller.user.deleteUser({ id: userToDelete.id });
@@ -396,14 +398,13 @@ describe("User Management - Audit Logging (AC9)", () => {
 });
 
 describe("User Management - Role Assignment (AC2, AC18)", () => {
+  // Consolidated four-role model — one entry per distinct role so the
+  // per-role email (`${role}@test.com`) stays unique across cases.
   const allRoles: UserRole[] = [
-    "ORG_ADMIN",
-    "GRC_ANALYST",
-    "SECURITY_ENGINEER",
-    "CISO",
-    "IT_STAKEHOLDER",
-    "BUSINESS_STAKEHOLDER",
-    "AUDITOR",
+    "ADMINISTRATOR",
+    "MANAGER",
+    "ANALYST",
+    "BUSINESS_USER",
   ];
 
   it.each(allRoles)("should allow creating user with role: %s", async (role) => {
@@ -425,16 +426,16 @@ describe("User Management - Role Assignment (AC2, AC18)", () => {
     const user = await caller.user.createUser({
       name: "Role Change Test",
       email: "role-change@test.com",
-      role: "AUDITOR",
+      role: "BUSINESS_USER",
     });
 
     // Update to CISO role
     const updated = await caller.user.updateUserRole({
       id: user.id,
-      role: "CISO",
+      role: "MANAGER",
     });
 
-    expect(updated.role).toBe("CISO");
+    expect(updated.role).toBe("MANAGER");
 
     // Check audit log for role change
     const auditLog = await db.auditLog.findFirst({
@@ -453,7 +454,7 @@ describe("User Management - Role Assignment (AC2, AC18)", () => {
     await expect(
       caller.user.updateUserRole({
         id: adminA.id,
-        role: "AUDITOR",
+        role: "BUSINESS_USER",
       })
     ).rejects.toThrow("Cannot change your own role");
   });

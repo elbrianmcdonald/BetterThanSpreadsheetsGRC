@@ -13,7 +13,7 @@ export const metadata = {
 
 export default async function HostnameSettingsPage() {
   const session = await auth();
-  requireRole(session, [UserRole.ORG_ADMIN], "/admin/settings/hostname");
+  requireRole(session, [UserRole.ADMINISTRATOR], "/admin/settings/hostname");
 
   return (
     <Suspense

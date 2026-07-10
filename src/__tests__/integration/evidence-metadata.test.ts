@@ -54,7 +54,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "Test User Metadata",
       email: "test-metadata@evidence-test.com",
-      role: "GRC_ANALYST",
+      platformRole: "ANALYST",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },
@@ -62,7 +62,7 @@ beforeAll(async () => {
   testUser = {
     id: createdUser.id,
     email: createdUser.email!,
-    role: createdUser.role,
+    role: "ANALYST" as UserRole,
     organizationId: createdUser.organizationId,
     name: createdUser.name!,
   };

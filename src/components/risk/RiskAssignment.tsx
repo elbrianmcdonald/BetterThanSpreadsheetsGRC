@@ -26,6 +26,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AssignRiskDialog } from "./AssignRiskDialog";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import type { UserRole } from "@prisma/client";
 
 interface OwnerInfo {
@@ -54,9 +55,9 @@ interface RiskAssignmentProps {
 }
 
 /**
- * Roles that can assign/reassign risks (AC30, AC36)
+ * Roles that can assign/reassign risks (AC30, AC36) — assign is a write action
  */
-const ASSIGN_ROLES: UserRole[] = ["GRC_ANALYST", "SECURITY_ENGINEER", "ORG_ADMIN"];
+const ASSIGN_ROLES: UserRole[] = WRITE_ROLES;
 
 export function RiskAssignment({
   riskId,

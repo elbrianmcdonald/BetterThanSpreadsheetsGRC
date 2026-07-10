@@ -21,19 +21,14 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { UserRole } from "@prisma/client";
+import { READ_ROLES } from "@/lib/auth/roles";
 import { createAuditLog } from "@/server/services/audit-log.service";
 
 /**
  * Roles allowed to READ the full control-domain taxonomy (drives the Risk
  * Category dropdown in the risk dialogs). Editing the taxonomy stays admin-only.
  */
-const TAXONOMY_READ_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_MANAGER,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-];
+const TAXONOMY_READ_ROLES: UserRole[] = [...READ_ROLES];
 
 /**
  * Control Domain Router

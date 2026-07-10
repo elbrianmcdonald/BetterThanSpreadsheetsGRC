@@ -11,7 +11,7 @@ export const metadata = {
   description: "Author a new organizational control",
 };
 
-const ROLES = [UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.SECURITY_ENGINEER];
+const ROLES = [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST];
 
 export default async function NewControlPage() {
   const session = await auth();

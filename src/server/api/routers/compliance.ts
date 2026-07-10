@@ -25,7 +25,8 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { Permission } from "@/server/auth/permissions";
-import { RiskStatus, Severity, UserRole } from "@prisma/client";
+import { RiskStatus, Severity } from "@prisma/client";
+import { READ_ROLES } from "@/lib/auth/roles";
 import { generateEvidencePackagePDF } from "@/server/services/pdfGenerator";
 import {
   getAllFrameworkCoverage,
@@ -630,7 +631,7 @@ export const complianceRouter = createTRPCRouter({
    * @requires GRC_ANALYST, ORG_ADMIN, or AUDITOR role
    */
   exportEvidencePackage: organizationProcedure
-    .use(requireRole([UserRole.GRC_ANALYST, UserRole.ORG_ADMIN, UserRole.AUDITOR]))
+    .use(requireRole(READ_ROLES))
     .input(z.object({ frameworkId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       // Verify framework exists and belongs to organization

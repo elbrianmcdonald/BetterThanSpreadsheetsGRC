@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 // Test credentials from seed.ts - Default password: Admin123!@#
 const TEST_USERS = {
-  acmeAdmin: { email: 'admin@acme-corp.com', password: 'Admin123!@#', name: 'Alice Admin', role: 'ORG_ADMIN' },
-  acmeAnalyst: { email: 'analyst@acme-corp.com', password: 'Admin123!@#', name: 'Bob Analyst', role: 'GRC_ANALYST' },
+  acmeAdmin: { email: 'admin@acme-corp.com', password: 'Admin123!@#', name: 'Alice Admin', role: 'ADMINISTRATOR' },
+  acmeAnalyst: { email: 'analyst@acme-corp.com', password: 'Admin123!@#', name: 'Bob Analyst', role: 'ANALYST' },
 };
 
 // Helper function to login

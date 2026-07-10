@@ -40,7 +40,7 @@ describe("usePermission Hook", () => {
           user: {
             id: "test-admin",
             email: "admin@test.com",
-            role: UserRole.ORG_ADMIN,
+            role: UserRole.ADMINISTRATOR,
             organizationId: "org-1",
             name: "Test Admin",
             image: null,
@@ -63,7 +63,7 @@ describe("usePermission Hook", () => {
           user: {
             id: "test-auditor",
             email: "auditor@test.com",
-            role: UserRole.AUDITOR,
+            role: UserRole.BUSINESS_USER,
             organizationId: "org-1",
             name: "Test Auditor",
             image: null,
@@ -86,7 +86,7 @@ describe("usePermission Hook", () => {
           user: {
             id: "test-analyst",
             email: "analyst@test.com",
-            role: UserRole.GRC_ANALYST,
+            role: UserRole.ANALYST,
             organizationId: "org-1",
             name: "Test Analyst",
             image: null,
@@ -111,7 +111,7 @@ describe("usePermission Hook", () => {
           user: {
             id: "test-ciso",
             email: "ciso@test.com",
-            role: UserRole.CISO,
+            role: UserRole.MANAGER,
             organizationId: "org-1",
             name: "Test CISO",
             image: null,
@@ -187,7 +187,7 @@ describe("usePermission Hook", () => {
           user: {
             id: "test-analyst",
             email: "analyst@test.com",
-            role: UserRole.GRC_ANALYST,
+            role: UserRole.ANALYST,
             organizationId: "org-1",
             name: "Test Analyst",
             image: null,
@@ -235,7 +235,7 @@ describe("useHasRole Hook", () => {
           user: {
             id: "test-admin",
             email: "admin@test.com",
-            role: UserRole.ORG_ADMIN,
+            role: UserRole.ADMINISTRATOR,
             organizationId: "org-1",
             name: "Test Admin",
             image: null,
@@ -247,7 +247,7 @@ describe("useHasRole Hook", () => {
         update: jest.fn(),
       });
 
-      const { result } = renderHook(() => useHasRole(UserRole.ORG_ADMIN));
+      const { result } = renderHook(() => useHasRole(UserRole.ADMINISTRATOR));
 
       expect(result.current).toBe(true);
     });
@@ -258,7 +258,7 @@ describe("useHasRole Hook", () => {
           user: {
             id: "test-analyst",
             email: "analyst@test.com",
-            role: UserRole.GRC_ANALYST,
+            role: UserRole.ANALYST,
             organizationId: "org-1",
             name: "Test Analyst",
             image: null,
@@ -270,7 +270,7 @@ describe("useHasRole Hook", () => {
         update: jest.fn(),
       });
 
-      const { result } = renderHook(() => useHasRole(UserRole.ORG_ADMIN));
+      const { result } = renderHook(() => useHasRole(UserRole.ADMINISTRATOR));
 
       expect(result.current).toBe(false);
     });
@@ -283,7 +283,7 @@ describe("useHasRole Hook", () => {
           user: {
             id: "test-analyst",
             email: "analyst@test.com",
-            role: UserRole.GRC_ANALYST,
+            role: UserRole.ANALYST,
             organizationId: "org-1",
             name: "Test Analyst",
             image: null,
@@ -296,7 +296,7 @@ describe("useHasRole Hook", () => {
       });
 
       const { result } = renderHook(() =>
-        useHasRole([UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.CISO])
+        useHasRole([UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER])
       );
 
       expect(result.current).toBe(true);
@@ -308,7 +308,7 @@ describe("useHasRole Hook", () => {
           user: {
             id: "test-auditor",
             email: "auditor@test.com",
-            role: UserRole.AUDITOR,
+            role: UserRole.BUSINESS_USER,
             organizationId: "org-1",
             name: "Test Auditor",
             image: null,
@@ -321,7 +321,7 @@ describe("useHasRole Hook", () => {
       });
 
       const { result } = renderHook(() =>
-        useHasRole([UserRole.ORG_ADMIN, UserRole.GRC_ANALYST, UserRole.CISO])
+        useHasRole([UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER])
       );
 
       expect(result.current).toBe(false);
@@ -336,7 +336,7 @@ describe("useHasRole Hook", () => {
         update: jest.fn(),
       });
 
-      const { result } = renderHook(() => useHasRole(UserRole.ORG_ADMIN));
+      const { result } = renderHook(() => useHasRole(UserRole.ADMINISTRATOR));
 
       expect(result.current).toBe(false);
     });
@@ -348,7 +348,7 @@ describe("useHasRole Hook", () => {
         update: jest.fn(),
       });
 
-      const { result } = renderHook(() => useHasRole(UserRole.ORG_ADMIN));
+      const { result } = renderHook(() => useHasRole(UserRole.ADMINISTRATOR));
 
       expect(result.current).toBe(false);
     });
@@ -371,7 +371,7 @@ describe("useHasRole Hook", () => {
         update: jest.fn(),
       });
 
-      const { result } = renderHook(() => useHasRole(UserRole.ORG_ADMIN));
+      const { result } = renderHook(() => useHasRole(UserRole.ADMINISTRATOR));
 
       expect(result.current).toBe(false);
     });
@@ -379,13 +379,13 @@ describe("useHasRole Hook", () => {
 
   describe("All Roles", () => {
     it.each([
-      UserRole.ORG_ADMIN,
-      UserRole.GRC_ANALYST,
-      UserRole.SECURITY_ENGINEER,
-      UserRole.CISO,
-      UserRole.IT_STAKEHOLDER,
-      UserRole.BUSINESS_STAKEHOLDER,
-      UserRole.AUDITOR,
+      UserRole.ADMINISTRATOR,
+      UserRole.ANALYST,
+      UserRole.ANALYST,
+      UserRole.MANAGER,
+      UserRole.BUSINESS_USER,
+      UserRole.BUSINESS_USER,
+      UserRole.BUSINESS_USER,
     ])("should correctly identify user with role: %s", (role) => {
       // Clear mocks before each iteration
       jest.clearAllMocks();

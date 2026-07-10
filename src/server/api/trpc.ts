@@ -245,7 +245,7 @@ async function logAuthorizationFailure(params: {
  * **Usage**:
  * ```typescript
  * export const adminOnlyProcedure = protectedProcedure.use(
- *   requireRole([UserRole.ORG_ADMIN])
+ *   requireRole([UserRole.ADMINISTRATOR])
  * );
  * ```
  *
@@ -387,7 +387,7 @@ export async function ensureOrgAccess(
  * ```
  */
 export const adminProcedure = organizationProcedure.use(
-  requireRole([UserRole.ORG_ADMIN]),
+  requireRole([UserRole.ADMINISTRATOR]),
 );
 
 /**
@@ -407,7 +407,7 @@ export const adminProcedure = organizationProcedure.use(
  * ```
  */
 export const analystProcedure = organizationProcedure.use(
-  requireRole([UserRole.GRC_ANALYST]),
+  requireRole([UserRole.ANALYST]),
 );
 
 /**
@@ -428,7 +428,7 @@ export const analystProcedure = organizationProcedure.use(
  * ```
  */
 export const engineerProcedure = organizationProcedure.use(
-  requireRole([UserRole.SECURITY_ENGINEER, UserRole.GRC_ANALYST]),
+  requireRole([UserRole.ANALYST, UserRole.ANALYST]),
 );
 
 /**
@@ -448,7 +448,7 @@ export const engineerProcedure = organizationProcedure.use(
  * ```
  */
 export const cisoProcedure = organizationProcedure.use(
-  requireRole([UserRole.CISO, UserRole.GRC_ANALYST]),
+  requireRole([UserRole.MANAGER, UserRole.ANALYST]),
 );
 
 /**
@@ -468,7 +468,7 @@ export const cisoProcedure = organizationProcedure.use(
  * ```
  */
 export const stakeholderProcedure = organizationProcedure.use(
-  requireRole([UserRole.IT_STAKEHOLDER, UserRole.BUSINESS_STAKEHOLDER]),
+  requireRole([UserRole.BUSINESS_USER, UserRole.BUSINESS_USER]),
 );
 
 /**
@@ -489,5 +489,5 @@ export const stakeholderProcedure = organizationProcedure.use(
  * ```
  */
 export const auditorProcedure = organizationProcedure.use(
-  requireRole([UserRole.AUDITOR]),
+  requireRole([UserRole.BUSINESS_USER]),
 );

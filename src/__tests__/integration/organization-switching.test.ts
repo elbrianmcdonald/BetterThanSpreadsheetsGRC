@@ -38,7 +38,7 @@ async function mkUser(
   orgId: string,
   role: UserRole,
   tag: string,
-  isPlatformAdmin = false,
+  platformRole: UserRole | null = null,
 ): Promise<TestUser> {
   const email = `${tag}-${Date.now()}-${Math.round(performance.now())}@example.com`;
   const u = await db.user.create({
@@ -47,17 +47,16 @@ async function mkUser(
       email,
       name: tag,
       organizationId: orgId,
-      role,
-      isPlatformAdmin,
+      platformRole,
       updatedAt: new Date(),
     },
   });
   return { id: u.id, email, organizationId: orgId, role };
 }
 
-async function mkMembership(userId: string, organizationId: string, role: UserRole) {
+async function mkMembership(userId: string, organizationId: string) {
   await db.organizationMembership.create({
-    data: { id: randomUUID(), userId, organizationId, role },
+    data: { id: randomUUID(), userId, organizationId, updatedAt: new Date() },
   });
 }
 
@@ -79,15 +78,15 @@ describe("Epic 1 — organization switching + membership isolation", () => {
       data: { id: randomUUID(), name: `B-Corp ${stamp}`, slug: `b-corp-${stamp}`, updatedAt: new Date() },
     });
 
-    userBoth = await mkUser(orgA.id, UserRole.ORG_ADMIN, "both");
-    await mkMembership(userBoth.id, orgA.id, UserRole.ORG_ADMIN);
-    await mkMembership(userBoth.id, orgB.id, UserRole.AUDITOR);
+    userBoth = await mkUser(orgA.id, UserRole.BUSINESS_USER, "both");
+    await mkMembership(userBoth.id, orgA.id);
+    await mkMembership(userBoth.id, orgB.id);
 
-    userAOnly = await mkUser(orgA.id, UserRole.ORG_ADMIN, "aonly");
-    await mkMembership(userAOnly.id, orgA.id, UserRole.ORG_ADMIN);
+    userAOnly = await mkUser(orgA.id, UserRole.BUSINESS_USER, "aonly");
+    await mkMembership(userAOnly.id, orgA.id);
 
-    platformAdmin = await mkUser(orgA.id, UserRole.ORG_ADMIN, "super", true);
-    await mkMembership(platformAdmin.id, orgA.id, UserRole.ORG_ADMIN);
+    platformAdmin = await mkUser(orgA.id, UserRole.ADMINISTRATOR, "super", UserRole.ADMINISTRATOR);
+    await mkMembership(platformAdmin.id, orgA.id);
 
     // One framework in each org to prove isolation across a switch.
     aFrameworkId = randomUUID();
@@ -135,7 +134,7 @@ describe("Epic 1 — organization switching + membership isolation", () => {
   it("switch into a member org returns that org's per-membership role (FR4, FR8)", async () => {
     const res = await createCaller(userBoth).organization.switch({ organizationId: orgB.id });
     expect(res.organizationId).toBe(orgB.id);
-    expect(res.role).toBe(UserRole.AUDITOR); // per-membership role in B, not the ADMIN role in A
+    expect(res.role).toBe(UserRole.BUSINESS_USER); // per-membership role in B, not the ADMIN role in A
   });
 
   it("switch into a non-member org is rejected FORBIDDEN (FR9, NFR5 — isolation gate)", async () => {
@@ -147,7 +146,7 @@ describe("Epic 1 — organization switching + membership isolation", () => {
   it("platform admin can switch into any org without a membership (FR2)", async () => {
     const res = await createCaller(platformAdmin).organization.switch({ organizationId: orgB.id });
     expect(res.organizationId).toBe(orgB.id);
-    expect(res.role).toBe(UserRole.ORG_ADMIN); // super-admin acts as admin in the target org
+    expect(res.role).toBe(UserRole.ADMINISTRATOR); // super-admin acts as admin in the target org
   });
 
   it("a switched (org-B-scoped) context returns zero org-A rows (NFR1)", async () => {

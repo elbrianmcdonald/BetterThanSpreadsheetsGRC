@@ -56,7 +56,7 @@ async function createAdminUser() {
         id: randomUUID(),
         name: 'Test Admin',
         email: 'admin@test.com',
-        role: 'ORG_ADMIN',
+        platformRole: 'ADMINISTRATOR',
         hashedPassword,
         organizationId: org.id,
         updatedAt: new Date(),
@@ -66,7 +66,7 @@ async function createAdminUser() {
     console.log('[CREATE-ADMIN] ✅ Admin user created successfully!');
     console.log(`[CREATE-ADMIN] Email: ${adminUser.email}`);
     console.log(`[CREATE-ADMIN] Password: ${testPassword}`);
-    console.log(`[CREATE-ADMIN] Role: ${adminUser.role}`);
+    console.log(`[CREATE-ADMIN] Role: ${adminUser.platformRole}`);
     console.log(`[CREATE-ADMIN] Organization: ${org.name}`);
     console.log('\n[CREATE-ADMIN] You can now sign in at http://localhost:3000/login');
   } catch (error) {

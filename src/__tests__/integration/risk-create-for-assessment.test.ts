@@ -50,7 +50,7 @@ beforeAll(async () => {
       id: randomUUID(),
       name: "CFA Analyst",
       email: `cfa-analyst-${stamp}@example.com`,
-      role: "GRC_ANALYST",
+      platformRole: "ANALYST",
       organizationId: testOrg.id,
       updatedAt: new Date(),
     },
@@ -58,7 +58,7 @@ beforeAll(async () => {
   analyst = {
     id: u.id,
     email: u.email!,
-    role: u.role,
+    role: u.platformRole!,
     organizationId: u.organizationId,
     name: u.name!,
     assignedFrameworks: u.assignedFrameworks,

@@ -24,7 +24,7 @@ export default async function Home() {
 
   const firstName = session.user?.name?.split(" ")[0] ?? "there";
   const isAdmin =
-    session.user?.role === "ORG_ADMIN" || session.user?.role === "CISO";
+    session.user?.role === "ADMINISTRATOR" || session.user?.role === "MANAGER";
 
   return (
     <AppLayout showBreadcrumbs={false}>

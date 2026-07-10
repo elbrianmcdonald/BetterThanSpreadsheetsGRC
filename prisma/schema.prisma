@@ -456,7 +456,7 @@ model OrganizationMembership {
   id             String   @id @default(cuid())
   userId         String
   organizationId String
-  role           UserRole @default(AUDITOR)
+  // Role Consolidation Epic 2: membership existence implies BUSINESS_USER (no stored role).
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -1487,11 +1487,13 @@ model User {
   emailVerified                           DateTime?
   image                                   String?
   hashedPassword                          String?
-  role                                    UserRole                    @default(AUDITOR)
+  // Role Consolidation Epic 2: no stored role — staff carry platformRole, Business
+  // Users are implied by OrganizationMembership; active role is derived.
   organizationId                          String
-  // Multi-Tenancy Epic 1 (Story 1.1): platform (super) admin can access & switch
-  // into every organization regardless of explicit membership.
-  isPlatformAdmin                         Boolean                     @default(false)
+  // Role Consolidation Epic 2: staff platform role (ANALYST/MANAGER/ADMINISTRATOR)
+  // grants that authority across ALL organizations. When set, the user is staff and
+  // supersedes any org membership. Null => org-bound Business User (via membership).
+  platformRole                            UserRole?
   // Story 7.0.2: Business Unit assignment (AC1-AC4)
   businessUnitId                          String? // Optional - user not yet assigned to BU
   // Story 3.7: Assigned framework codes for auditor role access control (AC19-AC21)
@@ -1984,14 +1986,13 @@ enum Severity {
 }
 
 enum UserRole {
-  ORG_ADMIN
-  GRC_MANAGER
-  GRC_ANALYST
-  SECURITY_ENGINEER
-  CISO
-  IT_STAKEHOLDER
-  BUSINESS_STAKEHOLDER
-  AUDITOR
+  // Consolidated four-role model (Role Consolidation).
+  // Staff (platform-scoped, stored on User.platformRole):
+  ADMINISTRATOR
+  MANAGER
+  ANALYST
+  // Org-bound (implied by OrganizationMembership; not stored):
+  BUSINESS_USER
 }
 
 enum RiskEvidenceLinkType {

@@ -25,6 +25,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { UserRole, AuditAction, ChangeType } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { randomUUID } from "crypto";
 
 import {
@@ -51,9 +52,9 @@ import {
  * - ORG_ADMIN: Full CRUD access
  */
 const GOAL_MANAGE_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
 ];
 
 /**
@@ -61,27 +62,21 @@ const GOAL_MANAGE_ROLES = [
  * All authenticated org users can view goals
  */
 const GOAL_VIEW_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
+  UserRole.MANAGER,
+  UserRole.ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.BUSINESS_USER,
+  UserRole.BUSINESS_USER,
+  UserRole.BUSINESS_USER,
 ];
 
 /**
  * Roles that can add comments on goals
  * Story 6.1 AC2: AUDITOR cannot add comments (read-only access)
  */
-const GOAL_COMMENT_ROLES = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-];
+// Commenting is a write action: staff only, never read-only Business Users.
+const GOAL_COMMENT_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // =============================================================================
 // Input Schemas

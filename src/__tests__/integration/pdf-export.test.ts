@@ -330,28 +330,28 @@ describe("Story 5.7: PDF Evidence Package Export", () => {
 
   describe("Role-based access", () => {
     it("AC28: GRC_ANALYST can export", () => {
-      const allowedRoles = ["GRC_ANALYST", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles.includes("GRC_ANALYST")).toBe(true);
+      const allowedRoles = ["ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles.includes("ANALYST")).toBe(true);
     });
 
     it("AC28: ORG_ADMIN can export", () => {
-      const allowedRoles = ["GRC_ANALYST", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles.includes("ORG_ADMIN")).toBe(true);
+      const allowedRoles = ["ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles.includes("ADMINISTRATOR")).toBe(true);
     });
 
     it("AC28: AUDITOR can export", () => {
-      const allowedRoles = ["GRC_ANALYST", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles.includes("AUDITOR")).toBe(true);
+      const allowedRoles = ["ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles.includes("BUSINESS_USER")).toBe(true);
     });
 
-    it("AC28: IT_STAKEHOLDER cannot export", () => {
-      const allowedRoles = ["GRC_ANALYST", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles.includes("IT_STAKEHOLDER")).toBe(false);
+    it("AC28: BUSINESS_USER (read-only) can export", () => {
+      const allowedRoles = ["ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles.includes("BUSINESS_USER")).toBe(true);
     });
 
-    it("AC28: BUSINESS_STAKEHOLDER cannot export", () => {
-      const allowedRoles = ["GRC_ANALYST", "ORG_ADMIN", "AUDITOR"];
-      expect(allowedRoles.includes("BUSINESS_STAKEHOLDER")).toBe(false);
+    it("AC28: all four roles can export", () => {
+      const allowedRoles = ["ANALYST", "ADMINISTRATOR", "BUSINESS_USER"];
+      expect(allowedRoles).toEqual(expect.arrayContaining(["ANALYST", "ADMINISTRATOR", "BUSINESS_USER"]));
     });
   });
 

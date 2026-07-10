@@ -399,25 +399,25 @@ describe("Approval Gates (Story 7.9)", () => {
   describe("Permissions (AC35-AC36)", () => {
     it("AC35: Approve roles should include security roles", () => {
       const approveRoles = [
-        "SECURITY_ENGINEER",
-        "GRC_ANALYST",
-        "ORG_ADMIN",
+        "ANALYST",
+        "ANALYST",
+        "ADMINISTRATOR",
       ];
 
-      expect(approveRoles).toContain("SECURITY_ENGINEER");
-      expect(approveRoles).toContain("GRC_ANALYST");
-      expect(approveRoles).toContain("ORG_ADMIN");
+      expect(approveRoles).toContain("ANALYST");
+      expect(approveRoles).toContain("ANALYST");
+      expect(approveRoles).toContain("ADMINISTRATOR");
     });
 
     it("AC36: Non-authorized roles should not see approve/reject buttons", () => {
       const nonAuthorizedRoles = [
-        "IT_STAKEHOLDER",
-        "BUSINESS_STAKEHOLDER",
-        "AUDITOR",
+        "BUSINESS_USER",
+        "BUSINESS_USER",
+        "BUSINESS_USER",
       ];
 
       const canModify = (role: string) =>
-        ["SECURITY_ENGINEER", "GRC_ANALYST", "ORG_ADMIN"].includes(role);
+        ["ANALYST", "ANALYST", "ADMINISTRATOR"].includes(role);
 
       for (const role of nonAuthorizedRoles) {
         expect(canModify(role)).toBe(false);

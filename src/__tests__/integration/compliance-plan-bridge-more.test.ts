@@ -38,8 +38,8 @@ describe("Compliance Plan Bridge — Epic 2 Stories 2.3/2.4 (standard + org)", (
   beforeAll(async () => {
     const s = `${Date.now()}-${Math.round(performance.now())}`;
     org = await db.organization.create({ data: { id: randomUUID(), name: `CPBX ${s}`, slug: `cpbx-${s}`, updatedAt: new Date() } });
-    const u = await db.user.create({ data: { id: randomUUID(), email: `cpbx-${s}@example.com`, name: "cpbxadmin", organizationId: org.id, role: UserRole.ORG_ADMIN, updatedAt: new Date() } });
-    admin = { id: u.id, email: u.email!, organizationId: org.id, role: UserRole.ORG_ADMIN };
+    const u = await db.user.create({ data: { id: randomUUID(), email: `cpbx-${s}@example.com`, name: "cpbxadmin", organizationId: org.id, platformRole: UserRole.ADMINISTRATOR, updatedAt: new Date() } });
+    admin = { id: u.id, email: u.email!, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {
       personId = (await db.person.create({ data: { organizationId: org.id, name: "Deficiency Owner" } })).id;

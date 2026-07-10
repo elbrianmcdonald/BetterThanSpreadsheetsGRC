@@ -47,22 +47,13 @@ import {
 } from "@/server/services/deliverableRoadmapData";
 import type { DeliverableCover } from "@/components/deliverable/types";
 import type { AuditAction } from "@prisma/client";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-const DELIVERABLE_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-  UserRole.AUDITOR,
-];
+/** Who may view/export a deliverable (all four roles, incl. read-only viewer). */
+const DELIVERABLE_ROLES: UserRole[] = READ_ROLES as UserRole[];
 
-/** Who may edit a deliverable's statement / section layout (reads add AUDITOR). */
-const EXEC_EDIT_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-];
+/** Who may edit a deliverable's statement / section layout (writers only). */
+const EXEC_EDIT_ROLES: UserRole[] = WRITE_ROLES as UserRole[];
 
 /**
  * Update a scalar exec field (statement / layout) on whichever assessment model
@@ -240,7 +231,7 @@ export const deliverableRouter = createTRPCRouter({
       // Statement edit rights mirror riskAssessmentProject.updateExecutiveStatement:
       // ORG_ADMIN or the assigned analyst.
       const canEdit =
-        ctx.session!.user.role === UserRole.ORG_ADMIN ||
+        ctx.session!.user.role === UserRole.ADMINISTRATOR ||
         data.assigneeId === ctx.session!.user.id;
       return {
         cover,

@@ -73,12 +73,9 @@ import {
   labelForControlType,
   labelForOrgControlStatus,
 } from "@/components/organizational-control/enum-labels";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
-const CAN_CREATE_CONTROL_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
+const CAN_CREATE_CONTROL_ROLES: UserRole[] = WRITE_ROLES;
 
 const ANY = "__any__";
 const PAGE_SIZE = 50;

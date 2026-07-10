@@ -49,9 +49,9 @@ describe("crosswalk suggestion review - Story 26.2", () => {
     });
     const email = `admin-rev-${Date.now()}@example.com`;
     const adminRow = await db.user.create({
-      data: { id: randomUUID(), email, name: "Admin", organizationId: org.id, role: UserRole.ORG_ADMIN, updatedAt: new Date() },
+      data: { id: randomUUID(), email, name: "Admin", organizationId: org.id, platformRole: UserRole.ADMINISTRATOR, updatedAt: new Date() },
     });
-    admin = { id: adminRow.id, email, organizationId: org.id, role: adminRow.role };
+    admin = { id: adminRow.id, email, organizationId: org.id, role: UserRole.ADMINISTRATOR };
 
     await runWithOrganizationContext(org.id, async () => {
       const mkFw = (code: string) =>

@@ -20,31 +20,15 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { UserRole, AuditAction, AssetType, AssetStatus } from "@prisma/client";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import { generateIdentifier } from "@/server/services/identifierService";
 
-// Roles that can view assets
-const ASSET_VIEW_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.IT_STAKEHOLDER,
-  UserRole.BUSINESS_STAKEHOLDER,
-  UserRole.AUDITOR,
-];
+// Roles that can view assets (read tier — all roles incl. BUSINESS_USER)
+const ASSET_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-// Roles that can manage all assets
-const ASSET_MANAGE_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
-
-// Roles that can only manage owned assets
-const ASSET_OWNER_EDIT_ROLES: UserRole[] = [
-  UserRole.IT_STAKEHOLDER,
-];
+// Roles that can manage all assets (write tier)
+const ASSET_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 // Input schemas
 const createAssetSchema = z.object({
@@ -184,22 +168,11 @@ export const assetRouter = createTRPCRouter({
     .input(listAssetSchema)
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role as UserRole;
 
-      // Build where clause
+      // Build where clause. Read tier (incl. BUSINESS_USER) sees all org assets.
       const where: any = {
         organizationId,
       };
-
-      // Role-based filtering
-      // IT_STAKEHOLDER and BUSINESS_STAKEHOLDER only see their owned assets
-      if (
-        (ASSET_OWNER_EDIT_ROLES.includes(userRole) || userRole === UserRole.BUSINESS_STAKEHOLDER) &&
-        !ASSET_MANAGE_ROLES.includes(userRole)
-      ) {
-        where.ownerId = userId;
-      }
 
       // Status filter - exclude DECOMMISSIONED unless explicitly requested
       if (input.status && input.status.length > 0) {
@@ -304,7 +277,6 @@ export const assetRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
       const userRole = ctx.session!.user.role as UserRole;
 
       const asset = await ctx.db.asset.findFirst({
@@ -348,22 +320,8 @@ export const assetRouter = createTRPCRouter({
         });
       }
 
-      // Role-based access check
-      if (
-        (ASSET_OWNER_EDIT_ROLES.includes(userRole) || userRole === UserRole.BUSINESS_STAKEHOLDER) &&
-        !ASSET_MANAGE_ROLES.includes(userRole)
-      ) {
-        if (asset.ownerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only view assets you own",
-          });
-        }
-      }
-
-      // Determine edit permissions
-      const canEdit = ASSET_MANAGE_ROLES.includes(userRole) ||
-        (ASSET_OWNER_EDIT_ROLES.includes(userRole) && asset.ownerId === userId);
+      // Determine edit permissions (write tier only; BUSINESS_USER is read-only)
+      const canEdit = ASSET_MANAGE_ROLES.includes(userRole);
       const canDelete = ASSET_MANAGE_ROLES.includes(userRole);
       const canLinkProcesses = ASSET_MANAGE_ROLES.includes(userRole);
 
@@ -405,17 +363,13 @@ export const assetRouter = createTRPCRouter({
    * Create a new asset
    */
   create: organizationProcedure
-    .use(requireRole([...ASSET_MANAGE_ROLES, ...ASSET_OWNER_EDIT_ROLES]))
+    .use(requireRole(ASSET_MANAGE_ROLES))
     .input(createAssetSchema)
     .mutation(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userRole = ctx.session!.user.role as UserRole;
 
-      // IT_STAKEHOLDER can only create assets they own
-      let ownerId = input.ownerId;
-      if (ASSET_OWNER_EDIT_ROLES.includes(userRole) && !ASSET_MANAGE_ROLES.includes(userRole)) {
-        ownerId = ctx.session!.user.id;
-      }
+      // Write tier manages all assets; owner is set from input.
+      const ownerId = input.ownerId;
 
       // Validate owner exists if provided. Asset.ownerId references AssetOwner, not User.
       if (ownerId) {
@@ -519,12 +473,10 @@ export const assetRouter = createTRPCRouter({
    * Update an asset
    */
   update: organizationProcedure
-    .use(requireRole([...ASSET_MANAGE_ROLES, ...ASSET_OWNER_EDIT_ROLES]))
+    .use(requireRole(ASSET_MANAGE_ROLES))
     .input(updateAssetSchema)
     .mutation(async ({ ctx, input }) => {
       const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-      const userRole = ctx.session!.user.role as UserRole;
 
       // Get existing asset
       const existing = await ctx.db.asset.findFirst({
@@ -539,23 +491,6 @@ export const assetRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: "Asset not found",
         });
-      }
-
-      // Permission check
-      if (ASSET_OWNER_EDIT_ROLES.includes(userRole) && !ASSET_MANAGE_ROLES.includes(userRole)) {
-        if (existing.ownerId !== userId) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You can only edit assets you own",
-          });
-        }
-        // Owners cannot change ownership or business unit
-        if (input.ownerId !== undefined || input.businessUnitId !== undefined) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Only GRC Analysts can change ownership or business unit",
-          });
-        }
       }
 
       // Validate owner if changing. Asset.ownerId references AssetOwner, not User.

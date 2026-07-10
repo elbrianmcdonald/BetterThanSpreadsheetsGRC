@@ -21,6 +21,7 @@ import {
 import { UserRole, AssessmentTaskStatus } from "@prisma/client";
 import { toast } from "sonner";
 
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,12 +51,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-/** Roles that can create/manage assessment tasks */
-const MANAGER_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-];
+/** Roles that can create/manage/assign assessment tasks (write tier) */
+const MANAGER_ROLES: UserRole[] = WRITE_ROLES;
 
 /** Status badge configuration */
 const statusConfig: Record<AssessmentTaskStatus, { color: string; label: string }> = {

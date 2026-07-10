@@ -91,7 +91,7 @@ export async function seedDemoData(prisma: PrismaClient) {
   // ========================================================================
   console.log('  Creating people...');
   const peopleData = [
-    { name: 'Sarah Chen',    email: 'sarah.chen@acme-corp.com',    jobTitle: 'CISO',                buCode: 'ITO' },
+    { name: 'Sarah Chen',    email: 'sarah.chen@acme-corp.com',    jobTitle: 'MANAGER',                buCode: 'ITO' },
     { name: 'Mike Torres',   email: 'mike.torres@acme-corp.com',   jobTitle: 'VP Engineering',      buCode: 'ENG' },
     { name: 'Lisa Park',     email: 'lisa.park@acme-corp.com',     jobTitle: 'Compliance Manager',  buCode: 'FIN' },
     { name: 'James Wilson',  email: 'james.wilson@acme-corp.com',  jobTitle: 'IT Director',         buCode: 'ITO' },
@@ -1668,7 +1668,7 @@ export async function seedDemoData(prisma: PrismaClient) {
         },
         stakeholders: {
           create: [
-            { name: 'Dana Cole', role: 'CISO', domain: 'Executive Sponsor', raci: 'A', isReviewer: false, isApprover: true, sortOrder: 0 },
+            { name: 'Dana Cole', role: 'MANAGER', domain: 'Executive Sponsor', raci: 'A', isReviewer: false, isApprover: true, sortOrder: 0 },
             { name: 'Bob Analyst', role: 'GRC Analyst', domain: 'Assessment Lead', raci: 'R', isReviewer: false, isApprover: false, sortOrder: 1 },
             { name: 'Tom Bradley', role: 'IT Operations Manager', domain: 'Identify / Protect', raci: 'C', isReviewer: true, isApprover: false, sortOrder: 2 },
             { name: 'Marcus Lee', role: 'SOC Lead', domain: 'Detect / Respond', raci: 'C', isReviewer: false, isApprover: false, sortOrder: 3 },

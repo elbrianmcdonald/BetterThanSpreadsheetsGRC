@@ -33,15 +33,11 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { createAuditLog } from "@/server/services/audit-log.service";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 
-// Write roles per the Epic 19 spec; reads additionally allow AUDITOR.
-const PATHWAY_MANAGE_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.CISO,
-];
-const PATHWAY_READ_ROLES: UserRole[] = [...PATHWAY_MANAGE_ROLES, UserRole.AUDITOR];
+// Write actions require a staff writer; reads additionally allow BUSINESS_USER.
+const PATHWAY_MANAGE_ROLES: UserRole[] = [...WRITE_ROLES];
+const PATHWAY_READ_ROLES: UserRole[] = [...READ_ROLES];
 
 const mitreTidSchema = z
   .string()

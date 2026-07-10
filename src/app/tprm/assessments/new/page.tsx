@@ -10,6 +10,7 @@
 
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { UserRole } from "@prisma/client";
 import { AppLayout } from "@/components/layout";
 import { NewAssessmentClient } from "./client";
@@ -17,11 +18,7 @@ import { NewAssessmentClient } from "./client";
 /**
  * Roles that can create assessments
  */
-const ASSESSMENT_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
+const ASSESSMENT_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 export const metadata = {
   title: "New Assessment | BetterThanSpreadsheetsGRC",

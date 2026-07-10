@@ -14,23 +14,13 @@ import {
   requireRole,
 } from "@/server/api/trpc";
 import { UserRole, BusinessProcessStatus, BIAAssessmentStatus } from "@prisma/client";
+import { READ_ROLES } from "@/lib/auth/roles";
 
-// Roles that can view BIA dashboard and reports
-const DASHBOARD_VIEW_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.CISO,
-  UserRole.AUDITOR,
-];
+// Roles that can view BIA dashboard and reports — read tier
+const DASHBOARD_VIEW_ROLES: UserRole[] = [...READ_ROLES];
 
-// Roles that can export reports
-const EXPORT_ROLES: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.CISO,
-  UserRole.AUDITOR,
-];
+// Roles that can export reports — read tier (Business User may export CSV/PDF)
+const EXPORT_ROLES: UserRole[] = [...READ_ROLES];
 
 const dashboardFilterSchema = z.object({
   businessFunctionId: z.string().optional(),

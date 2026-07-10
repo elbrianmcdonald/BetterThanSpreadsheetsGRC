@@ -27,8 +27,9 @@ import {
   Prisma,
 } from "@prisma/client";
 import { createTRPCRouter, organizationProcedure } from "@/server/api/trpc";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 
-const ALLOWED_MUTATION_ROLES = ["ORG_ADMIN", "GRC_ANALYST", "SECURITY_ENGINEER"];
+const ALLOWED_MUTATION_ROLES: readonly string[] = WRITE_ROLES;
 
 function assertMutationAllowed(role: string | undefined, action: string): void {
   if (!role || !ALLOWED_MUTATION_ROLES.includes(role)) {
@@ -844,7 +845,7 @@ export const organizationalControlRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // ORG_ADMIN only for publishing (scope policy, separate from author/edit role)
-      if (ctx.session?.user.role !== "ORG_ADMIN") {
+      if (ctx.session?.user.role !== "ADMINISTRATOR") {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only organization admins can publish control versions",

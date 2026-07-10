@@ -587,7 +587,7 @@ export const evidenceRequestRouter = createTRPCRouter({
 
       // Verify user is the requester (creator) or is ORG_ADMIN
       const isRequester = request.requestedById === ctx.session!.user.id;
-      const isAdmin = ctx.session!.user.role === "ORG_ADMIN";
+      const isAdmin = ctx.session!.user.role === "ADMINISTRATOR";
 
       if (!isRequester && !isAdmin) {
         throw new TRPCError({
@@ -664,11 +664,17 @@ export const evidenceRequestRouter = createTRPCRouter({
           id: true,
           name: true,
           email: true,
-          role: true,
+          platformRole: true,
         },
         orderBy: { name: "asc" },
       });
 
-      return users;
+      // Role Consolidation Epic 2: derive the displayed role (no stored User.role).
+      return users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.platformRole ?? "BUSINESS_USER",
+      }));
     }),
 });

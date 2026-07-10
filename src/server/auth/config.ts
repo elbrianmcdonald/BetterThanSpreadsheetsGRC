@@ -28,8 +28,9 @@ declare module "next-auth" {
       organizationId: string;
       // Story 3.7: Assigned framework codes for auditor role access control
       assignedFrameworks: string[];
-      // Multi-Tenancy Epic 3: platform admin flag (UI gating; server is authoritative)
-      isPlatformAdmin?: boolean;
+      // Role Consolidation Epic 2: staff platform role (all-org authority), or null
+      // for org-bound Business Users. platformRole === ADMINISTRATOR is the platform admin.
+      platformRole?: UserRole | null;
     } & DefaultSession["user"];
   }
 
@@ -38,8 +39,8 @@ declare module "next-auth" {
     organizationId: string;
     // Story 3.7: Assigned framework codes for auditor role access control
     assignedFrameworks: string[];
-    // Multi-Tenancy Epic 3: platform admin flag
-    isPlatformAdmin?: boolean;
+    // Role Consolidation Epic 2: staff platform role
+    platformRole?: UserRole | null;
   }
 }
 
@@ -133,17 +134,23 @@ export const authConfig = {
         await recordLoginAttempt(email, true);
         await clearFailedAttempts(email);
 
+        // Role Consolidation Epic 2: role is derived — platformRole for staff, or
+        // BUSINESS_USER via org membership. No stored User.role.
+        const activeRole =
+          (await resolveActiveRole(db, user.id, user.organizationId)) ??
+          UserRole.BUSINESS_USER;
+
         // Return user object (NextAuth will create session)
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: activeRole,
           organizationId: user.organizationId,
           // Story 3.7: Include assigned frameworks for auditor role access control
           assignedFrameworks: user.assignedFrameworks ?? [],
-          // Multi-Tenancy Epic 3: surface platform-admin for UI gating
-          isPlatformAdmin: user.isPlatformAdmin ?? false,
+          // Role Consolidation Epic 2: staff platform role (all-org authority)
+          platformRole: user.platformRole ?? null,
         };
       },
     }),
@@ -175,12 +182,13 @@ export const authConfig = {
       // On sign-in, add user data to token
       if (user) {
         token.id = user.id;
+        // Role Consolidation Epic 2: role is the derived active role (platformRole
+        // for staff, else BUSINESS_USER); platformRole marks all-org staff scope.
+        token.platformRole = user.platformRole ?? null;
         token.role = user.role;
         token.organizationId = user.organizationId;
         // Story 3.7: Include assigned frameworks for auditor role access control
         token.assignedFrameworks = user.assignedFrameworks ?? [];
-        // Multi-Tenancy Epic 3: platform-admin flag
-        token.isPlatformAdmin = user.isPlatformAdmin ?? false;
       }
 
       // Multi-Tenancy Epic 1 (Story 1.3): the client calls `update({ organizationId })`
@@ -213,8 +221,8 @@ export const authConfig = {
         session.user.organizationId = token.organizationId as string;
         // Story 3.7: Include assigned frameworks for auditor role access control
         session.user.assignedFrameworks = (token.assignedFrameworks as string[]) ?? [];
-        // Multi-Tenancy Epic 3: platform-admin flag for UI gating
-        session.user.isPlatformAdmin = (token.isPlatformAdmin as boolean) ?? false;
+        // Role Consolidation Epic 2: staff platform role (ADMINISTRATOR = platform admin)
+        session.user.platformRole = (token.platformRole as UserRole | null) ?? null;
       }
       return session;
     },

@@ -14,7 +14,7 @@
 import { db } from "@/server/db";
 import { appRouter } from "@/server/api/root";
 import { randomUUID } from "crypto";
-import { type UserRole, Severity, FindingSource, AuditAction } from "@prisma/client";
+import { UserRole, Severity, FindingSource, AuditAction } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 
@@ -99,7 +99,7 @@ beforeAll(async () => {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: role === UserRole.BUSINESS_USER ? null : role,
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -107,7 +107,7 @@ beforeAll(async () => {
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role,
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,
@@ -117,49 +117,49 @@ beforeAll(async () => {
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@finding-creation.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@finding-creation.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserOrgAdmin = await createUser(
     "Org Admin",
     "admin@finding-creation.test",
-    "ORG_ADMIN",
+    "ADMINISTRATOR",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder",
     "it@finding-creation.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserBusinessStakeholder = await createUser(
     "Business Stakeholder",
     "business@finding-creation.test",
-    "BUSINESS_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@finding-creation.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserOrg2 = await createUser(
     "User Org 2",
     "user@finding-creation-org2.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg2.id
   );
 });

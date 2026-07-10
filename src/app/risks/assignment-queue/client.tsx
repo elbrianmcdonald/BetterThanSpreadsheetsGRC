@@ -34,6 +34,7 @@ import { UserRole, Severity, RiskFindingSource } from "@prisma/client";
 import { format } from "date-fns";
 
 import { api } from "@/trpc/react";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -68,20 +69,11 @@ import { BulkAssignDialog } from "@/components/risk/BulkAssignDialog";
 import { AssessmentTasksSection } from "@/components/risk/AssessmentTasksSection";
 import { PendingApprovalsSection } from "@/components/risk/PendingApprovalsSection";
 
-/** Roles that can access the assignment queue */
-const QUEUE_ACCESS_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-  UserRole.AUDITOR,
-];
+/** Roles that can access (view) the assignment queue — read tier incl. Business Users. */
+const QUEUE_ACCESS_ROLES: UserRole[] = [...READ_ROLES];
 
-/** Roles that can assign risks */
-const ASSIGN_ROLES: UserRole[] = [
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-  UserRole.ORG_ADMIN,
-];
+/** Roles that can assign risks (assign = write tier). */
+const ASSIGN_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /** Severity badge colors */
 const severityConfig = {
@@ -164,7 +156,7 @@ export function AssignmentQueueClient() {
   const userRole = session?.user?.role as UserRole | undefined;
   const canAccessQueue = userRole && QUEUE_ACCESS_ROLES.includes(userRole);
   const canAssign = userRole && ASSIGN_ROLES.includes(userRole);
-  const isAuditor = userRole === UserRole.AUDITOR;
+  const isAuditor = userRole === UserRole.BUSINESS_USER;
 
   // Fetch queue data (AC1-AC6)
   // NOTE: All hooks must be called before any early returns

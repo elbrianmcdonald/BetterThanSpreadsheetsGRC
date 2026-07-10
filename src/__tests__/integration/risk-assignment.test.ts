@@ -97,7 +97,7 @@ beforeAll(async () => {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: role === "BUSINESS_USER" ? null : role,
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -105,7 +105,7 @@ beforeAll(async () => {
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role,
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,
@@ -115,63 +115,63 @@ beforeAll(async () => {
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@risk-assignment.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserOrgAdmin = await createUser(
     "Org Admin",
     "admin@risk-assignment.test",
-    "ORG_ADMIN",
+    "ADMINISTRATOR",
     testOrg.id
   );
 
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@risk-assignment.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder 1",
     "it1@risk-assignment.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserITStakeholder2 = await createUser(
     "IT Stakeholder 2",
     "it2@risk-assignment.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserBusinessStakeholder = await createUser(
     "Business Stakeholder 1",
     "biz1@risk-assignment.test",
-    "BUSINESS_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserBusinessStakeholder2 = await createUser(
     "Business Stakeholder 2",
     "biz2@risk-assignment.test",
-    "BUSINESS_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@risk-assignment.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserOrg2IT = await createUser(
     "IT Stakeholder Org2",
     "it@risk-assignment-org2.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg2.id
   );
 
@@ -530,8 +530,10 @@ describe("Story 4.6: Risk Assignment", () => {
       expect(result.ITOwner).toBeNull();
     });
 
-    it("AC15: should deny SECURITY_ENGINEER from reassigning", async () => {
-      const caller = createCaller(testUserSecurityEngineer);
+    it("AC15: should deny BUSINESS_USER from reassigning", async () => {
+      // Reassignment is a write/assign op; read-only BUSINESS_USER is denied.
+      // (SECURITY_ENGINEER folded into ANALYST, which is a writer and IS allowed.)
+      const caller = createCaller(testUserAuditor);
 
       await expect(
         caller.risk.reassignRisk({
@@ -558,7 +560,7 @@ describe("Story 4.6: Risk Assignment", () => {
       const caller = createCaller(testUserGRCAnalyst);
 
       const result = await caller.user.listUsersWithWorkload({
-        role: "IT_STAKEHOLDER",
+        role: "BUSINESS_USER",
       });
 
       expect(result.length).toBeGreaterThan(0);
@@ -569,7 +571,7 @@ describe("Story 4.6: Risk Assignment", () => {
 
       // Should only include IT_STAKEHOLDER users
       result.forEach((user) => {
-        expect(user.role).toBe("IT_STAKEHOLDER");
+        expect(user.role).toBe("BUSINESS_USER");
       });
     });
 
@@ -577,7 +579,7 @@ describe("Story 4.6: Risk Assignment", () => {
       const caller = createCaller(testUserGRCAnalyst);
 
       const result = await caller.user.listUsersWithWorkload({
-        role: "BUSINESS_STAKEHOLDER",
+        role: "BUSINESS_USER",
       });
 
       expect(result.length).toBeGreaterThan(0);
@@ -585,7 +587,7 @@ describe("Story 4.6: Risk Assignment", () => {
 
       // Should only include BUSINESS_STAKEHOLDER users
       result.forEach((user) => {
-        expect(user.role).toBe("BUSINESS_STAKEHOLDER");
+        expect(user.role).toBe("BUSINESS_USER");
       });
     });
 
@@ -593,7 +595,7 @@ describe("Story 4.6: Risk Assignment", () => {
       const caller = createCaller(testUserGRCAnalyst);
 
       const result = await caller.user.listUsersWithWorkload({
-        role: "IT_STAKEHOLDER",
+        role: "BUSINESS_USER",
       });
 
       // Verify ascending order by workload
@@ -608,7 +610,7 @@ describe("Story 4.6: Risk Assignment", () => {
       const caller = createCaller(testUserGRCAnalyst);
 
       const result = await caller.user.listUsersWithWorkload({
-        role: "IT_STAKEHOLDER",
+        role: "BUSINESS_USER",
       });
 
       // testUserOrg2IT should not be in results

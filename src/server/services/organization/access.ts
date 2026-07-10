@@ -12,10 +12,13 @@ import type { PrismaClient } from "@prisma/client";
 
 /**
  * Resolve the role a user would have in a given organization, or `null` if they
- * may not access it.
+ * may not access it. (Role Consolidation Epic 2 — two axes.)
  *
- * - A member's role comes from their `OrganizationMembership` for that org.
- * - A platform admin may access any existing organization, acting as ORG_ADMIN.
+ * - Staff carry `User.platformRole` (ANALYST/MANAGER/ADMINISTRATOR) which applies
+ *   across EVERY existing organization. `isPlatformAdmin` is the legacy equivalent
+ *   (→ ADMINISTRATOR) honored until the data migration populates platformRole.
+ * - Otherwise the user is an org-bound Business User: a membership for that org
+ *   grants access (its role during migration; BUSINESS_USER once the column drops).
  * - Everyone else gets `null` (no access).
  */
 export async function resolveActiveRole(
@@ -23,23 +26,27 @@ export async function resolveActiveRole(
   userId: string,
   organizationId: string,
 ): Promise<UserRole | null> {
-  const membership = await db.organizationMembership.findUnique({
-    where: { userId_organizationId: { userId, organizationId } },
-    select: { role: true },
-  });
-  if (membership) return membership.role;
-
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { isPlatformAdmin: true },
+    select: { platformRole: true },
   });
-  if (user?.isPlatformAdmin) {
+
+  // Staff (platform-scoped) authority applies to every existing organization.
+  if (user?.platformRole) {
     const org = await db.organization.findUnique({
       where: { id: organizationId },
       select: { id: true },
     });
-    if (org) return UserRole.ORG_ADMIN;
+    return org ? user.platformRole : null;
   }
+
+  // Org-bound Business User: membership EXISTENCE implies the BUSINESS_USER role
+  // (role is not stored on the membership — the user is a read-only org viewer).
+  const membership = await db.organizationMembership.findUnique({
+    where: { userId_organizationId: { userId, organizationId } },
+    select: { id: true },
+  });
+  if (membership) return UserRole.BUSINESS_USER;
 
   return null;
 }
@@ -54,10 +61,11 @@ export async function listAccessibleOrganizations(
 ): Promise<Array<{ id: string; name: string }>> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { isPlatformAdmin: true },
+    select: { platformRole: true },
   });
 
-  if (user?.isPlatformAdmin) {
+  // Staff (platformRole set) reach every active org; Business Users see only theirs.
+  if (user?.platformRole) {
     return db.organization.findMany({
       where: { active: true },
       select: { id: true, name: true },

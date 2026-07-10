@@ -107,7 +107,7 @@ export function RiskAssessmentsListContent() {
 
   // Story 3.3: Check if user can assign (ORG_ADMIN or CISO)
   const canAssign = useMemo(() => {
-    const allowedRoles: UserRole[] = [UserRole.ORG_ADMIN, UserRole.CISO];
+    const allowedRoles: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.MANAGER];
     return currentUserRole && allowedRoles.includes(currentUserRole);
   }, [currentUserRole]);
 

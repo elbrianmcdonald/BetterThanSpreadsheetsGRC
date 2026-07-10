@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 
 import { UserRole, VendorAssessmentStatus } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -76,11 +77,7 @@ import { VendorRiskTierBadge } from "@/components/vendor";
 /**
  * Roles that can create assessments
  */
-const ASSESSMENT_MANAGE_ROLES = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
-];
+const ASSESSMENT_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 /**
  * Assessment data shape from the list query

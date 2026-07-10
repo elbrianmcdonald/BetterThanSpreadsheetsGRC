@@ -579,7 +579,7 @@ function EditableAssessmentDetails({ project }: { project: ProjectData }) {
   const userRole = session?.user?.role as UserRole | undefined;
   const userId = session?.user?.id;
 
-  const isAdmin = userRole === UserRole.ORG_ADMIN;
+  const isAdmin = userRole === UserRole.ADMINISTRATOR;
   const isAssignee = project.assigneeId === userId;
   const canEdit =
     project.status === "IN_PROGRESS" && (isAdmin || isAssignee);
@@ -851,8 +851,8 @@ function WorkflowActions({ project }: { project: ProjectData }) {
   const userRole = session?.user?.role as UserRole | undefined;
   const userId = session?.user?.id;
 
-  const isAdmin = userRole === UserRole.ORG_ADMIN;
-  const isCiso = userRole === UserRole.CISO;
+  const isAdmin = userRole === UserRole.ADMINISTRATOR;
+  const isCiso = userRole === UserRole.MANAGER;
   const isAssignee = project.assigneeId === userId;
   const riskCount = project.discoveredRisks?.length ?? 0;
 
@@ -1013,7 +1013,7 @@ function CommentsTab({ projectId }: { projectId: string }) {
   const [draft, setDraft] = useState("");
   const userId = session?.user?.id;
   const userRole = session?.user?.role as UserRole | undefined;
-  const isAdmin = userRole === UserRole.ORG_ADMIN;
+  const isAdmin = userRole === UserRole.ADMINISTRATOR;
 
   const { data: comments, isLoading } = api.riskAssessmentProject.listComments.useQuery({
     projectId,

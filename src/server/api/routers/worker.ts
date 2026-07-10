@@ -23,8 +23,8 @@ import { getJobHistory, JobType, getRegisteredProcessors } from "@/server/worker
  * Roles that can view worker metrics
  */
 const CAN_VIEW_WORKER_METRICS: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
 ];
 
 export const workerRouter = createTRPCRouter({

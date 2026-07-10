@@ -63,7 +63,7 @@ beforeAll(async () => {
     id: userIdGRC,
     email: `grc-analyst-risk-filter-${userIdGRC.slice(0, 8)}@test.com`,
     name: "GRC Analyst for Risk Filter Test",
-    role: "GRC_ANALYST",
+    role: "ANALYST",
     organizationId: testOrg.id,
   };
 
@@ -72,7 +72,8 @@ beforeAll(async () => {
       id: testUserGRC.id,
       email: testUserGRC.email,
       name: testUserGRC.name,
-      role: testUserGRC.role,
+      // Role Consolidation Epic 2: staff role → platformRole.
+      platformRole: testUserGRC.role,
       organizationId: testUserGRC.organizationId,
       updatedAt: new Date(),
     },
@@ -83,7 +84,7 @@ beforeAll(async () => {
     id: userIdIT,
     email: `it-owner-risk-filter-${userIdIT.slice(0, 8)}@test.com`,
     name: "IT Stakeholder for Risk Filter Test",
-    role: "IT_STAKEHOLDER",
+    role: "BUSINESS_USER",
     organizationId: testOrg.id,
   };
 
@@ -92,7 +93,7 @@ beforeAll(async () => {
       id: testUserIT.id,
       email: testUserIT.email,
       name: testUserIT.name,
-      role: testUserIT.role,
+      // Role Consolidation Epic 2: Business User → null platformRole (no role column).
       organizationId: testUserIT.organizationId,
       updatedAt: new Date(),
     },
@@ -103,7 +104,7 @@ beforeAll(async () => {
     id: userIdBusiness,
     email: `business-owner-risk-filter-${userIdBusiness.slice(0, 8)}@test.com`,
     name: "Business Stakeholder for Risk Filter Test",
-    role: "BUSINESS_STAKEHOLDER",
+    role: "BUSINESS_USER",
     organizationId: testOrg.id,
   };
 
@@ -112,7 +113,7 @@ beforeAll(async () => {
       id: testUserBusiness.id,
       email: testUserBusiness.email,
       name: testUserBusiness.name,
-      role: testUserBusiness.role,
+      // Role Consolidation Epic 2: Business User → null platformRole (no role column).
       organizationId: testUserBusiness.organizationId,
       updatedAt: new Date(),
     },

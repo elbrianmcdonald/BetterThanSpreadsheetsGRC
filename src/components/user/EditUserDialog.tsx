@@ -29,7 +29,7 @@ export function EditUserDialog({
 }: EditUserDialogProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<UserRole>(UserRole.AUDITOR);
+  const [role, setRole] = useState<UserRole>(UserRole.BUSINESS_USER);
   // Story 7.0.4: Business Unit state (AC6)
   const [businessUnitId, setBusinessUnitId] = useState<string | null>(null);
   // Admin password change

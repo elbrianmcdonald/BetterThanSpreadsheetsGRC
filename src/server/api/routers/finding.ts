@@ -23,6 +23,7 @@ import {
   organizationProcedure,
   requireRole,
 } from "@/server/api/trpc";
+import { READ_ROLES, WRITE_ROLES, ADMIN_ROLES } from "@/lib/auth/roles";
 import { generateIdentifier } from "@/server/services/identifierService";
 import { createAuditLog } from "@/server/services/audit-log.service";
 import {
@@ -49,11 +50,7 @@ import { PUBLISHED_FINDINGS_AND } from "@/server/services/findingVisibility";
  * - GRC Analyst
  * - Org Admin
  */
-const FINDING_CREATE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const FINDING_CREATE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Roles that can triage findings (Story 7.3 AC29)
@@ -61,11 +58,7 @@ const FINDING_CREATE_ROLES = [
  * - GRC Analyst
  * - Org Admin
  */
-const FINDING_TRIAGE_ROLES = [
-  UserRole.SECURITY_ENGINEER,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const FINDING_TRIAGE_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /**
  * Create Finding Input Schema (Story 7.2 AC24)
@@ -1763,7 +1756,7 @@ export const findingRouter = createTRPCRouter({
    * AC2: Updates slaBreached = true for overdue findings
    */
   markSlaBreach: organizationProcedure
-    .use(requireRole([UserRole.ORG_ADMIN]))
+    .use(requireRole(ADMIN_ROLES))
     .mutation(async ({ ctx }) => {
       const now = new Date();
 
@@ -1877,14 +1870,7 @@ export const findingRouter = createTRPCRouter({
    * Generates a CSV file with all findings matching the current filters.
    */
   exportFindings: organizationProcedure
-    .use(
-      requireRole([
-        UserRole.GRC_ANALYST,
-        UserRole.SECURITY_ENGINEER,
-        UserRole.ORG_ADMIN,
-        UserRole.AUDITOR,
-      ])
-    )
+    .use(requireRole(READ_ROLES))
     .input(
       z.object({
         status: z.array(z.nativeEnum(FindingStatus)).optional(),

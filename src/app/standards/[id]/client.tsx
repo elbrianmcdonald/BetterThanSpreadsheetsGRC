@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,11 +102,7 @@ import {
 import { BulkControlUpload } from "@/components/standards/BulkControlUpload";
 
 /** Roles that can manage standards */
-const CAN_MANAGE_STANDARD_ROLES: UserRole[] = [
-  UserRole.CISO,
-  UserRole.GRC_ANALYST,
-  UserRole.ORG_ADMIN,
-];
+const CAN_MANAGE_STANDARD_ROLES: UserRole[] = WRITE_ROLES;
 
 /** Status badge configuration */
 const statusConfig: Record<StandardStatus, { color: string; label: string }> = {

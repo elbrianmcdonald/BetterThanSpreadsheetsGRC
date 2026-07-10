@@ -57,12 +57,16 @@ beforeAll(async () => {
     role: UserRole,
     orgId: string
   ) => {
+    // Role Consolidation Epic 2: staff carry platformRole; Business Users have a
+    // null platformRole. `role` is attached to the returned JS object so the
+    // caller can still build session.user.role.
+    const isStaff = role !== "BUSINESS_USER";
     const user = await db.user.create({
       data: {
         id: randomUUID(),
         name,
         email,
-        role,
+        platformRole: isStaff ? role : null,
         organizationId: orgId,
         updatedAt: new Date(),
       },
@@ -70,7 +74,7 @@ beforeAll(async () => {
     return {
       id: user.id,
       email: user.email!,
-      role: user.role,
+      role,
       organizationId: user.organizationId,
       name: user.name!,
       assignedFrameworks: user.assignedFrameworks,
@@ -80,35 +84,35 @@ beforeAll(async () => {
   testUserSecurityEngineer = await createUser(
     "Security Engineer",
     "security@risk-finding-docs.test",
-    "SECURITY_ENGINEER",
+    "ANALYST",
     testOrg.id
   );
 
   testUserGRCAnalyst = await createUser(
     "GRC Analyst",
     "grc@risk-finding-docs.test",
-    "GRC_ANALYST",
+    "ANALYST",
     testOrg.id
   );
 
   testUserOrgAdmin = await createUser(
     "Org Admin",
     "admin@risk-finding-docs.test",
-    "ORG_ADMIN",
+    "ADMINISTRATOR",
     testOrg.id
   );
 
   testUserITStakeholder = await createUser(
     "IT Stakeholder",
     "it@risk-finding-docs.test",
-    "IT_STAKEHOLDER",
+    "BUSINESS_USER",
     testOrg.id
   );
 
   testUserAuditor = await createUser(
     "Auditor",
     "auditor@risk-finding-docs.test",
-    "AUDITOR",
+    "BUSINESS_USER",
     testOrg.id
   );
 });
@@ -346,7 +350,7 @@ SELECT * FROM users WHERE id = '\${userInput}'
           id: randomUUID(),
           name: "Other User",
           email: "other@risk-finding-docs.test",
-          role: "SECURITY_ENGINEER",
+          platformRole: "ANALYST",
           organizationId: otherOrg.id,
           updatedAt: new Date(),
         },
@@ -355,7 +359,7 @@ SELECT * FROM users WHERE id = '\${userInput}'
       const caller = createCaller({
         id: otherUser.id,
         email: otherUser.email!,
-        role: otherUser.role,
+        role: "ANALYST",
         organizationId: otherUser.organizationId,
         name: otherUser.name!,
         assignedFrameworks: otherUser.assignedFrameworks,

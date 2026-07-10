@@ -55,14 +55,14 @@ describe('Session Callback Unit Tests', () => {
       id: 'user-123',
       email: 'test@example.com',
       name: 'Test User',
-      role: 'AUDITOR' as UserRole,
+      role: 'BUSINESS_USER' as UserRole,
       organizationId: 'org-456',
     };
 
     const result = sessionCallback({ session, user });
 
     expect(result.user.id).toBe('user-123');
-    expect(result.user.role).toBe('AUDITOR');
+    expect(result.user.role).toBe('BUSINESS_USER');
     expect(result.user.organizationId).toBe('org-456');
     expect(result.user.email).toBe('test@example.com');
     expect(result.user.name).toBe('Test User');
@@ -80,13 +80,13 @@ describe('Session Callback Unit Tests', () => {
       id: 'user-789',
       email: 'analyst@example.com',
       name: 'GRC Analyst',
-      role: 'GRC_ANALYST' as UserRole,
+      role: 'ANALYST' as UserRole,
       organizationId: 'org-123',
     };
 
     const result = sessionCallback({ session, user });
 
-    expect(result.user.role).toBe('GRC_ANALYST');
+    expect(result.user.role).toBe('ANALYST');
     expect(result.user.organizationId).toBe('org-123');
   });
 
@@ -102,13 +102,13 @@ describe('Session Callback Unit Tests', () => {
       id: 'user-admin',
       email: 'admin@example.com',
       name: 'Organization Admin',
-      role: 'ORG_ADMIN' as UserRole,
+      role: 'ADMINISTRATOR' as UserRole,
       organizationId: 'org-999',
     };
 
     const result = sessionCallback({ session, user });
 
-    expect(result.user.role).toBe('ORG_ADMIN');
+    expect(result.user.role).toBe('ADMINISTRATOR');
     expect(result.user.organizationId).toBe('org-999');
   });
 
@@ -124,7 +124,7 @@ describe('Session Callback Unit Tests', () => {
       id: 'user-preserve',
       email: 'preserve@example.com',
       name: 'Preserve Test',
-      role: 'AUDITOR' as UserRole,
+      role: 'BUSINESS_USER' as UserRole,
       organizationId: 'org-preserve',
     };
 
@@ -136,7 +136,7 @@ describe('Session Callback Unit Tests', () => {
 
     // New fields should be added
     expect(result.user.id).toBe('user-preserve');
-    expect(result.user.role).toBe('AUDITOR');
+    expect(result.user.role).toBe('BUSINESS_USER');
     expect(result.user.organizationId).toBe('org-preserve');
   });
 
@@ -152,14 +152,14 @@ describe('Session Callback Unit Tests', () => {
       id: 'user-null',
       email: null,
       name: null,
-      role: 'AUDITOR' as UserRole,
+      role: 'BUSINESS_USER' as UserRole,
       organizationId: 'org-null',
     };
 
     const result = sessionCallback({ session, user });
 
     expect(result.user.id).toBe('user-null');
-    expect(result.user.role).toBe('AUDITOR');
+    expect(result.user.role).toBe('BUSINESS_USER');
     expect(result.user.organizationId).toBe('org-null');
     expect(result.user.email).toBeNull();
     expect(result.user.name).toBeNull();
@@ -167,13 +167,13 @@ describe('Session Callback Unit Tests', () => {
 
   it('should handle all UserRole enum values', () => {
     const roles: UserRole[] = [
-      'ORG_ADMIN',
-      'GRC_ANALYST',
-      'SECURITY_ENGINEER',
-      'CISO',
-      'IT_STAKEHOLDER',
-      'BUSINESS_STAKEHOLDER',
-      'AUDITOR',
+      'ADMINISTRATOR',
+      'ANALYST',
+      'ANALYST',
+      'MANAGER',
+      'BUSINESS_USER',
+      'BUSINESS_USER',
+      'BUSINESS_USER',
     ];
 
     roles.forEach((role, index) => {

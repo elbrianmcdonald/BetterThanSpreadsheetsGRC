@@ -90,31 +90,36 @@ beforeAll(async () => {
 
   // Create test user
   const testEmail = `table-user-${randomUUID().slice(0, 8)}@test.com`;
-  testUser = await db.user.create({
-    data: {
-      id: testUserId,
-      name: "Table Test User",
-      email: testEmail,
-      role: "GRC_ANALYST",
-      organizationId: testOrg.id,
-      assignedFrameworks: [],
-      updatedAt: new Date(),
-    },
-  });
+  testUser = {
+    ...(await db.user.create({
+      data: {
+        id: testUserId,
+        name: "Table Test User",
+        email: testEmail,
+        platformRole: "ANALYST",
+        organizationId: testOrg.id,
+        assignedFrameworks: [],
+        updatedAt: new Date(),
+      },
+    })),
+    role: "ANALYST",
+  };
 
   // Create auditor user for permission tests
   const auditorEmail = `table-auditor-${randomUUID().slice(0, 8)}@test.com`;
-  auditorUser = await db.user.create({
-    data: {
-      id: testAuditorId,
-      name: "Table Auditor",
-      email: auditorEmail,
-      role: "AUDITOR",
-      organizationId: testOrg.id,
-      assignedFrameworks: [],
-      updatedAt: new Date(),
-    },
-  });
+  auditorUser = {
+    ...(await db.user.create({
+      data: {
+        id: testAuditorId,
+        name: "Table Auditor",
+        email: auditorEmail,
+        organizationId: testOrg.id,
+        assignedFrameworks: [],
+        updatedAt: new Date(),
+      },
+    })),
+    role: "BUSINESS_USER",
+  };
 
   // Find an existing control domain
   const existingDomain = await db.controlDomain.findFirst({

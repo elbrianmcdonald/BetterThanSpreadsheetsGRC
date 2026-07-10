@@ -56,9 +56,9 @@ import { PersonPicker } from "@/components/person/PersonPicker";
 import { validateFile } from "@/utils/file-validation";
 
 const CAN_MUTATE: UserRole[] = [
-  UserRole.ORG_ADMIN,
-  UserRole.GRC_ANALYST,
-  UserRole.SECURITY_ENGINEER,
+  UserRole.ADMINISTRATOR,
+  UserRole.ANALYST,
+  UserRole.ANALYST,
 ];
 
 const ARTIFACT_TYPE_OPTIONS: { value: EvidenceArtifactType; label: string }[] = [
