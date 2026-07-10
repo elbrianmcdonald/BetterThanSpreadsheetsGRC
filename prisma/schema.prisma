@@ -1986,23 +1986,13 @@ enum Severity {
 }
 
 enum UserRole {
-  // Consolidated four-role model (Role Consolidation — Epic 1).
+  // Consolidated four-role model (Role Consolidation).
   // Staff (platform-scoped, stored on User.platformRole):
   ADMINISTRATOR
   MANAGER
   ANALYST
   // Org-bound (implied by OrganizationMembership; not stored):
   BUSINESS_USER
-
-  // --- Legacy values (retained during expand phase; dropped in Epic 3 migration) ---
-  ORG_ADMIN
-  GRC_MANAGER
-  GRC_ANALYST
-  SECURITY_ENGINEER
-  CISO
-  IT_STAKEHOLDER
-  BUSINESS_STAKEHOLDER
-  AUDITOR
 }
 
 enum RiskEvidenceLinkType {
