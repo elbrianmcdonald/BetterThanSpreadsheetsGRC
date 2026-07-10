@@ -11,6 +11,7 @@
 
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { UserRole } from "@prisma/client";
 import { AppLayout } from "@/components/layout";
 import { QuestionnaireBuilderClient } from "./client";
@@ -18,10 +19,7 @@ import { QuestionnaireBuilderClient } from "./client";
 /**
  * Roles that can create questionnaire templates
  */
-const TEMPLATE_MANAGE_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.ANALYST,
-];
+const TEMPLATE_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 export const metadata = {
   title: "Create Questionnaire Template | BetterThanSpreadsheetsGRC",

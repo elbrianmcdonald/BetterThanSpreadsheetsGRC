@@ -50,6 +50,7 @@ import {
 } from "@prisma/client";
 
 import { api } from "@/trpc/react";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils";
 import { getScaleDefinition } from "@/lib/maturity-scales";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
@@ -222,11 +223,7 @@ const CONFIDENCE_OPTIONS = [
   { value: "HIGH", label: "High", color: "bg-green-100 text-green-700" },
 ];
 
-const CAN_MANAGE_ROLES: UserRole[] = [
-  UserRole.MANAGER,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const CAN_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 // =============================================================================
 // Helper Functions

@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 
 import { UserRole, VendorStatus, VendorRiskTier } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -97,7 +98,7 @@ import {
 /**
  * Roles that can manage vendors
  */
-const VENDOR_MANAGE_ROLES: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.ANALYST];
+const VENDOR_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 interface VendorDetailContentProps {
   vendor: {

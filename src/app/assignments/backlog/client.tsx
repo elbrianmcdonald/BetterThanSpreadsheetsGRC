@@ -37,6 +37,7 @@ import { UserRole, UnifiedAssessmentType } from "@prisma/client";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,28 +86,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-/** Roles that can access the backlog */
-const BACKLOG_ACCESS_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.MANAGER,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+/** Roles that can access the backlog (staff work queue → write tier) */
+const BACKLOG_ACCESS_ROLES: UserRole[] = WRITE_ROLES;
 
-/** Roles that can self-assign */
-const SELF_ASSIGN_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.MANAGER,
-  UserRole.ANALYST,
-];
+/** Roles that can self-assign (assign = write) */
+const SELF_ASSIGN_ROLES: UserRole[] = WRITE_ROLES;
 
-/** Roles that can assign to others */
-const ADMIN_ASSIGN_ROLES: UserRole[] = [
-  UserRole.ADMINISTRATOR,
-  UserRole.MANAGER,
-  UserRole.MANAGER,
-  UserRole.ANALYST,
-];
+/** Roles that can assign to others (assign = write) */
+const ADMIN_ASSIGN_ROLES: UserRole[] = WRITE_ROLES;
 
 /** Assessment type configuration */
 const assessmentTypeConfig: Record<UnifiedAssessmentType, { label: string; icon: React.ElementType; color: string }> = {
@@ -181,7 +168,7 @@ export function BacklogClient() {
   const canAccessBacklog = userRole && BACKLOG_ACCESS_ROLES.includes(userRole);
   const canSelfAssign = userRole && SELF_ASSIGN_ROLES.includes(userRole);
   const canAssignOthers = userRole && ADMIN_ASSIGN_ROLES.includes(userRole);
-  const canCreateTask = userRole && ([UserRole.ADMINISTRATOR, UserRole.MANAGER, UserRole.MANAGER, UserRole.ANALYST] as UserRole[]).includes(userRole);
+  const canCreateTask = userRole && (WRITE_ROLES as UserRole[]).includes(userRole);
 
   // Fetch backlog data
   const { data, isLoading, error } = api.assessmentTask.getUnifiedBacklog.useQuery(

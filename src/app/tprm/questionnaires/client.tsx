@@ -27,6 +27,7 @@ import {
 import toast from "react-hot-toast";
 
 import { UserRole } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -54,10 +55,7 @@ import { PageHeader, StatTile } from "@/components/layout";
 /**
  * Roles that can create/edit questionnaire templates
  */
-const TEMPLATE_MANAGE_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.ANALYST,
-];
+const TEMPLATE_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 /**
  * Template type from API

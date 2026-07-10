@@ -8,6 +8,7 @@ import { UserRole } from "@prisma/client";
 import toast from "react-hot-toast";
 
 import { api } from "@/trpc/react";
+import { WRITE_ROLES as WRITE_ROLE_TIER } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,8 @@ import { TagItemsDialog } from "@/components/enterprise-risk/TagItemsDialog";
 import { calculateInherentScore, isScoreResult } from "@/lib/matrix/scoring";
 import { score2D, thresholdForScore } from "@/lib/matrix/heatmap";
 
-const WRITE_ROLES: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST];
+/** Staff write tier — gates edit/review of enterprise risks. Source: @/lib/auth/roles. */
+const WRITE_ROLES: UserRole[] = [...WRITE_ROLE_TIER];
 
 function TrendChart({ snapshots }: { snapshots: Array<{ score: unknown; capturedAt: Date }> }) {
   const valid = snapshots

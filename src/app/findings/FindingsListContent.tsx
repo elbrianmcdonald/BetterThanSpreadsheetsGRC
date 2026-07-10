@@ -63,7 +63,7 @@ import {
 import toast from "react-hot-toast";
 import { formatDistanceToNow, format } from "date-fns";
 
-import { UserRole, FindingSource, FindingStatus, Severity } from "@prisma/client";
+import { FindingSource, FindingStatus, Severity } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -92,6 +92,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/trpc/react";
 import { useHasRole } from "@/hooks/useHasRole";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 
 import {
@@ -110,23 +111,14 @@ const COLUMN_VISIBILITY_KEY = "findings-table-column-visibility";
 const COLUMN_ORDER_KEY = "findings-table-column-order";
 
 /**
- * Roles that can create findings
+ * Roles that can create findings (any mutation → write tier)
  */
-const FINDING_CREATE_ROLES = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const FINDING_CREATE_ROLES = WRITE_ROLES;
 
 /**
- * Roles that can export findings
+ * Roles that can export findings (read tier — Business Users may export)
  */
-const FINDING_EXPORT_ROLES = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-  UserRole.BUSINESS_USER,
-];
+const FINDING_EXPORT_ROLES = READ_ROLES;
 
 /**
  * Finding data shape from the list query (expanded)

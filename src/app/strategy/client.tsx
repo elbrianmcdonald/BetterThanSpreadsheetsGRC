@@ -30,6 +30,7 @@ import { UserRole, StrategyStatus } from "@prisma/client";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,11 +71,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 /** Roles that can create/manage strategies (FR58) */
-const CAN_MANAGE_STRATEGY_ROLES: UserRole[] = [
-  UserRole.MANAGER,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const CAN_MANAGE_STRATEGY_ROLES: UserRole[] = WRITE_ROLES;
 
 /** Status badge configuration */
 const statusConfig: Record<

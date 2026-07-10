@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 
 import { UserRole, ResponseScore, QuestionType } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import {
   FindingMatrixScoringSection,
   buildScoringSubmitFields,
@@ -73,11 +74,7 @@ import { api } from "@/trpc/react";
 /**
  * Roles that can create findings from responses
  */
-const FINDING_CREATE_ROLES: UserRole[] = [
-  UserRole.ADMINISTRATOR,
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-];
+const FINDING_CREATE_ROLES: UserRole[] = WRITE_ROLES;
 
 interface QuestionnaireResponsesClientProps {
   questionnaireId: string;

@@ -16,7 +16,7 @@
 
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
-import { UserRole } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreateFindingForm } from "@/components/findings/CreateFindingForm";
@@ -28,16 +28,9 @@ export const metadata = {
 };
 
 /**
- * Roles that can create findings (AC29)
- * - Security Engineer
- * - GRC Analyst
- * - Org Admin
+ * Roles that can create findings (AC29) — any mutation → write tier.
  */
-const FINDING_CREATE_ROLES = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+const FINDING_CREATE_ROLES = WRITE_ROLES;
 
 export default async function CreateFindingPage({
   searchParams,

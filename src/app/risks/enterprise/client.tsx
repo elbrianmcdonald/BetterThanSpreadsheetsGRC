@@ -8,6 +8,7 @@ import { UserRole } from "@prisma/client";
 import toast from "react-hot-toast";
 
 import { api } from "@/trpc/react";
+import { WRITE_ROLES as WRITE_ROLE_TIER } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { MatrixSelector } from "@/components/assessment/MatrixSelector";
 import { RiskScoreHeatmap, type HeatmapItem } from "@/components/risk/RiskScoreHeatmap";
 
-const WRITE_ROLES: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST];
+/** Staff write tier — gates create/edit of enterprise risks. Source: @/lib/auth/roles. */
+const WRITE_ROLES: UserRole[] = [...WRITE_ROLE_TIER];
 
 function Sparkline({ points }: { points: Array<{ score: number | null; capturedAt: Date }> }) {
   const valid = points.filter((p) => p.score !== null) as Array<{ score: number; capturedAt: Date }>;

@@ -13,6 +13,7 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { UserRole } from "@prisma/client";
 import { api } from "@/trpc/server";
 import { AppLayout } from "@/components/layout";
@@ -23,7 +24,7 @@ import { Building2 } from "lucide-react";
 /**
  * Roles that can edit vendors
  */
-const VENDOR_MANAGE_ROLES = [UserRole.ADMINISTRATOR, UserRole.ANALYST];
+const VENDOR_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 export async function generateMetadata({
   params,

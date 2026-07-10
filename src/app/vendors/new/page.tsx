@@ -12,6 +12,7 @@
 
 import { auth } from "@/server/auth";
 import { requireRole } from "@/lib/auth/route-protection";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { UserRole } from "@prisma/client";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +27,7 @@ export const metadata = {
 /**
  * Roles that can create vendors
  */
-const VENDOR_MANAGE_ROLES = [UserRole.ADMINISTRATOR, UserRole.ANALYST];
+const VENDOR_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 export default async function CreateVendorPage() {
   const session = await auth();

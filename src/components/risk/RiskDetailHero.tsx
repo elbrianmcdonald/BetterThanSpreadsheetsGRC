@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { RiskStatus, UserRole, Severity } from "@prisma/client";
 
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { SeverityBadge } from "@/components/risk/SeverityBadge";
 import { StatusBadge } from "@/components/risk/StatusBadge";
@@ -62,26 +63,17 @@ interface RiskDetailHeroProps {
   className?: string;
 }
 
-/** Roles that can edit risks */
-const CAN_EDIT_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+/** Roles that can edit risks (write tier) */
+const CAN_EDIT_ROLES: UserRole[] = WRITE_ROLES;
 
-/** Roles that can change risk status */
-const CAN_CHANGE_STATUS_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-  UserRole.BUSINESS_USER,
-];
+/**
+ * Roles that can change risk status (write tier). BUSINESS_USER owners retain
+ * their owner-action pathway via the explicit check below.
+ */
+const CAN_CHANGE_STATUS_ROLES: UserRole[] = WRITE_ROLES;
 
-/** Roles that can delete risks */
-const CAN_DELETE_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+/** Roles that can delete risks (write tier) */
+const CAN_DELETE_ROLES: UserRole[] = WRITE_ROLES;
 
 export function RiskDetailHero({
   risk,

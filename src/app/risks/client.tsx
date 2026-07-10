@@ -57,6 +57,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 
 import { api } from "@/trpc/react";
+import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -96,27 +97,17 @@ const COLUMN_VISIBILITY_KEY = "risk-table-column-visibility";
 const COLUMN_ORDER_KEY = "risk-table-column-order";
 
 /**
- * Story 6.3: Roles that can create risks directly (without assessment)
- * Only ORG_ADMIN can create risks directly - all other users must use the
- * assessment workflow to discover and document risks.
+ * Story 6.3: Roles that can create risks directly (without assessment).
+ * Direct creation is a write action (write tier) — mirrors the server gate on
+ * /risks/new (RISK_CREATE_ROLES). Single source of truth: @/lib/auth/roles.
  */
-const CAN_CREATE_RISK_ROLES: UserRole[] = [
-  UserRole.ADMINISTRATOR,
-];
+const CAN_CREATE_RISK_ROLES: UserRole[] = [...WRITE_ROLES];
 
-/** Story 5.6 AC18: Roles that can export risks */
-const CAN_EXPORT_RISK_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-  UserRole.BUSINESS_USER,
-];
+/** Story 5.6 AC18: Roles that can export risks (read tier — Business Users may export). */
+const CAN_EXPORT_RISK_ROLES: UserRole[] = [...READ_ROLES];
 
-/** Roles that can assign risk assessments to other users */
-const CAN_ASSIGN_ASSESSMENT_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+/** Roles that can assign risk assessments to other users (assign = write tier). */
+const CAN_ASSIGN_ASSESSMENT_ROLES: UserRole[] = [...WRITE_ROLES];
 
 /** Severity badge variants */
 const severityConfig = {
@@ -409,13 +400,8 @@ export function RiskRegistryClient() {
   // Check if user can assign risk assessments
   const canAssignAssessments = userRole && CAN_ASSIGN_ASSESSMENT_ROLES.includes(userRole);
 
-  // Story 5.5 AC16-AC18: Check if user can see owner filters
-  const canFilterByOwner = userRole && (
-    userRole === UserRole.ANALYST ||
-    userRole === UserRole.ANALYST ||
-    userRole === UserRole.ADMINISTRATOR ||
-    userRole === UserRole.BUSINESS_USER
-  );
+  // Story 5.5 AC16-AC18: Check if user can see owner filters (read tier)
+  const canFilterByOwner = userRole && CAN_EXPORT_RISK_ROLES.includes(userRole);
 
   // Story 5.6: Export mutation
   const exportMutation = api.risk.exportRisks.useMutation({

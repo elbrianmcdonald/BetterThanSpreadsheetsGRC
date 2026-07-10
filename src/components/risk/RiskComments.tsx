@@ -18,6 +18,7 @@ import { useState } from "react";
 import { UserRole } from "@prisma/client";
 import { MessageSquare, Loader2 } from "lucide-react";
 
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { api } from "@/trpc/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -37,9 +38,10 @@ interface RiskCommentsProps {
 }
 
 /**
- * Roles that cannot add comments (AC42)
+ * Roles that can add comments — commenting is a write action, so BUSINESS_USER
+ * (read-only) is excluded (AC42).
  */
-const NO_COMMENT_ROLES = [UserRole.BUSINESS_USER];
+const CAN_COMMENT_ROLES: UserRole[] = WRITE_ROLES;
 
 export function RiskComments({
   riskId,
@@ -88,7 +90,7 @@ export function RiskComments({
   };
 
   // Determine if user can comment based on role
-  const userCanComment = canComment && !(NO_COMMENT_ROLES as UserRole[]).includes(currentUserRole);
+  const userCanComment = canComment && CAN_COMMENT_ROLES.includes(currentUserRole);
 
   return (
     <Card>

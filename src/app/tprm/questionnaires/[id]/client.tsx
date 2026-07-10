@@ -31,6 +31,7 @@ import {
 import toast from "react-hot-toast";
 
 import { QuestionType, UserRole } from "@prisma/client";
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -72,10 +73,7 @@ import { useHasRole } from "@/hooks/useHasRole";
 /**
  * Roles that can manage questionnaire templates
  */
-const TEMPLATE_MANAGE_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.ANALYST,
-];
+const TEMPLATE_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 interface QuestionnaireDetailClientProps {
   templateId: string;

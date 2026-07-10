@@ -41,6 +41,7 @@ import {
   VendorAssessmentRecommendation,
   QuestionnaireStatus,
 } from "@prisma/client";
+import { WRITE_ROLES, APPROVE_ROLES } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -99,19 +100,12 @@ import { ExecutiveSummaryTab } from "@/components/deliverable/ExecutiveSummaryTa
 /**
  * Roles that can manage assessments
  */
-const ASSESSMENT_MANAGE_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-];
+const ASSESSMENT_MANAGE_ROLES: UserRole[] = WRITE_ROLES;
 
 /**
  * Roles that can complete assessments
  */
-const ASSESSMENT_COMPLETE_ROLES = [
-  UserRole.ADMINISTRATOR,
-  UserRole.ANALYST,
-];
+const ASSESSMENT_COMPLETE_ROLES: UserRole[] = APPROVE_ROLES;
 
 interface AssessmentDetailClientProps {
   assessmentId: string;

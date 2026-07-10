@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
+import { APPROVE_ROLES } from "@/lib/auth/roles";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,8 +34,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-/** Manager roles that can view pending approvals */
-const MANAGER_ROLES: UserRole[] = [UserRole.ADMINISTRATOR, UserRole.MANAGER];
+/** Roles that can view/act on the pending-approval queue (approve tier) */
+const MANAGER_ROLES: UserRole[] = APPROVE_ROLES;
 
 interface PendingApprovalsSectionProps {
   userRole: UserRole;

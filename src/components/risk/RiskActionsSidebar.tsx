@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { RiskStatus, UserRole } from "@prisma/client";
 
+import { WRITE_ROLES } from "@/lib/auth/roles";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -58,18 +59,11 @@ interface RiskActionsSidebarProps {
   className?: string;
 }
 
-/** Roles that can assign risks (AC58) */
-const CAN_ASSIGN_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+/** Roles that can assign risks (AC58) — assign is a write action */
+const CAN_ASSIGN_ROLES: UserRole[] = WRITE_ROLES;
 
-/** Roles that can close risks (AC62) */
-const CAN_CLOSE_ROLES: UserRole[] = [
-  UserRole.ANALYST,
-  UserRole.ADMINISTRATOR,
-];
+/** Roles that can close risks (AC62) — write tier */
+const CAN_CLOSE_ROLES: UserRole[] = WRITE_ROLES;
 
 export function RiskActionsSidebar({
   risk,
@@ -104,7 +98,6 @@ export function RiskActionsSidebar({
   const canChangeStatus =
     userRole &&
     (CAN_ASSIGN_ROLES.includes(userRole) ||
-      userRole === UserRole.BUSINESS_USER ||
       userRole === UserRole.BUSINESS_USER);
 
   // Story 16.7: Can start treatment if user can assign and risk is OPEN
