@@ -910,6 +910,381 @@ export const crosswalkRouter = createTRPCRouter({
     }),
 
   // ===========================================================================
+  // Standards as a crosswalk source
+  // (StandardControlMapping edge table; each Standard is its own source, keyed
+  // by standardId. Same OLIR relationship semantics / StandardMappingType.)
+  // ===========================================================================
+
+  /**
+   * Paginated controls for a single standard's source pane. Same return shape as
+   * listOrgControls / listFrameworkControls so ControlPane renders it unchanged.
+   * Standard controls have no family hierarchy, so `families` is empty.
+   */
+  listStandardControls: organizationProcedure
+    .use(requireRole(CROSSWALK_VIEW_ROLES))
+    .input(
+      z.object({
+        standardId: z.string().min(1),
+        search: z.string().optional(),
+        familyId: z.string().optional(),
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(25),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const orgId = ctx.organizationId!;
+      const standard = await ctx.db.standard.findFirst({
+        where: { id: input.standardId, organizationId: orgId },
+        select: { id: true },
+      });
+      if (!standard) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Standard not found in your organization" });
+      }
+
+      const all = await ctx.db.standardControl.findMany({
+        where: { standardId: input.standardId },
+        select: { id: true, code: true, title: true },
+        orderBy: { sortOrder: "asc" },
+      });
+
+      const search = input.search?.trim().toLowerCase();
+      const filtered = all.filter((c) => {
+        if (search) {
+          return (
+            c.code.toLowerCase().includes(search) ||
+            c.title.toLowerCase().includes(search)
+          );
+        }
+        return true;
+      });
+
+      const total = filtered.length;
+      const start = (input.page - 1) * input.pageSize;
+      const controls = filtered.slice(start, start + input.pageSize).map((c) => ({
+        id: c.id,
+        controlId: c.code,
+        title: c.title,
+        familyId: "(none)",
+      }));
+
+      return {
+        controls,
+        total,
+        page: input.page,
+        pageSize: input.pageSize,
+        families: [] as { id: string; controlId: string; title: string }[],
+      };
+    }),
+
+  /**
+   * Header metadata for a standard → framework workbench.
+   */
+  getStandardTarget: organizationProcedure
+    .use(requireRole(CROSSWALK_VIEW_ROLES))
+    .input(z.object({ standardId: z.string().min(1), targetFrameworkId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const orgId = ctx.organizationId!;
+      const [standard, target] = await Promise.all([
+        ctx.db.standard.findFirst({
+          where: { id: input.standardId, organizationId: orgId },
+          select: { id: true, title: true, _count: { select: { Controls: true } } },
+        }),
+        ctx.db.framework.findFirst({
+          where: { id: input.targetFrameworkId, organizationId: orgId },
+          select: { id: true, name: true, code: true, _count: { select: { Control: true } } },
+        }),
+      ]);
+      if (!standard) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Standard not found in your organization" });
+      }
+      if (!target) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Framework not found in your organization" });
+      }
+      const mappingCount = await ctx.db.standardControlMapping.count({
+        where: {
+          StandardControl: { standardId: input.standardId },
+          FrameworkControl: { frameworkId: input.targetFrameworkId },
+        },
+      });
+      return {
+        standard: {
+          id: standard.id,
+          name: standard.title,
+          controlCount: standard._count.Controls,
+        },
+        target: {
+          id: target.id,
+          name: target.name,
+          code: target.code,
+          controlCount: target._count.Control,
+        },
+        mappingCount,
+      };
+    }),
+
+  /**
+   * Existing StandardControlMapping rows for a selected standard control into the
+   * target framework — backs the current-mappings bar (also surfaces mappings
+   * created by the standard's FrameworkMappingsEditor).
+   */
+  listStandardControlMappingsForSource: organizationProcedure
+    .use(requireRole(CROSSWALK_VIEW_ROLES))
+    .input(
+      z.object({
+        standardControlId: z.string().min(1),
+        targetFrameworkId: z.string().min(1),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.db.standardControlMapping.findMany({
+        where: {
+          standardControlId: input.standardControlId,
+          StandardControl: { Standard: { organizationId: ctx.organizationId! } },
+          FrameworkControl: { frameworkId: input.targetFrameworkId },
+        },
+        select: {
+          id: true,
+          mappingType: true,
+          notes: true,
+          createdAt: true,
+          FrameworkControl: { select: { id: true, controlId: true, title: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }),
+
+  /**
+   * Batch-create standard-control → framework-control mappings.
+   */
+  createStandardControlMappings: organizationProcedure
+    .use(requireRole(CROSSWALK_MANAGE_ROLES))
+    .input(
+      z.object({
+        standardControlId: z.string().min(1),
+        frameworkControlIds: z.array(z.string().min(1)).min(1).max(200),
+        mappingType: z.nativeEnum(StandardMappingType).default(StandardMappingType.EQUIVALENT),
+        notes: z.string().max(500).optional().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const orgId = ctx.organizationId!;
+      const targetIds = Array.from(new Set(input.frameworkControlIds));
+
+      const standardControl = await ctx.db.standardControl.findFirst({
+        where: { id: input.standardControlId, Standard: { organizationId: orgId } },
+        select: { id: true },
+      });
+      if (!standardControl) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Standard control not found" });
+      }
+
+      const targets = await ctx.db.control.findMany({
+        where: { id: { in: targetIds }, organizationId: orgId },
+        select: { id: true },
+      });
+      if (targets.length !== targetIds.length) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "One or more target controls not found" });
+      }
+
+      const result = await ctx.db.standardControlMapping.createMany({
+        data: targets.map((t) => ({
+          id: randomUUID(),
+          standardControlId: input.standardControlId,
+          controlId: t.id,
+          mappingType: input.mappingType,
+          notes: input.notes ?? null,
+          createdById: ctx.session!.user.id,
+        })),
+        skipDuplicates: true,
+      });
+
+      if (result.count > 0) {
+        void createAuditLog({
+          organizationId: orgId,
+          userId: ctx.session!.user.id,
+          action: AuditAction.CREATE_MAPPING,
+          entityType: "StandardControlMapping",
+          entityId: input.standardControlId,
+          changes: {
+            after: {
+              standardControlId: input.standardControlId,
+              frameworkControlIds: targetIds,
+              mappingType: input.mappingType,
+              created: result.count,
+            },
+          },
+        });
+      }
+
+      return { created: result.count };
+    }),
+
+  /**
+   * Edit a standard-control mapping's relationship type / notes in place.
+   */
+  updateStandardControlMapping: organizationProcedure
+    .use(requireRole(CROSSWALK_MANAGE_ROLES))
+    .input(
+      z.object({
+        id: z.string().min(1),
+        mappingType: z.nativeEnum(StandardMappingType).optional(),
+        notes: z.string().max(500).optional().nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.standardControlMapping.findFirst({
+        where: {
+          id: input.id,
+          StandardControl: { Standard: { organizationId: ctx.organizationId! } },
+        },
+        select: { id: true, mappingType: true, notes: true },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Mapping not found" });
+      }
+      const updated = await ctx.db.standardControlMapping.update({
+        where: { id: input.id },
+        data: {
+          ...(input.mappingType !== undefined && { mappingType: input.mappingType }),
+          ...(input.notes !== undefined && { notes: input.notes }),
+        },
+        select: {
+          id: true,
+          mappingType: true,
+          notes: true,
+          FrameworkControl: { select: { id: true, controlId: true, title: true } },
+        },
+      });
+      void createAuditLog({
+        organizationId: ctx.organizationId!,
+        userId: ctx.session!.user.id,
+        action: AuditAction.UPDATE_MAPPING,
+        entityType: "StandardControlMapping",
+        entityId: input.id,
+        changes: {
+          before: { mappingType: existing.mappingType, notes: existing.notes },
+          after: { mappingType: updated.mappingType, notes: updated.notes },
+        },
+      });
+      return updated;
+    }),
+
+  /**
+   * Delete a standard-control mapping.
+   */
+  deleteStandardControlMapping: organizationProcedure
+    .use(requireRole(CROSSWALK_MANAGE_ROLES))
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.standardControlMapping.findFirst({
+        where: {
+          id: input.id,
+          StandardControl: { Standard: { organizationId: ctx.organizationId! } },
+        },
+        select: { id: true },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Mapping not found" });
+      }
+      await ctx.db.standardControlMapping.delete({ where: { id: input.id } });
+      void createAuditLog({
+        organizationId: ctx.organizationId!,
+        userId: ctx.session!.user.id,
+        action: AuditAction.DELETE_MAPPING,
+        entityType: "StandardControlMapping",
+        entityId: input.id,
+      });
+      return { success: true };
+    }),
+
+  /**
+   * Export a standard → target-framework crosswalk (relationship + rationale).
+   * StandardControlMapping has no status/lineage/reviewer columns, so those are
+   * omitted. `scope: "complete"` emits "(no mapping)" rows for uncovered
+   * standard controls.
+   */
+  exportStandardCrosswalk: organizationProcedure
+    .use(requireRole(CROSSWALK_VIEW_ROLES))
+    .input(
+      z.object({
+        standardId: z.string().min(1),
+        targetFrameworkId: z.string().min(1),
+        format: z.enum(["csv", "xlsx"]),
+        scope: z.enum(["filtered", "complete"]).default("complete"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const orgId = ctx.organizationId!;
+      const [standard, target] = await Promise.all([
+        ctx.db.standard.findFirst({
+          where: { id: input.standardId, organizationId: orgId },
+          select: { id: true, title: true },
+        }),
+        ctx.db.framework.findFirst({
+          where: { id: input.targetFrameworkId, organizationId: orgId },
+          select: { id: true, code: true },
+        }),
+      ]);
+      if (!standard) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Standard not found in your organization" });
+      }
+      if (!target) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Framework not found in your organization" });
+      }
+
+      const mappings = await ctx.db.standardControlMapping.findMany({
+        where: {
+          StandardControl: { standardId: input.standardId },
+          FrameworkControl: { frameworkId: input.targetFrameworkId },
+        },
+        select: {
+          mappingType: true,
+          notes: true,
+          standardControlId: true,
+          StandardControl: { select: { code: true, title: true } },
+          FrameworkControl: { select: { controlId: true, title: true } },
+        },
+        orderBy: [{ StandardControl: { code: "asc" } }],
+      });
+
+      const headers = [
+        "Standard Control ID",
+        "Standard Control",
+        "Framework Control ID",
+        "Framework Control",
+        "Relationship",
+        "Rationale",
+      ];
+      const rows: string[][] = mappings.map((m) => [
+        m.StandardControl.code,
+        m.StandardControl.title,
+        m.FrameworkControl.controlId,
+        m.FrameworkControl.title,
+        OLIR_EXPORT_LABEL[m.mappingType] ?? m.mappingType,
+        m.notes ?? "",
+      ]);
+
+      if (input.scope === "complete") {
+        const mappedIds = new Set(mappings.map((m) => m.standardControlId));
+        const stdControls = await ctx.db.standardControl.findMany({
+          where: { standardId: input.standardId },
+          select: { id: true, code: true, title: true },
+          orderBy: { sortOrder: "asc" },
+        });
+        for (const c of stdControls) {
+          if (mappedIds.has(c.id)) continue;
+          rows.push([c.code, c.title, "", "", "(no mapping)", ""]);
+        }
+      }
+
+      const file = buildExportFile(input.format as ExportFormat, headers, rows);
+      return {
+        filename: `crosswalk-${target.code}-standard.${input.format}`,
+        ...file,
+      };
+    }),
+
+  // ===========================================================================
   // Story 26.1 — One-hop transitive suggestions
   // (org control --confirmed--> FC_a --one crosswalk--> FC_b in the target framework)
   // ===========================================================================

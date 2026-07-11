@@ -74,7 +74,7 @@ interface ReferenceMatrix {
  * falling back to the org's default published matrix. Returns null when neither
  * is available. Mirrors riskMatrix.getOrgPublishedMatrix's default selection.
  */
-async function resolveReferenceMatrix(
+export async function resolveReferenceMatrix(
   db: PrismaClient,
   organizationId: string,
   preferredVersionId?: string | null,
@@ -116,7 +116,7 @@ async function resolveReferenceMatrix(
 }
 
 /** Round a value to the nearest available scale level (by `value`). */
-function nearestScaleValue(value: number, levels: { value: number }[]): number {
+export function nearestScaleValue(value: number, levels: { value: number }[]): number {
   let best = levels[0]?.value ?? value;
   let bestDist = Infinity;
   for (const l of levels) {

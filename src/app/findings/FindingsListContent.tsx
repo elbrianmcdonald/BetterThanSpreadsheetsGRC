@@ -96,14 +96,15 @@ import { READ_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 
 import {
-  FindingFilters,
   DEFAULT_FILTERS,
   type FindingFilterState,
 } from "@/components/findings/FindingFilters";
+import { FindingFilterPanel } from "@/components/findings/FindingFilterPanel";
 import { FindingsPagination } from "@/components/findings/FindingsPagination";
 import { FindingStatusBadge } from "@/components/findings/FindingStatusBadge";
 import { FindingSourceBadge } from "@/components/findings/FindingSourceBadge";
 import { SeverityBadge } from "@/components/risk/SeverityBadge";
+import { RiskScoreHeatmap, type HeatmapItem } from "@/components/risk/RiskScoreHeatmap";
 import { ToxicMark } from "@/components/pathway/ToxicMark";
 
 // localStorage keys for column persistence
@@ -446,6 +447,25 @@ export function FindingsListContent() {
 
   // Fetch findings stats for summary cards
   const { data: stats, isLoading: isStatsLoading } = api.finding.getStats.useQuery();
+
+  // Matrix-adaptive findings heatmap (mirrors the Enterprise Risk list). Rows
+  // are mapped to the shared RiskScoreHeatmap's HeatmapItem shape.
+  const heatmap = api.finding.heatmap.useQuery();
+  const heatmapRows: HeatmapItem[] = useMemo(
+    () =>
+      (heatmap.data?.rows ?? []).map((r) => ({
+        id: r.id,
+        label: r.label,
+        title: r.title,
+        likelihood: r.likelihood,
+        impact: r.impact,
+        score: r.score,
+        scoreLabel: r.scoreLabel,
+        color: r.color,
+        href: r.href,
+      })),
+    [heatmap.data]
+  );
 
   // Fetch findings with filters, sorting, and pagination
   const { data, isLoading, isError, error } = api.finding.list.useQuery({
@@ -1081,8 +1101,31 @@ export function FindingsListContent() {
         />
       </div>
 
+      {/* Matrix-adaptive findings heatmap (rendered only when the org has a
+          reference matrix; otherwise the empty-card fallback used by the ER
+          list). */}
+      {heatmap.data?.matrix ? (
+        <RiskScoreHeatmap
+          matrix={{
+            scales: heatmap.data.matrix.scales,
+            thresholds: heatmap.data.matrix.thresholds,
+            outputScaleMax: heatmap.data.matrix.outputScaleMax,
+          }}
+          rows={heatmapRows}
+          title="Findings Heatmap"
+          subtitle={`All findings plotted on ${heatmap.data.matrix.templateName}`}
+          emptyLabel="No scored findings yet."
+        />
+      ) : heatmap.isSuccess ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            No risk matrix configured — findings heatmap unavailable.
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Filters */}
-      <FindingFilters filters={filters} onFiltersChange={handleFiltersChange} />
+      <FindingFilterPanel filters={filters} onFiltersChange={handleFiltersChange} />
 
       {/* Table or Empty State */}
       {!isLoading && findings.length === 0 ? (

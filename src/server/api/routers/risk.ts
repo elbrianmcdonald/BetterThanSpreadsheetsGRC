@@ -33,7 +33,8 @@ import {
   RiskDiscoveryStatus,
   RiskControlLinkType,
   AssessmentProjectStatus,
-  Prisma
+  Prisma,
+  type PrismaClient
 } from "@prisma/client";
 import { WRITE_ROLES } from "@/lib/auth/roles";
 // Story 5.6: CSV Export imports
@@ -84,6 +85,7 @@ import {
   isScoreResult,
 } from "@/lib/matrix/scoring";
 import type { MatrixScales, Threshold } from "@/lib/matrix/types";
+import { score2D, thresholdForScore } from "@/lib/matrix/heatmap";
 import { recomputeEnterpriseRiskScore } from "@/server/services/enterpriseRiskScore";
 import { recomputeRiskScore } from "@/server/services/riskScore";
 import { isTerminalFindingStatus } from "@/server/services/findingStateMachine";
@@ -167,6 +169,76 @@ const COMMENT_ALLOWED_ROLES = [
   ...COMMENT_FULL_ACCESS_ROLES,
   ...COMMENT_RESTRICTED_ROLES,
 ];
+
+/** A matrix version reduced to the bits needed to size/score a heatmap grid. */
+interface ReferenceMatrix {
+  versionId: string;
+  templateName: string;
+  scales: MatrixScales;
+  thresholds: Threshold[];
+  outputScaleMax: number;
+}
+
+/**
+ * Resolve the org's reference matrix for heatmap plotting. Mirrors
+ * enterpriseRisk.resolveReferenceMatrix precedence: explicit version →
+ * org's default published template's currentVersion → newest active template's
+ * currentVersion. Returns null when the org has no published matrix.
+ */
+async function resolveReferenceMatrix(
+  db: PrismaClient,
+  organizationId: string,
+  preferredVersionId?: string | null,
+): Promise<ReferenceMatrix | null> {
+  if (preferredVersionId) {
+    const v = await db.riskMatrixVersion.findFirst({
+      where: { id: preferredVersionId, template: { organizationId } },
+      include: { template: true },
+    });
+    if (v) {
+      return {
+        versionId: v.id,
+        templateName: v.template.name,
+        scales: v.scales as unknown as MatrixScales,
+        thresholds: v.thresholds as unknown as Threshold[],
+        outputScaleMax: Number(v.template.outputScaleMax),
+      };
+    }
+  }
+  const defaultTemplate = await db.riskMatrixTemplate.findFirst({
+    where: { organizationId, isDefault: true, isActive: true, currentVersionId: { not: null } },
+    include: { currentVersion: true },
+  });
+  const tpl =
+    defaultTemplate ??
+    (await db.riskMatrixTemplate.findFirst({
+      where: { organizationId, isActive: true, currentVersionId: { not: null } },
+      orderBy: { updatedAt: "desc" },
+      include: { currentVersion: true },
+    }));
+  if (!tpl?.currentVersion) return null;
+  return {
+    versionId: tpl.currentVersion.id,
+    templateName: tpl.name,
+    scales: tpl.currentVersion.scales as unknown as MatrixScales,
+    thresholds: tpl.currentVersion.thresholds as unknown as Threshold[],
+    outputScaleMax: Number(tpl.outputScaleMax),
+  };
+}
+
+/** Round a value to the nearest available scale level (by `value`). */
+function nearestScaleValue(value: number, levels: { value: number }[]): number {
+  let best = levels[0]?.value ?? value;
+  let bestDist = Infinity;
+  for (const l of levels) {
+    const d = Math.abs(l.value - value);
+    if (d < bestDist) {
+      bestDist = d;
+      best = l.value;
+    }
+  }
+  return best;
+}
 
 export const riskRouter = createTRPCRouter({
   /**
@@ -7438,4 +7510,81 @@ export const riskRouter = createTRPCRouter({
         orderBy: { createdAt: "asc" },
       });
     }),
+
+  /**
+   * Matrix-adaptive risk heatmap. Resolves the org's reference matrix and plots
+   * each risk on it by snapping its residual (or, if absent, inherent) L/I to
+   * the nearest matrix scale level. Returns `matrix: null` when the org has no
+   * published matrix so the client can hide the heatmap. Risks without
+   * plottable L/I are omitted. Mirrors enterpriseRisk.heatmap.
+   */
+  heatmap: organizationProcedure.query(async ({ ctx }) => {
+    const orgId = ctx.organizationId!;
+    const matrix = await resolveReferenceMatrix(ctx.db, orgId, null);
+
+    if (!matrix) {
+      return { matrix: null, rows: [] as Array<{
+        id: string;
+        label: string | null;
+        title: string;
+        likelihood: number | null;
+        impact: number | null;
+        score: number | null;
+        scoreLabel: string | null;
+        color: string;
+        href: string;
+      }> };
+    }
+
+    const risks = await ctx.db.risk.findMany({
+      where: {
+        organizationId: orgId,
+        AND: [{ OR: [{ discoveryStatus: "PUBLISHED" }, { discoveryStatus: null }] }],
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        identifier: true,
+        title: true,
+        residualLikelihood: true,
+        residualImpact: true,
+        inherentLikelihood: true,
+        inherentImpact: true,
+      },
+    });
+
+    const rows = risks
+      .map((r) => {
+        const rawL = r.residualLikelihood ?? r.inherentLikelihood;
+        const rawI = r.residualImpact ?? r.inherentImpact;
+        if (rawL === null || rawI === null) return null;
+
+        const likelihood = nearestScaleValue(Number(rawL), matrix.scales.likelihood);
+        const impact = nearestScaleValue(Number(rawI), matrix.scales.impact);
+        const score = score2D(likelihood, impact, matrix.scales, matrix.outputScaleMax);
+        const band = thresholdForScore(score, matrix.thresholds);
+        return {
+          id: r.id,
+          label: r.identifier ?? null,
+          title: r.title,
+          likelihood,
+          impact,
+          score,
+          scoreLabel: band?.label ?? null,
+          color: band?.color ?? "#CCCCCC",
+          href: `/risks/${r.id}`,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+
+    return {
+      matrix: {
+        templateName: matrix.templateName,
+        scales: matrix.scales,
+        thresholds: matrix.thresholds,
+        outputScaleMax: matrix.outputScaleMax,
+      },
+      rows,
+    };
+  }),
 });

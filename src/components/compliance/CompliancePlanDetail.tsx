@@ -14,8 +14,12 @@ import { toast } from "sonner";
 import { Trash2, Plus, Download, FileUp, Save } from "lucide-react";
 
 import { api } from "@/trpc/react";
+import { PlanProgressDonut } from "@/components/compliance/PlanProgressDonut";
 
 const STATUSES = Object.values(CompliancePlanItemStatus);
+
+/** Item statuses treated as "done" — mirrors CLOSED_ITEM_STATUSES in the router. */
+const CLOSED_ITEM_STATUSES: string[] = ["COMPLETE", "RISK_ACCEPTED"];
 
 function downloadCsv(filename: string, content: string) {
   const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
@@ -147,22 +151,42 @@ export function CompliancePlanDetail({ planId }: { planId: string }) {
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading plan…</p>;
   if (!plan) return <p className="text-sm text-muted-foreground">Plan not found.</p>;
 
+  // Partition every item into exactly one donut bucket:
+  //  complete   = closed status (COMPLETE / RISK_ACCEPTED)
+  //  overdue    = not complete AND past target date
+  //  notComplete = everything else still open
+  const completeCount = plan.items.filter((i) => CLOSED_ITEM_STATUSES.includes(i.status)).length;
+  const overdueSlice = plan.items.filter(
+    (i) => !CLOSED_ITEM_STATUSES.includes(i.status) && i.overdue,
+  ).length;
+  const notCompleteCount = plan.items.length - completeCount - overdueSlice;
+
   return (
     <div className="space-y-6">
-      {/* Progress summary + export */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card p-4">
-        <div className="flex items-center gap-4">
-          <div>
-            <div className="text-2xl font-bold text-foreground">{plan.progressPct}%</div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Complete</div>
+      {/* Progress summary + donut + export */}
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
+        <div className="flex flex-wrap items-center gap-6">
+          {/* Item breakdown donut */}
+          <div className="w-[240px] shrink-0">
+            <PlanProgressDonut
+              complete={completeCount}
+              notComplete={notCompleteCount}
+              overdue={overdueSlice}
+            />
           </div>
-          <div className="h-10 w-px bg-border" />
-          <div>
-            <div className={`text-2xl font-bold ${plan.overdueCount > 0 ? "text-destructive" : "text-foreground"}`}>
-              {plan.overdueCount}
+          <div className="flex items-center gap-4">
+            <div>
+              <div className="text-2xl font-bold tnum text-foreground">{plan.progressPct}%</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Complete</div>
             </div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">
-              {plan.overdueCount === 1 ? "1 overdue" : `${plan.overdueCount} overdue`}
+            <div className="h-10 w-px bg-border" />
+            <div>
+              <div className={`text-2xl font-bold tnum ${plan.overdueCount > 0 ? "text-destructive" : "text-foreground"}`}>
+                {plan.overdueCount}
+              </div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                {plan.overdueCount === 1 ? "1 overdue" : `${plan.overdueCount} overdue`}
+              </div>
             </div>
           </div>
         </div>

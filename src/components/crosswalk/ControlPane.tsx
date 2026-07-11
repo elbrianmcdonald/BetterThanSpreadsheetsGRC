@@ -41,7 +41,8 @@ export interface PaneControl {
 
 export type PaneSource =
   | { type: "framework"; frameworkId: string }
-  | { type: "orgControls" };
+  | { type: "orgControls" }
+  | { type: "standard"; standardId: string; standardName?: string };
 
 interface Props {
   source: PaneSource;
@@ -82,13 +83,20 @@ export function ControlPane({ source, mode, selectedIds, onToggle, mappedTargetI
     enabled: source.type === "orgControls",
     placeholderData: (prev) => prev,
   });
-  const active = source.type === "framework" ? fwQuery : ocQuery;
+  const stdQuery = api.crosswalk.listStandardControls.useQuery(
+    { standardId: source.type === "standard" ? source.standardId : "", ...commonInput },
+    { enabled: source.type === "standard", placeholderData: (prev) => prev },
+  );
+  const active =
+    source.type === "framework" ? fwQuery : source.type === "standard" ? stdQuery : ocQuery;
   const { data, isLoading, isFetching } = active;
   const fwData = source.type === "framework" ? fwQuery.data : undefined;
   const paneTitle =
     source.type === "orgControls"
       ? "Organizational Controls"
-      : (fwData?.framework?.name ?? null);
+      : source.type === "standard"
+        ? (source.standardName ?? "Standard Controls")
+        : (fwData?.framework?.name ?? null);
   const paneCode = fwData?.framework?.code ?? null;
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;

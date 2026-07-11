@@ -36,7 +36,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppLayout, PageHeader, StatTile } from "@/components/layout";
 import { RiskTrendChart } from "@/components/compliance/RiskTrendChart";
-import { RiskHeatmap } from "@/components/compliance/RiskHeatmap";
+import { RiskScoreHeatmap, type HeatmapItem } from "@/components/risk/RiskScoreHeatmap";
 import { VelocityWidget } from "@/components/compliance/VelocityWidget";
 import { VelocityTrendChart } from "@/components/compliance/VelocityTrendChart";
 import { RiskMetricsWidget } from "@/components/compliance/RiskMetricsWidget";
@@ -78,6 +78,23 @@ export function RiskDashboardClient() {
   } = api.compliance.getRiskMetrics.useQuery(undefined, {
     refetchInterval: 60000,
   });
+
+  // Matrix-adaptive risk heatmap (sizes/colors the grid to the org's matrix).
+  const { data: heatmapData } = api.risk.heatmap.useQuery(undefined, {
+    refetchInterval: 60000,
+  });
+
+  const heatmapRows: HeatmapItem[] = (heatmapData?.rows ?? []).map((r) => ({
+    id: r.id,
+    label: r.label,
+    title: r.title,
+    likelihood: r.likelihood,
+    impact: r.impact,
+    score: r.score,
+    scoreLabel: r.scoreLabel,
+    color: r.color,
+    href: r.href,
+  }));
 
   // Loading state - include isMounted check to prevent hydration mismatch
   if (!isMounted || sessionStatus === "loading") {
@@ -211,8 +228,20 @@ export function RiskDashboardClient() {
           </div>
         </div>
 
-        {/* Risk Severity Heatmap */}
-        <RiskHeatmap />
+        {/* Risk Severity Heatmap — matrix-adaptive (org's actual matrix). */}
+        {heatmapData?.matrix && (
+          <RiskScoreHeatmap
+            matrix={{
+              scales: heatmapData.matrix.scales,
+              thresholds: heatmapData.matrix.thresholds,
+              outputScaleMax: heatmapData.matrix.outputScaleMax,
+            }}
+            rows={heatmapRows}
+            title="Risk Heatmap"
+            subtitle={`All risks plotted on ${heatmapData.matrix.templateName}`}
+            emptyLabel="No scored risks yet."
+          />
+        )}
 
         {/* Remediation Velocity */}
         <div className="space-y-4">

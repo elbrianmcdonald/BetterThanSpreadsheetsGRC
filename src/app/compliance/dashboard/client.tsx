@@ -449,11 +449,6 @@ export function ComplianceDashboardClient() {
                       View Framework Details
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/admin/frameworks/${selectedFramework.frameworkId}/gaps`}>
-                      View Gaps Analysis
-                    </Link>
-                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

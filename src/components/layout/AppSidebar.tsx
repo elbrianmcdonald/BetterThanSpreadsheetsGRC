@@ -88,7 +88,7 @@ const NAV_SECTIONS: NavSection[] = [
     id: "governance",
     label: "Governance",
     icon: <Shield className="h-5 w-5" />,
-    roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST],
+    roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER],
     items: [
       {
         href: "/strategy",
@@ -105,7 +105,13 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/crosswalks",
         label: "Crosswalks",
         icon: <GitCompare className="h-4 w-4" />,
-        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST],
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER],
+      },
+      {
+        href: "/standards",
+        label: "Standards",
+        icon: <BookCheck className="h-4 w-4" />,
+        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER],
       },
       {
         href: "/controls",
@@ -201,18 +207,6 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <ClipboardList className="h-4 w-4" />,
       },
       {
-        href: "/standards",
-        label: "Standards",
-        icon: <BookCheck className="h-4 w-4" />,
-        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.MANAGER],
-      },
-      {
-        href: "/admin/evidence",
-        label: "Evidence",
-        icon: <FileText className="h-4 w-4" />,
-        roles: [UserRole.ADMINISTRATOR, UserRole.ANALYST, UserRole.ANALYST],
-      },
-      {
         href: "/compliance/velocity",
         label: "Velocity Metrics",
         icon: <BarChart3 className="h-4 w-4" />,
@@ -279,9 +273,23 @@ const NAV_SECTIONS: NavSection[] = [
     id: "admin",
     label: "Administration",
     icon: <Users className="h-5 w-5" />,
-    roles: [UserRole.ADMINISTRATOR],
+    // No section-level role gate: every item below is individually gated, so this
+    // section surfaces for a non-admin only via items they may see (e.g. Evidence).
     platformAdmin: true, // also visible to platform admins (for the platform items below)
     items: [
+      {
+        href: "/admin/evidence",
+        label: "Evidence",
+        icon: <FileText className="h-4 w-4" />,
+        // Editable by staff; Business Users are read-only + download (enforced by the
+        // evidence router's EVIDENCE_* permissions). Visible to all roles.
+        roles: [
+          UserRole.ADMINISTRATOR,
+          UserRole.MANAGER,
+          UserRole.ANALYST,
+          UserRole.BUSINESS_USER,
+        ],
+      },
       {
         href: "/admin/users",
         label: "User Management",

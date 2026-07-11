@@ -33,7 +33,10 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -42,6 +45,9 @@ import { Loader2, GitCompare, ArrowRight, Plus } from "lucide-react";
 
 // Sentinel source value for crosswalking org custom controls (Story 25.4).
 const ORG_CONTROLS = "__org_controls__";
+// Sentinel prefix for crosswalking a specific standard's controls. The selected
+// source value is `${STANDARD_PREFIX}${standardId}` so it carries which standard.
+const STANDARD_PREFIX = "__standard__:";
 
 function formatDate(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
@@ -63,16 +69,28 @@ export function CrosswalksClient() {
   const { data: crosswalks, isLoading: crosswalksLoading } =
     api.crosswalk.listCrosswalks.useQuery();
 
+  const { data: standardsData } = api.standard.list.useQuery({
+    status: "ACTIVE",
+    pageSize: 100,
+  });
+  const standards = standardsData?.standards ?? [];
+
   const isOrgSource = sourceId === ORG_CONTROLS;
+  const isStandardSource = sourceId.startsWith(STANDARD_PREFIX);
   const canOpen =
-    sourceId !== "" && targetId !== "" && (isOrgSource || sourceId !== targetId);
+    sourceId !== "" &&
+    targetId !== "" &&
+    (isOrgSource || isStandardSource || sourceId !== targetId);
 
   const openWorkbench = (s: string, t: string) => {
     router.push(`/crosswalks/${s}/${t}`);
   };
   const openSelectedWorkbench = () => {
     if (isOrgSource) router.push(`/crosswalks/org-controls/${targetId}`);
-    else openWorkbench(sourceId, targetId);
+    else if (isStandardSource) {
+      const standardId = sourceId.slice(STANDARD_PREFIX.length);
+      router.push(`/crosswalks/standards/${standardId}/${targetId}`);
+    } else openWorkbench(sourceId, targetId);
   };
 
   return (
@@ -104,11 +122,28 @@ export function CrosswalksClient() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={ORG_CONTROLS}>Organizational Controls</SelectItem>
-                    {(frameworks ?? []).map((f) => (
-                      <SelectItem key={f.id} value={f.id} disabled={f.id === targetId}>
-                        {f.name} ({f.code})
-                      </SelectItem>
-                    ))}
+                    {standards.length > 0 && (
+                      <>
+                        <SelectSeparator />
+                        <SelectGroup>
+                          <SelectLabel>Standards</SelectLabel>
+                          {standards.map((s) => (
+                            <SelectItem key={s.id} value={`${STANDARD_PREFIX}${s.id}`}>
+                              {s.title}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                        <SelectSeparator />
+                      </>
+                    )}
+                    <SelectGroup>
+                      <SelectLabel>Frameworks</SelectLabel>
+                      {(frameworks ?? []).map((f) => (
+                        <SelectItem key={f.id} value={f.id} disabled={f.id === targetId}>
+                          {f.name} ({f.code})
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>

@@ -42,7 +42,11 @@ import {
 // Story 22.2: matrix scoring extracted to a shared service (used by both the
 // finding router and the risk manual-override mutation).
 import { computeMatrixScoring as computeFindingMatrixScoring } from "@/server/services/matrixScoring";
-import { PUBLISHED_FINDINGS_AND } from "@/server/services/findingVisibility";
+import { PUBLISHED_FINDINGS_AND, PUBLISHED_FINDINGS_WHERE } from "@/server/services/findingVisibility";
+// Reuse the enterprise-risk heatmap machinery so findings plot on the same
+// org reference matrix with identical grid sizing/coloring semantics.
+import { resolveReferenceMatrix, nearestScaleValue } from "@/server/api/routers/enterpriseRisk";
+import { score2D, thresholdForScore } from "@/lib/matrix/heatmap";
 
 /**
  * Roles that can create findings (Story 7.2 AC29)
@@ -274,6 +278,97 @@ export const findingRouter = createTRPCRouter({
       orderBy: { severityLabel: "asc" },
     });
     return rows.map((r) => r.severityLabel!) ;
+  }),
+
+  /**
+   * Org-wide findings heatmap: every register finding positioned on the org's
+   * default reference matrix grid. Each finding uses its residual L/I when
+   * scored, otherwise its inherent L/I, snapped to the matrix's nearest scale
+   * value. Findings with neither residual nor inherent L/I are omitted (they
+   * can't be plotted). Mirrors enterpriseRisk.heatmap so it can feed the shared
+   * RiskScoreHeatmap component. Gated on the same read tier as `list`.
+   */
+  heatmap: organizationProcedure.query(async ({ ctx }) => {
+    const orgId = ctx.organizationId!;
+    const matrix = await resolveReferenceMatrix(ctx.db, orgId, null);
+
+    const findings = await ctx.db.finding.findMany({
+      where: {
+        organizationId: orgId,
+        ...PUBLISHED_FINDINGS_WHERE,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        identifier: true,
+        title: true,
+        severityLabel: true,
+        inherentLikelihood: true,
+        inherentImpact: true,
+        residualLikelihood: true,
+        residualImpact: true,
+      },
+    });
+
+    // Row shape mirrors RiskScoreHeatmap's HeatmapItem so the client can pass
+    // it straight through. Nullable numerics keep the two return branches
+    // (matrix / no-matrix) type-compatible for tRPC inference.
+    type HeatmapRow = {
+      id: string;
+      label: string | null;
+      title: string;
+      likelihood: number | null;
+      impact: number | null;
+      score: number | null;
+      scoreLabel: string | null;
+      color: string;
+      href: string;
+    };
+
+    // No org matrix → nothing to plot on. Return matrix: null so the client can
+    // render its empty-card fallback (same contract as enterpriseRisk.heatmap).
+    if (!matrix) {
+      return { matrix: null, rows: [] as HeatmapRow[] };
+    }
+
+    const rows: HeatmapRow[] = findings
+      .map((f): HeatmapRow | null => {
+        // Prefer residual L/I (post-treatment), fall back to inherent.
+        const rawL = f.residualLikelihood ?? f.inherentLikelihood;
+        const rawI = f.residualImpact ?? f.inherentImpact;
+        // Skip findings with no usable L/I — they can't be plotted.
+        if (rawL === null || rawI === null) return null;
+
+        const likelihood = nearestScaleValue(Number(rawL), matrix.scales.likelihood);
+        const impact = nearestScaleValue(Number(rawI), matrix.scales.impact);
+        const score = score2D(likelihood, impact, matrix.scales, matrix.outputScaleMax);
+        const band = thresholdForScore(score, matrix.thresholds);
+
+        return {
+          id: f.id,
+          label: f.identifier,
+          title: f.title,
+          likelihood,
+          impact,
+          score,
+          // Prefer the finding's stored matrix label; fall back to the band the
+          // grid resolves this cell to.
+          scoreLabel: f.severityLabel ?? band?.label ?? null,
+          color: band?.color ?? "#CCCCCC",
+          href: `/findings/${f.id}`,
+        };
+      })
+      .filter((r): r is HeatmapRow => r !== null);
+
+    return {
+      matrix: {
+        templateName: matrix.templateName,
+        scales: matrix.scales,
+        thresholds: matrix.thresholds,
+        outputScaleMax: matrix.outputScaleMax,
+      },
+      rows,
+    };
   }),
 
   /**
