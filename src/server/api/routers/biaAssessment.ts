@@ -698,11 +698,8 @@ export const biaAssessmentRouter = createTRPCRouter({
         organizationId,
       };
 
-      // For stakeholders, only show their owned processes
-      if (
-        userRole === UserRole.BUSINESS_USER ||
-        userRole === UserRole.BUSINESS_USER
-      ) {
+      // For Business Users, only show their owned processes
+      if (userRole === UserRole.BUSINESS_USER) {
         where.ownerId = userId;
       }
 

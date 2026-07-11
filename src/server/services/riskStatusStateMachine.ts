@@ -110,48 +110,22 @@ export function validateTransition(
   }
 
   // Check role permissions (AC19-AC24)
-  // AC22, AC23: BUSINESS_STAKEHOLDER and AUDITOR cannot change status
-  if (
-    userRole === UserRole.BUSINESS_USER ||
-    userRole === UserRole.BUSINESS_USER
-  ) {
+  // Business Users are read-only and cannot change risk status.
+  if (userRole === UserRole.BUSINESS_USER) {
     return {
       allowed: false,
       reason: "Your role does not have permission to change risk status",
     };
   }
 
-  // AC19: GRC_ANALYST and ORG_ADMIN can perform any valid transition
-  if (userRole === UserRole.ANALYST || userRole === UserRole.ADMINISTRATOR) {
+  // Staff (Analyst, Manager, Administrator) can perform any valid transition.
+  // buildSuccessResult still attaches ASSIGNED→REMEDIATED evidence requirements.
+  if (
+    userRole === UserRole.ANALYST ||
+    userRole === UserRole.MANAGER ||
+    userRole === UserRole.ADMINISTRATOR
+  ) {
     return buildSuccessResult(currentStatus, newStatus);
-  }
-
-  // AC20: SECURITY_ENGINEER can transition OPEN → ASSIGNED
-  if (
-    userRole === UserRole.ANALYST &&
-    currentStatus === RiskStatus.OPEN &&
-    newStatus === RiskStatus.ASSIGNED
-  ) {
-    return { allowed: true };
-  }
-
-  // AC21: IT_STAKEHOLDER can transition ASSIGNED → REMEDIATED (for assigned risks only)
-  if (
-    userRole === UserRole.BUSINESS_USER &&
-    currentStatus === RiskStatus.ASSIGNED &&
-    newStatus === RiskStatus.REMEDIATED
-  ) {
-    if (!isOwner) {
-      return {
-        allowed: false,
-        reason:
-          "You can only mark risks as remediated if you are assigned as the IT owner",
-      };
-    }
-    return {
-      allowed: true,
-      requiresRemediationEvidence: true,
-    };
   }
 
   // AC24: Unauthorized transitions return FORBIDDEN error
