@@ -48,10 +48,12 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Upgrade npm to fix node-tar CVEs (CVE-2026-23745/23950/24842) bundled in npm 10.x
+# Upgrade npm to fix node-tar CVEs (CVE-2026-23745/23950/24842) bundled in npm 10.x.
+# Pinned to the 11.x line, not @latest: npm 12 requires Node >=22 and hard-fails
+# EBADENGINE on this image's Node 20. 11.x bundles the patched tar >=7.5.19.
 # Then install Prisma CLI + tsx globally for runtime migrations and seeding.
 # Prisma pinned to v7 to match the project's schema format (datasource without url).
-RUN npm install -g npm@latest prisma@7 tsx
+RUN npm install -g npm@11 prisma@7 tsx
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
