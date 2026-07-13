@@ -10,7 +10,7 @@
  * so assessors see them read-only during a maturity assessment.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Hash, Layers, Loader2, Search, Shield, Tag } from "lucide-react";
 import { toast } from "sonner";
@@ -73,6 +73,14 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
   // purely presentational.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  // Debounced like the compliance page: C2M2 is 356 practices and SAMM 90, and
+  // every keystroke re-walks the whole tree.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const updateDomainTesting = api.maturity.updateDomainTestingFields.useMutation({
     onSuccess: () => {
@@ -107,18 +115,37 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
   );
 
   // Questions with no domain render outside the tree — maturityToNodes ignores
-  // them by design.
-  const frameworkLevelQuestions = useMemo(
-    () => (framework?.questions ?? []).filter((q) => q.domainId === null),
+  // them by design. They are nodes like any other, so they can be searched.
+  const frameworkLevelNodes = useMemo(
+    (): FrameworkNode[] =>
+      (framework?.questions ?? [])
+        .filter((q) => q.domainId === null)
+        .map((q) => ({
+          id: q.id,
+          code: q.practiceCode ?? q.id.slice(0, 8),
+          title: q.questionText,
+          description: null,
+          kind: "question" as const,
+          levelLabel: q.practiceLevel === null ? null : `MIL ${q.practiceLevel}`,
+          depth: 0,
+          childCount: 0,
+          children: [],
+          testInstructions: q.testInstructions,
+          acceptanceCriteria: q.acceptanceCriteria,
+        })),
     [framework],
   );
 
   // Search flattens: a hit deep in the tree has no parent row on screen to sit
   // under. Match on code and title, which is what people search by.
-  const isSearching = search.trim().length > 0;
+  //
+  // The framework-level questions are part of the corpus: their own table is
+  // hidden while a search is active, so leaving them out of the index would make
+  // them unreachable for as long as anything is typed in the box.
+  const isSearching = debouncedSearch.trim().length > 0;
   const searchResults = useMemo(() => {
     if (!isSearching) return [];
-    const needle = search.trim().toLowerCase();
+    const needle = debouncedSearch.trim().toLowerCase();
     const hits: FrameworkNode[] = [];
     const visit = (node: FrameworkNode) => {
       if (
@@ -130,8 +157,9 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
       for (const child of node.children ?? []) visit(child);
     };
     for (const root of rootNodes) visit(root);
+    for (const node of frameworkLevelNodes) visit(node);
     return hits;
-  }, [isSearching, search, rootNodes]);
+  }, [isSearching, debouncedSearch, rootNodes, frameworkLevelNodes]);
 
   const openEditor = (target: TestingTarget, focus: "ti" | "ac") => {
     setEditingTarget(target);
@@ -374,7 +402,7 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search domains..."
+                  placeholder="Search domains and practices..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10"
@@ -383,51 +411,43 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
             </div>
           </CardHeader>
           <CardContent>
-            {rootNodes.length === 0 ? (
+            {rootNodes.length === 0 && frameworkLevelNodes.length === 0 ? (
               <p className="text-sm text-muted-foreground">No domains defined.</p>
             ) : isSearching && searchResults.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No domains match “{search}”.
+                No domains or practices match “{debouncedSearch}”.
               </p>
             ) : (
               <>
                 {isSearching && (
                   <p className="mb-2 text-sm text-muted-foreground">
-                    Showing flat search results — {searchResults.length} match
-                    {searchResults.length === 1 ? "" : "es"}.
+                    Showing flat results — {searchResults.length} match
+                    {searchResults.length === 1 ? "" : "es"}. Expand is disabled
+                    while searching.
                   </p>
                 )}
-                <FrameworkNodeTable
-                  nodes={isSearching ? searchResults : rootNodes}
-                  columns={{ level: true, testing: true }}
-                  expanded={expanded}
-                  flat={isSearching}
-                  idHeader="Code"
-                  onToggleExpand={handleToggleExpand}
-                  onEditTesting={openEditorForNode}
-                />
+                {(isSearching || rootNodes.length > 0) && (
+                  <FrameworkNodeTable
+                    nodes={isSearching ? searchResults : rootNodes}
+                    columns={{ level: true, testing: true }}
+                    expanded={expanded}
+                    flat={isSearching}
+                    idHeader="Code"
+                    onToggleExpand={handleToggleExpand}
+                    onEditTesting={openEditorForNode}
+                  />
+                )}
               </>
             )}
 
-            {/* Questions not bound to any domain sit outside the tree. */}
-            {frameworkLevelQuestions.length > 0 && !isSearching && (
+            {/* Questions not bound to any domain sit outside the tree. While a
+                search is active they are part of the flat result list above
+                instead, so this table stands down rather than duplicating them. */}
+            {frameworkLevelNodes.length > 0 && !isSearching && (
               <div className="mt-6 space-y-2 border-t pt-4">
                 <h3 className="text-sm font-medium">Framework-level questions</h3>
                 <FrameworkNodeTable
-                  nodes={frameworkLevelQuestions.map((q) => ({
-                    id: q.id,
-                    code: q.practiceCode ?? q.id.slice(0, 8),
-                    title: q.questionText,
-                    description: null,
-                    kind: "question" as const,
-                    levelLabel:
-                      q.practiceLevel === null ? null : `MIL ${q.practiceLevel}`,
-                    depth: 0,
-                    childCount: 0,
-                    children: [],
-                    testInstructions: q.testInstructions,
-                    acceptanceCriteria: q.acceptanceCriteria,
-                  }))}
+                  nodes={frameworkLevelNodes}
                   columns={{ level: true, testing: true }}
                   expanded={new Set()}
                   flat
