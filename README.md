@@ -1,176 +1,260 @@
+<div align="center">
+
 # BetterThanSpreadsheetsGRC
 
-This GRC application is meant for organizations who want to move out of spreadsheets but do not have the budget to move to an enterprise tool, hence the name of better than spreadsheets grc. I do not recommend putting this on anything that is internet facing, i am not a programmer and could of missed some vulnerabilities. This is in what I would consider an alpha release, as there are some features that i would like to eventually put in here. 
+**An open-source GRC platform for teams who have outgrown spreadsheets but can't afford an enterprise tool.**
 
-** Current Features**
-                                                                                                                                                                                                                                                                       
- Features
-                                                                                                                                                                                                                                                                        
-  Assignments
+Risk registers, compliance assessments, control libraries, third-party risk, and business impact analysis — in one self-hosted app that starts with a single `docker compose up`.
 
-  - My Assignments — Kanban board of your assigned assessment tasks, with drag-and-drop status tracking across To Do, In Progress, and Completed columns.
-  - Backlog — View and assign unassigned assessment tasks across all assessment types, with filtering by priority, type, and business unit.
+[Quick Start](#quick-start) · [Screenshots](#screenshots) · [Features](#features) · [Install Guide](./INSTALL.md) · [Changelog](./CHANGELOG.md)
 
-  Governance
+</div>
 
-  - Strategy — Create and track security strategies by fiscal year with progress monitoring, ownership, and lifecycle status.
-  - Maturity — Assess and visualize organizational maturity levels across supported frameworks (NIST CSF 2.0, C2M2, OWASP SAMM) with current vs. target scoring.
-  - Frameworks — Import OSCAL-formatted compliance frameworks, manage their lifecycle, and review control counts and validation status. Comes with NIST CSF (which is not a control framework but some use it this way for some reason) NIST 800-171, NIST 800-53r5 (able to select which baseline you want to assess against), and a sample of ISO 27001 controls.
-  - Control Library — Browse, search, and manage controls across all imported frameworks with health indicators, bulk operations, and CSV export.
+---
 
-  Risk
+> [!WARNING]
+> **This is an alpha release, and I am not a professional programmer.** I would not recommend putting this on anything internet-facing — I could easily have missed vulnerabilities. Run it on an internal network, and treat it accordingly. There are still features I'd like to add.
 
-  - Risk Dashboard — Visualize risk posture through a heatmap, severity distribution, remediation velocity trends, and summary metrics.
-  - Risk Register — Searchable, filterable catalog of all organizational risks with severity scoring, owner assignment, and CSV export.
-  - Findings Register — Track security findings from audits and assessments, triage them by severity, and accept findings to convert them into risks.
-  - Risk Assessments — Create and manage risk assessment projects, claim unassigned assessments, and track reassessment schedules.
+---
 
-  Compliance
+## Screenshots
 
-  - Dashboard — Monitor compliance coverage percentages across frameworks and business units with real-time score updates and gap analysis.
-  - Assessments — Conduct compliance assessments against adopted frameworks, track progress with compliance scores, and filter by status or assessor.
-  - Standards — Maintain a registry of organizational standards with lifecycle status, review cycles, and CSV import support.
-  - Evidence — Upload, tag, and manage compliance evidence files with framework mappings, control domain associations, and a full audit trail.
-  - Velocity Metrics — Measure remediation speed with average days-to-close breakdowns by severity, owner, and finding source.
+Every screenshot below is the app running against its own demo seed data — what you get on a fresh install.
 
-  Third Party
+### Risk Dashboard
 
-  - TPRM Dashboard — Summarize vendor risk across tiers with assessment coverage metrics, overdue review alerts, and side-by-side vendor comparison.
-  - Vendor Registry — Manage vendors with risk tiering, review scheduling, and business unit assignment, including bulk CSV import and export.
-  - Assessments — Track vendor assessment progress with status workflows, due date monitoring, and assessor assignment.
-  - Questionnaires — Browse and customize security questionnaire templates for vendor risk intake.
+Heatmap on a configurable risk matrix, severity distribution, treatment SLA status, and risks ranked by score.
 
-  Business Impact
+![Risk Dashboard](./docs/screenshots/risk-dashboard.png)
 
-  - BIA Dashboard — View business impact analysis coverage, tier distribution, and assessment freshness across all business processes.
-  - Business Processes — Catalog business processes with criticality tiering, ownership, and links to supporting functions and assets.
-  - Business Functions — Define and organize business functions that group related business processes.
-  - Asset Registry — Inventory IT assets by type (server, database, application, network, endpoint) with status tracking and process linkage.
-  - BIA Configuration — Configure impact categories, scoring scales, tier definitions with RTO/RPO targets, and threshold criteria.
+### Findings Register
 
-  Administration
+Track findings from audits and pentests, triage by severity, and accept a finding to convert it into a risk.
 
-  - User Management — Create and manage user accounts with role-based access control, framework assignments, and business unit placement.
-  - Business Units — Build a hierarchical organizational structure (up to 5 levels) for department-based routing and reporting.
-  - Assessment Types — Define and manage risk assessment types used across the platform.
-  - Risk Matrices — Configure risk scoring matrices with customizable grid sizes, dimensions, and scoring scales.
-  - Mappings — View and manage control-to-domain mappings across frameworks with confidence scoring.
-  - Taxonomy — Manage the control domain taxonomy used to categorize and cross-reference controls.
-  - MITRE ATT&CK — Browse MITRE ATT&CK tactics and techniques, synced from the STIX repository, for threat-informed defense alignment.
+![Findings Register](./docs/screenshots/findings.png)
 
-Planned features
-- SSO integrations
-- Email Notifications
-- More maturity frameworks
-- Taxonomy — Manage the control domain taxonomy used to categorize and cross-reference controls.
-## Getting Started
+### Compliance Dashboard
 
-BetterThanSpreadsheetsGRC runs entirely in Docker. You do **not** need Node.js, npm, or PostgreSQL installed on your host — only Docker.
+Coverage and score per framework, filterable by business unit, with assessment progress at a glance.
 
-### Prerequisites
+![Compliance Dashboard](./docs/screenshots/compliance-dashboard.png)
 
-- Docker Engine 20.10+ and Docker Compose v2
-- `openssl` and `curl` (bundled with Git Bash on Windows)
-- Port 80 free on the host
+<details>
+<summary><b>More screenshots</b> — control library, frameworks, TPRM, vendors, BIA, risk assessments, home</summary>
 
-### Quick Start
+### Framework / Standard Control Library
+
+Every control across every imported framework in one searchable table, with linked risks and findings.
+
+![Control Library](./docs/screenshots/control-library.png)
+
+### Framework Management
+
+Import OSCAL catalogs or CSV/XLSX. Ships with NIST CSF 2.0, NIST SP 800-171, NIST SP 800-53r5, and a sample of ISO 27001.
+
+![Framework Management](./docs/screenshots/frameworks.png)
+
+### Third-Party Risk (TPRM)
+
+Vendor risk by tier, assessment coverage, and overdue review alerts.
+
+![TPRM Dashboard](./docs/screenshots/tprm-dashboard.png)
+
+### Vendor Registry
+
+Risk tiering, review scheduling, and business-unit assignment, with bulk CSV import/export.
+
+![Vendor Registry](./docs/screenshots/vendors.png)
+
+### Business Impact Analysis
+
+Criticality tiers, assessment freshness, and coverage across business processes.
+
+![BIA Dashboard](./docs/screenshots/bia-dashboard.png)
+
+### Risk Assessments
+
+Run assessment projects, claim them from a backlog, and track reassessment schedules.
+
+![Risk Assessments](./docs/screenshots/risk-assessments.png)
+
+### Home
+
+Your assigned tasks, open risks and findings, and recent activity.
+
+![Home](./docs/screenshots/home.png)
+
+</details>
+
+---
+
+## Quick Start
+
+The app runs entirely in Docker. You do **not** need Node.js, npm, or PostgreSQL on your host — only Docker.
+
+**Prerequisites:** Docker Engine 20.10+ with Compose v2, and port 80 free.
 
 ```bash
-git clone <repository-url>
-cd betterthanspreadsheetsgrc
+git clone https://github.com/elbrianmcdonald/BetterThanSpreadsheetsGRC.git
+cd BetterThanSpreadsheetsGRC
 ./start.sh
 ```
 
-`start.sh` creates `.env` from `.env.example`, generates a random `POSTGRES_PASSWORD`, `AUTH_SECRET`, and `CRON_SECRET`, builds the images, starts PostgreSQL and the app, runs `prisma db push` to create the schema, and seeds frameworks + demo data on first run. Expect 3–5 minutes for the first build plus ~1 minute for seeding.
+`start.sh` creates `.env`, generates a random `POSTGRES_PASSWORD`, `AUTH_SECRET`, and `CRON_SECRET`, builds the images, starts PostgreSQL and the app, applies the schema, and seeds frameworks + demo data on first run. Expect **3–5 minutes** for the first build.
 
-When it finishes, open **http://localhost** and sign in:
+> **Windows:** run `./start.sh` from Git Bash or WSL, not PowerShell/CMD. To stay in PowerShell, use the manual setup below.
 
-- Email: `admin@acme-corp.com`
-- Password: `Admin123!@#`
+When it finishes, open **<http://localhost>** and sign in with the seeded admin:
 
-> **Windows:** run `./start.sh` from Git Bash or WSL (not PowerShell/CMD).
->
-> **Subsequent starts:** `docker compose up -d`
+| Email | Password |
+| --- | --- |
+| `admin@acme-corp.com` | `Admin123!@#` |
 
-### Manual Setup (if you want to configure `.env` yourself)
+The seed also creates `analyst@`, `manager@`, and `viewer@acme-corp.com` (same password) so you can see how each role sees the app. **Change these before putting the app anywhere real.**
 
-The cross-platform helper script generates every required secret in one step:
+Subsequent starts are just `docker compose up -d`.
+
+### Manual setup
+
+If you'd rather configure `.env` yourself, or you're on PowerShell:
 
 ```bash
-# Linux / macOS / Git Bash on Windows
+# Linux / macOS / Git Bash
 ./scripts/setup-env.sh
 
-# PowerShell on Windows
+# Windows PowerShell
 .\scripts\setup-env.ps1
 ```
 
-Then start the stack:
+Either script generates all three required secrets into `.env` and is safe to re-run — it never overwrites a value you've already set. Then:
 
 ```bash
-# Set SEED_ON_STARTUP=true in .env for the first run, then remove it
 docker compose up -d --build
 ```
 
-If you prefer to manage `.env` entirely by hand: copy `.env.example`, then set
-`POSTGRES_PASSWORD`, `AUTH_SECRET` (generate with `openssl rand -base64 32`),
-and `CRON_SECRET` (generate with `openssl rand -hex 32`). All three are
-required — `docker compose up` will refuse to start without `CRON_SECRET`.
+To manage `.env` entirely by hand, copy `.env.example` and set `POSTGRES_PASSWORD`, `AUTH_SECRET` (`openssl rand -base64 32`), and `CRON_SECRET` (`openssl rand -hex 32`). All three are required — `docker compose up` refuses to start without them.
 
-The app container runs `prisma db push --accept-data-loss` on every start and seeds the database when it is empty or when `SEED_ON_STARTUP=true`. There is no separate `prisma migrate` step to run by hand.
+The app container applies the schema (`prisma db push`) on every start and seeds the database when it's empty, or whenever `SEED_ON_STARTUP=true`. There is no separate migration step to run by hand.
 
-### Verify
+### Verify it's up
 
 ```bash
 curl http://localhost/api/health
 # {"status":"healthy","timestamp":"..."}
 ```
 
-### Production, HTTPS, reverse proxy, ClamAV, email, backups
+---
 
-See **[INSTALL.md](./INSTALL.md)** for the full deployment guide (Caddy + Let's Encrypt, existing reverse proxy, ClamAV malware scanning, SendGrid / SES email, backup & restore, and troubleshooting).
+## Features
 
-See **[DOCKER.md](./DOCKER.md)** for Docker internals, volumes, and Windows notes.
+### Governance
+- **Strategy** — Track security strategies by fiscal year with progress, ownership, and lifecycle status.
+- **Maturity** — Score organizational maturity against NIST CSF 2.0, C2M2, and OWASP SAMM, current vs. target.
+- **Frameworks** — Import OSCAL-formatted frameworks and manage their lifecycle. Ships with NIST CSF 2.0, NIST SP 800-171, NIST SP 800-53r5 (pick your baseline), and a sample of ISO 27001.
+- **Control Library** — Search and manage controls across every framework, with health indicators, bulk operations, and CSV export.
+- **Crosswalks** — Map controls between any two frameworks using NIST OLIR relationship semantics.
+- **Standards** — Registry of internal standards with lifecycle status, review cycles, and CSV import.
 
+### Risk
+- **Risk Dashboard** — Heatmap, severity distribution, remediation velocity, and treatment SLA tracking.
+- **Risk Register** — Searchable catalog of risks with severity scoring, owner assignment, and CSV export.
+- **Findings Register** — Triage findings from audits and pentests; accept one to convert it into a risk.
+- **Risk Assessments** — Run assessment projects, claim from a backlog, and track reassessment schedules.
+- **Enterprise Risks** — Roll findings and risks up to enterprise-level risk statements.
 
+### Compliance
+- **Dashboard** — Coverage percentages across frameworks and business units, with gap analysis.
+- **Assessments** — Assess against adopted frameworks and track compliance scores.
+- **Evidence** — Upload, tag, and map evidence files to frameworks and control domains, with a full audit trail.
+- **Velocity Metrics** — Average days-to-close, broken down by severity, owner, and finding source.
+
+### Third Party
+- **TPRM Dashboard** — Vendor risk by tier, assessment coverage, and overdue review alerts.
+- **Vendor Registry** — Risk tiering, review scheduling, and business-unit assignment with bulk CSV import/export.
+- **Assessments & Questionnaires** — Vendor assessment workflows and customizable security questionnaire templates.
+
+### Business Impact
+- **BIA Dashboard** — Coverage, tier distribution, and assessment freshness across business processes.
+- **Business Processes & Functions** — Catalog processes with criticality tiering, ownership, and asset links.
+- **Asset Registry** — Inventory servers, databases, applications, network gear, and endpoints, linked to processes.
+- **BIA Configuration** — Impact categories, scoring scales, RTO/RPO tier definitions, and thresholds.
+
+### Assignments & Administration
+- **My Assignments / Backlog** — Kanban board of assigned assessment tasks; claim unassigned work from the backlog.
+- **User Management** — Accounts with role-based access control, framework assignments, and business-unit placement.
+- **Business Units** — Hierarchical org structure (up to 5 levels) for routing and reporting.
+- **Risk Matrices** — Configurable grid sizes, dimensions, and scoring scales.
+- **Taxonomy & Mappings** — Control-domain taxonomy and control-to-domain mappings with confidence scoring.
+- **MITRE ATT&CK** — Browse tactics and techniques, synced from the STIX repository.
+
+### Planned
+- SSO integrations
+- Email notifications
+- More maturity frameworks
+
+---
+
+## Tech Stack
+
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js 15 (App Router) + React 19 |
+| Language | TypeScript 5.8 |
+| API | tRPC 11 |
+| Database | PostgreSQL 15 + Prisma 7 |
+| Auth | NextAuth v5 (credentials) |
+| UI | Tailwind CSS 4 + shadcn/ui, Recharts |
+| PDF export | Puppeteer (Chromium in-container) |
+| Deploy | Docker Compose; optional Caddy reverse proxy with auto-HTTPS |
+
+---
+
+## Documentation
+
+| Doc | Covers |
+| --- | --- |
+| **[INSTALL.md](./INSTALL.md)** | Full deployment: Caddy + Let's Encrypt, existing reverse proxies, ClamAV malware scanning, SendGrid/SES email, backup & restore, troubleshooting. |
+| **[DOCKER.md](./DOCKER.md)** | Docker internals, volumes, profiles, and Windows notes. |
+| **[DATABASE_SETUP.md](./DATABASE_SETUP.md)** | Schema and database configuration. |
+| **[DEVELOPER_INSTRUCTIONS.md](./DEVELOPER_INSTRUCTIONS.md)** | Local development workflow. |
+| **[CHANGELOG.md](./CHANGELOG.md)** | Release history (also readable in-app at `/changelog`). |
+
+### Docker profiles
+
+The default `docker compose up -d` starts just the app and PostgreSQL. Extras are opt-in:
+
+```bash
+docker compose --profile production up -d   # + Caddy reverse proxy, auto-HTTPS on :443
+docker compose --profile clamav up -d       # + ClamAV malware scanning for uploads
+```
+
+---
 
 ## Project Structure
 
 ```
-betterthanspreadsheetsgrc/
+BetterThanSpreadsheetsGRC/
 ├── src/
-│   ├── app/                    # Next.js App Router pages
-│   │   ├── api/                # API routes
-│   │   │   ├── auth/           # NextAuth.js endpoints
-│   │   │   └── trpc/           # tRPC HTTP handler
-│   │   ├── test/               # Test page
-│   │   ├── layout.tsx          # Root layout
-│   │   └── page.tsx            # Homepage
-│   ├── components/
-│   │   └── ui/                 # shadcn/ui components
+│   ├── app/              # Next.js App Router — one directory per screen
+│   ├── components/       # Shared UI (shadcn/ui in components/ui)
 │   ├── server/
-│   │   ├── api/
-│   │   │   ├── routers/        # tRPC routers
-│   │   │   ├── root.ts         # Main tRPC router
-│   │   │   └── trpc.ts         # tRPC configuration
-│   │   ├── auth/               # NextAuth.js configuration
-│   │   └── db.ts               # Prisma client instance
-│   ├── trpc/
-│   │   ├── react.tsx           # tRPC React client
-│   │   └── server.ts           # tRPC server-side client
-│   ├── styles/
-│   │   └── globals.css         # Global styles + Tailwind
-│   └── env.js                  # Environment variable validation
+│   │   ├── api/routers/  # tRPC routers — the API surface
+│   │   ├── auth/         # NextAuth configuration
+│   │   └── db.ts         # Prisma client
+│   └── styles/
 ├── prisma/
-│   └── schema.prisma           # Database schema
-├── public/                     # Static assets
-├── .env                        # Environment variables (gitignored)
-├── .env.example                # Environment template
-├── components.json             # shadcn/ui configuration
-├── docker-compose.yml          # Docker services
-├── next.config.js              # Next.js configuration
-├── package.json                # Dependencies and scripts
-├── tailwind.config.ts          # Tailwind CSS configuration
-└── tsconfig.json               # TypeScript configuration
+│   ├── schema.prisma     # Database schema
+│   └── seed.ts           # Frameworks + demo data seeded on first run
+├── e2e/                  # Playwright end-to-end tests
+├── scripts/              # setup-env, admin creation, maintenance jobs
+├── docs/screenshots/     # Images used by this README
+├── docker-compose.yml    # app, postgres, caddy, clamav, test
+├── Dockerfile            # Multi-stage build (standalone Next.js output)
+└── Caddyfile             # Reverse proxy config (production profile)
 ```
 
+---
 
+## License
+
+See the repository for license details.
