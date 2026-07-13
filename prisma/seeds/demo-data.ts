@@ -1275,6 +1275,9 @@ export async function seedDemoData(prisma: PrismaClient) {
     { organizationId: ORG_A,    prefix: 'BP',   year: 2026, lastSequence: 4 },
     { organizationId: ORG_A,    prefix: 'BF',   year: 2026, lastSequence: 2 },
     { organizationId: ORG_A,    prefix: 'RISK', year: 2026, lastSequence: 12 },
+    // One RR entry per seeded risk (see the register block in Layer 3). Without
+    // this the first risk an approver raises collides on RR-2026-0001.
+    { organizationId: ORG_A,    prefix: 'RR',   year: 2026, lastSequence: 12 },
     // Org B (Globex) — seed.ts seeds RISK-2026-0001/-0002
     { organizationId: ORG_B_ID, prefix: 'RISK', year: 2026, lastSequence: 2 },
   ];

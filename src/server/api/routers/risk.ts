@@ -33,10 +33,11 @@ import {
   RiskDiscoveryStatus,
   RiskControlLinkType,
   AssessmentProjectStatus,
+  RiskRegisterStatus,
   Prisma,
   type PrismaClient
 } from "@prisma/client";
-import { WRITE_ROLES } from "@/lib/auth/roles";
+import { APPROVE_ROLES, WRITE_ROLES } from "@/lib/auth/roles";
 // Story 5.6: CSV Export imports
 import {
   formatRisksForCSV,
@@ -120,6 +121,42 @@ const LINK_EVIDENCE_ROLES: UserRole[] = [...WRITE_ROLES];
  * AC23: AUDITOR cannot create risks (view-only role)
  */
 const RISK_CREATE_ROLES: UserRole[] = [...WRITE_ROLES];
+
+/**
+ * Promotes a risk into the risk register (idempotent).
+ *
+ * A risk only belongs in the register once it has been signed off: either it
+ * was raised by someone who can approve (ADMINISTRATOR/MANAGER — see
+ * `risk.create`), or it was raised by an ANALYST and has since cleared review
+ * (see `approveAssessment`). Assessment-discovered risks are promoted by
+ * `riskAssessmentProject.approve` instead, which owns its own promotion.
+ *
+ * No-ops when an entry already exists, so callers can invoke it without first
+ * checking — `riskId` is unique on RiskRegisterEntry.
+ */
+async function promoteRiskToRegister(
+  db: PrismaClient | Prisma.TransactionClient,
+  organizationId: string,
+  riskId: string,
+  ownerId: string,
+): Promise<void> {
+  const existing = await db.riskRegisterEntry.findUnique({
+    where: { riskId },
+    select: { id: true },
+  });
+  if (existing) return;
+
+  const identifier = await generateIdentifier(organizationId, "RR");
+  await db.riskRegisterEntry.create({
+    data: {
+      organizationId,
+      identifier,
+      riskId,
+      ownerId,
+      status: RiskRegisterStatus.OPEN,
+    },
+  });
+}
 
 /**
  * Story 4.5: Roles that can manage remediation options (AC9, AC15, AC20)
@@ -385,6 +422,20 @@ export const riskRouter = createTRPCRouter({
       // Generate risk identifier (RISK-2026-0001 format)
       const identifier = await generateIdentifier(ctx.organizationId!, "RISK");
 
+      // Manually-raised risks (no discoveryProjectId) route by the raiser's
+      // authority: someone who can approve doesn't need a second signature, so
+      // their risk opens straight away and is promoted to the register below.
+      // An ANALYST's risk is submitted for review instead — it lands in the
+      // reviewer queue (/risks/decisions) and only reaches the register once
+      // `approveAssessment` clears it. Assessment-discovered risks keep their
+      // existing behaviour: the project's own approval owns their promotion.
+      const isManualRisk = !input.discoveryProjectId;
+      const canSelfApprove = APPROVE_ROLES.includes(
+        ctx.session!.user.role as UserRole,
+      );
+      const initialStatus: RiskStatus =
+        isManualRisk && !canSelfApprove ? RiskStatus.PENDING_REVIEW : RiskStatus.OPEN;
+
       // Create risk with status OPEN (AC17)
       // Story 4.2 (Task 5.3): Associate with templateId if provided
       // Story 4.3 (AC18-AC22): Include finding context fields
@@ -396,7 +447,7 @@ export const riskRouter = createTRPCRouter({
           description: input.description,
           affectedSystems: input.affectedSystems ?? null,
           severity: input.severity,
-          status: "OPEN",
+          status: initialStatus,
           createdById: ctx.session!.user.id, // AC18
           organizationId: ctx.organizationId!, // AC19
           templateId: input.templateId ?? null, // Story 4.2 (Task 5.3)
@@ -425,6 +476,18 @@ export const riskRouter = createTRPCRouter({
           enterpriseRiskId: input.enterpriseRiskId ?? null,
         },
       });
+
+      // An approver's own risk needs no second signature — put it in the
+      // register now. The analyst path deliberately skips this: promotion
+      // happens on approval instead.
+      if (isManualRisk && canSelfApprove) {
+        await promoteRiskToRegister(
+          ctx.db,
+          ctx.organizationId!,
+          risk.id,
+          ctx.session!.user.id,
+        );
+      }
 
       // Audit logging (AC24-AC25)
       // Story 4.2 (Task 5.4): Include template info in audit log
@@ -5706,11 +5769,13 @@ export const riskRouter = createTRPCRouter({
       const userId = ctx.session!.user.id;
       const userRole = ctx.session!.user.role as UserRole;
 
-      // Only managers can approve
-      if (userRole !== UserRole.ANALYST && userRole !== UserRole.ADMINISTRATOR) {
+      // Only approvers can approve. This previously admitted ANALYST and
+      // rejected MANAGER — inverted, and it defeated the point of review,
+      // since an analyst could sign off the risk they had just raised.
+      if (!APPROVE_ROLES.includes(userRole)) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Only GRC Analysts and Admins can approve assessments",
+          message: "Only Managers and Administrators can approve risks",
         });
       }
 
@@ -5745,6 +5810,15 @@ export const riskRouter = createTRPCRouter({
           assessmentReviewNotes: input.notes,
         },
       });
+
+      // Approval is the signature the register was waiting for. Owner is the
+      // person who raised the risk, not the approver.
+      await promoteRiskToRegister(
+        ctx.db,
+        organizationId,
+        input.riskId,
+        risk.createdById ?? userId,
+      );
 
       // Record status history
       await ctx.db.riskStatusHistory.create({
