@@ -662,112 +662,139 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
-          ) : visibleRoots.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              {debouncedSearch || healthFilter !== "all" ? (
-                <>
-                  <p>No controls found matching your filters</p>
-                  <button
-                    onClick={() => {
-                      setSearchQuery("");
-                      setDebouncedSearch("");
-                      setHealthFilter("all");
-                    }}
-                    className="mt-2 text-blue-600 hover:text-blue-800"
-                  >
-                    Clear filters
-                  </button>
-                </>
-              ) : (
-                <p>No controls in this framework</p>
-              )}
-            </div>
           ) : (
             <>
-              {(isSearching || isFiltering) && (
-                <p className="mb-2 text-sm text-muted-foreground">
-                  Showing flat results — expand is disabled while{" "}
-                  {isSearching ? "searching" : "filtering"}.
-                </p>
+              {visibleRoots.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {debouncedSearch || healthFilter !== "all" ? (
+                    <>
+                      <p>No controls found matching your filters</p>
+                      <button
+                        onClick={() => {
+                          setSearchQuery("");
+                          setDebouncedSearch("");
+                          setHealthFilter("all");
+                        }}
+                        className="mt-2 text-blue-600 hover:text-blue-800"
+                      >
+                        Clear filters
+                      </button>
+                    </>
+                  ) : (
+                    <p>No controls in this framework</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {(isSearching || isFiltering) && (
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      Showing flat results — expand is disabled while{" "}
+                      {isSearching ? "searching" : "filtering"}.
+                    </p>
+                  )}
+
+                  <FrameworkNodeTable
+                    nodes={visibleRoots}
+                    columns={{
+                      health: true,
+                      domains: true,
+                      testing: true,
+                      children: true,
+                      actions: true,
+                    }}
+                    expanded={expanded}
+                    onToggleExpand={handleToggleExpand}
+                    loadingChildIds={loadingChildIds}
+                    healthByNodeId={healthByNodeId}
+                    flat={isSearching || isFiltering}
+                    onRowClick={(node) => setSelectedControlId(node.id)}
+                    onEditTesting={(node, focus) => {
+                      setEditingTestingControlId(node.id);
+                      setEditingTestingField(focus === "ti" ? "testInstructions" : "acceptanceCriteria");
+                      setEditingTestInstructions(node.testInstructions ?? "");
+                      setEditingAcceptanceCriteria(node.acceptanceCriteria ?? "");
+                    }}
+                    onEditDomains={(node) => {
+                      setTaggingControlId(node.id);
+                      setTaggingControlDomains((node.domains ?? []).map((d) => d.id));
+                    }}
+                    renderActions={(node) => (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            Actions
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedControlId(node.id)}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          {node.isActive ? (
+                            <DropdownMenuItem
+                              onClick={() => deprecateControlMutation.mutate({ id: node.id })}
+                              className="text-amber-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Deprecate
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => restoreControlMutation.mutate({ id: node.id })}
+                              className="text-green-600"
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Restore
+                            </DropdownMenuItem>
+                          )}
+                          {(healthByNodeId.get(node.id)?.riskCount ?? 0) === 0 &&
+                            (healthByNodeId.get(node.id)?.findingCount ?? 0) === 0 && (
+                              <DropdownMenuItem
+                                onClick={() => deleteControlMutation.mutate({ id: node.id })}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  />
+                </>
               )}
 
-              <FrameworkNodeTable
-                nodes={visibleRoots}
-                columns={{
-                  health: true,
-                  domains: true,
-                  testing: true,
-                  children: true,
-                  actions: true,
-                }}
-                expanded={expanded}
-                onToggleExpand={handleToggleExpand}
-                loadingChildIds={loadingChildIds}
-                healthByNodeId={healthByNodeId}
-                flat={isSearching || isFiltering}
-                onRowClick={(node) => setSelectedControlId(node.id)}
-                onEditTesting={(node, focus) => {
-                  setEditingTestingControlId(node.id);
-                  setEditingTestingField(focus === "ti" ? "testInstructions" : "acceptanceCriteria");
-                  setEditingTestInstructions(node.testInstructions ?? "");
-                  setEditingAcceptanceCriteria(node.acceptanceCriteria ?? "");
-                }}
-                onEditDomains={(node) => {
-                  setTaggingControlId(node.id);
-                  setTaggingControlDomains((node.domains ?? []).map((d) => d.id));
-                }}
-                renderActions={(node) => (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        Actions
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setSelectedControlId(node.id)}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      {node.isActive ? (
-                        <DropdownMenuItem
-                          onClick={() => deprecateControlMutation.mutate({ id: node.id })}
-                          className="text-amber-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Deprecate
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem
-                          onClick={() => restoreControlMutation.mutate({ id: node.id })}
-                          className="text-green-600"
-                        >
-                          <RotateCcw className="h-4 w-4 mr-2" />
-                          Restore
-                        </DropdownMenuItem>
-                      )}
-                      {(healthByNodeId.get(node.id)?.riskCount ?? 0) === 0 &&
-                        (healthByNodeId.get(node.id)?.findingCount ?? 0) === 0 && (
-                          <DropdownMenuItem
-                            onClick={() => deleteControlMutation.mutate({ id: node.id })}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              />
-
-              {/* Pagination */}
+              {/* Pagination. Hoisted out of the visibleRoots-non-empty branch
+                  above (Story 12.3 review finding): a health filter narrows
+                  only the rows already fetched for THIS page, so it is entirely
+                  possible for the whole page to filter down to zero rows while
+                  later pages still hold matches (e.g. NIST 800-53's lone
+                  CRITICAL control several pages in). Without this, that page
+                  rendered the "no controls found" empty state — which has no
+                  Next button — stranding the user on a page they can't leave. */}
               {pagination && pagination.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 px-2">
                   <p className="text-sm text-gray-500">
-                    Showing {currentPage * pageSize + 1} to{" "}
-                    {Math.min((currentPage + 1) * pageSize, pagination.totalCount)} of{" "}
-                    {pagination.totalCount}{" "}
-                    {isTree ? "top-level controls" : "matching controls"}
+                    {isFiltering ? (
+                      // Honest-footer fix: the flat fetch behind a health filter
+                      // returns a full page of unfiltered rows, then the health
+                      // filter is applied client-side to just that page. So
+                      // "matching controls" out of `pagination.totalCount` would
+                      // describe the fetch, not what's on screen. Report what's
+                      // actually rendered on this page instead.
+                      <>
+                        Showing {visibleRoots.length} of {rootNodes.length} controls
+                        on this page matching this filter ({pagination.totalCount}{" "}
+                        controls fetched across all pages)
+                      </>
+                    ) : (
+                      <>
+                        Showing {currentPage * pageSize + 1} to{" "}
+                        {Math.min((currentPage + 1) * pageSize, pagination.totalCount)} of{" "}
+                        {pagination.totalCount}{" "}
+                        {isTree ? "top-level controls" : "matching controls"}
+                      </>
+                    )}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
