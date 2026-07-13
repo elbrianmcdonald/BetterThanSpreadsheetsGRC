@@ -442,10 +442,57 @@ export async function seedDemoData(prisma: PrismaClient) {
     }
   }
 
+  // Risk register entries. In the app these are minted only when a risk
+  // assessment is approved (riskAssessmentProject.approve), which the seed
+  // never runs — so without this the Risk Register renders empty on a fresh
+  // install even though the Risk Dashboard shows a dozen risks. Mirror the
+  // promotion the approve path would have done: one entry per risk, owned by
+  // the assessment assignee.
+  const REGISTER_STATUS = {
+    OPEN: 'OPEN',
+    ASSIGNED: 'IN_TREATMENT',
+    REMEDIATED: 'MITIGATED',
+    CLOSED: 'CLOSED',
+    DRAFT: 'OPEN',
+    PENDING_REVIEW: 'OPEN',
+  } as const;
+
+  const now = Date.now();
+  const DAY = 24 * 60 * 60 * 1000;
+
+  for (const [i, r] of risksData.entries()) {
+    const status = REGISTER_STATUS[r.status];
+    const closed = status === 'CLOSED' || status === 'MITIGATED';
+    // Give the in-treatment entries an SLA so the register's OVERDUE tile and
+    // date filters have something to show: the first is deliberately past due.
+    const slaDueDate =
+      status === 'IN_TREATMENT' ? new Date(now + (i === 0 ? -12 : 30 + i * 7) * DAY) : null;
+
+    await prisma.riskRegisterEntry.upsert({
+      where: { riskId: r.id },
+      update: {},
+      create: {
+        organizationId: ORG_A,
+        identifier: `RR-2026-${String(i + 1).padStart(4, '0')}`,
+        riskId: r.id,
+        ownerId: ALICE,
+        status,
+        slaDueDate,
+        treatmentPlan:
+          status === 'IN_TREATMENT'
+            ? `Remediation underway for ${r.title.toLowerCase()}; tracked to the SLA date above.`
+            : null,
+        closedAt: closed ? new Date(now - 5 * DAY) : null,
+        closedBy: closed ? ALICE : null,
+      },
+    });
+  }
+
   const derivedCount = risksData.filter((r) => !r.manual).length;
   console.log(
-    `  ✅ ${risksData.length} risks (${derivedCount} rollup-derived, ${risksData.length - derivedCount} manual-override) + ${linkRows.length} finding links + ER cascade\n`,
+    `  ✅ ${risksData.length} risks (${derivedCount} rollup-derived, ${risksData.length - derivedCount} manual-override) + ${linkRows.length} finding links + ER cascade`,
   );
+  console.log(`  ✅ ${risksData.length} risk register entries\n`);
 
   // ========================================================================
   // Layer 4: Risk Assessments + Scenarios + Treatments + Comments

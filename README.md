@@ -40,7 +40,13 @@ Coverage and score per framework, filterable by business unit, with assessment p
 ![Compliance Dashboard](./docs/screenshots/compliance-dashboard.png)
 
 <details>
-<summary><b>More screenshots</b> — control library, frameworks, TPRM, vendors, BIA, risk assessments, home</summary>
+<summary><b>More screenshots</b> — risk register, control library, frameworks, TPRM, vendors, BIA, risk assessments, home</summary>
+
+### Risk Register
+
+Risks promoted from approved assessments, with treatment status, owner, and SLA tracking.
+
+![Risk Register](./docs/screenshots/risk-register.png)
 
 ### Framework / Standard Control Library
 
