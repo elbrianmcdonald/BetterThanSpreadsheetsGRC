@@ -8,7 +8,7 @@
  * know whether it is showing a compliance framework or a maturity one.
  */
 
-import type { ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -63,12 +63,19 @@ export interface FrameworkNodeTableProps {
   renderActions?: (node: FrameworkNode) => ReactNode;
   /** Flat search results: no chevrons, no indentation. */
   flat?: boolean;
+  /** Header of the leftmost column. Compliance says "Control ID"; maturity says "Code". */
+  idHeader?: string;
+}
+
+/** A node with no health data is unknown, never "compliant". */
+function EmptyCell() {
+  return <span className="text-muted-foreground">—</span>;
 }
 
 function HealthBadge({ health }: { health: NodeHealth }) {
   if (health === "CRITICAL") {
     return (
-      <Badge variant="destructive" className="gap-1">
+      <Badge variant="critical" className="gap-1">
         <ShieldAlert className="h-3 w-3" />
         Critical
       </Badge>
@@ -76,24 +83,28 @@ function HealthBadge({ health }: { health: NodeHealth }) {
   }
   if (health === "AT_RISK") {
     return (
-      <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-600 bg-yellow-50">
+      <Badge variant="warning" className="gap-1">
         <Shield className="h-3 w-3" />
         At Risk
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="gap-1 border-green-500 text-green-600 bg-green-50">
+    <Badge variant="success" className="gap-1">
       <ShieldCheck className="h-3 w-3" />
       Healthy
     </Badge>
   );
 }
 
-/** Colour a maturity row by its level so the hierarchy reads at a glance. */
+/**
+ * Colour a maturity row by its level so the hierarchy reads at a glance.
+ * Token-based so both themes work; the chart tokens are the project's
+ * categorical (non-semantic) palette, which is what a level is.
+ */
 function levelBadgeClass(levelLabel: string | null): string {
-  if (levelLabel === "FUNCTION") return "bg-purple-100 text-purple-700";
-  if (levelLabel === "CATEGORY") return "bg-blue-100 text-blue-700";
+  if (levelLabel === "FUNCTION") return "border-transparent bg-chart-1/10 text-chart-1";
+  if (levelLabel === "CATEGORY") return "border-transparent bg-chart-2/10 text-chart-2";
   return "";
 }
 
@@ -106,19 +117,24 @@ function TestingCell({
   label: string;
   onEdit: () => void;
 }) {
+  const handleClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    onEdit();
+  };
+
   if (value) {
     return (
-      <Badge
-        variant="secondary"
-        className="text-xs cursor-pointer hover:bg-secondary/80 max-w-[130px] truncate"
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 max-w-[130px] px-1 text-xs"
         title={value}
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit();
-        }}
+        onClick={handleClick}
       >
-        {value}
-      </Badge>
+        <Badge variant="secondary" className="max-w-full truncate text-xs">
+          {value}
+        </Badge>
+      </Button>
     );
   }
   return (
@@ -126,10 +142,7 @@ function TestingCell({
       variant="ghost"
       size="sm"
       className="h-6 px-2 text-xs text-muted-foreground"
-      onClick={(e) => {
-        e.stopPropagation();
-        onEdit();
-      }}
+      onClick={handleClick}
     >
       <Plus className="h-3 w-3 mr-1" />
       {label}
@@ -149,15 +162,24 @@ export function FrameworkNodeTable({
   onEditDomains,
   renderActions,
   flat = false,
+  idHeader = "Control ID",
 }: FrameworkNodeTableProps) {
   const rows = flat ? nodes : flattenVisible(nodes, expanded);
+  const columnCount =
+    2 +
+    (columns.level ? 1 : 0) +
+    (columns.health ? 3 : 0) +
+    (columns.domains ? 1 : 0) +
+    (columns.testing ? 2 : 0) +
+    (columns.children ? 1 : 0) +
+    (columns.actions ? 1 : 0);
 
   return (
     <div className="overflow-hidden rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[180px]">Control ID</TableHead>
+            <TableHead className="w-[180px]">{idHeader}</TableHead>
             <TableHead>Title</TableHead>
             {columns.level && <TableHead className="w-[120px]">Level</TableHead>}
             {columns.health && <TableHead className="w-[80px] text-center">Risks</TableHead>}
@@ -171,17 +193,40 @@ export function FrameworkNodeTable({
           </TableRow>
         </TableHeader>
         <TableBody>
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={columnCount} className="h-24 text-center text-muted-foreground">
+                No matching rows.
+              </TableCell>
+            </TableRow>
+          )}
           {rows.map((node) => {
             const isExpandable = !flat && node.childCount > 0;
             const isOpen = expanded.has(node.id);
             const isLoadingChildren = loadingChildIds?.has(node.id) ?? false;
             const healthInfo = healthByNodeId?.get(node.id);
 
+            const handleRowKeyDown = onRowClick
+              ? (e: KeyboardEvent<HTMLTableRowElement>) => {
+                  if (e.key !== "Enter" && e.key !== " ") return;
+                  // Space would otherwise scroll the page.
+                  e.preventDefault();
+                  onRowClick(node);
+                }
+              : undefined;
+
             return (
               <TableRow
                 key={node.id}
-                className={onRowClick ? "cursor-pointer hover:bg-gray-50" : undefined}
+                className={
+                  onRowClick
+                    ? "cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    : undefined
+                }
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? "button" : undefined}
                 onClick={onRowClick ? () => onRowClick(node) : undefined}
+                onKeyDown={handleRowKeyDown}
               >
                 <TableCell className="font-mono text-sm">
                   <div
@@ -198,7 +243,7 @@ export function FrameworkNodeTable({
                         type="button"
                         aria-label={`${isOpen ? "Collapse" : "Expand"} ${node.code}`}
                         aria-expanded={isOpen}
-                        className="shrink-0 text-muted-foreground hover:text-foreground"
+                        className="shrink-0 rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
                         onClick={(e) => {
                           e.stopPropagation();
                           onToggleExpand(node);
@@ -220,7 +265,9 @@ export function FrameworkNodeTable({
                 <TableCell>
                   <p className="font-medium">{node.title}</p>
                   {node.description && (
-                    <p className="text-sm text-gray-500 truncate max-w-md">{node.description}</p>
+                    <p className="text-sm text-muted-foreground truncate max-w-md">
+                      {node.description}
+                    </p>
                   )}
                 </TableCell>
 
@@ -242,7 +289,7 @@ export function FrameworkNodeTable({
                         {healthInfo.riskCount}
                       </Badge>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <EmptyCell />
                     )}
                   </TableCell>
                 )}
@@ -255,14 +302,15 @@ export function FrameworkNodeTable({
                         {healthInfo.findingCount}
                       </Badge>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <EmptyCell />
                     )}
                   </TableCell>
                 )}
 
                 {columns.health && (
                   <TableCell>
-                    <HealthBadge health={healthInfo?.health ?? "HEALTHY"} />
+                    {/* No health data means unknown. Never assert "Healthy". */}
+                    {healthInfo ? <HealthBadge health={healthInfo.health} /> : <EmptyCell />}
                   </TableCell>
                 )}
 
@@ -271,17 +319,20 @@ export function FrameworkNodeTable({
                     <div className="flex flex-wrap gap-1">
                       {node.domains && node.domains.length > 0 ? (
                         node.domains.map((d) => (
-                          <Badge
+                          <Button
                             key={d.id}
-                            variant="secondary"
-                            className="text-xs cursor-pointer hover:bg-secondary/80"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1 text-xs"
                             onClick={(e) => {
                               e.stopPropagation();
                               onEditDomains?.(node);
                             }}
                           >
-                            {d.code}
-                          </Badge>
+                            <Badge variant="secondary" className="text-xs">
+                              {d.code}
+                            </Badge>
+                          </Button>
                         ))
                       ) : (
                         <Button
@@ -324,7 +375,9 @@ export function FrameworkNodeTable({
                 {columns.children && (
                   <TableCell>
                     {node.childCount > 0 && (
-                      <span className="text-sm text-gray-500">{node.childCount} sub-controls</span>
+                      <span className="text-sm text-muted-foreground">
+                        {node.childCount} sub-controls
+                      </span>
                     )}
                   </TableCell>
                 )}
