@@ -65,6 +65,11 @@ const LEVEL_LABELS_BY_FRAMEWORK: Readonly<
   Record<string, Readonly<Record<string, string>>>
 > = {
   C2M2: { FUNCTION: "DOMAIN" },
+  OWASP_SAMM: {
+    FUNCTION: "BUSINESS FUNCTION",
+    CATEGORY: "SECURITY PRACTICE",
+    SUBCATEGORY: "ACTIVITY STREAM",
+  },
 };
 
 export function MaturityFrameworkDetailClient({ frameworkId }: Props) {

@@ -133,6 +133,34 @@ describe("FrameworkNodeTable", () => {
     expect(screen.getByText("MIL 1")).toBeInTheDocument();
   });
 
+  it("renames every mapped tier, so SAMM reads in its own vocabulary", () => {
+    const tiers: FrameworkNode[] = [
+      { ...leaf("g", "G", "Governance", 0), kind: "domain", levelLabel: "FUNCTION" },
+      { ...leaf("gsm", "G-SM", "Strategy and Metrics", 0), kind: "domain", levelLabel: "CATEGORY" },
+      { ...leaf("gsma", "G-SM-A", "Create and Promote", 0), kind: "domain", levelLabel: "SUBCATEGORY" },
+    ];
+
+    render(
+      <FrameworkNodeTable
+        nodes={tiers}
+        columns={{ level: true }}
+        expanded={new Set()}
+        onToggleExpand={jest.fn()}
+        levelLabels={{
+          FUNCTION: "BUSINESS FUNCTION",
+          CATEGORY: "SECURITY PRACTICE",
+          SUBCATEGORY: "ACTIVITY STREAM",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("BUSINESS FUNCTION")).toBeInTheDocument();
+    expect(screen.getByText("SECURITY PRACTICE")).toBeInTheDocument();
+    expect(screen.getByText("ACTIVITY STREAM")).toBeInTheDocument();
+    expect(screen.queryByText("CATEGORY")).not.toBeInTheDocument();
+    expect(screen.queryByText("SUBCATEGORY")).not.toBeInTheDocument();
+  });
+
   it("renders the stored level when no levelLabels map is given", () => {
     const csfFunction: FrameworkNode = {
       ...leaf("gv", "GV", "Govern", 0),

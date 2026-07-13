@@ -204,7 +204,7 @@ export function FrameworkNodeTable({
           <TableRow>
             <TableHead className="w-[180px]">{idHeader}</TableHead>
             <TableHead>Title</TableHead>
-            {columns.level && <TableHead className="w-[120px]">Level</TableHead>}
+            {columns.level && <TableHead className="w-[170px]">Level</TableHead>}
             {columns.health && <TableHead className="w-[80px] text-center">Risks</TableHead>}
             {columns.health && <TableHead className="w-[80px] text-center">Findings</TableHead>}
             {columns.health && <TableHead className="w-[100px]">Health</TableHead>}
@@ -303,7 +303,10 @@ export function FrameworkNodeTable({
                 {columns.level && (
                   <TableCell>
                     {node.levelLabel && (
-                      <Badge variant="secondary" className={`text-xs ${levelBadgeClass(node.levelLabel)}`}>
+                      <Badge
+                        variant="secondary"
+                        className={`whitespace-nowrap text-xs ${levelBadgeClass(node.levelLabel)}`}
+                      >
                         {levelLabels?.[node.levelLabel] ?? node.levelLabel}
                       </Badge>
                     )}
