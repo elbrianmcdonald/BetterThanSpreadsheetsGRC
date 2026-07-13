@@ -55,6 +55,18 @@ type TestingTarget =
   | { kind: "domain"; id: string; code: string; name: string; testInstructions: string | null; acceptanceCriteria: string | null }
   | { kind: "question"; id: string; code: string; name: string; testInstructions: string | null; acceptanceCriteria: string | null };
 
+/**
+ * The stored AssessmentDepth enum is written in NIST CSF's vocabulary
+ * (FUNCTION / CATEGORY / SUBCATEGORY) and every maturity framework reuses it,
+ * so C2M2's top tier — properly a Domain — comes back badged FUNCTION. Rename
+ * it for display only; a level with no entry here renders as stored.
+ */
+const LEVEL_LABELS_BY_FRAMEWORK: Readonly<
+  Record<string, Readonly<Record<string, string>>>
+> = {
+  C2M2: { FUNCTION: "DOMAIN" },
+};
+
 export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
   const utils = api.useUtils();
   const { data: framework, isLoading, error } = api.maturity.getFramework.useQuery({
@@ -240,6 +252,7 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
   }
 
   const scoringLevels = (framework.scoringLevels ?? []) as unknown as ScoringLevel[];
+  const levelLabels = LEVEL_LABELS_BY_FRAMEWORK[framework.type];
 
   return (
     <AppLayout>
@@ -433,6 +446,7 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
                     expanded={expanded}
                     flat={isSearching}
                     idHeader="Code"
+                    levelLabels={levelLabels}
                     onToggleExpand={handleToggleExpand}
                     onEditTesting={openEditorForNode}
                   />
@@ -452,6 +466,7 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
                   expanded={new Set()}
                   flat
                   idHeader="Code"
+                  levelLabels={levelLabels}
                   onToggleExpand={() => undefined}
                   onEditTesting={openEditorForNode}
                 />

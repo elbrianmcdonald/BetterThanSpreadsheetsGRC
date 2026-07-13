@@ -103,6 +103,56 @@ describe("FrameworkNodeTable", () => {
     expect(screen.queryByText("FUNCTION")).not.toBeInTheDocument();
   });
 
+  it("renames a level for display when levelLabels maps it, and leaves unmapped levels alone", () => {
+    // C2M2 stores its top tier as FUNCTION (the enum is written in NIST CSF's
+    // vocabulary) but it is properly a Domain.
+    const c2m2Domain: FrameworkNode = {
+      ...leaf("asset", "ASSET", "Asset Management", 0),
+      kind: "domain",
+      levelLabel: "FUNCTION",
+    };
+    const practice: FrameworkNode = {
+      ...leaf("asset-1a", "ASSET-1a", "Are IT assets inventoried?", 0),
+      kind: "question",
+      levelLabel: "MIL 1",
+    };
+
+    render(
+      <FrameworkNodeTable
+        nodes={[c2m2Domain, practice]}
+        columns={{ level: true }}
+        expanded={new Set()}
+        onToggleExpand={jest.fn()}
+        levelLabels={{ FUNCTION: "DOMAIN" }}
+      />,
+    );
+
+    expect(screen.getByText("DOMAIN")).toBeInTheDocument();
+    expect(screen.queryByText("FUNCTION")).not.toBeInTheDocument();
+    // Unmapped levels are untouched.
+    expect(screen.getByText("MIL 1")).toBeInTheDocument();
+  });
+
+  it("renders the stored level when no levelLabels map is given", () => {
+    const csfFunction: FrameworkNode = {
+      ...leaf("gv", "GV", "Govern", 0),
+      kind: "domain",
+      levelLabel: "FUNCTION",
+    };
+
+    render(
+      <FrameworkNodeTable
+        nodes={[csfFunction]}
+        columns={{ level: true }}
+        expanded={new Set()}
+        onToggleExpand={jest.fn()}
+      />,
+    );
+
+    // NIST CSF's Functions really are Functions — the rename must not leak.
+    expect(screen.getByText("FUNCTION")).toBeInTheDocument();
+  });
+
   it("renders health columns from healthByNodeId when the health column is on", () => {
     render(
       <FrameworkNodeTable

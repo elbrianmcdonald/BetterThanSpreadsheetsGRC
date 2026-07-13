@@ -68,6 +68,14 @@ export interface FrameworkNodeTableProps {
   flat?: boolean;
   /** Header of the leftmost column. Compliance says "Control ID"; maturity says "Code". */
   idHeader?: string;
+  /**
+   * Display names for the level badge, keyed by the raw level. The stored
+   * AssessmentDepth enum is written in NIST CSF's vocabulary (FUNCTION /
+   * CATEGORY / SUBCATEGORY), which mis-names the other maturity frameworks —
+   * C2M2's top tier is a Domain, not a Function. Unmapped levels render as-is,
+   * and the badge colour still keys off the raw level.
+   */
+  levelLabels?: Readonly<Record<string, string>>;
 }
 
 /** A node with no health data is unknown, never "compliant". */
@@ -177,6 +185,7 @@ export function FrameworkNodeTable({
   renderActions,
   flat = false,
   idHeader = "Control ID",
+  levelLabels,
 }: FrameworkNodeTableProps) {
   const rows = flat ? nodes : flattenVisible(nodes, expanded);
   const columnCount =
@@ -295,7 +304,7 @@ export function FrameworkNodeTable({
                   <TableCell>
                     {node.levelLabel && (
                       <Badge variant="secondary" className={`text-xs ${levelBadgeClass(node.levelLabel)}`}>
-                        {node.levelLabel}
+                        {levelLabels?.[node.levelLabel] ?? node.levelLabel}
                       </Badge>
                     )}
                   </TableCell>
