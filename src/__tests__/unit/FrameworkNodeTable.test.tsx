@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { FrameworkNodeTable } from "@/components/frameworks/FrameworkNodeTable";
 import type { FrameworkNode } from "@/lib/frameworks/framework-node";
 
@@ -264,12 +265,138 @@ describe("FrameworkNodeTable", () => {
       />,
     );
 
-    const row = screen.getByRole("button", { name: /account management/i });
-    fireEvent.keyDown(row, { key: "Enter" });
+    const row = screen.getAllByRole("row")[1];
+    expect(row).toBeDefined();
+    fireEvent.keyDown(row!, { key: "Enter" });
     expect(onRowClick).toHaveBeenCalledTimes(1);
 
-    fireEvent.keyDown(row, { key: " " });
+    fireEvent.keyDown(row!, { key: " " });
     expect(onRowClick).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets the keyboard activate the chevron without the row hijacking the keystroke", async () => {
+    // The row's own Enter/Space handler must not preventDefault() on keystrokes
+    // that originated inside a nested control: doing so cancels the button's
+    // default activation, so the node never expands and the row navigates away.
+    const user = userEvent.setup();
+    const onToggleExpand = jest.fn();
+    const onRowClick = jest.fn();
+
+    render(
+      <FrameworkNodeTable
+        nodes={[family]}
+        columns={{ health: true, domains: true, testing: true, children: true, actions: true }}
+        expanded={new Set()}
+        onToggleExpand={onToggleExpand}
+        onRowClick={onRowClick}
+      />,
+    );
+
+    const chevron = screen.getByRole("button", { name: /expand 03\.01/i });
+    chevron.focus();
+    await user.keyboard("{Enter}");
+
+    expect(onToggleExpand).toHaveBeenCalledWith(family);
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it("keeps table row semantics and nested controls reachable when the row is clickable", () => {
+    // role="button" on a <tr> is children-presentational: it strips every nested
+    // control out of the accessibility tree and breaks table > rowgroup > row.
+    const node: FrameworkNode = {
+      ...leaf("c1", "03.01.01", "Account Management", 0),
+      testInstructions: "Run the script",
+      acceptanceCriteria: "No findings",
+      domains: [{ id: "d1", code: "AC", name: "Access Control" }],
+    };
+
+    render(
+      <FrameworkNodeTable
+        nodes={[node]}
+        columns={{ domains: true, testing: true }}
+        expanded={new Set()}
+        onToggleExpand={jest.fn()}
+        onRowClick={jest.fn()}
+        onEditDomains={jest.fn()}
+        onEditTesting={jest.fn()}
+      />,
+    );
+
+    const bodyRow = screen.getAllByRole("row")[1];
+    expect(bodyRow).toBeDefined();
+    expect(bodyRow!.getAttribute("role")).toBeNull();
+    expect(bodyRow).toHaveAttribute("tabindex", "0");
+
+    // Nested controls stay in the accessibility tree.
+    expect(screen.getByRole("button", { name: "AC" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /run the script/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /no findings/i })).toBeInTheDocument();
+  });
+
+  it("keeps header and body cell counts in sync for the compliance column set", () => {
+    render(
+      <FrameworkNodeTable
+        nodes={[leaf("c1", "03.01.01", "Account Management", 0)]}
+        columns={{ health: true, domains: true, testing: true, children: true, actions: true }}
+        expanded={new Set()}
+        onToggleExpand={jest.fn()}
+      />,
+    );
+
+    // Control ID + Title + Risks + Findings + Health + Domains + TI + AC + Children + Actions
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers).toHaveLength(10);
+
+    const bodyRow = screen.getAllByRole("row")[1];
+    expect(bodyRow).toBeDefined();
+    expect(bodyRow!.querySelectorAll("td")).toHaveLength(headers.length);
+  });
+
+  it("spans the empty-state cell across exactly the rendered header count", () => {
+    // columnCount is a hand-maintained parallel of the header block; tie it to
+    // the real header count so a new column cannot silently desync the colSpan.
+    render(
+      <FrameworkNodeTable
+        nodes={[]}
+        columns={{ health: true, domains: true, testing: true, children: true, actions: true }}
+        expanded={new Set()}
+        onToggleExpand={jest.fn()}
+      />,
+    );
+
+    const headerCount = screen.getAllByRole("columnheader").length;
+    const emptyCell = screen.getByText("No matching rows.");
+    expect(emptyCell).toHaveAttribute("colspan", String(headerCount));
+  });
+
+  it("colours maturity level badges from non-status tokens only", () => {
+    // --chart-2 IS --success and --chart-3 IS --warning (and --chart-4 IS
+    // --destructive) byte-for-byte in globals.css, so those tokens would render
+    // a level as a compliance state. Levels are categorical, not a status.
+    const fn: FrameworkNode = { ...leaf("gv", "GV", "Govern", 0), kind: "domain", levelLabel: "FUNCTION" };
+    const cat: FrameworkNode = { ...leaf("gv-oc", "GV.OC", "Org Context", 1), kind: "domain", levelLabel: "CATEGORY" };
+
+    render(
+      <FrameworkNodeTable
+        nodes={[fn, cat]}
+        columns={{ level: true }}
+        expanded={new Set()}
+        onToggleExpand={jest.fn()}
+        flat
+      />,
+    );
+
+    const functionClass = screen.getByText("FUNCTION").className;
+    const categoryClass = screen.getByText("CATEGORY").className;
+
+    // Only look at colour utilities the level adds; the badge base class legitimately
+    // carries aria-invalid:*-destructive variants.
+    const statusPaint = /(?:^|\s)(?:bg|text|border)-(?:chart-2|chart-3|chart-4|success|warning|destructive)\b/;
+    for (const cls of [functionClass, categoryClass]) {
+      expect(cls).not.toMatch(statusPaint);
+    }
+    // ...and the two levels still read differently at a glance.
+    expect(functionClass).not.toEqual(categoryClass);
   });
 
   it("exposes clickable domain and testing badges as real buttons", () => {

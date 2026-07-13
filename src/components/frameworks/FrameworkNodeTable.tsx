@@ -99,12 +99,21 @@ function HealthBadge({ health }: { health: NodeHealth }) {
 
 /**
  * Colour a maturity row by its level so the hierarchy reads at a glance.
- * Token-based so both themes work; the chart tokens are the project's
- * categorical (non-semantic) palette, which is what a level is.
+ *
+ * A level is a position in a hierarchy, not a compliance state, so it must not
+ * borrow the status palette. That rules out more chart tokens than it looks:
+ * in globals.css --chart-2 IS --success, --chart-3 IS --warning and --chart-4 IS
+ * --destructive, byte-for-byte in both themes — a "categorical" green/amber/red
+ * would render pixel-identical to a status badge. The only genuinely non-status
+ * chart tokens are --chart-1 (navy) and --chart-5 (neutral slate), and they are
+ * far enough apart in hue and lightness to tell apart at a glance.
+ *
+ * --chart-5 is too light to carry badge text, so it tints the surface and draws
+ * the border while the readable neutral foreground carries the label.
  */
 function levelBadgeClass(levelLabel: string | null): string {
   if (levelLabel === "FUNCTION") return "border-transparent bg-chart-1/10 text-chart-1";
-  if (levelLabel === "CATEGORY") return "border-transparent bg-chart-2/10 text-chart-2";
+  if (levelLabel === "CATEGORY") return "border-chart-5 bg-chart-5/10 text-secondary-foreground";
   return "";
 }
 
@@ -208,6 +217,11 @@ export function FrameworkNodeTable({
 
             const handleRowKeyDown = onRowClick
               ? (e: KeyboardEvent<HTMLTableRowElement>) => {
+                  // Keydown from a nested control (chevron, domain/TI/AC buttons,
+                  // the actions menu) bubbles to the row. Acting on it here would
+                  // preventDefault() the control's own activation and navigate away
+                  // instead — so only handle keystrokes aimed at the row itself.
+                  if (e.target !== e.currentTarget) return;
                   if (e.key !== "Enter" && e.key !== " ") return;
                   // Space would otherwise scroll the page.
                   e.preventDefault();
@@ -223,8 +237,12 @@ export function FrameworkNodeTable({
                     ? "cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     : undefined
                 }
+                // No role="button" here: ARIA makes a button's descendants
+                // presentational, which would strip the chevron, the domain/TI/AC
+                // buttons and the actions menu out of the accessibility tree — and
+                // it breaks the required table > rowgroup > row structure. tabIndex
+                // plus onKeyDown keeps the row keyboard-activatable without either.
                 tabIndex={onRowClick ? 0 : undefined}
-                role={onRowClick ? "button" : undefined}
                 onClick={onRowClick ? () => onRowClick(node) : undefined}
                 onKeyDown={handleRowKeyDown}
               >
