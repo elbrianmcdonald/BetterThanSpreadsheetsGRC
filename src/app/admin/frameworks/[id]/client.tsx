@@ -8,7 +8,7 @@
  * @see Story 2.2: OSCAL Catalog Storage and Retrieval
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -163,14 +163,20 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     api.framework.getById.useQuery({ id: frameworkId });
 
   const isSearching = debouncedSearch.length > 0;
+  // Story 12.3: a health filter renders a flat view (see `visibleRoots`), and
+  // risks/findings link to LEAF controls, so a top-level-only fetch would never
+  // contain the rows the filter is looking for — the page would then contradict
+  // its own summary cards. Filtering therefore fetches flat, exactly like search.
+  const isFiltering = healthFilter !== "all";
+  const isTree = !isSearching && !isFiltering;
 
-  // Not searching: load top-level rows only and lazy-expand. Searching: flat
-  // results, because a search hit deep in the tree has no meaningful parent row
+  // Tree mode: load top-level rows only and lazy-expand. Searching/filtering:
+  // flat results, because a hit deep in the tree has no meaningful parent row
   // to draw it under.
   const { data: controlsData, isLoading: isLoadingControls } =
     api.framework.getControls.useQuery({
       frameworkId,
-      topLevelOnly: !isSearching,
+      topLevelOnly: isTree,
       search: debouncedSearch || undefined,
       page: currentPage,
       pageSize,
@@ -187,6 +193,10 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
       setShowCreateDialog(false);
       setCreateForm({ controlId: "", title: "", description: "", guidance: "", parentControlId: "" });
       utils.framework.getControls.invalidate({ frameworkId });
+      // The lazily-fetched child rows are a separate cache. Without this a saved
+      // edit silently reverts on the next expand (the stale payload is served
+      // from cache), and a deleted child re-appears as a live row.
+      void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
     },
     onError: (error) => {
@@ -198,6 +208,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     onSuccess: () => {
       toast.success("Control deprecated");
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
     },
     onError: (error) => {
@@ -209,6 +220,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     onSuccess: () => {
       toast.success("Control restored");
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
     },
     onError: (error) => {
@@ -220,6 +232,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     onSuccess: () => {
       toast.success("Control deleted");
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
     },
     onError: (error) => {
@@ -237,6 +250,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
       setEditingTestInstructions("");
       setEditingAcceptanceCriteria("");
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
     },
     onError: (error) => {
       toast.error(error.message);
@@ -250,6 +264,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
       setTaggingControlId(null);
       setTaggingControlDomains([]);
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
     },
     onError: (error) => {
       toast.error(error.message);
@@ -259,35 +274,59 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
   // --- Lazy-loaded control tree ---------------------------------------------
   const [rootNodes, setRootNodes] = useState<FrameworkNode[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [loadingChildIds, setLoadingChildIds] = useState<Set<string>>(new Set());
-  const [pendingExpandId, setPendingExpandId] = useState<string | null>(null);
+  // One child query per OPEN parent row. A scalar "currently expanding" id would
+  // be overwritten by a second chevron click landing inside the first round-trip,
+  // stranding the first row in a spinner with no chevron (the spinner takes
+  // precedence over it), so it could never be expanded or collapsed again.
+  // Keeping the query mounted for as long as the row is open also means an
+  // invalidation-driven refetch is delivered instead of being dropped on the floor.
+  const [openParentIds, setOpenParentIds] = useState<string[]>([]);
+
+  const childQueries = api.useQueries((t) =>
+    openParentIds.map((id) => t.framework.getControlChildren({ parentControlId: id })),
+  );
 
   // Rebuild the tree whenever the server returns a new page / search result.
-  // Expansion is reset with it: the old ids are not on screen any more.
+  // Expansion is reset with it: the old ids are not on screen any more, and the
+  // grafts they produced are gone with them.
+  const graftedData = useRef(new Map<string, unknown>());
   useEffect(() => {
     setRootNodes(controlsToNodes(controlsData?.controls ?? []));
     setExpanded(new Set());
+    setOpenParentIds([]);
+    graftedData.current = new Map();
   }, [controlsData]);
 
-  const { data: childControls } = api.framework.getControlChildren.useQuery(
-    { parentControlId: pendingExpandId! },
-    { enabled: pendingExpandId !== null },
-  );
-
-  // Graft fetched children onto the node that asked for them.
+  // Graft each result onto the node that asked for it, as it arrives. Results
+  // are grafted once per payload identity: React Query hands back the same
+  // `data` reference until it genuinely changes, so a refetch that returns new
+  // rows re-grafts and one that returns the same rows does not re-render.
   useEffect(() => {
-    if (!pendingExpandId || !childControls) return;
-    const parentId = pendingExpandId;
-    const children = controlsToNodes(childControls);
+    const arrivals: Array<{ parentId: string; children: FrameworkNode[] }> = [];
 
-    setRootNodes((prev) => graftChildren(prev, parentId, children));
-    setLoadingChildIds((prev) => {
-      const next = new Set(prev);
-      next.delete(parentId);
-      return next;
+    openParentIds.forEach((parentId, i) => {
+      const data = childQueries[i]?.data;
+      if (!data) return;
+      if (graftedData.current.get(parentId) === data) return;
+      graftedData.current.set(parentId, data);
+      arrivals.push({ parentId, children: controlsToNodes(data) });
     });
-    setPendingExpandId(null);
-  }, [pendingExpandId, childControls]);
+
+    if (arrivals.length === 0) return;
+    setRootNodes((prev) =>
+      arrivals.reduce(
+        (tree, { parentId, children }) => graftChildren(tree, parentId, children),
+        prev,
+      ),
+    );
+  }, [openParentIds, childQueries]);
+
+  // Derived, never stored: a row spins exactly while its own query has no rows
+  // yet. Nothing can strand an id here, because there is no set to forget to
+  // clean up — a failed or superseded query simply stops being pending.
+  const loadingChildIds = new Set(
+    openParentIds.filter((_, i) => childQueries[i]?.isPending ?? false),
+  );
 
   const handleToggleExpand = (node: FrameworkNode) => {
     const isOpen = expanded.has(node.id);
@@ -299,11 +338,12 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
       return next;
     });
 
-    // Fetch children the first time this row opens.
-    if (!isOpen && node.children === null) {
-      setLoadingChildIds((prev) => new Set(prev).add(node.id));
-      setPendingExpandId(node.id);
-    }
+    if (node.childCount === 0) return;
+
+    setOpenParentIds((prev) => {
+      if (isOpen) return prev.filter((id) => id !== node.id);
+      return prev.includes(node.id) ? prev : [...prev, node.id];
+    });
   };
 
   const handleCreateControl = () => {
@@ -354,12 +394,15 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     ]),
   );
 
-  // Story 12.3: Apply health filter (AC11). The filter narrows which ROOT rows
-  // are shown. Filtering mid-tree would orphan children, so a filtered view is
-  // a flat view.
-  const isFiltering = healthFilter !== "all";
+  // Story 12.3: Apply health filter (AC11). Filtering mid-tree would orphan
+  // children, so a filtered view is a flat view — and the fetch above is flat
+  // to match, so these rows are the real controls (leaves included) that the
+  // summary cards count, not just the families.
+  //
+  // A node with NO health entry is unknown, not healthy: the table renders it
+  // as "—" rather than a green badge, so the filter must not match it either.
   const visibleRoots = isFiltering
-    ? rootNodes.filter((n) => (healthByNodeId.get(n.id)?.health ?? "HEALTHY") === healthFilter)
+    ? rootNodes.filter((n) => healthByNodeId.get(n.id)?.health === healthFilter)
     : rootNodes;
 
   // Story 12.3: Calculate health summary (AC25-AC26)
@@ -583,7 +626,12 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
               {/* Story 12.3: Health filter (AC11) */}
               <Select
                 value={healthFilter}
-                onValueChange={(v) => setHealthFilter(v as typeof healthFilter)}
+                onValueChange={(v) => {
+                  setHealthFilter(v as typeof healthFilter);
+                  // The fetch shape changes with the filter (tree vs flat), so a
+                  // stale page offset would point into a different result set.
+                  setCurrentPage(0);
+                }}
               >
                 <SelectTrigger className="w-[150px]">
                   <Filter className="h-4 w-4 mr-2" />
@@ -719,7 +767,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                     Showing {currentPage * pageSize + 1} to{" "}
                     {Math.min((currentPage + 1) * pageSize, pagination.totalCount)} of{" "}
                     {pagination.totalCount}{" "}
-                    {isSearching ? "matching controls" : "top-level controls"}
+                    {isTree ? "top-level controls" : "matching controls"}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
