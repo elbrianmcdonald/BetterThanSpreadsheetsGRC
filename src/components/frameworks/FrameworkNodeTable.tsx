@@ -8,7 +8,7 @@
  * know whether it is showing a compliance framework or a maturity one.
  */
 
-import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import { Fragment, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -56,6 +56,9 @@ export interface FrameworkNodeTableProps {
   expanded: ReadonlySet<string>;
   onToggleExpand: (node: FrameworkNode) => void;
   loadingChildIds?: ReadonlySet<string>;
+  /** Open rows whose child fetch failed. Each gets an inline retry row. */
+  childErrorIds?: ReadonlySet<string>;
+  onRetryChildren?: (node: FrameworkNode) => void;
   healthByNodeId?: ReadonlyMap<string, NodeHealthInfo>;
   onRowClick?: (node: FrameworkNode) => void;
   onEditTesting?: (node: FrameworkNode, focus: "ti" | "ac") => void;
@@ -165,6 +168,8 @@ export function FrameworkNodeTable({
   expanded,
   onToggleExpand,
   loadingChildIds,
+  childErrorIds,
+  onRetryChildren,
   healthByNodeId,
   onRowClick,
   onEditTesting,
@@ -202,17 +207,14 @@ export function FrameworkNodeTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={columnCount} className="h-24 text-center text-muted-foreground">
-                No matching rows.
-              </TableCell>
-            </TableRow>
-          )}
+          {/* No empty state here by design: every page that renders this table
+              owns its own — it is the one that knows whether "nothing" means an
+              empty framework, a filter with no hits, or a search with no hits. */}
           {rows.map((node) => {
             const isExpandable = !flat && node.childCount > 0;
             const isOpen = expanded.has(node.id);
             const isLoadingChildren = loadingChildIds?.has(node.id) ?? false;
+            const hasChildError = !flat && isOpen && (childErrorIds?.has(node.id) ?? false);
             const healthInfo = healthByNodeId?.get(node.id);
 
             const handleRowKeyDown = onRowClick
@@ -230,8 +232,8 @@ export function FrameworkNodeTable({
               : undefined;
 
             return (
+              <Fragment key={node.id}>
               <TableRow
-                key={node.id}
                 className={
                   onRowClick
                     ? "cursor-pointer hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -406,6 +408,35 @@ export function FrameworkNodeTable({
                   </TableCell>
                 )}
               </TableRow>
+
+              {/* An open row whose children failed to load would otherwise be
+                  indistinguishable from one with no children at all. Say so,
+                  and give the user a way out that isn't "collapse and guess". */}
+              {hasChildError && (
+                <TableRow>
+                  <TableCell colSpan={columnCount} className="py-2">
+                    <div
+                      className="flex items-center gap-2 text-sm text-destructive"
+                      style={{ paddingLeft: `${(node.depth + 1) * 1.25}rem` }}
+                    >
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>Couldn&apos;t load sub-controls of {node.code}.</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRetryChildren?.(node);
+                        }}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+              </Fragment>
             );
           })}
         </TableBody>

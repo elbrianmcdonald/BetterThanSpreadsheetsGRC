@@ -87,7 +87,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ControlDomainSelect } from "@/components/taxonomy/ControlDomainSelect";
 import { FrameworkNodeTable } from "@/components/frameworks/FrameworkNodeTable";
-import { controlsToNodes, type FrameworkNode } from "@/lib/frameworks/framework-node";
+import {
+  controlsToNodes,
+  type ControlInput,
+  type FrameworkNode,
+} from "@/lib/frameworks/framework-node";
 
 /**
  * Return a copy of the tree with `children` attached to the node with `parentId`.
@@ -229,8 +233,18 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
   });
 
   const deleteControlMutation = api.framework.deleteControl.useMutation({
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       toast.success("Control deleted");
+      // The row is gone, so its child query must go with it — otherwise the
+      // getControlChildren invalidation below refetches children for an id the
+      // server no longer knows, which now surfaces as a spurious error toast.
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.delete(variables.id);
+        return next;
+      });
+      setOpenParentIds((prev) => prev.filter((id) => id !== variables.id));
+      graftedData.current.delete(variables.id);
       utils.framework.getControls.invalidate({ frameworkId });
       void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
@@ -286,16 +300,44 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     openParentIds.map((id) => t.framework.getControlChildren({ parentControlId: id })),
   );
 
-  // Rebuild the tree whenever the server returns a new page / search result.
-  // Expansion is reset with it: the old ids are not on screen any more, and the
-  // grafts they produced are gone with them.
-  const graftedData = useRef(new Map<string, unknown>());
+  // What the user is currently looking at. Expansion belongs to a *view*, not to
+  // a payload: the same rows re-fetched after an edit are still the same view.
+  //
+  // Resetting on the `controlsData` reference instead made the tree collapse on
+  // some edits and not others — `getControls` eagerly includes the first five
+  // children of every row, so editing the third child of a family changed the
+  // payload (collapse) while editing the sixth did not (structural sharing kept
+  // the reference, no collapse). Same gesture, different outcome. Keying on the
+  // query identity makes the reset deterministic: it happens when — and only
+  // when — the user changes page, search, filter, or tree/flat mode.
+  const viewKey = `${frameworkId}|${isTree ? "tree" : "flat"}|${currentPage}|${debouncedSearch}|${healthFilter}`;
+
+  const graftedData = useRef(new Map<string, ControlInput[]>());
+
   useEffect(() => {
-    setRootNodes(controlsToNodes(controlsData?.controls ?? []));
     setExpanded(new Set());
     setOpenParentIds([]);
     graftedData.current = new Map();
-  }, [controlsData]);
+  }, [viewKey]);
+
+  // Rebuild the roots whenever the server hands back rows, re-applying every
+  // graft we already hold so a refetch does not throw the open tree away.
+  // Insertion order guarantees a parent is grafted before any of its own
+  // children, because a row can only be expanded after its parent was.
+  //
+  // Runs after the reset effect above, so a view change rebuilds from an empty
+  // graft map. This effect must therefore depend on `viewKey` too: two health
+  // filters (HEALTHY → CRITICAL) share one query key, so `controlsData` alone
+  // would not fire and the cleared grafts would never leave the rendered tree.
+  useEffect(() => {
+    const grafts = [...graftedData.current.entries()];
+    setRootNodes(
+      grafts.reduce(
+        (tree, [parentId, data]) => graftChildren(tree, parentId, controlsToNodes(data)),
+        controlsToNodes(controlsData?.controls ?? []),
+      ),
+    );
+  }, [controlsData, viewKey]);
 
   // Graft each result onto the node that asked for it, as it arrives. Results
   // are grafted once per payload identity: React Query hands back the same
@@ -327,6 +369,36 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
   const loadingChildIds = new Set(
     openParentIds.filter((_, i) => childQueries[i]?.isPending ?? false),
   );
+
+  // A failed child fetch is neither pending nor loaded: without this the row
+  // would sit open, chevron down, with nothing under it and nothing to say why.
+  // The table draws an inline "couldn't load — Retry" row for each of these.
+  const childErrorIds = new Set(
+    openParentIds.filter((_, i) => childQueries[i]?.isError ?? false),
+  );
+
+  const handleRetryChildren = (node: FrameworkNode) => {
+    const i = openParentIds.indexOf(node.id);
+    if (i === -1) return;
+    void childQueries[i]?.refetch();
+  };
+
+  // Toast once per failure, not once per render. The id is forgotten again as
+  // soon as its query recovers, so a later failure of the same row speaks up.
+  const toastedChildErrors = useRef(new Set<string>());
+  useEffect(() => {
+    openParentIds.forEach((parentId, i) => {
+      const query = childQueries[i];
+      if (!query) return;
+      if (!query.isError) {
+        toastedChildErrors.current.delete(parentId);
+        return;
+      }
+      if (toastedChildErrors.current.has(parentId)) return;
+      toastedChildErrors.current.add(parentId);
+      toast.error("Couldn't load sub-controls. Use Retry on the row to try again.");
+    });
+  }, [openParentIds, childQueries]);
 
   const handleToggleExpand = (node: FrameworkNode) => {
     const isOpen = expanded.has(node.id);
@@ -674,6 +746,14 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                           setSearchQuery("");
                           setDebouncedSearch("");
                           setHealthFilter("all");
+                          // Clearing filters flips the fetch back to the tree,
+                          // whose page count is far smaller. Keeping the old
+                          // offset asks for a page that no longer exists: the
+                          // server returns nothing, the pagination block hides
+                          // itself (totalPages === 1) and the empty state loses
+                          // its Clear-filters button — a dead end with no way
+                          // back short of a reload.
+                          setCurrentPage(0);
                         }}
                         className="mt-2 text-blue-600 hover:text-blue-800"
                       >
@@ -688,8 +768,9 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                 <>
                   {(isSearching || isFiltering) && (
                     <p className="mb-2 text-sm text-muted-foreground">
-                      Showing flat results — expand is disabled while{" "}
-                      {isSearching ? "searching" : "filtering"}.
+                      Showing flat results — {visibleRoots.length} match
+                      {visibleRoots.length === 1 ? "" : "es"}. Expand is disabled
+                      while {isSearching ? "searching" : "filtering"}.
                     </p>
                   )}
 
@@ -705,6 +786,8 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                     expanded={expanded}
                     onToggleExpand={handleToggleExpand}
                     loadingChildIds={loadingChildIds}
+                    childErrorIds={childErrorIds}
+                    onRetryChildren={handleRetryChildren}
                     healthByNodeId={healthByNodeId}
                     flat={isSearching || isFiltering}
                     onRowClick={(node) => setSelectedControlId(node.id)}

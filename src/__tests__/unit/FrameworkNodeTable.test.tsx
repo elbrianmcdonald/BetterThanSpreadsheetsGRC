@@ -245,12 +245,17 @@ describe("FrameworkNodeTable", () => {
     expect(screen.queryByRole("columnheader", { name: "Control ID" })).not.toBeInTheDocument();
   });
 
-  it("renders an empty state when there are no rows", () => {
+  it("renders no empty state of its own — the page owns that copy", () => {
+    // Only the page knows whether "no rows" means an empty framework, a search
+    // with no hits, or a filter with no hits — and only the page can offer the
+    // Clear-filters escape hatch. The table draws headers and stops.
     render(
       <FrameworkNodeTable nodes={[]} columns={{}} expanded={new Set()} onToggleExpand={jest.fn()} />,
     );
 
-    expect(screen.getByText("No matching rows.")).toBeInTheDocument();
+    expect(screen.queryByText("No matching rows.")).not.toBeInTheDocument();
+    // Header row only.
+    expect(screen.getAllByRole("row")).toHaveLength(1);
   });
 
   it("fires onRowClick from the keyboard", () => {
@@ -352,21 +357,49 @@ describe("FrameworkNodeTable", () => {
     expect(bodyRow!.querySelectorAll("td")).toHaveLength(headers.length);
   });
 
-  it("spans the empty-state cell across exactly the rendered header count", () => {
-    // columnCount is a hand-maintained parallel of the header block; tie it to
-    // the real header count so a new column cannot silently desync the colSpan.
+  it("tells the user when an expanded row's children failed to load, and offers a retry", () => {
+    // A failed child fetch is neither pending nor loaded: the row sits open with
+    // nothing under it. Without this row there is no spinner, no error and no
+    // way back other than collapsing and guessing.
+    const onRetryChildren = jest.fn();
+    const unloaded: FrameworkNode = { ...family, children: null };
+
     render(
       <FrameworkNodeTable
-        nodes={[]}
+        nodes={[unloaded]}
         columns={{ health: true, domains: true, testing: true, children: true, actions: true }}
-        expanded={new Set()}
+        expanded={new Set(["f1"])}
+        childErrorIds={new Set(["f1"])}
+        onRetryChildren={onRetryChildren}
         onToggleExpand={jest.fn()}
       />,
     );
 
+    expect(screen.getByText(/couldn't load sub-controls of 03\.01/i)).toBeInTheDocument();
+
+    // columnCount is a hand-maintained parallel of the header block; tie it to
+    // the real header count so a new column cannot silently desync the colSpan.
     const headerCount = screen.getAllByRole("columnheader").length;
-    const emptyCell = screen.getByText("No matching rows.");
-    expect(emptyCell).toHaveAttribute("colspan", String(headerCount));
+    const errorCell = screen.getByText(/couldn't load sub-controls of 03\.01/i).closest("td");
+    expect(errorCell).toHaveAttribute("colspan", String(headerCount));
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(onRetryChildren).toHaveBeenCalledWith(unloaded);
+  });
+
+  it("does not draw the child-error row for a collapsed row", () => {
+    render(
+      <FrameworkNodeTable
+        nodes={[{ ...family, children: null }]}
+        columns={{ children: true }}
+        expanded={new Set()}
+        childErrorIds={new Set(["f1"])}
+        onRetryChildren={jest.fn()}
+        onToggleExpand={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/couldn't load sub-controls/i)).not.toBeInTheDocument();
   });
 
   it("colours maturity level badges from non-status tokens only", () => {
