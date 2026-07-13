@@ -98,7 +98,14 @@ describe("framework.getControlChildren", () => {
       parentId = parent.id;
       // Created out of order so the orderBy in the procedure is what sorts them.
       await mkControl(orgA.id, framework.id, "03.01.02", parent.id);
-      await mkControl(orgA.id, framework.id, "03.01.01", parent.id);
+      const firstChild = await mkControl(orgA.id, framework.id, "03.01.01", parent.id);
+
+      // Three levels deep, like NIST 800-53 (family → control → enhancement).
+      // Without a grandchild here, `_count.other_Control` on a returned child is
+      // always 0, so a regression that drops the `_count` include from
+      // getControlChildren is invisible to every test — while in the app every
+      // 800-53 enhancement silently loses its chevron and becomes unreachable.
+      await mkControl(orgA.id, framework.id, "03.01.01.a", firstChild.id);
 
       const bigParent = await mkControl(orgA.id, framework.id, "03.02", null);
       bigParentId = bigParent.id;
@@ -125,7 +132,9 @@ describe("framework.getControlChildren", () => {
     });
 
     expect(children.map((c) => c.controlId)).toEqual(["03.01.01", "03.01.02"]);
-    expect(children[0]!._count.other_Control).toBe(0);
+    // 03.01.01 has a child of its own; 03.01.02 is a leaf.
+    expect(children[0]!._count.other_Control).toBeGreaterThan(0);
+    expect(children[1]!._count.other_Control).toBe(0);
 
     // The payload must be exactly what Task 1's controlsToNodes consumes. The
     // annotation is the compile-time half of that contract; the call is the
@@ -133,9 +142,29 @@ describe("framework.getControlChildren", () => {
     const nodeInput: ControlInput[] = children;
     const nodes = controlsToNodes(nodeInput, 1);
     expect(nodes.map((n) => n.code)).toEqual(["03.01.01", "03.01.02"]);
-    // Leaves are "loaded" ([]), not "unfetched" (null) — this drives the chevron.
-    expect(nodes[0]!.children).toEqual([]);
+    // The chevron contract, both ways. A child that has children of its own is
+    // "unfetched" (null) and therefore expandable — this is what makes an 800-53
+    // enhancement reachable. A leaf is "loaded" ([]) and draws no chevron.
+    expect(nodes[0]!.childCount).toBeGreaterThan(0);
+    expect(nodes[0]!.children).toBeNull();
+    expect(nodes[1]!.childCount).toBe(0);
+    expect(nodes[1]!.children).toEqual([]);
     expect(nodes[0]!.depth).toBe(1);
+  });
+
+  it("reports a grandchild count, so a three-level tree stays expandable", async () => {
+    const children = await createCaller(adminA).framework.getControlChildren({
+      parentControlId: parentId,
+    });
+    const midLevel = children.find((c) => c.controlId === "03.01.01");
+    expect(midLevel).toBeDefined();
+    expect(midLevel!._count.other_Control).toBe(1);
+
+    // And the grandchild is genuinely fetchable from that mid-level id.
+    const grandchildren = await createCaller(adminA).framework.getControlChildren({
+      parentControlId: midLevel!.id,
+    });
+    expect(grandchildren.map((c) => c.controlId)).toEqual(["03.01.01.a"]);
   });
 
   it("returns more than five children (it is not the getControls preview limit)", async () => {
@@ -150,10 +179,12 @@ describe("framework.getControlChildren", () => {
     const children = await createCaller(adminA).framework.getControlChildren({
       parentControlId: parentId,
     });
-    const leafId = children[0]!.id;
+    // 03.01.02 is the leaf; 03.01.01 has a grandchild hanging off it.
+    const leaf = children.find((c) => c.controlId === "03.01.02");
+    expect(leaf).toBeDefined();
 
     await expect(
-      createCaller(adminA).framework.getControlChildren({ parentControlId: leafId }),
+      createCaller(adminA).framework.getControlChildren({ parentControlId: leaf!.id }),
     ).resolves.toEqual([]);
   });
 
