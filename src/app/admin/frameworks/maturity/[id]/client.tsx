@@ -3,20 +3,22 @@
 /**
  * Maturity framework detail page.
  *
- * Renders the framework hierarchy as a nested tree (Function → Category →
- * Subcategory) and surfaces questions/practices grouped under their domain.
+ * Renders the framework hierarchy (Function → Category → Subcategory, or
+ * Domain → Practice) through the shared FrameworkNodeTable, so NIST CSF 2.0,
+ * C2M2 and OWASP SAMM read exactly like the compliance framework pages.
  * Test instructions and acceptance criteria are editable inline by ORG_ADMIN
  * so assessors see them read-only during a maturity assessment.
  */
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Plus, Shield, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { ArrowLeft, Calendar, Hash, Layers, Loader2, Search, Shield, Tag } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "@/trpc/react";
 import { AppLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -35,11 +37,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { FrameworkNodeTable } from "@/components/frameworks/FrameworkNodeTable";
+import { maturityToNodes, type FrameworkNode } from "@/lib/frameworks/framework-node";
 
 interface Props {
   frameworkId: string;
@@ -56,6 +55,23 @@ type TestingTarget =
   | { kind: "domain"; id: string; code: string; name: string; testInstructions: string | null; acceptanceCriteria: string | null }
   | { kind: "question"; id: string; code: string; name: string; testInstructions: string | null; acceptanceCriteria: string | null };
 
+/**
+ * The stored AssessmentDepth enum is written in NIST CSF's vocabulary
+ * (FUNCTION / CATEGORY / SUBCATEGORY) and every maturity framework reuses it,
+ * so C2M2's top tier — properly a Domain — comes back badged FUNCTION. Rename
+ * it for display only; a level with no entry here renders as stored.
+ */
+const LEVEL_LABELS_BY_FRAMEWORK: Readonly<
+  Record<string, Readonly<Record<string, string>>>
+> = {
+  C2M2: { FUNCTION: "DOMAIN" },
+  OWASP_SAMM: {
+    FUNCTION: "BUSINESS FUNCTION",
+    CATEGORY: "SECURITY PRACTICE",
+    SUBCATEGORY: "ACTIVITY STREAM",
+  },
+};
+
 export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
   const utils = api.useUtils();
   const { data: framework, isLoading, error } = api.maturity.getFramework.useQuery({
@@ -69,6 +85,19 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
   const [editingTI, setEditingTI] = useState("");
   const [editingAC, setEditingAC] = useState("");
   const [editingFocus, setEditingFocus] = useState<"ti" | "ac">("ti");
+
+  // Tree + search state. Expansion is controlled by the page; the table is
+  // purely presentational.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  // Debounced like the compliance page: C2M2 is 356 practices and SAMM 90, and
+  // every keystroke re-walks the whole tree.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const updateDomainTesting = api.maturity.updateDomainTestingFields.useMutation({
     onSuccess: () => {
@@ -90,12 +119,87 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
 
   const isPending = updateDomainTesting.isPending || updateQuestionTesting.isPending;
 
+  // A maturity framework arrives whole from the server (134 domains at most),
+  // so the tree is built once and there is nothing to lazy-load.
+  // These hooks must sit above the isLoading / error early returns, hence the
+  // internal guard on `framework` being undefined.
+  const rootNodes = useMemo(
+    () =>
+      framework
+        ? maturityToNodes(framework.domainHierarchy, framework.questions)
+        : [],
+    [framework],
+  );
+
+  // Questions with no domain render outside the tree — maturityToNodes ignores
+  // them by design. They are nodes like any other, so they can be searched.
+  const frameworkLevelNodes = useMemo(
+    (): FrameworkNode[] =>
+      (framework?.questions ?? [])
+        .filter((q) => q.domainId === null)
+        .map((q) => ({
+          id: q.id,
+          code: q.practiceCode ?? q.id.slice(0, 8),
+          title: q.questionText,
+          description: null,
+          kind: "question" as const,
+          levelLabel: q.practiceLevel === null ? null : `MIL ${q.practiceLevel}`,
+          depth: 0,
+          childCount: 0,
+          children: [],
+          testInstructions: q.testInstructions,
+          acceptanceCriteria: q.acceptanceCriteria,
+        })),
+    [framework],
+  );
+
+  // Search flattens: a hit deep in the tree has no parent row on screen to sit
+  // under. Match on code and title, which is what people search by.
+  //
+  // The framework-level questions are part of the corpus: their own table is
+  // hidden while a search is active, so leaving them out of the index would make
+  // them unreachable for as long as anything is typed in the box.
+  const isSearching = debouncedSearch.trim().length > 0;
+  const searchResults = useMemo(() => {
+    if (!isSearching) return [];
+    const needle = debouncedSearch.trim().toLowerCase();
+    const hits: FrameworkNode[] = [];
+    const visit = (node: FrameworkNode) => {
+      if (
+        node.code.toLowerCase().includes(needle) ||
+        node.title.toLowerCase().includes(needle)
+      ) {
+        hits.push({ ...node, depth: 0 });
+      }
+      for (const child of node.children ?? []) visit(child);
+    };
+    for (const root of rootNodes) visit(root);
+    for (const node of frameworkLevelNodes) visit(node);
+    return hits;
+  }, [isSearching, debouncedSearch, rootNodes, frameworkLevelNodes]);
+
   const openEditor = (target: TestingTarget, focus: "ti" | "ac") => {
     setEditingTarget(target);
     setEditingTI(target.testInstructions ?? "");
     setEditingAC(target.acceptanceCriteria ?? "");
     setEditingFocus(focus);
   };
+
+  // The tree carries both MaturityDomain nodes (CSF subcategories included) and
+  // MaturityQuestion leaves. Only "question" nodes may go to the question
+  // mutation — everything else is a domain row.
+  const openEditorForNode = (node: FrameworkNode, focus: "ti" | "ac") =>
+    openEditor(
+      {
+        kind: node.kind === "question" ? "question" : "domain",
+        id: node.id,
+        code: node.code,
+        name: node.title,
+        testInstructions: node.testInstructions,
+        acceptanceCriteria: node.acceptanceCriteria,
+      },
+      focus,
+    );
 
   const handleSave = () => {
     if (!editingTarget) return;
@@ -110,6 +214,14 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
       updateQuestionTesting.mutate(payload);
     }
   };
+
+  const handleToggleExpand = (node: FrameworkNode) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(node.id)) next.delete(node.id);
+      else next.add(node.id);
+      return next;
+    });
 
   if (isLoading) {
     return (
@@ -145,13 +257,7 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
   }
 
   const scoringLevels = (framework.scoringLevels ?? []) as unknown as ScoringLevel[];
-  const questionsByDomain = new Map<string | null, typeof framework.questions>();
-  for (const q of framework.questions) {
-    const key = q.domainId ?? null;
-    if (!questionsByDomain.has(key)) questionsByDomain.set(key, []);
-    questionsByDomain.get(key)!.push(q);
-  }
-  const frameworkLevelQuestions = questionsByDomain.get(null) ?? [];
+  const levelLabels = LEVEL_LABELS_BY_FRAMEWORK[framework.type];
 
   return (
     <AppLayout>
@@ -203,6 +309,58 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
           </CardHeader>
         </Card>
 
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Tag className="mr-3 h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Version</p>
+                  <p className="text-lg font-medium">{framework.version}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Hash className="mr-3 h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Domains</p>
+                  <p className="text-lg font-medium">{framework.domains.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Layers className="mr-3 h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Scoring Levels</p>
+                  <p className="text-lg font-medium">
+                    {framework.minLevel}–{framework.maxLevel}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Calendar className="mr-3 h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Practices</p>
+                  <p className="text-lg font-medium">{framework.questions.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Scoring Levels</CardTitle>
@@ -248,79 +406,75 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Domains</CardTitle>
-            <CardDescription>
-              {framework.domains.length} domains •{" "}
-              {framework.questions.length > 0
-                ? `${framework.questions.length} practices/questions`
-                : "no questions (subcategories are the controls)"}
-            </CardDescription>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-base">Domains</CardTitle>
+                <CardDescription>
+                  {framework.domains.length} domains •{" "}
+                  {framework.questions.length > 0
+                    ? `${framework.questions.length} practices/questions`
+                    : "no questions (subcategories are the controls)"}
+                </CardDescription>
+              </div>
+              <div className="relative w-72">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search domains and practices..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            {framework.domainHierarchy.length === 0 ? (
+            {rootNodes.length === 0 && frameworkLevelNodes.length === 0 ? (
               <p className="text-sm text-muted-foreground">No domains defined.</p>
+            ) : isSearching && searchResults.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No domains or practices match “{debouncedSearch}”.
+              </p>
             ) : (
-              <div className="space-y-2">
-                {framework.domainHierarchy.map((root) => (
-                  <DomainNode
-                    key={root.id}
-                    domain={root}
-                    questionsByDomain={questionsByDomain}
-                    depth={0}
-                    onEditDomain={(d, focus) =>
-                      openEditor(
-                        {
-                          kind: "domain",
-                          id: d.id,
-                          code: d.code,
-                          name: d.name,
-                          testInstructions: d.testInstructions,
-                          acceptanceCriteria: d.acceptanceCriteria,
-                        },
-                        focus
-                      )
-                    }
-                    onEditQuestion={(q, focus) =>
-                      openEditor(
-                        {
-                          kind: "question",
-                          id: q.id,
-                          code: q.practiceCode ?? q.id.slice(0, 8),
-                          name: q.questionText.slice(0, 80),
-                          testInstructions: q.testInstructions,
-                          acceptanceCriteria: q.acceptanceCriteria,
-                        },
-                        focus
-                      )
-                    }
+              <>
+                {isSearching && (
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    Showing flat results — {searchResults.length} match
+                    {searchResults.length === 1 ? "" : "es"}. Expand is disabled
+                    while searching.
+                  </p>
+                )}
+                {(isSearching || rootNodes.length > 0) && (
+                  <FrameworkNodeTable
+                    nodes={isSearching ? searchResults : rootNodes}
+                    columns={{ level: true, testing: true }}
+                    expanded={expanded}
+                    flat={isSearching}
+                    idHeader="Code"
+                    levelLabels={levelLabels}
+                    onToggleExpand={handleToggleExpand}
+                    onEditTesting={openEditorForNode}
                   />
-                ))}
-              </div>
+                )}
+              </>
             )}
 
-            {/* Framework-level questions (not bound to a domain) */}
-            {frameworkLevelQuestions.length > 0 && (
-              <div className="mt-6 pt-4 border-t space-y-2">
+            {/* Questions not bound to any domain sit outside the tree. While a
+                search is active they are part of the flat result list above
+                instead, so this table stands down rather than duplicating them. */}
+            {frameworkLevelNodes.length > 0 && !isSearching && (
+              <div className="mt-6 space-y-2 border-t pt-4">
                 <h3 className="text-sm font-medium">Framework-level questions</h3>
-                {frameworkLevelQuestions.map((q) => (
-                  <QuestionRow
-                    key={q.id}
-                    question={q}
-                    onEdit={(focus) =>
-                      openEditor(
-                        {
-                          kind: "question",
-                          id: q.id,
-                          code: q.practiceCode ?? q.id.slice(0, 8),
-                          name: q.questionText.slice(0, 80),
-                          testInstructions: q.testInstructions,
-                          acceptanceCriteria: q.acceptanceCriteria,
-                        },
-                        focus
-                      )
-                    }
-                  />
-                ))}
+                <FrameworkNodeTable
+                  nodes={frameworkLevelNodes}
+                  columns={{ level: true, testing: true }}
+                  expanded={new Set()}
+                  flat
+                  idHeader="Code"
+                  levelLabels={levelLabels}
+                  onToggleExpand={() => undefined}
+                  onEditTesting={openEditorForNode}
+                />
               </div>
             )}
           </CardContent>
@@ -395,203 +549,5 @@ export function MaturityFrameworkDetailClient({ frameworkId }: Props) {
         </DialogContent>
       </Dialog>
     </AppLayout>
-  );
-}
-
-// =============================================================================
-// Tree node — recursive
-// =============================================================================
-
-type DomainNodeShape = {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  level: string;
-  testInstructions: string | null;
-  acceptanceCriteria: string | null;
-  children: DomainNodeShape[];
-};
-
-type QuestionShape = {
-  id: string;
-  questionText: string;
-  practiceCode: string | null;
-  practiceLevel: number | null;
-  testInstructions: string | null;
-  acceptanceCriteria: string | null;
-};
-
-function DomainNode({
-  domain,
-  questionsByDomain,
-  depth,
-  onEditDomain,
-  onEditQuestion,
-}: {
-  domain: DomainNodeShape;
-  questionsByDomain: Map<string | null, QuestionShape[]>;
-  depth: number;
-  onEditDomain: (d: DomainNodeShape, focus: "ti" | "ac") => void;
-  onEditQuestion: (q: QuestionShape, focus: "ti" | "ac") => void;
-}) {
-  const [open, setOpen] = useState(depth < 1);
-  const childQuestions = questionsByDomain.get(domain.id) ?? [];
-  const hasChildren = domain.children.length > 0 || childQuestions.length > 0;
-
-  // Color the node based on its level (Function = purple, Category = blue,
-  // Subcategory = neutral) so the hierarchy reads at a glance.
-  const levelColor =
-    domain.level === "FUNCTION"
-      ? "bg-purple-50 border-purple-200"
-      : domain.level === "CATEGORY"
-        ? "bg-blue-50 border-blue-200"
-        : "bg-white border-gray-200";
-
-  return (
-    <div style={{ marginLeft: depth === 0 ? 0 : "1.25rem" }}>
-      <div className={`flex items-start gap-2 p-3 rounded-lg border ${levelColor}`}>
-        {hasChildren ? (
-          <button
-            type="button"
-            onClick={() => setOpen(!open)}
-            className="shrink-0 mt-0.5 text-muted-foreground hover:text-foreground"
-          >
-            {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
-          </button>
-        ) : (
-          <span className="shrink-0 w-4" />
-        )}
-        <Badge variant="outline" className="font-mono shrink-0">
-          {domain.code}
-        </Badge>
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">{domain.name}</p>
-          {domain.description && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {domain.description}
-            </p>
-          )}
-        </div>
-        <Badge variant="secondary" className="text-xs shrink-0">
-          {domain.level}
-        </Badge>
-        <TestingBadges
-          testInstructions={domain.testInstructions}
-          acceptanceCriteria={domain.acceptanceCriteria}
-          onEdit={(focus) => onEditDomain(domain, focus)}
-        />
-      </div>
-
-      {open && (
-        <div className="mt-2 space-y-2">
-          {domain.children.map((child) => (
-            <DomainNode
-              key={child.id}
-              domain={child}
-              questionsByDomain={questionsByDomain}
-              depth={depth + 1}
-              onEditDomain={onEditDomain}
-              onEditQuestion={onEditQuestion}
-            />
-          ))}
-          {childQuestions.length > 0 && (
-            <div style={{ marginLeft: "1.25rem" }} className="space-y-1.5">
-              {childQuestions.map((q) => (
-                <QuestionRow
-                  key={q.id}
-                  question={q}
-                  onEdit={(focus) => onEditQuestion(q, focus)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function QuestionRow({
-  question,
-  onEdit,
-}: {
-  question: QuestionShape;
-  onEdit: (focus: "ti" | "ac") => void;
-}) {
-  return (
-    <div className="flex items-start gap-2 p-2.5 rounded-md border bg-muted/30 text-sm">
-      {question.practiceCode && (
-        <Badge variant="outline" className="font-mono text-xs shrink-0">
-          {question.practiceCode}
-        </Badge>
-      )}
-      {question.practiceLevel !== null && (
-        <Badge variant="secondary" className="text-xs shrink-0">
-          MIL {question.practiceLevel}
-        </Badge>
-      )}
-      <p className="flex-1 min-w-0">{question.questionText}</p>
-      <TestingBadges
-        testInstructions={question.testInstructions}
-        acceptanceCriteria={question.acceptanceCriteria}
-        onEdit={onEdit}
-      />
-    </div>
-  );
-}
-
-function TestingBadges({
-  testInstructions,
-  acceptanceCriteria,
-  onEdit,
-}: {
-  testInstructions: string | null;
-  acceptanceCriteria: string | null;
-  onEdit: (focus: "ti" | "ac") => void;
-}) {
-  return (
-    <div className="flex items-center gap-1 shrink-0">
-      {testInstructions ? (
-        <Badge
-          variant="secondary"
-          className="text-xs bg-indigo-100 text-indigo-700 cursor-pointer hover:bg-indigo-200"
-          title={testInstructions}
-          onClick={() => onEdit("ti")}
-        >
-          TI ✓
-        </Badge>
-      ) : (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-xs text-muted-foreground"
-          onClick={() => onEdit("ti")}
-        >
-          <Plus className="h-3 w-3 mr-0.5" />
-          TI
-        </Button>
-      )}
-      {acceptanceCriteria ? (
-        <Badge
-          variant="secondary"
-          className="text-xs bg-emerald-100 text-emerald-700 cursor-pointer hover:bg-emerald-200"
-          title={acceptanceCriteria}
-          onClick={() => onEdit("ac")}
-        >
-          AC ✓
-        </Badge>
-      ) : (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-xs text-muted-foreground"
-          onClick={() => onEdit("ac")}
-        >
-          <Plus className="h-3 w-3 mr-0.5" />
-          AC
-        </Button>
-      )}
-    </div>
   );
 }

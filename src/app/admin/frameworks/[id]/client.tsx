@@ -8,7 +8,7 @@
  * @see Story 2.2: OSCAL Catalog Storage and Retrieval
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -21,14 +21,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   ArrowLeft,
   Search,
   Loader2,
@@ -40,21 +32,18 @@ import {
   Hash,
   ExternalLink,
   RefreshCw,
-  AlertTriangle,
   BarChart3,
   Shield,
   ShieldAlert,
   ShieldCheck,
   Filter,
   Download,
-  AlertCircle,
   Plus,
   Pencil,
   Trash2,
   RotateCcw,
   Lock,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -97,31 +86,32 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ControlDomainSelect } from "@/components/taxonomy/ControlDomainSelect";
+import { FrameworkNodeTable } from "@/components/frameworks/FrameworkNodeTable";
+import {
+  controlsToNodes,
+  type ControlInput,
+  type FrameworkNode,
+} from "@/lib/frameworks/framework-node";
 
-// Story 12.3: Health badge component
-function ControlHealthBadge({ health }: { health: "HEALTHY" | "AT_RISK" | "CRITICAL" }) {
-  if (health === "CRITICAL") {
-    return (
-      <Badge variant="destructive" className="gap-1">
-        <ShieldAlert className="h-3 w-3" />
-        Critical
-      </Badge>
-    );
-  }
-  if (health === "AT_RISK") {
-    return (
-      <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-600 bg-yellow-50">
-        <Shield className="h-3 w-3" />
-        At Risk
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="gap-1 border-green-500 text-green-600 bg-green-50">
-      <ShieldCheck className="h-3 w-3" />
-      Healthy
-    </Badge>
-  );
+/**
+ * Return a copy of the tree with `children` attached to the node with `parentId`.
+ * Children arrive one level at a time, so this only ever has to recurse.
+ */
+function graftChildren(
+  nodes: FrameworkNode[],
+  parentId: string,
+  children: FrameworkNode[],
+): FrameworkNode[] {
+  return nodes.map((node) => {
+    if (node.id === parentId) {
+      return {
+        ...node,
+        children: children.map((child) => ({ ...child, depth: node.depth + 1 })),
+      };
+    }
+    if (node.children === null) return node;
+    return { ...node, children: graftChildren(node.children, parentId, children) };
+  });
 }
 
 interface FrameworkDetailClientProps {
@@ -176,10 +166,21 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
   const { data: framework, isLoading: isLoadingFramework, error: frameworkError } =
     api.framework.getById.useQuery({ id: frameworkId });
 
-  // Fetch controls with pagination and search
+  const isSearching = debouncedSearch.length > 0;
+  // Story 12.3: a health filter renders a flat view (see `visibleRoots`), and
+  // risks/findings link to LEAF controls, so a top-level-only fetch would never
+  // contain the rows the filter is looking for — the page would then contradict
+  // its own summary cards. Filtering therefore fetches flat, exactly like search.
+  const isFiltering = healthFilter !== "all";
+  const isTree = !isSearching && !isFiltering;
+
+  // Tree mode: load top-level rows only and lazy-expand. Searching/filtering:
+  // flat results, because a hit deep in the tree has no meaningful parent row
+  // to draw it under.
   const { data: controlsData, isLoading: isLoadingControls } =
     api.framework.getControls.useQuery({
       frameworkId,
+      topLevelOnly: isTree,
       search: debouncedSearch || undefined,
       page: currentPage,
       pageSize,
@@ -196,6 +197,10 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
       setShowCreateDialog(false);
       setCreateForm({ controlId: "", title: "", description: "", guidance: "", parentControlId: "" });
       utils.framework.getControls.invalidate({ frameworkId });
+      // The lazily-fetched child rows are a separate cache. Without this a saved
+      // edit silently reverts on the next expand (the stale payload is served
+      // from cache), and a deleted child re-appears as a live row.
+      void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
     },
     onError: (error) => {
@@ -207,6 +212,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     onSuccess: () => {
       toast.success("Control deprecated");
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
     },
     onError: (error) => {
@@ -218,6 +224,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     onSuccess: () => {
       toast.success("Control restored");
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
     },
     onError: (error) => {
@@ -226,9 +233,20 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
   });
 
   const deleteControlMutation = api.framework.deleteControl.useMutation({
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       toast.success("Control deleted");
+      // The row is gone, so its child query must go with it — otherwise the
+      // getControlChildren invalidation below refetches children for an id the
+      // server no longer knows, which now surfaces as a spurious error toast.
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        next.delete(variables.id);
+        return next;
+      });
+      setOpenParentIds((prev) => prev.filter((id) => id !== variables.id));
+      graftedData.current.delete(variables.id);
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
       utils.controlLink.getFrameworkControlHealth.invalidate({ frameworkId });
     },
     onError: (error) => {
@@ -246,6 +264,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
       setEditingTestInstructions("");
       setEditingAcceptanceCriteria("");
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
     },
     onError: (error) => {
       toast.error(error.message);
@@ -259,11 +278,145 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
       setTaggingControlId(null);
       setTaggingControlDomains([]);
       utils.framework.getControls.invalidate({ frameworkId });
+      void utils.framework.getControlChildren.invalidate();
     },
     onError: (error) => {
       toast.error(error.message);
     },
   });
+
+  // --- Lazy-loaded control tree ---------------------------------------------
+  const [rootNodes, setRootNodes] = useState<FrameworkNode[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // One child query per OPEN parent row. A scalar "currently expanding" id would
+  // be overwritten by a second chevron click landing inside the first round-trip,
+  // stranding the first row in a spinner with no chevron (the spinner takes
+  // precedence over it), so it could never be expanded or collapsed again.
+  // Keeping the query mounted for as long as the row is open also means an
+  // invalidation-driven refetch is delivered instead of being dropped on the floor.
+  const [openParentIds, setOpenParentIds] = useState<string[]>([]);
+
+  const childQueries = api.useQueries((t) =>
+    openParentIds.map((id) => t.framework.getControlChildren({ parentControlId: id })),
+  );
+
+  // What the user is currently looking at. Expansion belongs to a *view*, not to
+  // a payload: the same rows re-fetched after an edit are still the same view.
+  //
+  // Resetting on the `controlsData` reference instead made the tree collapse on
+  // some edits and not others — `getControls` eagerly includes the first five
+  // children of every row, so editing the third child of a family changed the
+  // payload (collapse) while editing the sixth did not (structural sharing kept
+  // the reference, no collapse). Same gesture, different outcome. Keying on the
+  // query identity makes the reset deterministic: it happens when — and only
+  // when — the user changes page, search, filter, or tree/flat mode.
+  const viewKey = `${frameworkId}|${isTree ? "tree" : "flat"}|${currentPage}|${debouncedSearch}|${healthFilter}`;
+
+  const graftedData = useRef(new Map<string, ControlInput[]>());
+
+  useEffect(() => {
+    setExpanded(new Set());
+    setOpenParentIds([]);
+    graftedData.current = new Map();
+  }, [viewKey]);
+
+  // Rebuild the roots whenever the server hands back rows, re-applying every
+  // graft we already hold so a refetch does not throw the open tree away.
+  // Insertion order guarantees a parent is grafted before any of its own
+  // children, because a row can only be expanded after its parent was.
+  //
+  // Runs after the reset effect above, so a view change rebuilds from an empty
+  // graft map. This effect must therefore depend on `viewKey` too: two health
+  // filters (HEALTHY → CRITICAL) share one query key, so `controlsData` alone
+  // would not fire and the cleared grafts would never leave the rendered tree.
+  useEffect(() => {
+    const grafts = [...graftedData.current.entries()];
+    setRootNodes(
+      grafts.reduce(
+        (tree, [parentId, data]) => graftChildren(tree, parentId, controlsToNodes(data)),
+        controlsToNodes(controlsData?.controls ?? []),
+      ),
+    );
+  }, [controlsData, viewKey]);
+
+  // Graft each result onto the node that asked for it, as it arrives. Results
+  // are grafted once per payload identity: React Query hands back the same
+  // `data` reference until it genuinely changes, so a refetch that returns new
+  // rows re-grafts and one that returns the same rows does not re-render.
+  useEffect(() => {
+    const arrivals: Array<{ parentId: string; children: FrameworkNode[] }> = [];
+
+    openParentIds.forEach((parentId, i) => {
+      const data = childQueries[i]?.data;
+      if (!data) return;
+      if (graftedData.current.get(parentId) === data) return;
+      graftedData.current.set(parentId, data);
+      arrivals.push({ parentId, children: controlsToNodes(data) });
+    });
+
+    if (arrivals.length === 0) return;
+    setRootNodes((prev) =>
+      arrivals.reduce(
+        (tree, { parentId, children }) => graftChildren(tree, parentId, children),
+        prev,
+      ),
+    );
+  }, [openParentIds, childQueries]);
+
+  // Derived, never stored: a row spins exactly while its own query has no rows
+  // yet. Nothing can strand an id here, because there is no set to forget to
+  // clean up — a failed or superseded query simply stops being pending.
+  const loadingChildIds = new Set(
+    openParentIds.filter((_, i) => childQueries[i]?.isPending ?? false),
+  );
+
+  // A failed child fetch is neither pending nor loaded: without this the row
+  // would sit open, chevron down, with nothing under it and nothing to say why.
+  // The table draws an inline "couldn't load — Retry" row for each of these.
+  const childErrorIds = new Set(
+    openParentIds.filter((_, i) => childQueries[i]?.isError ?? false),
+  );
+
+  const handleRetryChildren = (node: FrameworkNode) => {
+    const i = openParentIds.indexOf(node.id);
+    if (i === -1) return;
+    void childQueries[i]?.refetch();
+  };
+
+  // Toast once per failure, not once per render. The id is forgotten again as
+  // soon as its query recovers, so a later failure of the same row speaks up.
+  const toastedChildErrors = useRef(new Set<string>());
+  useEffect(() => {
+    openParentIds.forEach((parentId, i) => {
+      const query = childQueries[i];
+      if (!query) return;
+      if (!query.isError) {
+        toastedChildErrors.current.delete(parentId);
+        return;
+      }
+      if (toastedChildErrors.current.has(parentId)) return;
+      toastedChildErrors.current.add(parentId);
+      toast.error("Couldn't load sub-controls. Use Retry on the row to try again.");
+    });
+  }, [openParentIds, childQueries]);
+
+  const handleToggleExpand = (node: FrameworkNode) => {
+    const isOpen = expanded.has(node.id);
+
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (isOpen) next.delete(node.id);
+      else next.add(node.id);
+      return next;
+    });
+
+    if (node.childCount === 0) return;
+
+    setOpenParentIds((prev) => {
+      if (isOpen) return prev.filter((id) => id !== node.id);
+      return prev.includes(node.id) ? prev : [...prev, node.id];
+    });
+  };
 
   const handleCreateControl = () => {
     createControlMutation.mutate({
@@ -303,23 +456,26 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     );
   }
 
-  const { pagination, controls } = controlsData || { pagination: null, controls: [] };
+  const { pagination } = controlsData ?? { pagination: null };
 
-  // Story 12.3: Merge controls with health data (AC1-AC4)
-  const controlsWithHealth = controls.map((control) => {
-    const healthInfo = healthData?.controls.find((h) => h.id === control.id);
-    return {
-      ...control,
-      health: healthInfo?.health ?? ("HEALTHY" as const),
-      riskCount: healthInfo?.riskCount ?? 0,
-      findingCount: healthInfo?.findingCount ?? 0,
-    };
-  });
+  // Story 12.3: Health lookup, keyed by control id (AC1-AC4)
+  const healthByNodeId = new Map(
+    (healthData?.controls ?? []).map((h) => [
+      h.id,
+      { health: h.health, riskCount: h.riskCount, findingCount: h.findingCount },
+    ]),
+  );
 
-  // Story 12.3: Apply health filter (AC11)
-  const filteredControls = healthFilter === "all"
-    ? controlsWithHealth
-    : controlsWithHealth.filter((c) => c.health === healthFilter);
+  // Story 12.3: Apply health filter (AC11). Filtering mid-tree would orphan
+  // children, so a filtered view is a flat view — and the fetch above is flat
+  // to match, so these rows are the real controls (leaves included) that the
+  // summary cards count, not just the families.
+  //
+  // A node with NO health entry is unknown, not healthy: the table renders it
+  // as "—" rather than a green badge, so the filter must not match it either.
+  const visibleRoots = isFiltering
+    ? rootNodes.filter((n) => healthByNodeId.get(n.id)?.health === healthFilter)
+    : rootNodes;
 
   // Story 12.3: Calculate health summary (AC25-AC26)
   const healthSummary = healthData?.summary ?? {
@@ -528,7 +684,9 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                 Controls
               </CardTitle>
               <CardDescription>
-                {pagination?.totalCount || 0} controls in this framework
+                {/* The true total, from getById. `pagination.totalCount` now
+                    counts top-level rows only, so it cannot be used here. */}
+                {framework._count?.Control ?? 0} controls in this framework
               </CardDescription>
             </div>
             <div className="flex items-center gap-3">
@@ -540,7 +698,12 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
               {/* Story 12.3: Health filter (AC11) */}
               <Select
                 value={healthFilter}
-                onValueChange={(v) => setHealthFilter(v as typeof healthFilter)}
+                onValueChange={(v) => {
+                  setHealthFilter(v as typeof healthFilter);
+                  // The fetch shape changes with the filter (tree vs flat), so a
+                  // stale page offset would point into a different result set.
+                  setCurrentPage(0);
+                }}
               >
                 <SelectTrigger className="w-[150px]">
                   <Filter className="h-4 w-4 mr-2" />
@@ -571,264 +734,150 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
-          ) : filteredControls.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              {debouncedSearch || healthFilter !== "all" ? (
-                <>
-                  <p>No controls found matching your filters</p>
-                  <button
-                    onClick={() => {
-                      setSearchQuery("");
-                      setDebouncedSearch("");
-                      setHealthFilter("all");
-                    }}
-                    className="mt-2 text-blue-600 hover:text-blue-800"
-                  >
-                    Clear filters
-                  </button>
-                </>
-              ) : (
-                <p>No controls in this framework</p>
-              )}
-            </div>
           ) : (
             <>
-              <div className="overflow-hidden rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[150px]">Control ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      {/* Story 12.3: Health columns (AC1-AC4) */}
-                      <TableHead className="w-[80px] text-center">Risks</TableHead>
-                      <TableHead className="w-[80px] text-center">Findings</TableHead>
-                      <TableHead className="w-[100px]">Health</TableHead>
-                      <TableHead className="w-[120px]">Domains</TableHead>
-                      <TableHead className="w-[140px]">Test Instructions</TableHead>
-                      <TableHead className="w-[140px]">Acceptance Criteria</TableHead>
-                      <TableHead className="w-[100px]">Children</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredControls.map((control) => (
-                      <TableRow
-                        key={control.id}
-                        className="cursor-pointer hover:bg-gray-50"
-                        onClick={() => setSelectedControlId(control.id)}
+              {visibleRoots.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {debouncedSearch || healthFilter !== "all" ? (
+                    <>
+                      <p>No controls found matching your filters</p>
+                      <button
+                        onClick={() => {
+                          setSearchQuery("");
+                          setDebouncedSearch("");
+                          setHealthFilter("all");
+                          // Clearing filters flips the fetch back to the tree,
+                          // whose page count is far smaller. Keeping the old
+                          // offset asks for a page that no longer exists: the
+                          // server returns nothing, the pagination block hides
+                          // itself (totalPages === 1) and the empty state loses
+                          // its Clear-filters button — a dead end with no way
+                          // back short of a reload.
+                          setCurrentPage(0);
+                        }}
+                        className="mt-2 text-blue-600 hover:text-blue-800"
                       >
-                        <TableCell className="font-mono text-sm">
-                          {control.controlId}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{control.title}</p>
-                            <p className="text-sm text-gray-500 truncate max-w-md">
-                              {control.description}
-                            </p>
-                          </div>
-                        </TableCell>
-                        {/* Story 12.3: Risk count (AC1) */}
-                        <TableCell className="text-center">
-                          {control.riskCount > 0 ? (
-                            <Badge variant="outline" className="gap-1">
-                              <AlertTriangle className="h-3 w-3" />
-                              {control.riskCount}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </TableCell>
-                        {/* Story 12.3: Finding count (AC2) */}
-                        <TableCell className="text-center">
-                          {control.findingCount > 0 ? (
-                            <Badge variant="outline" className="gap-1">
-                              <AlertCircle className="h-3 w-3" />
-                              {control.findingCount}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </TableCell>
-                        {/* Story 12.3: Health status (AC3-AC4) */}
-                        <TableCell>
-                          <ControlHealthBadge health={control.health} />
-                        </TableCell>
-                        {/* Domain tags */}
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {control.ControlDomains && control.ControlDomains.length > 0 ? (
-                              control.ControlDomains.map((cd: { ControlDomain: { id: string; code: string; name: string } }) => (
-                                <Badge
-                                  key={cd.ControlDomain.id}
-                                  variant="secondary"
-                                  className="text-xs cursor-pointer hover:bg-secondary/80"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setTaggingControlId(control.id);
-                                    setTaggingControlDomains(
-                                      control.ControlDomains?.map((d: { ControlDomain: { id: string } }) => d.ControlDomain.id) || []
-                                    );
-                                  }}
-                                >
-                                  {cd.ControlDomain.code}
-                                </Badge>
-                              ))
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-xs text-muted-foreground"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setTaggingControlId(control.id);
-                                  setTaggingControlDomains([]);
-                                }}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                        {/* Test Instructions — badge if set, "Add" if empty.
-                            Click opens the testing-fields edit dialog focused
-                            on the testInstructions textarea. */}
-                        <TableCell>
-                          {control.testInstructions ? (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-secondary/80 max-w-[130px] truncate"
-                              title={control.testInstructions}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTestingControlId(control.id);
-                                setEditingTestingField("testInstructions");
-                                setEditingTestInstructions(control.testInstructions ?? "");
-                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
-                              }}
-                            >
-                              {control.testInstructions}
-                            </Badge>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs text-muted-foreground"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTestingControlId(control.id);
-                                setEditingTestingField("testInstructions");
-                                setEditingTestInstructions("");
-                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add
-                            </Button>
-                          )}
-                        </TableCell>
-                        {/* Acceptance Criteria — same pattern */}
-                        <TableCell>
-                          {control.acceptanceCriteria ? (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-secondary/80 max-w-[130px] truncate"
-                              title={control.acceptanceCriteria}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTestingControlId(control.id);
-                                setEditingTestingField("acceptanceCriteria");
-                                setEditingTestInstructions(control.testInstructions ?? "");
-                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
-                              }}
-                            >
-                              {control.acceptanceCriteria}
-                            </Badge>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs text-muted-foreground"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTestingControlId(control.id);
-                                setEditingTestingField("acceptanceCriteria");
-                                setEditingTestInstructions(control.testInstructions ?? "");
-                                setEditingAcceptanceCriteria("");
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add
-                            </Button>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {(control._count?.other_Control || 0) > 0 && (
-                            <span className="text-sm text-gray-500">
-                              {control._count?.other_Control} sub-controls
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {/* Story 12.4: Control actions dropdown */}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                Actions
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setSelectedControlId(control.id)}>
-                                <FileText className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              {control.isActive ? (
-                                <DropdownMenuItem
-                                  onClick={() => deprecateControlMutation.mutate({ id: control.id })}
-                                  className="text-amber-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Deprecate
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={() => restoreControlMutation.mutate({ id: control.id })}
-                                  className="text-green-600"
-                                >
-                                  <RotateCcw className="h-4 w-4 mr-2" />
-                                  Restore
-                                </DropdownMenuItem>
-                              )}
-                              {control.riskCount === 0 && control.findingCount === 0 && (
-                                <DropdownMenuItem
-                                  onClick={() => deleteControlMutation.mutate({ id: control.id })}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                        Clear filters
+                      </button>
+                    </>
+                  ) : (
+                    <p>No controls in this framework</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {(isSearching || isFiltering) && (
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      Showing flat results — {visibleRoots.length} match
+                      {visibleRoots.length === 1 ? "" : "es"}. Expand is disabled
+                      while {isSearching ? "searching" : "filtering"}.
+                    </p>
+                  )}
 
-              {/* Pagination */}
+                  <FrameworkNodeTable
+                    nodes={visibleRoots}
+                    columns={{
+                      health: true,
+                      domains: true,
+                      testing: true,
+                      children: true,
+                      actions: true,
+                    }}
+                    expanded={expanded}
+                    onToggleExpand={handleToggleExpand}
+                    loadingChildIds={loadingChildIds}
+                    childErrorIds={childErrorIds}
+                    onRetryChildren={handleRetryChildren}
+                    healthByNodeId={healthByNodeId}
+                    flat={isSearching || isFiltering}
+                    onRowClick={(node) => setSelectedControlId(node.id)}
+                    onEditTesting={(node, focus) => {
+                      setEditingTestingControlId(node.id);
+                      setEditingTestingField(focus === "ti" ? "testInstructions" : "acceptanceCriteria");
+                      setEditingTestInstructions(node.testInstructions ?? "");
+                      setEditingAcceptanceCriteria(node.acceptanceCriteria ?? "");
+                    }}
+                    onEditDomains={(node) => {
+                      setTaggingControlId(node.id);
+                      setTaggingControlDomains((node.domains ?? []).map((d) => d.id));
+                    }}
+                    renderActions={(node) => (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            Actions
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedControlId(node.id)}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          {node.isActive ? (
+                            <DropdownMenuItem
+                              onClick={() => deprecateControlMutation.mutate({ id: node.id })}
+                              className="text-amber-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Deprecate
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => restoreControlMutation.mutate({ id: node.id })}
+                              className="text-green-600"
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Restore
+                            </DropdownMenuItem>
+                          )}
+                          {(healthByNodeId.get(node.id)?.riskCount ?? 0) === 0 &&
+                            (healthByNodeId.get(node.id)?.findingCount ?? 0) === 0 && (
+                              <DropdownMenuItem
+                                onClick={() => deleteControlMutation.mutate({ id: node.id })}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  />
+                </>
+              )}
+
+              {/* Pagination. Hoisted out of the visibleRoots-non-empty branch
+                  above (Story 12.3 review finding): a health filter narrows
+                  only the rows already fetched for THIS page, so it is entirely
+                  possible for the whole page to filter down to zero rows while
+                  later pages still hold matches (e.g. NIST 800-53's lone
+                  CRITICAL control several pages in). Without this, that page
+                  rendered the "no controls found" empty state — which has no
+                  Next button — stranding the user on a page they can't leave. */}
               {pagination && pagination.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 px-2">
                   <p className="text-sm text-gray-500">
-                    Showing {currentPage * pageSize + 1} to{" "}
-                    {Math.min((currentPage + 1) * pageSize, pagination.totalCount)} of{" "}
-                    {pagination.totalCount} controls
+                    {isFiltering ? (
+                      // Honest-footer fix: the flat fetch behind a health filter
+                      // returns a full page of unfiltered rows, then the health
+                      // filter is applied client-side to just that page. So
+                      // "matching controls" out of `pagination.totalCount` would
+                      // describe the fetch, not what's on screen. Report what's
+                      // actually rendered on this page instead.
+                      <>
+                        Showing {visibleRoots.length} of {rootNodes.length} controls
+                        on this page matching this filter ({pagination.totalCount}{" "}
+                        controls fetched across all pages)
+                      </>
+                    ) : (
+                      <>
+                        Showing {currentPage * pageSize + 1} to{" "}
+                        {Math.min((currentPage + 1) * pageSize, pagination.totalCount)} of{" "}
+                        {pagination.totalCount}{" "}
+                        {isTree ? "top-level controls" : "matching controls"}
+                      </>
+                    )}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
