@@ -1081,6 +1081,54 @@ export const frameworkRouter = createTRPCRouter({
     }),
 
   /**
+   * Children of a single control, for lazy-expanding the framework tree.
+   *
+   * Deliberately separate from `getControls`, whose `other_Control` include is
+   * capped at 5 as a preview. NIST 800-53 has 1216 controls, so the detail page
+   * loads top-level rows only and calls this per expanded row.
+   *
+   * @requires FRAMEWORK_READ permission
+   */
+  getControlChildren: organizationProcedure
+    .use(requirePermission(Permission.FRAMEWORK_READ))
+    .input(z.object({ parentControlId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      // The org filter extension scopes this read, so a control belonging to
+      // another tenant is simply not found — no existence leak.
+      const parent = await ctx.db.control.findUnique({
+        where: { id: input.parentControlId },
+      });
+
+      if (!parent) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Control not found",
+        });
+      }
+
+      return ctx.db.control.findMany({
+        where: { parentControlId: input.parentControlId },
+        orderBy: { controlId: "asc" },
+        include: {
+          _count: {
+            select: { other_Control: true },
+          },
+          ControlDomains: {
+            include: {
+              ControlDomain: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    }),
+
+  /**
    * Get a single control by ID with full details
    *
    * @requires FRAMEWORK_READ permission
