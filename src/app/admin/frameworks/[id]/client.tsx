@@ -8,7 +8,7 @@
  * @see Story 2.2: OSCAL Catalog Storage and Retrieval
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -21,14 +21,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   ArrowLeft,
   Search,
   Loader2,
@@ -40,21 +32,18 @@ import {
   Hash,
   ExternalLink,
   RefreshCw,
-  AlertTriangle,
   BarChart3,
   Shield,
   ShieldAlert,
   ShieldCheck,
   Filter,
   Download,
-  AlertCircle,
   Plus,
   Pencil,
   Trash2,
   RotateCcw,
   Lock,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -97,31 +86,28 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ControlDomainSelect } from "@/components/taxonomy/ControlDomainSelect";
+import { FrameworkNodeTable } from "@/components/frameworks/FrameworkNodeTable";
+import { controlsToNodes, type FrameworkNode } from "@/lib/frameworks/framework-node";
 
-// Story 12.3: Health badge component
-function ControlHealthBadge({ health }: { health: "HEALTHY" | "AT_RISK" | "CRITICAL" }) {
-  if (health === "CRITICAL") {
-    return (
-      <Badge variant="destructive" className="gap-1">
-        <ShieldAlert className="h-3 w-3" />
-        Critical
-      </Badge>
-    );
-  }
-  if (health === "AT_RISK") {
-    return (
-      <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-600 bg-yellow-50">
-        <Shield className="h-3 w-3" />
-        At Risk
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="outline" className="gap-1 border-green-500 text-green-600 bg-green-50">
-      <ShieldCheck className="h-3 w-3" />
-      Healthy
-    </Badge>
-  );
+/**
+ * Return a copy of the tree with `children` attached to the node with `parentId`.
+ * Children arrive one level at a time, so this only ever has to recurse.
+ */
+function graftChildren(
+  nodes: FrameworkNode[],
+  parentId: string,
+  children: FrameworkNode[],
+): FrameworkNode[] {
+  return nodes.map((node) => {
+    if (node.id === parentId) {
+      return {
+        ...node,
+        children: children.map((child) => ({ ...child, depth: node.depth + 1 })),
+      };
+    }
+    if (node.children === null) return node;
+    return { ...node, children: graftChildren(node.children, parentId, children) };
+  });
 }
 
 interface FrameworkDetailClientProps {
@@ -176,10 +162,15 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
   const { data: framework, isLoading: isLoadingFramework, error: frameworkError } =
     api.framework.getById.useQuery({ id: frameworkId });
 
-  // Fetch controls with pagination and search
+  const isSearching = debouncedSearch.length > 0;
+
+  // Not searching: load top-level rows only and lazy-expand. Searching: flat
+  // results, because a search hit deep in the tree has no meaningful parent row
+  // to draw it under.
   const { data: controlsData, isLoading: isLoadingControls } =
     api.framework.getControls.useQuery({
       frameworkId,
+      topLevelOnly: !isSearching,
       search: debouncedSearch || undefined,
       page: currentPage,
       pageSize,
@@ -265,6 +256,56 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     },
   });
 
+  // --- Lazy-loaded control tree ---------------------------------------------
+  const [rootNodes, setRootNodes] = useState<FrameworkNode[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [loadingChildIds, setLoadingChildIds] = useState<Set<string>>(new Set());
+  const [pendingExpandId, setPendingExpandId] = useState<string | null>(null);
+
+  // Rebuild the tree whenever the server returns a new page / search result.
+  // Expansion is reset with it: the old ids are not on screen any more.
+  useEffect(() => {
+    setRootNodes(controlsToNodes(controlsData?.controls ?? []));
+    setExpanded(new Set());
+  }, [controlsData]);
+
+  const { data: childControls } = api.framework.getControlChildren.useQuery(
+    { parentControlId: pendingExpandId! },
+    { enabled: pendingExpandId !== null },
+  );
+
+  // Graft fetched children onto the node that asked for them.
+  useEffect(() => {
+    if (!pendingExpandId || !childControls) return;
+    const parentId = pendingExpandId;
+    const children = controlsToNodes(childControls);
+
+    setRootNodes((prev) => graftChildren(prev, parentId, children));
+    setLoadingChildIds((prev) => {
+      const next = new Set(prev);
+      next.delete(parentId);
+      return next;
+    });
+    setPendingExpandId(null);
+  }, [pendingExpandId, childControls]);
+
+  const handleToggleExpand = (node: FrameworkNode) => {
+    const isOpen = expanded.has(node.id);
+
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (isOpen) next.delete(node.id);
+      else next.add(node.id);
+      return next;
+    });
+
+    // Fetch children the first time this row opens.
+    if (!isOpen && node.children === null) {
+      setLoadingChildIds((prev) => new Set(prev).add(node.id));
+      setPendingExpandId(node.id);
+    }
+  };
+
   const handleCreateControl = () => {
     createControlMutation.mutate({
       frameworkId,
@@ -303,23 +344,23 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
     );
   }
 
-  const { pagination, controls } = controlsData || { pagination: null, controls: [] };
+  const { pagination } = controlsData ?? { pagination: null };
 
-  // Story 12.3: Merge controls with health data (AC1-AC4)
-  const controlsWithHealth = controls.map((control) => {
-    const healthInfo = healthData?.controls.find((h) => h.id === control.id);
-    return {
-      ...control,
-      health: healthInfo?.health ?? ("HEALTHY" as const),
-      riskCount: healthInfo?.riskCount ?? 0,
-      findingCount: healthInfo?.findingCount ?? 0,
-    };
-  });
+  // Story 12.3: Health lookup, keyed by control id (AC1-AC4)
+  const healthByNodeId = new Map(
+    (healthData?.controls ?? []).map((h) => [
+      h.id,
+      { health: h.health, riskCount: h.riskCount, findingCount: h.findingCount },
+    ]),
+  );
 
-  // Story 12.3: Apply health filter (AC11)
-  const filteredControls = healthFilter === "all"
-    ? controlsWithHealth
-    : controlsWithHealth.filter((c) => c.health === healthFilter);
+  // Story 12.3: Apply health filter (AC11). The filter narrows which ROOT rows
+  // are shown. Filtering mid-tree would orphan children, so a filtered view is
+  // a flat view.
+  const isFiltering = healthFilter !== "all";
+  const visibleRoots = isFiltering
+    ? rootNodes.filter((n) => (healthByNodeId.get(n.id)?.health ?? "HEALTHY") === healthFilter)
+    : rootNodes;
 
   // Story 12.3: Calculate health summary (AC25-AC26)
   const healthSummary = healthData?.summary ?? {
@@ -528,7 +569,9 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                 Controls
               </CardTitle>
               <CardDescription>
-                {pagination?.totalCount || 0} controls in this framework
+                {/* The true total, from getById. `pagination.totalCount` now
+                    counts top-level rows only, so it cannot be used here. */}
+                {framework._count?.Control ?? 0} controls in this framework
               </CardDescription>
             </div>
             <div className="flex items-center gap-3">
@@ -571,7 +614,7 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
-          ) : filteredControls.length === 0 ? (
+          ) : visibleRoots.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               {debouncedSearch || healthFilter !== "all" ? (
                 <>
@@ -593,234 +636,81 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
             </div>
           ) : (
             <>
-              <div className="overflow-hidden rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[150px]">Control ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      {/* Story 12.3: Health columns (AC1-AC4) */}
-                      <TableHead className="w-[80px] text-center">Risks</TableHead>
-                      <TableHead className="w-[80px] text-center">Findings</TableHead>
-                      <TableHead className="w-[100px]">Health</TableHead>
-                      <TableHead className="w-[120px]">Domains</TableHead>
-                      <TableHead className="w-[140px]">Test Instructions</TableHead>
-                      <TableHead className="w-[140px]">Acceptance Criteria</TableHead>
-                      <TableHead className="w-[100px]">Children</TableHead>
-                      <TableHead className="w-[80px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredControls.map((control) => (
-                      <TableRow
-                        key={control.id}
-                        className="cursor-pointer hover:bg-gray-50"
-                        onClick={() => setSelectedControlId(control.id)}
-                      >
-                        <TableCell className="font-mono text-sm">
-                          {control.controlId}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{control.title}</p>
-                            <p className="text-sm text-gray-500 truncate max-w-md">
-                              {control.description}
-                            </p>
-                          </div>
-                        </TableCell>
-                        {/* Story 12.3: Risk count (AC1) */}
-                        <TableCell className="text-center">
-                          {control.riskCount > 0 ? (
-                            <Badge variant="outline" className="gap-1">
-                              <AlertTriangle className="h-3 w-3" />
-                              {control.riskCount}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </TableCell>
-                        {/* Story 12.3: Finding count (AC2) */}
-                        <TableCell className="text-center">
-                          {control.findingCount > 0 ? (
-                            <Badge variant="outline" className="gap-1">
-                              <AlertCircle className="h-3 w-3" />
-                              {control.findingCount}
-                            </Badge>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </TableCell>
-                        {/* Story 12.3: Health status (AC3-AC4) */}
-                        <TableCell>
-                          <ControlHealthBadge health={control.health} />
-                        </TableCell>
-                        {/* Domain tags */}
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {control.ControlDomains && control.ControlDomains.length > 0 ? (
-                              control.ControlDomains.map((cd: { ControlDomain: { id: string; code: string; name: string } }) => (
-                                <Badge
-                                  key={cd.ControlDomain.id}
-                                  variant="secondary"
-                                  className="text-xs cursor-pointer hover:bg-secondary/80"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setTaggingControlId(control.id);
-                                    setTaggingControlDomains(
-                                      control.ControlDomains?.map((d: { ControlDomain: { id: string } }) => d.ControlDomain.id) || []
-                                    );
-                                  }}
-                                >
-                                  {cd.ControlDomain.code}
-                                </Badge>
-                              ))
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-2 text-xs text-muted-foreground"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setTaggingControlId(control.id);
-                                  setTaggingControlDomains([]);
-                                }}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                        {/* Test Instructions — badge if set, "Add" if empty.
-                            Click opens the testing-fields edit dialog focused
-                            on the testInstructions textarea. */}
-                        <TableCell>
-                          {control.testInstructions ? (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-secondary/80 max-w-[130px] truncate"
-                              title={control.testInstructions}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTestingControlId(control.id);
-                                setEditingTestingField("testInstructions");
-                                setEditingTestInstructions(control.testInstructions ?? "");
-                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
-                              }}
-                            >
-                              {control.testInstructions}
-                            </Badge>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs text-muted-foreground"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTestingControlId(control.id);
-                                setEditingTestingField("testInstructions");
-                                setEditingTestInstructions("");
-                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add
-                            </Button>
-                          )}
-                        </TableCell>
-                        {/* Acceptance Criteria — same pattern */}
-                        <TableCell>
-                          {control.acceptanceCriteria ? (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-secondary/80 max-w-[130px] truncate"
-                              title={control.acceptanceCriteria}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTestingControlId(control.id);
-                                setEditingTestingField("acceptanceCriteria");
-                                setEditingTestInstructions(control.testInstructions ?? "");
-                                setEditingAcceptanceCriteria(control.acceptanceCriteria ?? "");
-                              }}
-                            >
-                              {control.acceptanceCriteria}
-                            </Badge>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-xs text-muted-foreground"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTestingControlId(control.id);
-                                setEditingTestingField("acceptanceCriteria");
-                                setEditingTestInstructions(control.testInstructions ?? "");
-                                setEditingAcceptanceCriteria("");
-                              }}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add
-                            </Button>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {(control._count?.other_Control || 0) > 0 && (
-                            <span className="text-sm text-gray-500">
-                              {control._count?.other_Control} sub-controls
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {/* Story 12.4: Control actions dropdown */}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                Actions
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setSelectedControlId(control.id)}>
-                                <FileText className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              {control.isActive ? (
-                                <DropdownMenuItem
-                                  onClick={() => deprecateControlMutation.mutate({ id: control.id })}
-                                  className="text-amber-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Deprecate
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={() => restoreControlMutation.mutate({ id: control.id })}
-                                  className="text-green-600"
-                                >
-                                  <RotateCcw className="h-4 w-4 mr-2" />
-                                  Restore
-                                </DropdownMenuItem>
-                              )}
-                              {control.riskCount === 0 && control.findingCount === 0 && (
-                                <DropdownMenuItem
-                                  onClick={() => deleteControlMutation.mutate({ id: control.id })}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              {(isSearching || isFiltering) && (
+                <p className="mb-2 text-sm text-muted-foreground">
+                  Showing flat results — expand is disabled while{" "}
+                  {isSearching ? "searching" : "filtering"}.
+                </p>
+              )}
+
+              <FrameworkNodeTable
+                nodes={visibleRoots}
+                columns={{
+                  health: true,
+                  domains: true,
+                  testing: true,
+                  children: true,
+                  actions: true,
+                }}
+                expanded={expanded}
+                onToggleExpand={handleToggleExpand}
+                loadingChildIds={loadingChildIds}
+                healthByNodeId={healthByNodeId}
+                flat={isSearching || isFiltering}
+                onRowClick={(node) => setSelectedControlId(node.id)}
+                onEditTesting={(node, focus) => {
+                  setEditingTestingControlId(node.id);
+                  setEditingTestingField(focus === "ti" ? "testInstructions" : "acceptanceCriteria");
+                  setEditingTestInstructions(node.testInstructions ?? "");
+                  setEditingAcceptanceCriteria(node.acceptanceCriteria ?? "");
+                }}
+                onEditDomains={(node) => {
+                  setTaggingControlId(node.id);
+                  setTaggingControlDomains((node.domains ?? []).map((d) => d.id));
+                }}
+                renderActions={(node) => (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm">
+                        Actions
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setSelectedControlId(node.id)}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        View Details
+                      </DropdownMenuItem>
+                      {node.isActive ? (
+                        <DropdownMenuItem
+                          onClick={() => deprecateControlMutation.mutate({ id: node.id })}
+                          className="text-amber-600"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Deprecate
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onClick={() => restoreControlMutation.mutate({ id: node.id })}
+                          className="text-green-600"
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Restore
+                        </DropdownMenuItem>
+                      )}
+                      {(healthByNodeId.get(node.id)?.riskCount ?? 0) === 0 &&
+                        (healthByNodeId.get(node.id)?.findingCount ?? 0) === 0 && (
+                          <DropdownMenuItem
+                            onClick={() => deleteControlMutation.mutate({ id: node.id })}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              />
 
               {/* Pagination */}
               {pagination && pagination.totalPages > 1 && (
@@ -828,7 +718,8 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                   <p className="text-sm text-gray-500">
                     Showing {currentPage * pageSize + 1} to{" "}
                     {Math.min((currentPage + 1) * pageSize, pagination.totalCount)} of{" "}
-                    {pagination.totalCount} controls
+                    {pagination.totalCount}{" "}
+                    {isSearching ? "matching controls" : "top-level controls"}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
