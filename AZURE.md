@@ -77,20 +77,70 @@ az provider show -n Microsoft.App --query registrationState -o tsv
 az group create -n $RG -l $LOC
 ```
 
-### 2. Container registry, and build the image in it
+### 2. Container registry, and get the image into it
 
-`az acr build` uploads the source and builds in the cloud, so **you do not need Docker locally**.
+Create the registry first, either way:
 
 ```bash
 az acr create -n $ACR -g $RG --sku Basic
+```
 
+Then pick **one** of the two ways to get an image into it. Both end with the same
+`$ACR.azurecr.io/btsgrc:$TAG` and step 5 does not care which you used.
+
+#### Option 1 — build locally, push to ACR *(needs Docker running)*
+
+Use this when you want to test the image before it goes anywhere, or when the cloud build is
+failing and you want to see the build output on your own machine.
+
+```bash
+# Log Docker in to the registry. This writes an ACR token into your Docker
+# credential store; it expires after ~3 hours, so re-run it if a later push 401s.
+az acr login --name $ACR
+
+# Run from the repository root
+docker build -t $IMAGE:$TAG .
+
+docker push $IMAGE:$TAG
+```
+
+Then confirm it actually landed — a push that silently went to the wrong repository is a
+frustrating way to lose an hour:
+
+```bash
+az acr repository show-tags -n $ACR --repository btsgrc -o table
+```
+
+Notes:
+
+- **Docker Desktop must be running.** `az acr login` fails with a daemon-connection error
+  otherwise, and the message points at Docker, not at Azure.
+- **Build on the same architecture as Container Apps**, which is `linux/amd64`. On an Apple Silicon
+  Mac a plain `docker build` produces an `arm64` image that pushes fine and then fails at runtime
+  with an exec-format error. Force the platform:
+  `docker build --platform linux/amd64 -t $IMAGE:$TAG .`
+- The build needs ~4GB of memory available to Docker — `next build` is type-checking the whole
+  codebase and is OOM-killed below that. If the build dies without a clear error, raise Docker
+  Desktop's memory limit (Settings → Resources) before assuming the code is at fault.
+- The first push is a few hundred MB and is slow on a home connection. Subsequent pushes only send
+  changed layers.
+
+#### Option 2 — let ACR build it *(no local Docker)*
+
+`az acr build` uploads the source and builds in the cloud. Nothing is required on your machine.
+
+```bash
 # Run from the repository root — the trailing dot is the build context
 az acr build --registry $ACR --image btsgrc:$TAG .
 ```
 
-The build takes 5–10 minutes. It runs `next build`, which is memory-hungry; the Basic SKU handles
-it, but if the build is OOM-killed, retry on a bigger agent pool or build locally and push instead
-(see [Path B](#path-b--build-locally-push-to-acr)).
+Slower to iterate on (every attempt re-uploads the context), but it sidesteps Docker entirely and
+always produces the right architecture.
+
+> **Redeploying later?** Same commands, but **bump `TAG` first**. Container Apps keys revisions off
+> the image reference, so pushing over an existing tag can leave the old image running with no
+> error and no new revision. See
+> [Building and deploying a new image](#building-and-deploying-a-new-image).
 
 ### 3. PostgreSQL
 
@@ -422,11 +472,18 @@ az acr build --registry $ACR --image btsgrc:$TAG .
 
 ### Path B — build locally, push to ACR
 
+Needs Docker running. Bump `TAG` before you start.
+
 ```bash
-az acr login --name $ACR
-docker build -t $IMAGE:$TAG .
+az acr login --name $ACR                          # token expires after ~3h; re-run if a push 401s
+docker build --platform linux/amd64 -t $IMAGE:$TAG .
 docker push $IMAGE:$TAG
+az acr repository show-tags -n $ACR --repository btsgrc -o table   # confirm the tag landed
 ```
+
+`--platform linux/amd64` is not optional on an Apple Silicon Mac: an `arm64` image pushes without
+complaint and then dies at runtime with an exec-format error. The build also needs ~4GB available
+to Docker, or `next build` is OOM-killed.
 
 ### Path C — build and deploy in one step
 
