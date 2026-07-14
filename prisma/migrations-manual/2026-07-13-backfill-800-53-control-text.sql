@@ -2347,10 +2347,16 @@ UPDATE "Control" c SET "description" = 'Maintain configuration control over the 
 UPDATE "Control" c SET "description" = 'Scan for counterfeit system components [Assignment: organization-defined frequency].', "guidance" = 'The type of component determines the type of scanning to be conducted (e.g., web application scanning if the component is a web application).', "updatedAt" = NOW() FROM "Framework" f WHERE c."frameworkId" = f."id" AND f."code" = 'NIST80053' AND c."controlId" = 'SR-11(03)';
 UPDATE "Control" c SET "description" = 'Dispose of [Assignment: organization-defined data, documentation, tools, or system components] using the following techniques and methods: [Assignment: organization-defined techniques and methods].', "guidance" = 'Data, documentation, tools, or system components can be disposed of at any time during the system development life cycle (not only in the disposal or retirement phase of the life cycle). For example, disposal can occur during research and development, design, prototyping, or operations/maintenance and include methods such as disk cleaning, removal of cryptographic keys, partial reuse of components. Opportunities for compromise during disposal affect physical and logical data, including system documentation in paper-based or digital files; shipping and delivery documentation; memory sticks with software code; or complete routers or servers that include permanent media, which contain sensitive or proprietary information. Additionally, proper disposal of system components helps to prevent such components from entering the gray market.', "updatedAt" = NOW() FROM "Framework" f WHERE c."frameworkId" = f."id" AND f."code" = 'NIST80053' AND c."controlId" = 'SR-12';
 
-DO $$ DECLARE n int; BEGIN
-  SELECT count(*) INTO n FROM "Control" c JOIN "Framework" f ON c."frameworkId" = f."id"
+DO $$ DECLARE controls int; with_text int; BEGIN
+  SELECT count(*) INTO controls FROM "Control" c JOIN "Framework" f ON c."frameworkId" = f."id"
+   WHERE f."code" = 'NIST80053';
+  SELECT count(*) INTO with_text FROM "Control" c JOIN "Framework" f ON c."frameworkId" = f."id"
    WHERE f."code" = 'NIST80053' AND c."guidance" IS NOT NULL;
-  IF n = 0 THEN RAISE EXCEPTION 'NIST 800-53 text backfill matched no rows — the control-id mapping is wrong'; END IF;
+  IF controls = 0 THEN
+    RAISE NOTICE 'No NIST 800-53 framework in this database — nothing to backfill.';
+  ELSIF with_text = 0 THEN
+    RAISE EXCEPTION 'NIST 800-53 text backfill matched no rows — the control-id mapping is wrong';
+  END IF;
 END $$;
 
 COMMIT;

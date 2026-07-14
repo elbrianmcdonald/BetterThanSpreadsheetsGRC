@@ -170,15 +170,25 @@ def write_backfill_sql(out, dest):
             )
         )
     # A zero-row UPDATE succeeds silently. If the OSCAL->repo id mapping were ever
-    # wrong, an operator would see a clean COMMIT over an untouched database. Fail loud.
+    # wrong, an operator would see a clean COMMIT over an untouched database. Fail loud —
+    # but only where there was something to update. A database that simply has no 800-53
+    # framework (a tenant that never activated it) is not broken, and raising there means
+    # an operator running the migrations-manual folder gets a scary "the mapping is wrong"
+    # on a database where nothing is wrong.
     lines.extend(
         [
             "",
-            "DO $$ DECLARE n int; BEGIN",
-            '  SELECT count(*) INTO n FROM "Control" c JOIN "Framework" f ON c."frameworkId" = f."id"',
+            "DO $$ DECLARE controls int; with_text int; BEGIN",
+            '  SELECT count(*) INTO controls FROM "Control" c JOIN "Framework" f ON c."frameworkId" = f."id"',
+            '   WHERE f."code" = %s;' % sql_literal(FRAMEWORK_CODE),
+            '  SELECT count(*) INTO with_text FROM "Control" c JOIN "Framework" f ON c."frameworkId" = f."id"',
             '   WHERE f."code" = %s AND c."guidance" IS NOT NULL;' % sql_literal(FRAMEWORK_CODE),
-            "  IF n = 0 THEN RAISE EXCEPTION 'NIST 800-53 text backfill matched no rows "
-            "— the control-id mapping is wrong'; END IF;",
+            "  IF controls = 0 THEN",
+            "    RAISE NOTICE 'No NIST 800-53 framework in this database — nothing to backfill.';",
+            "  ELSIF with_text = 0 THEN",
+            "    RAISE EXCEPTION 'NIST 800-53 text backfill matched no rows "
+            "— the control-id mapping is wrong';",
+            "  END IF;",
             "END $$;",
             "",
             "COMMIT;",
