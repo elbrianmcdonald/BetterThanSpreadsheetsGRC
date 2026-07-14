@@ -266,6 +266,9 @@ Your external DB is untouched; the containerized DB starts fresh.
 
 ## Deploying to a managed container platform
 
+> **On Azure Container Apps?** See **[AZURE.md](AZURE.md)** for a full `az`-based runbook —
+> secrets, ingress, scaling, image rebuilds, cron jobs, and troubleshooting.
+
 Azure Container Apps, AWS ECS/Fargate, Google Cloud Run, and Kubernetes all run the image
 directly — there is no `.env` file and no Docker Compose to fill in defaults. **Every variable
 the app needs must be set explicitly on the platform.** This is the single most common way to
