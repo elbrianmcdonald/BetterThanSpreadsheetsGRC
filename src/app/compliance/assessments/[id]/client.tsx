@@ -137,6 +137,8 @@ interface ControlScore {
     controlId: string;
     title: string;
     description: string | null;
+    /** NIST's Discussion — how to judge the control, not just what it says. */
+    guidance: string | null;
     parentControlId: string | null;
     testInstructions: string | null;
     acceptanceCriteria: string | null;
@@ -381,23 +383,56 @@ function ControlScoringItem({
         </div>
       </div>
 
-      {/* Control Description - Collapsible */}
+      {/* Control Description — the control's real NIST statement. Collapsible. */}
       {score.control.description && (
         <Collapsible className="mb-3">
           <CollapsibleTrigger asChild>
-            <button className="w-full p-2 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors">
+            <button className="w-full p-2 bg-muted border border-border rounded-lg hover:bg-muted/70 transition-colors">
               <div className="flex items-center gap-2">
-                <HelpCircle className="h-4 w-4 text-blue-600 shrink-0" />
-                <span className="text-xs font-medium text-blue-800">
+                <HelpCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-foreground">
                   Control Details
                 </span>
-                <ChevronRight className="h-4 w-4 text-blue-600 ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
               </div>
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-1 p-3 bg-blue-50 border border-t-0 border-blue-100 rounded-b-lg">
-              <p className="text-xs text-blue-700">{score.control.description}</p>
+            <div className="mt-1 p-3 bg-muted border border-t-0 border-border rounded-b-lg">
+              {/* whitespace-pre-wrap: the description is NIST's structured
+                  statement — lettered clauses on their own indented lines. HTML
+                  collapses every newline and indent, so without this AC-02 reads
+                  as one unbroken run-on paragraph. */}
+              <p className="text-xs text-foreground whitespace-pre-wrap">
+                {score.control.description}
+              </p>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Guidance — NIST's Discussion for this control. It is the text that tells
+          the assessor how to JUDGE the control, so it belongs on the page where
+          they score it, not only in the framework admin. Collapsible: it runs to
+          several paragraphs and would bury the scoring controls if always open. */}
+      {score.control.guidance && (
+        <Collapsible className="mb-3">
+          <CollapsibleTrigger asChild>
+            <button className="w-full p-2 bg-muted border border-border rounded-lg hover:bg-muted/70 transition-colors">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-foreground">
+                  Guidance
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-1 p-3 bg-muted border border-t-0 border-border rounded-b-lg">
+              <p className="text-xs text-foreground whitespace-pre-wrap">
+                {score.control.guidance}
+              </p>
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -584,8 +619,16 @@ function ControlGroupCard({
   isEditable: boolean;
   onCreateFinding?: (score: ControlScore) => void;
 }) {
-  // Which nested controls have their enhancements revealed. Keyed by control id.
-  const [expandedControls, setExpandedControls] = useState<Set<string>>(new Set());
+  // Which nested controls have their children revealed. Keyed by control id.
+  //
+  // The group's root (the family, or a base control in a baseline-scoped
+  // assessment) is a scoreable row of its own, so its members hang one level
+  // below it. Start it open: the card is already a disclosure, and hiding every
+  // base control behind a second chevron inside it would make the assessor click
+  // twice to see anything.
+  const [expandedControls, setExpandedControls] = useState<Set<string>>(
+    () => new Set(group.nodes.map((node) => node.score.control.id)),
+  );
 
   // Filtering keeps this group because something in it matches — but the match
   // can be an enhancement three levels down, hidden inside a collapsed base
@@ -664,14 +707,9 @@ function ControlGroupCard({
 
       {isExpanded && (
         <CardContent className="space-y-4 pt-0">
-          {group.parent.control.description && (
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">{group.parent.control.description}</p>
-              </div>
-            </div>
-          )}
+          {/* The root's description is not repeated here: the root is now its own
+              row below, with its full statement behind its Control Details
+              disclosure. Printing it twice on one open card is just noise. */}
 
           {/* Group Stats */}
           <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">

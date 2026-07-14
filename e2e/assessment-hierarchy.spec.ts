@@ -29,15 +29,36 @@ import { USERS, login, assertNoError } from './support/helpers';
  */
 
 const ASSESSMENT_URL = '/compliance/assessments/cmrjrw3x4000g01mmlvdozzpu';
+/**
+ * The baseline-scoped assessment: 287 score rows and ZERO family rows, because a
+ * baseline scopes to baselined controls only. Every base control is therefore a
+ * root of the tree, and 54 of them (AC-02 among them) have baselined enhancements
+ * below. Making a root with children a header-only group turned those 54 scored
+ * controls into unscoreable card titles.
+ */
+const BASELINE_ASSESSMENT_URL = '/compliance/assessments/demo-ca-002';
 
-/** Open the assessment and switch to the Controls tab. */
-async function openControlsTab(page: Page): Promise<void> {
-  await page.goto(ASSESSMENT_URL);
+/** Open an assessment and switch to the Controls tab. */
+async function openControlsTab(page: Page, url = ASSESSMENT_URL): Promise<void> {
+  await page.goto(url);
   await page.getByRole('tab', { name: 'Controls', exact: true }).click();
   // The tab really rendered — everything after this is meaningful.
   await expect(page.getByRole('heading', { name: /Control Assessments/ })).toBeVisible({
     timeout: 30000,
   });
+}
+
+/**
+ * A control's own scoreable row: the innermost div holding that control's expand
+ * chevron and its own "Control Details" disclosure. A group header has neither —
+ * which is the whole point: a header cannot be scored.
+ */
+function expandedRow(page: Page, code: string) {
+  return page
+    .locator('div')
+    .filter({ has: page.getByRole('button', { name: `Collapse ${code}`, exact: true }) })
+    .filter({ has: page.getByRole('button', { name: 'Control Details' }) })
+    .last();
 }
 
 /** The family group card's header row, addressed by its code badge. */
@@ -107,14 +128,61 @@ test.describe('A compliance assessment exposes every level of the framework', ()
   }) => {
     await openControlsTab(page);
 
-    // AC has 25 base controls and 147 controls once the enhancements below them
-    // are counted. The old two-level grouping rendered "0/25 controls".
+    // AC has 25 base controls, 147 controls once the enhancements below them are
+    // counted, and 148 score rows once the family's own row is counted — the
+    // family has a score row in the database like every other control, so it must
+    // be in the denominator AND scoreable. The old two-level grouping rendered
+    // "0/25 controls"; the first fix rendered "0/147" and left the family
+    // unscoreable, so the page could never reach notAssessedCount === 0.
     const acHeader = familyHeader(page, 'AC');
     await expect(acHeader).toBeVisible({ timeout: 20000 });
-    await expect(acHeader).toContainText(/\d+\/147 controls/);
+    await expect(acHeader).toContainText(/\d+\/148 controls/);
     await expect(acHeader.getByText(/\/\s*25 controls/)).toHaveCount(0);
+    await expect(acHeader.getByText(/\/\s*147 controls/)).toHaveCount(0);
 
     await assertNoError(page, 'nist 800-53 group denominator');
+  });
+
+  test('the family that names the group is itself a scoreable row', async ({ page }) => {
+    await openControlsTab(page);
+    await page.getByText('AC', { exact: true }).click();
+
+    // AC is not just a card title: it has a score row in the database and the
+    // assessment cannot be submitted until it is scored, so it must render as a
+    // row with a status control of its own.
+    const acRow = expandedRow(page, 'AC');
+    await expect(acRow).toBeVisible({ timeout: 20000 });
+    await expect(acRow.getByRole('combobox')).toBeVisible();
+
+    await assertNoError(page, 'nist 800-53 family row');
+  });
+
+  test('a baseline-scoped assessment can score its base controls', async ({ page }) => {
+    // demo-ca-002 has no family rows at all, so AC-02 — the control the whole
+    // hierarchy fix exists for — is a ROOT with enhancements below it. It used to
+    // render as a group header only: scored in the database, unscoreable on the
+    // page, one of 54 controls in that state.
+    await openControlsTab(page, BASELINE_ASSESSMENT_URL);
+
+    // The group card is named after the base control itself.
+    const card = page
+      .locator('div')
+      .filter({ has: page.getByText('AC-02', { exact: true }) })
+      .filter({ hasText: /\d+\/\d+ controls/ })
+      .last();
+    await expect(card).toBeVisible({ timeout: 20000 });
+    await card.click();
+
+    // AC-02 now has a row of its own, with a status control — it is scoreable.
+    const ac02 = expandedRow(page, 'AC-02');
+    await expect(ac02).toBeVisible();
+    await expect(ac02).toContainText('Account Management');
+    await expect(ac02.getByRole('combobox')).toBeVisible();
+
+    // And it is still the parent of its baselined enhancements.
+    await expect(page.getByText('AC-02(01)', { exact: true })).toBeVisible();
+
+    await assertNoError(page, 'baseline-scoped assessment');
   });
 
   test('controls carry their real NIST statement, not a copy of their title', async ({ page }) => {
@@ -129,10 +197,48 @@ test.describe('A compliance assessment exposes every level of the framework', ()
     // The statement lives behind the row's own "Control Details" disclosure.
     await ac02.getByRole('button', { name: 'Control Details' }).click();
 
-    // AC-02's real OSCAL statement opens with its lettered account clause.
-    await expect(ac02).toContainText(
-      /a\.\s*Define and document the types of accounts allowed and specifically prohibited for use within the system/i,
+    const statement = ac02
+      .locator('p')
+      .filter({ hasText: 'Define and document the types of accounts' })
+      .last();
+    await expect(statement).toBeVisible();
+
+    // toContainText() normalizes whitespace, so it cannot see the formatting bug
+    // it would be written to protect: it passes whether or not the newlines
+    // survive. innerText is what the user actually reads — NIST's statement is a
+    // structured list, and HTML collapses every \n unless the block says so.
+    await expect(statement).toHaveCSS('white-space', 'pre-wrap');
+    const rendered = await statement.innerText();
+    const lines = rendered
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    expect(lines.length, 'AC-02 renders as a run-on paragraph, not a lettered list').toBeGreaterThan(
+      5,
     );
-    await expect(ac02).toContainText(/b\.\s*Assign account managers/i);
+    expect(lines.some((line) => /^a\.\s*Define and document the types of accounts/i.test(line))).toBe(
+      true,
+    );
+    // b. is a LINE of its own, not swallowed into the middle of a. 's line.
+    expect(lines.some((line) => /^b\.\s*Assign account managers/i.test(line))).toBe(true);
+  });
+
+  test("a control's NIST discussion is on the page the assessor scores it on", async ({ page }) => {
+    // The Discussion was imported for 1,014 controls and rendered only on
+    // /admin/frameworks — dead data on the assessment, which is the page that
+    // tells an assessor how to judge the control.
+    await openControlsTab(page);
+    await page.getByText('AC', { exact: true }).click();
+
+    const ac02 = controlRow(page, 'AC-02');
+    await expect(ac02).toBeVisible({ timeout: 20000 });
+
+    const guidance = ac02.getByRole('button', { name: 'Guidance', exact: true });
+    await expect(guidance).toBeVisible();
+    await guidance.click();
+
+    // AC-02's Discussion, verbatim from the OSCAL catalog.
+    await expect(ac02).toContainText(/Examples of system account types include individual/i);
   });
 });

@@ -18,15 +18,16 @@ const s = (id: string, controlId: string, parent: string | null): Score => ({
 });
 
 /**
- * Every control id the page would render for these groups: the group headers
- * plus every row nested inside them. Nothing else is drawn, so anything absent
- * here is invisible to the user and missing from the denominator.
+ * Every control id the page draws as a *row* — the things an assessor can
+ * actually score, and the only things in the denominator.
+ *
+ * A group header is a card title, not a scoreable row. Unioning headers in here
+ * is what let the bug through: a real control promoted to a root became a header
+ * with no row, scored in the database and unscoreable on the page, and the suite
+ * stayed green because the header "counted".
  */
-const renderedIds = (groups: ControlGroupTree<Score>[]) => {
-  const rows = groups.flatMap((g) => allScores(g.nodes).map((score) => score.control.id));
-  const headers = groups.map((g) => g.parent.control.id);
-  return { rows, all: new Set([...rows, ...headers]) };
-};
+const renderedRows = (groups: ControlGroupTree<Score>[]) =>
+  groups.flatMap((g) => allScores(g.nodes).map((score) => score.control.id));
 
 // NIST 800-53's real shape: family -> base control -> enhancement.
 const AC = s("ac", "AC", null);
@@ -44,33 +45,47 @@ describe("buildControlTree", () => {
     expect(groups).toHaveLength(1);
     const ac = groups[0]!;
     expect(ac.parent.control.controlId).toBe("AC");
-    expect(ac.nodes.map((n) => n.score.control.controlId)).toEqual(["AC-01", "AC-02"]);
+    // The root is a scoreable row of its own, with its members below it.
+    expect(ac.nodes.map((n) => n.score.control.controlId)).toEqual(["AC"]);
+    const acRow = ac.nodes[0]!;
+    expect(acRow.children.map((n) => n.score.control.controlId)).toEqual(["AC-01", "AC-02"]);
 
-    const ac02 = ac.nodes[1]!;
+    const ac02 = acRow.children[1]!;
     expect(ac02.children.map((n) => n.score.control.controlId)).toEqual([
       "AC-02(01)",
       "AC-02(02)",
     ]);
   });
 
-  it("counts every descendant, so the group denominator is not just its direct children", () => {
-    // The old code said "0/25 controls" for AC when AC really has ~175.
+  it("renders the root itself as a scoreable row, not only as a group header", () => {
+    // The root of a group has a score row in the database like any other
+    // control. Rendering it as a card title only — with no row — makes it
+    // unscoreable while still counting in the server's totals, so the
+    // assessment can never reach notAssessedCount === 0 and cannot be submitted.
     const groups = buildControlTree([AC, AC01, AC02, AC02_1, AC02_2]);
-    expect(groups[0]!.total).toBe(4); // AC-01, AC-02, AC-02(01), AC-02(02)
+    expect(renderedRows(groups)).toContain("ac");
+  });
+
+  it("counts every descendant AND the root, so the group total is the server's total", () => {
+    // The old code said "0/25 controls" for AC when AC really has ~175, and then
+    // dropped the family's own row from the denominator on top of that.
+    const groups = buildControlTree([AC, AC01, AC02, AC02_1, AC02_2]);
+    expect(groups[0]!.total).toBe(5); // AC, AC-01, AC-02, AC-02(01), AC-02(02)
   });
 
   it("assigns depth relative to the group, driving indentation", () => {
     const groups = buildControlTree([AC, AC01, AC02, AC02_1]);
     const ac = groups[0]!;
-    expect(ac.nodes[0]!.depth).toBe(0);
-    expect(ac.nodes[1]!.children[0]!.depth).toBe(1);
+    expect(ac.nodes[0]!.depth).toBe(0); // AC
+    expect(ac.nodes[0]!.children[0]!.depth).toBe(1); // AC-01
+    expect(ac.nodes[0]!.children[1]!.children[0]!.depth).toBe(2); // AC-02(01)
   });
 
   it("sorts siblings by controlId at every level", () => {
     const groups = buildControlTree([AC, AC02, AC01, AC02_2, AC02_1]);
-    const ac = groups[0]!;
-    expect(ac.nodes.map((n) => n.score.control.controlId)).toEqual(["AC-01", "AC-02"]);
-    expect(ac.nodes[1]!.children.map((n) => n.score.control.controlId)).toEqual([
+    const acRow = groups[0]!.nodes[0]!;
+    expect(acRow.children.map((n) => n.score.control.controlId)).toEqual(["AC-01", "AC-02"]);
+    expect(acRow.children[1]!.children.map((n) => n.score.control.controlId)).toEqual([
       "AC-02(01)",
       "AC-02(02)",
     ]);
@@ -109,17 +124,48 @@ describe("buildControlTree", () => {
     const groups = buildControlTree([l4, l2, l1, l3]);
     expect(groups).toHaveLength(1);
     const group = groups[0]!;
-    expect(group.total).toBe(3); // L-01.1, L-01.1.1, L-01.1.1.1
+    expect(group.total).toBe(4); // L-01, L-01.1, L-01.1.1, L-01.1.1.1
 
     const depth0 = group.nodes[0]!;
     const depth1 = depth0.children[0]!;
     const depth2 = depth1.children[0]!;
-    expect(depth0.score.control.controlId).toBe("L-01.1");
-    expect(depth1.score.control.controlId).toBe("L-01.1.1");
-    expect(depth2.score.control.controlId).toBe("L-01.1.1.1");
+    const depth3 = depth2.children[0]!;
+    expect(depth0.score.control.controlId).toBe("L-01");
+    expect(depth1.score.control.controlId).toBe("L-01.1");
+    expect(depth2.score.control.controlId).toBe("L-01.1.1");
+    expect(depth3.score.control.controlId).toBe("L-01.1.1.1");
     expect(depth0.depth).toBe(0);
     expect(depth1.depth).toBe(1);
     expect(depth2.depth).toBe(2);
+    expect(depth3.depth).toBe(3);
+  });
+
+  it("makes every base control of a baseline-scoped assessment scoreable", () => {
+    // A baseline-scoped assessment (demo-ca-002, "NIST 800-53 Moderate
+    // Baseline") scopes to the baselined controls only: 287 score rows and ZERO
+    // family rows. Every base control's parent is therefore absent, so each is
+    // promoted to a root — and 54 of them have baselined enhancements below.
+    // Making a root with children a header-only group turned those 54 real,
+    // scored controls into unscoreable card titles. AC-02 was one of them.
+    const scores = [AC02, AC02_1, AC02_2, AC01]; // no AC family row
+    const groups = buildControlTree(scores);
+
+    // Each base control is its own group (no family to hang under).
+    expect(groups.map((g) => g.parent.control.controlId)).toEqual(["AC-01", "AC-02"]);
+
+    const rows = renderedRows(groups);
+    for (const score of scores) {
+      expect(rows).toContain(score.control.id);
+    }
+
+    // AC-02 is a scoreable row AND still the parent of its enhancements.
+    const ac02 = groups[1]!;
+    expect(ac02.nodes.map((n) => n.score.control.controlId)).toEqual(["AC-02"]);
+    expect(ac02.nodes[0]!.children.map((n) => n.score.control.controlId)).toEqual([
+      "AC-02(01)",
+      "AC-02(02)",
+    ]);
+    expect(ac02.total).toBe(3); // AC-02 itself counts in its own denominator
   });
 
   it("still renders controls caught in a parent cycle instead of deleting them", () => {
@@ -131,14 +177,14 @@ describe("buildControlTree", () => {
     const enh = s("a1", "AC-02(01)", "a");
 
     const groups = buildControlTree([a, b, enh]);
-    const { all } = renderedIds(groups);
-    expect(all).toEqual(new Set(["a", "b", "a1"]));
+    // A rescued control must come back as a scoreable ROW, not as a header.
+    expect(new Set(renderedRows(groups))).toEqual(new Set(["a", "b", "a1"]));
   });
 
   it("still renders a control that is its own parent", () => {
     const self = s("x", "AC-02", "x");
     const groups = buildControlTree([self]);
-    expect(renderedIds(groups).all).toEqual(new Set(["x"]));
+    expect(new Set(renderedRows(groups))).toEqual(new Set(["x"]));
   });
 
   it("renders every input score exactly once — no row is lost and none is duplicated", () => {
@@ -158,22 +204,34 @@ describe("buildControlTree", () => {
     ];
 
     const groups = buildControlTree(scores);
-    const { rows, all } = renderedIds(groups);
+    const rows = renderedRows(groups);
 
-    expect(all).toEqual(new Set(scores.map((score) => score.control.id)));
+    // Every score is a ROW — a header does not count, nobody can score a header.
+    expect(new Set(rows)).toEqual(new Set(scores.map((score) => score.control.id)));
     expect(new Set(rows).size).toBe(rows.length); // no control drawn twice
   });
 });
 
 describe("allScores", () => {
-  it("counts a base control AND its enhancements — the honest denominator", () => {
+  it("counts the root, a base control AND its enhancements — the honest denominator", () => {
     const groups = buildControlTree([AC, AC01, AC02, AC02_1, AC02_2]);
     expect(allScores(groups[0]!.nodes).map((score) => score.control.controlId)).toEqual([
+      "AC",
       "AC-01",
       "AC-02",
       "AC-02(01)",
       "AC-02(02)",
     ]);
+  });
+
+  it("sums to the server's control count across every group — one denominator, not two", () => {
+    // The sidebar reads the server's totalControls; the group cards sum
+    // allScores(). If a root is missing from the tree the two disagree on the
+    // same page, and canSubmit (notAssessedCount === 0) can never be reached.
+    const scores = [AC, AC01, AC02, AC02_1, AC02_2, AT, AT01];
+    const groups = buildControlTree(scores);
+    const summed = groups.reduce((sum, g) => sum + allScores(g.nodes).length, 0);
+    expect(summed).toBe(scores.length);
   });
 
   it("agrees with the group total that the tree reports", () => {
@@ -198,13 +256,14 @@ describe("ancestorsOfMatches", () => {
       groups[0]!.nodes,
       (score: Score) => score.control.controlId === "AC-02(02)",
     );
-    expect(ids).toEqual(new Set(["ac02"]));
+    // The family row is an ancestor too, now that it is a row in the tree.
+    expect(ids).toEqual(new Set(["ac", "ac02"]));
   });
 
   it("does not expand a matching leaf itself, only what hides it", () => {
     const groups = buildControlTree([AC, AC01, AC02, AC02_1]);
     const ids = ancestorsOfMatches(groups[0]!.nodes, (score: Score) => score.control.controlId === "AC-01");
-    expect(ids).toEqual(new Set());
+    expect(ids).toEqual(new Set(["ac"])); // AC-01 hides inside AC; AC-01 itself is not expanded
   });
 
   it("expands the whole chain above a deeply nested match", () => {
@@ -215,7 +274,7 @@ describe("ancestorsOfMatches", () => {
 
     const groups = buildControlTree([l1, l2, l3, l4]);
     const ids = ancestorsOfMatches(groups[0]!.nodes, (score: Score) => score.id === "score-l4");
-    expect(ids).toEqual(new Set(["l2", "l3"]));
+    expect(ids).toEqual(new Set(["l1", "l2", "l3"]));
   });
 });
 
@@ -259,13 +318,19 @@ describe("flattenTree", () => {
     const ac = groups.find((g) => g.parent.control.controlId === "AC")!;
     const deep = groups.find((g) => g.parent.control.controlId === "L-01")!;
 
-    it("draws only the top row of each group while everything is collapsed", () => {
-      expect(flattenTree(ac.nodes, new Set()).map((n) => n.score.control.controlId)).toEqual([
+    it("draws only the root row of each group while everything is collapsed", () => {
+      // The root is a row now — it is drawn, and it is scoreable.
+      expect(flattenTree(ac.nodes, new Set()).map((n) => n.score.control.controlId)).toEqual(["AC"]);
+      expect(flattenTree(deep.nodes, new Set()).map((n) => n.score.control.controlId)).toEqual([
+        "L-01",
+      ]);
+    });
+
+    it("reveals the members of an expanded root", () => {
+      expect(flattenTree(ac.nodes, new Set(["ac"])).map((n) => n.score.control.controlId)).toEqual([
+        "AC",
         "AC-01",
         "AC-02",
-      ]);
-      expect(flattenTree(deep.nodes, new Set()).map((n) => n.score.control.controlId)).toEqual([
-        "L-01.1",
       ]);
     });
 
@@ -274,14 +339,21 @@ describe("flattenTree", () => {
         flattenTree(deep.nodes, new Set(expanded)).map((n) => n.score.control.controlId);
 
       // Expanding a node whose children themselves have children.
-      expect(rows(["l2"])).toEqual(["L-01.1", "L-01.1.1"]);
-      expect(rows(["l2", "l3"])).toEqual(["L-01.1", "L-01.1.1", "L-01.1.1.1"]);
+      expect(rows(["l1", "l2"])).toEqual(["L-01", "L-01.1", "L-01.1.1"]);
+      expect(rows(["l1", "l2", "l3"])).toEqual([
+        "L-01",
+        "L-01.1",
+        "L-01.1.1",
+        "L-01.1.1.1",
+      ]);
       // A collapsed intermediate hides its whole subtree, expanded or not.
-      expect(rows(["l3"])).toEqual(["L-01.1"]);
+      expect(rows(["l1", "l3"])).toEqual(["L-01", "L-01.1"]);
     });
 
     it("carries the depth the rows are indented by", () => {
-      expect(flattenTree(deep.nodes, new Set(["l2", "l3"])).map((n) => n.depth)).toEqual([0, 1, 2]);
+      expect(
+        flattenTree(deep.nodes, new Set(["l1", "l2", "l3"])).map((n) => n.depth),
+      ).toEqual([0, 1, 2, 3]);
     });
   });
 });

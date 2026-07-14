@@ -19,17 +19,18 @@ export interface ControlLike {
 
 export interface ScoreNode<T> {
   score: T;
-  /** 0 for a group's immediate members. Drives indentation. */
+  /** 0 for the group's root row. Drives indentation. */
   depth: number;
   children: ScoreNode<T>[];
 }
 
 export interface ControlGroupTree<T> {
-  /** The top-level control the group is named after (the family). */
+  /** The top-level control the group is named after (a family, or — in a
+   *  baseline-scoped assessment, which carries no family rows — a base control). */
   parent: T;
-  /** Its members, nested. */
+  /** The root row, with its members nested below it. */
   nodes: ScoreNode<T>[];
-  /** Every descendant, at any depth — the honest denominator. */
+  /** The root and every descendant — the honest denominator. */
   total: number;
 }
 
@@ -78,21 +79,24 @@ export function buildControlTree<T extends ControlLike>(scores: T[]): ControlGro
     1 + node.children.reduce((sum, child) => sum + count(child), 0);
 
   const toGroup = (root: T): ControlGroupTree<T> => {
-    placed.add(root.control.id);
-    const children = (byParent.get(root.control.id) ?? [])
-      .filter((child) => !placed.has(child.control.id))
-      .map((child) => build(child, 0))
-      .sort(byControlId);
-
-    // A childless top-level control (ISO 27001, NIST CSF) is its own member,
-    // so every framework renders through the same shape.
-    const nodes =
-      children.length > 0 ? children : [{ score: root, depth: 0, children: [] }];
-
+    // The root is BOTH the card header and the group's first scoreable row.
+    // Dropping it whenever it had children was the same bug one level up: a root
+    // is only a synthetic family (AC) in a full assessment. In a baseline-scoped
+    // assessment there are no family rows at all, so every base control is a
+    // root — 54 of them (AC-02, AC-06, AC-17, …) have baselined enhancements
+    // below them, and header-only groups made those real, scored controls
+    // unscoreable. Same for a control rescued from a parent cycle. Every root has
+    // a score row in the database; every score row must be scoreable, and must
+    // count once in the denominator so the group cards and the server's
+    // totalControls agree.
+    //
+    // A childless root (ISO 27001, NIST CSF — flat frameworks) is unchanged: a
+    // single node with no children, exactly as before.
+    const node = build(root, 0);
     return {
       parent: root,
-      nodes,
-      total: nodes.reduce((sum, node) => sum + count(node), 0),
+      nodes: [node],
+      total: count(node),
     };
   };
 
@@ -111,10 +115,12 @@ export function buildControlTree<T extends ControlLike>(scores: T[]): ControlGro
 }
 
 /**
- * Every score in a group, at any depth — a base control AND its enhancements.
- * The group's denominator has to count these: 800-53's AC family has 147
- * controls once enhancements are included, not the 25 base controls the old
- * two-level grouping saw.
+ * Every score in a group, at any depth — the root, its base controls AND their
+ * enhancements. The group's denominator has to count these: 800-53's AC group
+ * holds 148 score rows (the family row plus 147 controls once enhancements are
+ * included), not the 25 base controls the old two-level grouping saw. Summed
+ * over the groups this equals the server's totalControls, so the page has one
+ * denominator and not two.
  */
 export function allScores<T extends ControlLike>(nodes: ScoreNode<T>[]): T[] {
   return nodes.flatMap((node) => [node.score, ...allScores(node.children)]);
