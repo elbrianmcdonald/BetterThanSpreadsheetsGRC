@@ -96,13 +96,21 @@ users are found to be mislabeling.
 
 `finding.create` (`src/server/api/routers/finding.ts:592`) absorbs the vendor path.
 
-1. **`createFindingInput` (`:71-148`) gains `vendorId`, `vendorAssessmentId`, `questionnaireResponseId`,**
-   all optional. Every existing caller omits them and is unaffected. The compliance, maturity, control,
-   and discovery-project linkage fields are already accepted.
+1. **`createFindingInput` (`:71-148`) gains `questionnaireResponseId`,** optional. Every existing caller
+   omits it and is unaffected. The compliance, maturity, control, and discovery-project linkage fields
+   are already accepted.
 
-2. **The vendor fields get org-scope validation**, lifted from `createFromQuestionnaireResponse` and
-   matching the existing validation of BUs, assignee, control, assessments, enterprise risk, and linked
-   risks (`:665-801`). A vendor or response belonging to another org must fail exactly as those do.
+   `vendorId` and `vendorAssessmentId` are **not** accepted from the client. They are *derived*
+   server-side by walking `questionnaireResponse → questionnaire → assessment → vendor`, exactly as
+   `createFromQuestionnaireResponse` does today (`:2187-2188`). `QuestionnaireResponse` has no
+   `organizationId` column, so this walk is also the only way to prove org ownership — accepting
+   client-supplied vendor ids would let a caller attach a finding to a vendor the response does not
+   belong to.
+
+2. **The derivation walk *is* the org-scope check**, lifted from `createFromQuestionnaireResponse`
+   (`:2152-2157`) and matching the existing validation of BUs, assignee, control, assessments,
+   enterprise risk, and linked risks (`:665-801`). A response whose assessment belongs to another org
+   is rejected with `FORBIDDEN`.
 
 3. **The one-finding-per-response guard (`:2160-2168`) moves into `create`, fired only when
    `questionnaireResponseId` is present.** Compliance, maturity, and risk-assessment creates never
