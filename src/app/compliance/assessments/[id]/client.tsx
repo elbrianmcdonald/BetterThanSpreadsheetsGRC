@@ -1650,12 +1650,8 @@ export function ComplianceAssessmentDetailClient({
           open={findingDialogOpen}
           onOpenChange={setFindingDialogOpen}
           initialTitle={`${findingContext.controlCode} — ${findingContext.controlTitle}`}
-          initialDescription={
-            findingContext.controlDescription
-              ? `Observed during assessment "${assessment.name}" (${assessment.identifier}):\n\n${findingContext.controlDescription}`
-              : `Observed during assessment "${assessment.name}" (${assessment.identifier}) against ${findingContext.controlCode} — ${findingContext.controlTitle}.`
-          }
-          contextLabel={`Linked to ${findingContext.controlCode} — ${findingContext.controlTitle}`}
+          initialSource="AUDIT"
+          contextLabel={`Spawned from ${findingContext.controlCode} — ${findingContext.controlTitle}`}
           controlId={findingContext.controlId}
           complianceAssessmentId={assessment.id}
         />
