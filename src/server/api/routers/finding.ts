@@ -145,6 +145,11 @@ const createFindingInput = z.object({
   discoveryProjectId: z.string().min(1).optional(),
   // Source questionnaire question (when spawned from a question card).
   sourceRiskAssessmentQuestionId: z.string().optional(),
+  // Vendor (TPRM) linkage — the finding was raised against a questionnaire
+  // response. vendorId / vendorAssessmentId are DERIVED from this id server-side
+  // (QuestionnaireResponse has no organizationId of its own), so a caller can't
+  // attach a finding to a vendor the response doesn't belong to.
+  questionnaireResponseId: z.string().optional(),
 });
 
 
@@ -602,6 +607,7 @@ export const findingRouter = createTRPCRouter({
         maturityDomainId,
         discoveryProjectId,
         sourceRiskAssessmentQuestionId,
+        questionnaireResponseId,
         likelihood,
         impact,
         exposure,
@@ -656,6 +662,57 @@ export const findingRouter = createTRPCRouter({
             message: "Only the assigned analyst can add findings to this assessment",
           });
         }
+      }
+
+      // Vendor (TPRM) linkage: walk response → questionnaire → assessment → vendor.
+      // This walk is also the org check — QuestionnaireResponse has no
+      // organizationId column, so ownership is only provable through the
+      // assessment. Absorbed from the deleted createFromQuestionnaireResponse.
+      let vendorLinkage: { vendorId: string; vendorAssessmentId: string } | null = null;
+      if (questionnaireResponseId) {
+        const response = await ctx.db.questionnaireResponse.findUnique({
+          where: { id: questionnaireResponseId },
+          select: {
+            questionnaire: {
+              select: {
+                assessment: {
+                  select: { id: true, organizationId: true, vendorId: true },
+                },
+              },
+            },
+          },
+        });
+        if (!response) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Questionnaire response not found",
+          });
+        }
+        const assessment = response.questionnaire.assessment;
+        if (assessment.organizationId !== organizationId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Assessment does not belong to this organization",
+          });
+        }
+
+        // One finding per response (FR46). Only ever checked on the vendor path —
+        // every other create flow leaves questionnaireResponseId undefined.
+        const existing = await ctx.db.finding.findFirst({
+          where: { questionnaireResponseId },
+          select: { id: true },
+        });
+        if (existing) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "A finding has already been created for this response",
+          });
+        }
+
+        vendorLinkage = {
+          vendorId: assessment.vendorId,
+          vendorAssessmentId: assessment.id,
+        };
       }
 
       // AC25: Generate sequential identifier
@@ -873,6 +930,10 @@ export const findingRouter = createTRPCRouter({
           sourceMaturityDomainId: maturityDomainId ?? null,
           sourceComplianceAssessmentId: complianceAssessmentId ?? null,
           sourceRiskAssessmentQuestionId: sourceRiskAssessmentQuestionId ?? null,
+          // Vendor (TPRM) linkage — derived above, never client-supplied.
+          questionnaireResponseId: questionnaireResponseId ?? null,
+          vendorId: vendorLinkage?.vendorId ?? null,
+          vendorAssessmentId: vendorLinkage?.vendorAssessmentId ?? null,
           // Gated lifecycle: PENDING until the assessment is approved (mirrors risks)
           discoveryProjectId: discoveryProjectId ?? null,
           discoveryStatus: discoveryProjectId ? RiskDiscoveryStatus.PENDING : null,
@@ -2064,211 +2125,6 @@ export const findingRouter = createTRPCRouter({
         data: csv,
         rowCount: findings.length,
       };
-    }),
-
-  /**
-   * Create a finding from a questionnaire response
-   *
-   * Epic 5: Vendor Risk & Finding Integration
-   * FR45: Assessor can create a finding directly from a questionnaire response
-   * FR46: System links vendor findings to the main Findings register
-   * FR50: Finding created from vendor assessment includes source context
-   */
-  createFromQuestionnaireResponse: organizationProcedure
-    .use(requireRole(FINDING_CREATE_ROLES))
-    .input(
-      z.object({
-        questionnaireResponseId: z.string(),
-        title: z
-          .string()
-          .min(5, "Title must be at least 5 characters")
-          .max(500, "Title must be less than 500 characters"),
-        description: z
-          .string()
-          .min(20, "Description must be at least 20 characters"),
-        severity: z.nativeEnum(Severity),
-        // Story 20.1: matrix-anchored scoring â€” same contract as finding.create.
-        // When likelihood + impact are supplied the server computes the
-        // authoritative inherent score and overrides severity/severityLabel.
-        severityLabel: z.string().max(50).optional(),
-        matrixVersionId: z.string().optional(),
-        likelihood: z.number().positive().optional(),
-        impact: z.number().positive().optional(),
-        exposure: z.number().positive().optional(),
-        affectedAssets: z.array(z.string()).optional().default([]),
-        assigneeId: z.string().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const {
-        questionnaireResponseId,
-        title,
-        description,
-        severity,
-        severityLabel,
-        matrixVersionId,
-        likelihood,
-        impact,
-        exposure,
-        affectedAssets,
-        assigneeId,
-      } = input;
-      const organizationId = ctx.organizationId!;
-      const userId = ctx.session!.user.id;
-
-      // Fetch the questionnaire response with full context
-      const response = await ctx.db.questionnaireResponse.findUnique({
-        where: { id: questionnaireResponseId },
-        include: {
-          question: {
-            include: {
-              section: {
-                include: {
-                  template: true,
-                },
-              },
-            },
-          },
-          questionnaire: {
-            include: {
-              assessment: {
-                include: {
-                  vendor: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (!response) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Questionnaire response not found",
-        });
-      }
-
-      // Validate the assessment belongs to this organization
-      if (response.questionnaire.assessment.organizationId !== organizationId) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Assessment does not belong to this organization",
-        });
-      }
-
-      // Check if a finding already exists for this response
-      const existingFinding = await ctx.db.finding.findFirst({
-        where: { questionnaireResponseId },
-      });
-      if (existingFinding) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "A finding has already been created for this response",
-        });
-      }
-
-      // Validate assignee if provided
-      if (assigneeId) {
-        const validAssignee = await ctx.db.user.findFirst({
-          where: { id: assigneeId, organizationId },
-        });
-        if (!validAssignee) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Invalid assignee - must be in same organization",
-          });
-        }
-      }
-
-      // Generate identifier
-      const identifier = await generateIdentifier(organizationId, "FND");
-
-      // Extract vendor info
-      const vendorId = response.questionnaire.assessment.vendor.id;
-      const vendorAssessmentId = response.questionnaire.assessment.id;
-      const vendorName = response.questionnaire.assessment.vendor.name;
-      const questionText = response.question.questionText;
-
-      // Story 20.1: matrix scoring shared with finding.create â€” overrides the
-      // client-sent severity when a complete LÃ—I(Ã—E) score is supplied.
-      const scoring = await computeFindingMatrixScoring(ctx.db, organizationId, {
-        likelihood,
-        impact,
-        exposure,
-        matrixVersionId,
-      });
-
-      // Create the finding with vendor context
-      const finding = await ctx.db.finding.create({
-        data: {
-          organizationId,
-          identifier,
-          title,
-          description,
-          source: FindingSource.MANUAL, // Questionnaire-sourced findings are treated as manual
-          severity: scoring.severity ?? severity,
-          severityLabel: scoring.severityLabel ?? severityLabel,
-          matrixVersionId: scoring.matrixVersionId,
-          inherentLikelihood:
-            scoring.inherentLikelihood !== null
-              ? new Prisma.Decimal(scoring.inherentLikelihood)
-              : null,
-          inherentImpact:
-            scoring.inherentImpact !== null
-              ? new Prisma.Decimal(scoring.inherentImpact)
-              : null,
-          inherentExposure:
-            scoring.inherentExposure !== null
-              ? new Prisma.Decimal(scoring.inherentExposure)
-              : null,
-          inherentScore:
-            scoring.inherentScore !== null
-              ? new Prisma.Decimal(scoring.inherentScore)
-              : null,
-          status: "NEW",
-          affectedAssets,
-          createdBy: userId,
-          assigneeId: assigneeId ?? null,
-          // Epic 5: Vendor integration
-          vendorId,
-          vendorAssessmentId,
-          questionnaireResponseId,
-        },
-        include: {
-          assignee: { select: { id: true, name: true, email: true } },
-          creator: { select: { id: true, name: true, email: true } },
-          vendor: { select: { id: true, name: true, identifier: true } },
-          vendorAssessment: { select: { id: true, identifier: true, title: true } },
-        },
-      });
-
-      // Audit log with vendor context (FR50)
-      void createAuditLog({
-        organizationId,
-        userId,
-        action: AuditAction.FINDING_CREATED,
-        entityType: "Finding",
-        entityId: finding.id,
-        changes: {
-          before: null,
-          after: {
-            identifier: finding.identifier,
-            title: finding.title,
-            severity: finding.severity,
-            vendorId,
-            vendorAssessmentId,
-            questionnaireResponseId,
-            sourceContext: {
-              vendorName,
-              questionText,
-              assessmentId: vendorAssessmentId,
-              templateName: response.question.section.template.name,
-            },
-          },
-        },
-      });
-
-      return finding;
     }),
 
   /**

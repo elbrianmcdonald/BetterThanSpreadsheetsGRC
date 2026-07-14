@@ -101,7 +101,7 @@ export interface FindingScoringValue {
   isComplete: boolean;
 }
 
-/** Scoring fields accepted by finding.create / createFromQuestionnaireResponse. */
+/** Scoring fields accepted by finding.create. */
 export interface ScoringSubmitFields {
   severity: Severity;
   severityLabel?: string;

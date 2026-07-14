@@ -948,14 +948,15 @@ describe("Story 20.1: Matrix scoring at creation", () => {
     expect(result.residualEliminated).toBe(true);
   });
 
-  it("AC1: createFromQuestionnaireResponse persists matrix scoring (vendor entry point)", async () => {
+  it("AC1: finding.create persists matrix scoring on the vendor questionnaire entry point", async () => {
     const caller = createCaller(testUserGRCAnalyst);
 
-    const result = await caller.finding.createFromQuestionnaireResponse({
+    const result = await caller.finding.create({
       questionnaireResponseId,
       title: "Vendor lacks MFA on remote access",
       description: "Vendor answered No to MFA enforcement — scored against the org matrix.",
       severity: Severity.LOW, // deliberately wrong — server must override (AC2)
+      source: FindingSource.MANUAL,
       likelihood: 4,
       impact: 5,
     });

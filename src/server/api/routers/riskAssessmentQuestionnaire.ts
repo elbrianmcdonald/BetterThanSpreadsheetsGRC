@@ -9,13 +9,8 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import {
   AuditAction,
-  FindingSource,
-  FindingStatus,
   QuestionnaireUsageType,
-  RiskDiscoveryStatus,
   RiskQuestionStatus,
-  RiskStatus,
-  Severity,
   UserRole,
 } from "@prisma/client";
 
@@ -106,14 +101,6 @@ const ATTACH_EVIDENCE_INPUT = z.object({
 const DETACH_EVIDENCE_INPUT = z.object({
   questionId: z.string(),
   evidenceId: z.string(),
-});
-
-const SPAWN_INPUT = z.object({
-  questionId: z.string(),
-  kind: z.enum(["finding", "risk"]),
-  title: z.string().min(1).max(255),
-  description: z.string().max(5000).optional().nullable(),
-  severity: z.nativeEnum(Severity).default(Severity.MEDIUM),
 });
 
 export const riskAssessmentQuestionnaireRouter = createTRPCRouter({
@@ -459,120 +446,4 @@ export const riskAssessmentQuestionnaireRouter = createTRPCRouter({
       return { ok: true };
     }),
 
-  // ---------------------------------------------------------------------
-  // Story 6: spawn a Finding or a Risk from a question. Multiple per
-  // question allowed. Children carry sourceRiskAssessmentQuestionId.
-  // Evidence files are linked by reference.
-  // ---------------------------------------------------------------------
-
-  spawn: organizationProcedure
-    .use(requireRole(ANSWER_ROLES))
-    .input(SPAWN_INPUT)
-    .mutation(async ({ ctx, input }) => {
-      const question = await loadQuestionForProject(ctx, input.questionId);
-      const projectId = question.section.questionnaire.riskAssessmentProjectId;
-
-      if (input.kind === "finding") {
-        const year = new Date().getFullYear();
-        const yearPrefix = `FND-${year}-`;
-        const last = await ctx.db.finding.findFirst({
-          where: {
-            organizationId: ctx.organizationId!,
-            identifier: { startsWith: yearPrefix },
-          },
-          orderBy: { identifier: "desc" },
-          select: { identifier: true },
-        });
-        const nextNum = last
-          ? Number(last.identifier.slice(yearPrefix.length)) + 1
-          : 1;
-        const identifier = `${yearPrefix}${String(nextNum).padStart(4, "0")}`;
-        const finding = await ctx.db.finding.create({
-          data: {
-            organizationId: ctx.organizationId!,
-            identifier,
-            title: input.title,
-            description: input.description ?? "",
-            source: FindingSource.MANUAL,
-            severity: input.severity,
-            status: FindingStatus.NEW,
-            createdBy: ctx.session!.user.id,
-            sourceRiskAssessmentQuestionId: input.questionId,
-          },
-          select: { id: true, identifier: true, title: true, severity: true, status: true },
-        });
-        await ctx.db.auditLog.create({
-          data: {
-            id: randomUUID(),
-            organizationId: ctx.organizationId!,
-            userId: ctx.session!.user.id,
-            action: AuditAction.SYSTEM_CONFIGURATION_CHANGED,
-            entityType: "Finding",
-            entityId: finding.id,
-            changes: {
-              action: "SPAWN_FROM_QUESTION",
-              questionId: input.questionId,
-              projectId,
-            },
-            actorName: ctx.session!.user.name,
-            actorRole: ctx.session!.user.role,
-          },
-        });
-        return { kind: "finding" as const, ...finding };
-      }
-
-      // RISK
-      const yearR = new Date().getFullYear();
-      const riskPrefix = `RISK-${yearR}-`;
-      const lastR = await ctx.db.risk.findFirst({
-        where: {
-          organizationId: ctx.organizationId!,
-          identifier: { startsWith: riskPrefix },
-        },
-        orderBy: { identifier: "desc" },
-        select: { identifier: true },
-      });
-      const nextR = lastR && lastR.identifier
-        ? Number(lastR.identifier.slice(riskPrefix.length)) + 1
-        : 1;
-      const identifierR = `${riskPrefix}${String(nextR).padStart(4, "0")}`;
-      const risk = await ctx.db.risk.create({
-        data: {
-          identifier: identifierR,
-          organizationId: ctx.organizationId!,
-          title: input.title,
-          description: input.description ?? "",
-          severity: input.severity,
-          status: RiskStatus.OPEN,
-          createdById: ctx.session!.user.id,
-          discoveryProjectId: projectId,
-          // Tie into the assessment's identified-risk lifecycle: PENDING risks
-          // appear under the assessment and are published to the risk register
-          // when the assessment is approved (riskAssessmentProject.approve).
-          // Mirrors risk.create / DiscoveredRiskForm behavior.
-          discoveryStatus: RiskDiscoveryStatus.PENDING,
-          sourceRiskAssessmentQuestionId: input.questionId,
-          updatedAt: new Date(),
-        },
-        select: { id: true, identifier: true, title: true, severity: true, status: true },
-      });
-      await ctx.db.auditLog.create({
-        data: {
-          id: randomUUID(),
-          organizationId: ctx.organizationId!,
-          userId: ctx.session!.user.id,
-          action: AuditAction.SYSTEM_CONFIGURATION_CHANGED,
-          entityType: "Risk",
-          entityId: risk.id,
-          changes: {
-            action: "SPAWN_FROM_QUESTION",
-            questionId: input.questionId,
-            projectId,
-          },
-          actorName: ctx.session!.user.name,
-          actorRole: ctx.session!.user.role,
-        },
-      });
-      return { kind: "risk" as const, ...risk };
-    }),
 });

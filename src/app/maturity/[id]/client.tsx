@@ -2873,12 +2873,8 @@ export function MaturityAssessmentDetailClient({
           open={findingDialogOpen}
           onOpenChange={setFindingDialogOpen}
           initialTitle={`${findingContext.code} — ${findingContext.name}`}
-          initialDescription={
-            findingContext.description
-              ? `Observed during assessment "${assessment.name}" (${assessment.identifier}):\n\n${findingContext.description}`
-              : `Observed during assessment "${assessment.name}" (${assessment.identifier}) against ${findingContext.code} — ${findingContext.name}.`
-          }
-          contextLabel={`Linked to ${findingContext.code} — ${findingContext.name} in ${assessment.framework.name}`}
+          initialSource="AUDIT"
+          contextLabel={`Spawned from ${findingContext.code} — ${findingContext.name} in ${assessment.framework.name}`}
           maturityAssessmentId={assessment.id}
           maturityDomainId={findingContext.domainId}
         />

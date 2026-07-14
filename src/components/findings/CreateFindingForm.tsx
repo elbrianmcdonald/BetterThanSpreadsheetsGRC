@@ -172,13 +172,37 @@ interface CreateFindingFormProps {
    */
   discoveryProjectId?: string;
   sourceRiskAssessmentQuestionId?: string;
+  /**
+   * Spawn linkage (2026-07-14): the finding was raised from a specific
+   * compliance control, maturity domain, or vendor questionnaire response.
+   * These are pass-through to finding.create and are deliberately NOT rendered
+   * as form fields — a user must not be able to re-point a finding at a
+   * different assessment. The server derives vendorId/vendorAssessmentId from
+   * questionnaireResponseId.
+   */
+  controlId?: string;
+  complianceAssessmentId?: string;
+  maturityAssessmentId?: string;
+  maturityDomainId?: string;
+  questionnaireResponseId?: string;
   /** Prefill for question-spawned findings (question text / notes). */
   defaultTitle?: string;
   defaultDescription?: string;
+  /**
+   * Preselected source, by where the finding was spawned from (AUDIT for
+   * assessments, MANUAL for vendor questionnaires). Still user-editable.
+   */
+  defaultSource?: FindingSource;
   /** When set, called after create instead of navigating to the finding. */
   onCreated?: (finding: { id: string; identifier: string }) => void;
   /** Cancel handler when hosted in a dialog (defaults to router.back()). */
   onCancel?: () => void;
+  /**
+   * Suppress this form's own success toast(s) (2026-07-14): CreateFindingDialog
+   * shows its own richer "created — open" toast after `onCreated` runs, so the
+   * form's plain success toast would double up. Error toasts are unaffected.
+   */
+  suppressSuccessToast?: boolean;
   /**
    * Where to navigate after a successful create (e.g. back to the source
    * assessment tab). Defaults to the new finding's detail page.
@@ -189,11 +213,18 @@ interface CreateFindingFormProps {
 export function CreateFindingForm({
   discoveryProjectId,
   sourceRiskAssessmentQuestionId,
+  controlId,
+  complianceAssessmentId,
+  maturityAssessmentId,
+  maturityDomainId,
+  questionnaireResponseId,
   defaultTitle,
   defaultDescription,
+  defaultSource,
   onCreated,
   onCancel,
   returnTo,
+  suppressSuccessToast,
 }: CreateFindingFormProps = {}) {
   const router = useRouter();
   const [selectedBUs, setSelectedBUs] = useState<string[]>([]);
@@ -283,8 +314,11 @@ export function CreateFindingForm({
   const form = useForm<CreateFindingFormValues>({
     resolver: zodResolver(createFindingSchema),
     defaultValues: {
-      // Assessment-spawned findings default to the RISK_ASSESSMENT source.
-      source: discoveryProjectId ? FindingSource.RISK_ASSESSMENT : undefined,
+      // Spawn-site default (AUDIT from assessments, MANUAL from vendor
+      // questionnaires); risk-assessment projects keep RISK_ASSESSMENT.
+      source:
+        defaultSource ??
+        (discoveryProjectId ? FindingSource.RISK_ASSESSMENT : undefined),
       affectedBusinessUnitIds: [],
       assigneeId: undefined,
       risks: [
@@ -364,6 +398,14 @@ export function CreateFindingForm({
           // optionally back-linking the source questionnaire question.
           discoveryProjectId,
           sourceRiskAssessmentQuestionId,
+          // Spawn linkage (2026-07-14). controlId also auto-creates an
+          // OBSERVATION ControlLink server-side; questionnaireResponseId makes
+          // the server derive the vendor + vendor-assessment ids.
+          controlId,
+          complianceAssessmentId,
+          maturityAssessmentId,
+          maturityDomainId,
+          questionnaireResponseId,
         });
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to create finding");
@@ -393,9 +435,11 @@ export function CreateFindingForm({
               findingIds: [finding.id],
             });
           }
-          toast.success(
-            `Finding ${finding.identifier} created and added to the exploitation pathway`,
-          );
+          if (!suppressSuccessToast) {
+            toast.success(
+              `Finding ${finding.identifier} created and added to the exploitation pathway`,
+            );
+          }
         } catch (error) {
           toast.error(
             `Finding ${finding.identifier} created, but adding it to the pathway failed: ${
@@ -403,7 +447,7 @@ export function CreateFindingForm({
             }`,
           );
         }
-      } else {
+      } else if (!suppressSuccessToast) {
         toast.success(`Finding ${finding.identifier} created successfully`);
       }
 

@@ -14,7 +14,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import toast from "react-hot-toast";
 import {
   FileQuestion,
   Loader2,
@@ -31,11 +30,7 @@ import {
 
 import { UserRole, ResponseScore, QuestionType } from "@prisma/client";
 import { WRITE_ROLES } from "@/lib/auth/roles";
-import {
-  FindingMatrixScoringSection,
-  buildScoringSubmitFields,
-  type FindingScoringValue,
-} from "@/components/findings/FindingMatrixScoringSection";
+import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,24 +41,6 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Collapsible,
   CollapsibleContent,
@@ -106,12 +83,12 @@ export function QuestionnaireResponsesClient({
 }: QuestionnaireResponsesClientProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [createFindingOpen, setCreateFindingOpen] = useState(false);
-  const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
-  const [selectedQuestion, setSelectedQuestion] = useState<string>("");
-  const [findingTitle, setFindingTitle] = useState("");
-  const [findingDescription, setFindingDescription] = useState("");
-  // Story 20.1: normalized scoring state from the shared matrix section.
-  const [findingScoring, setFindingScoring] = useState<FindingScoringValue | null>(null);
+  // Which response the dialog was spawned from, plus its title/context prefill.
+  const [findingContext, setFindingContext] = useState<{
+    responseId: string;
+    title: string;
+    contextLabel: string;
+  } | null>(null);
 
   const canCreateFinding = FINDING_CREATE_ROLES.includes(userRole);
 
@@ -120,60 +97,15 @@ export function QuestionnaireResponsesClient({
     questionnaireId,
   });
 
-  // Create finding mutation
-  const createFindingMutation = api.finding.createFromQuestionnaireResponse.useMutation({
-    onSuccess: (finding) => {
-      toast.success(`Finding ${finding.identifier} created`);
-      setCreateFindingOpen(false);
-      resetFindingForm();
-      void refetch();
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to create finding");
-    },
-  });
-
-  const resetFindingForm = () => {
-    setSelectedResponseId(null);
-    setSelectedQuestion("");
-    setFindingTitle("");
-    setFindingDescription("");
-  };
-
-  const openCreateFindingDialog = (responseId: string, questionText: string, responseValue: string) => {
-    setSelectedResponseId(responseId);
-    setSelectedQuestion(questionText);
-    // Pre-populate the finding title and description
-    setFindingTitle(`Concern: ${questionText.substring(0, 100)}${questionText.length > 100 ? "..." : ""}`);
-    setFindingDescription(
-      `A concerning response was identified during the vendor assessment questionnaire.\n\n` +
-      `**Question:** ${questionText}\n\n` +
-      `**Response:** ${responseValue}\n\n` +
-      `**Vendor:** ${questionnaire.assessment.vendor.name}\n` +
-      `**Assessment:** ${questionnaire.assessment.identifier}\n` +
-      `**Template:** ${questionnaire.template.name}`
-    );
-    setCreateFindingOpen(true);
-  };
-
-  const handleCreateFinding = () => {
-    if (!selectedResponseId || !findingTitle || !findingDescription) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    // Story 20.1: with a configured matrix, require a complete L×I(×E) score.
-    if (!findingScoring?.isComplete) {
-      toast.error("Complete the severity scoring before creating the finding");
-      return;
-    }
-    createFindingMutation.mutate({
-      questionnaireResponseId: selectedResponseId,
-      title: findingTitle,
-      description: findingDescription,
-      // Matrix path sends L/I(/E) + version id (server computes score);
-      // categorical fallback sends severity + optional threshold label.
-      ...buildScoringSubmitFields(findingScoring),
+  const openCreateFindingDialog = (responseId: string, questionText: string) => {
+    setFindingContext({
+      responseId,
+      // Title prefill only — the risk statement is written by the user.
+      title: `Concern: ${questionText.substring(0, 100)}${questionText.length > 100 ? "..." : ""}`,
+      // Single-line chip, not a document — the old markdown block is dropped.
+      contextLabel: `${questionnaire.assessment.vendor.name} — ${questionText}`,
     });
+    setCreateFindingOpen(true);
   };
 
   const toggleSection = (sectionId: string) => {
@@ -299,76 +231,19 @@ export function QuestionnaireResponsesClient({
         </div>
       )}
 
-      {/* Create Finding Dialog */}
-      <Dialog open={createFindingOpen} onOpenChange={setCreateFindingOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create Finding from Response</DialogTitle>
-            <DialogDescription>
-              Create a finding based on a concerning questionnaire response. The finding will be linked
-              to this vendor assessment.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="rounded-lg bg-muted p-3 text-sm">
-              <p className="font-medium">Source Question:</p>
-              <p className="mt-1 text-muted-foreground">{selectedQuestion}</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="finding-title">Finding Title *</Label>
-              <Input
-                id="finding-title"
-                value={findingTitle}
-                onChange={(e) => setFindingTitle(e.target.value)}
-                placeholder="Brief title for the finding"
-              />
-            </div>
-
-            {/* Severity scoring (Story 20.1): matrix L×I(×E) with live score,
-                or categorical fallback when no matrix is configured */}
-            <FindingMatrixScoringSection
-              enabled={createFindingOpen}
-              resetKey={selectedResponseId}
-              onChange={setFindingScoring}
-            />
-
-            <div className="space-y-2">
-              <Label htmlFor="finding-description">Description *</Label>
-              <Textarea
-                id="finding-description"
-                value={findingDescription}
-                onChange={(e) => setFindingDescription(e.target.value)}
-                rows={8}
-                placeholder="Detailed description of the finding..."
-              />
-              <p className="text-xs text-muted-foreground">
-                Minimum 20 characters required
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateFindingOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateFinding}
-              disabled={
-                !findingTitle ||
-                findingDescription.length < 20 ||
-                createFindingMutation.isPending
-              }
-            >
-              {createFindingMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Create Finding
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create Finding Dialog — modal chrome around the real finding form. */}
+      <CreateFindingDialog
+        open={createFindingOpen}
+        onOpenChange={setCreateFindingOpen}
+        initialTitle={findingContext?.title}
+        initialSource="MANUAL"
+        contextLabel={findingContext?.contextLabel}
+        questionnaireResponseId={findingContext?.responseId}
+        onCreated={() => {
+          // The response row shows a "finding created" state — refetch it.
+          void refetch();
+        }}
+      />
     </div>
   );
 }
@@ -402,7 +277,7 @@ interface ResponseItemProps {
     };
   };
   canCreateFinding: boolean;
-  onCreateFinding: (responseId: string, questionText: string, responseValue: string) => void;
+  onCreateFinding: (responseId: string, questionText: string) => void;
 }
 
 function ResponseItem({ response, canCreateFinding, onCreateFinding }: ResponseItemProps) {
@@ -501,7 +376,7 @@ function ResponseItem({ response, canCreateFinding, onCreateFinding }: ResponseI
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onCreateFinding(response.id, response.question.questionText, responseValue)}
+              onClick={() => onCreateFinding(response.id, response.question.questionText)}
             >
               <Plus className="mr-1 h-4 w-4" />
               Create Finding
