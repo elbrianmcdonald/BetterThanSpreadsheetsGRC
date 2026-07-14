@@ -14,6 +14,46 @@
 
 import type { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { readFileSync } from 'fs';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+/**
+ * The real control statements and discussion, generated from NIST's official
+ * OSCAL catalog by scripts/extract-800-53-oscal.py.
+ *
+ * Read at runtime rather than imported: prisma/seeds is typechecked and
+ * resolveJsonModule is on, so importing ~2.5MB of prose would make tsc infer a
+ * type over the whole blob on every build.
+ */
+interface ControlText {
+  description: string;
+  guidance: string | null;
+}
+
+const TEXT_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  'data',
+  'nist-800-53-r5-text.json',
+);
+
+const CONTROL_TEXT = JSON.parse(
+  readFileSync(TEXT_PATH, 'utf-8'),
+) as Record<string, ControlText | undefined>;
+
+/**
+ * Fall back to the title if a control is somehow missing from the catalog —
+ * a missing entry must not blank out a control, but it should be loud in the
+ * seed log rather than silently shipping a title-as-description again.
+ */
+export function textFor(controlId: string, title: string): ControlText {
+  const entry = CONTROL_TEXT[controlId];
+  if (!entry) {
+    console.warn(`⚠️  no OSCAL text for ${controlId} — falling back to its title`);
+    return { description: title, guidance: null };
+  }
+  return entry;
+}
 
 export const NIST_800_53_FAMILIES: Array<{
   controlId: string; title: string; description: string;
@@ -1249,6 +1289,7 @@ export async function seedNist80053Controls(
   const familyMap = new Map<string, string>();
   for (const family of NIST_800_53_FAMILIES) {
     const id = randomUUID();
+    const text = textFor(family.controlId, family.title);
     await prisma.control.create({
       data: {
         id,
@@ -1256,7 +1297,8 @@ export async function seedNist80053Controls(
         frameworkId,
         controlId: family.controlId,
         title: family.title,
-        description: family.description,
+        description: text.description,
+        guidance: text.guidance,
         parentControlId: null,
         baselines: null,
         isActive: true,
@@ -1272,6 +1314,7 @@ export async function seedNist80053Controls(
     if (control.parentId !== null) continue; // Skip enhancements
     const id = randomUUID();
     const familyUuid = familyMap.get(control.familyId);
+    const text = textFor(control.controlId, control.title);
     await prisma.control.create({
       data: {
         id,
@@ -1279,7 +1322,8 @@ export async function seedNist80053Controls(
         frameworkId,
         controlId: control.controlId,
         title: control.title,
-        description: control.title,
+        description: text.description,
+        guidance: text.guidance,
         parentControlId: familyUuid ?? null,
         baselines: control.baselines || null,
         isActive: true,
@@ -1294,6 +1338,7 @@ export async function seedNist80053Controls(
   for (const control of NIST_800_53_CONTROLS) {
     if (control.parentId === null) continue; // Skip base controls
     const parentUuid = baseMap.get(control.parentId);
+    const text = textFor(control.controlId, control.title);
     await prisma.control.create({
       data: {
         id: randomUUID(),
@@ -1301,7 +1346,8 @@ export async function seedNist80053Controls(
         frameworkId,
         controlId: control.controlId,
         title: control.title,
-        description: control.title,
+        description: text.description,
+        guidance: text.guidance,
         parentControlId: parentUuid ?? null,
         baselines: control.baselines || null,
         isActive: true,
