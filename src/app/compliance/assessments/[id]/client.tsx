@@ -62,6 +62,12 @@ import {
 
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
+import {
+  buildControlTree,
+  flattenTree,
+  type ControlGroupTree,
+  type ScoreNode,
+} from "@/lib/compliance/control-tree";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
@@ -134,17 +140,6 @@ interface ControlScore {
     testInstructions: string | null;
     acceptanceCriteria: string | null;
   };
-}
-
-interface ControlGroup {
-  parent: {
-    id: string;
-    controlId: string;
-    title: string;
-    description: string | null;
-  };
-  children: ControlScore[];
-  score?: ControlScore; // Score for parent control itself, if it has one
 }
 
 // =============================================================================
@@ -235,6 +230,16 @@ function getStatusLevel(status: ComplianceStatus) {
 }
 
 /**
+ * Every score in a group, at any depth — a base control AND its enhancements.
+ * The group's denominator has to count these: 800-53's AC family has ~175
+ * controls once enhancements are included, not the 25 base controls the old
+ * two-level grouping saw.
+ */
+function allScores(nodes: ScoreNode<ControlScore>[]): ControlScore[] {
+  return nodes.flatMap((node) => [node.score, ...allScores(node.children)]);
+}
+
+/**
  * Calculate compliance percentage for a group of controls
  */
 function calculateGroupCompliance(controls: ControlScore[]): {
@@ -285,6 +290,10 @@ function ComplianceStatusBadge({ status }: { status: ComplianceStatus }) {
  */
 function ControlScoringItem({
   score,
+  depth,
+  hasChildren,
+  isExpanded,
+  onToggleExpand,
   assessmentId,
   onUpdate,
   isSaving,
@@ -292,6 +301,10 @@ function ControlScoringItem({
   onCreateFinding,
 }: {
   score: ControlScore;
+  depth: number;
+  hasChildren: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
   assessmentId: string;
   onUpdate: (controlId: string, status: ComplianceStatus, notes?: string | null) => void;
   isSaving: boolean;
@@ -316,6 +329,9 @@ function ControlScoringItem({
 
   return (
     <div
+      // Indent by depth so an enhancement (AC-02(01)) sits visibly under its
+      // base control (AC-02). 800-53 nests; ISO 27001 is flat and depth is 0.
+      style={{ marginLeft: `${depth * 1.5}rem` }}
       className={cn(
         "p-4 rounded-lg border transition-colors",
         score.status === ComplianceStatus.COMPLIANT
@@ -334,6 +350,23 @@ function ControlScoringItem({
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
+            {hasChildren ? (
+              <button
+                type="button"
+                aria-label={`${isExpanded ? "Collapse" : "Expand"} ${score.control.controlId}`}
+                aria-expanded={isExpanded}
+                onClick={onToggleExpand}
+                className="shrink-0 rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            ) : (
+              <span className="w-4 shrink-0" />
+            )}
             <span className="font-mono text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
               {score.control.controlId}
             </span>
@@ -549,7 +582,7 @@ function ControlGroupCard({
   isEditable,
   onCreateFinding,
 }: {
-  group: ControlGroup;
+  group: ControlGroupTree<ControlScore>;
   assessmentId: string;
   isExpanded: boolean;
   onToggle: () => void;
@@ -558,9 +591,14 @@ function ControlGroupCard({
   isEditable: boolean;
   onCreateFinding?: (score: ControlScore) => void;
 }) {
-  const stats = calculateGroupCompliance(group.children);
+  // Which nested controls have their enhancements revealed. Keyed by control id.
+  const [expandedControls, setExpandedControls] = useState<Set<string>>(new Set());
+  const visibleRows = flattenTree(group.nodes, expandedControls);
+
+  // Stats over every descendant, not just the top row — this is what turns the
+  // old, lying "0/25 controls" into an honest "0/175".
+  const stats = calculateGroupCompliance(allScores(group.nodes));
   const scoredCount = stats.total - stats.notAssessed;
-  const isAllScored = stats.notAssessed === 0;
 
   return (
     <Card
@@ -584,9 +622,9 @@ function ControlGroupCard({
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             )}
             <Badge variant="outline" className="font-mono">
-              {group.parent.controlId}
+              {group.parent.control.controlId}
             </Badge>
-            <span className="font-medium">{group.parent.title}</span>
+            <span className="font-medium">{group.parent.control.title}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
@@ -603,20 +641,20 @@ function ControlGroupCard({
             )}
           </div>
         </div>
-        {!isExpanded && group.parent.description && (
+        {!isExpanded && group.parent.control.description && (
           <p className="text-sm text-muted-foreground ml-11 line-clamp-1">
-            {group.parent.description}
+            {group.parent.control.description}
           </p>
         )}
       </CardHeader>
 
       {isExpanded && (
         <CardContent className="space-y-4 pt-0">
-          {group.parent.description && (
+          {group.parent.control.description && (
             <div className="p-3 bg-muted/50 rounded-lg">
               <div className="flex items-start gap-2">
                 <Info className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">{group.parent.description}</p>
+                <p className="text-sm text-muted-foreground">{group.parent.control.description}</p>
               </div>
             </div>
           )}
@@ -662,19 +700,32 @@ function ControlGroupCard({
             </div>
           </div>
 
-          {/* Child Controls */}
+          {/* Member controls, nested. A base control with enhancements gets an
+              expand chevron; its enhancements appear indented beneath it. */}
           <div className="space-y-3">
-            {group.children.map((childScore) => (
+            {visibleRows.map((node) => (
               <ControlScoringItem
-                key={childScore.id}
-                score={childScore}
+                key={node.score.id}
+                score={node.score}
+                depth={node.depth}
+                hasChildren={node.children.length > 0}
+                isExpanded={expandedControls.has(node.score.control.id)}
+                onToggleExpand={() =>
+                  setExpandedControls((prev) => {
+                    const next = new Set(prev);
+                    const id = node.score.control.id;
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  })
+                }
                 assessmentId={assessmentId}
                 onUpdate={onUpdate}
                 isSaving={isSaving}
                 isEditable={isEditable}
                 onCreateFinding={
                   onCreateFinding
-                    ? () => onCreateFinding(childScore)
+                    ? () => onCreateFinding(node.score)
                     : undefined
                 }
               />
@@ -1007,75 +1058,33 @@ export function ComplianceAssessmentDetailClient({
     },
   });
 
-  // Group controls by parent
-  const controlGroups = useMemo(() => {
-    if (!assessment?.controlScores) return [];
+  // Group controls into a real tree. 800-53 is three levels deep (family ->
+  // base control -> enhancement); the old two-level grouping dropped all 872
+  // enhancements on the floor.
+  const controlGroups = useMemo(
+    () => buildControlTree(assessment?.controlScores ?? []),
+    [assessment?.controlScores],
+  );
 
-    const groups: ControlGroup[] = [];
-    const childMap = new Map<string, ControlScore[]>();
-    const parentControls = new Map<string, ControlScore>();
-
-    // First pass: identify parents and collect children
-    for (const score of assessment.controlScores) {
-      if (score.control.parentControlId) {
-        const children = childMap.get(score.control.parentControlId) || [];
-        children.push(score);
-        childMap.set(score.control.parentControlId, children);
-      } else {
-        // This is a top-level control
-        parentControls.set(score.control.id, score);
-      }
-    }
-
-    // Second pass: build groups
-    for (const [parentId, parentScore] of parentControls) {
-      const children = childMap.get(parentId) || [];
-
-      if (children.length > 0) {
-        // Has children - create a group
-        groups.push({
-          parent: parentScore.control,
-          children: children.sort((a, b) =>
-            a.control.controlId.localeCompare(b.control.controlId)
-          ),
-          score: parentScore,
-        });
-      } else {
-        // No children - treat as single control group
-        groups.push({
-          parent: parentScore.control,
-          children: [parentScore],
-          score: parentScore,
-        });
-      }
-    }
-
-    // Sort groups by control ID
-    return groups.sort((a, b) =>
-      a.parent.controlId.localeCompare(b.parent.controlId)
-    );
-  }, [assessment?.controlScores]);
-
-  // Status filter: show only groups where at least one child matches the
-  // selected status, and within each group show only matching children.
+  // Status filter: show only groups that contain at least one control with the
+  // selected status — at ANY depth, so a matching enhancement keeps its family
+  // visible. The group renders its full tree once opened, so the assessor can
+  // still see a match in the context of its siblings and parent.
   const filteredControlGroups = useMemo(() => {
     if (statusFilter === "ALL") return controlGroups;
-    return controlGroups
-      .map((group) => ({
-        ...group,
-        children: group.children.filter((c) => c.status === statusFilter),
-      }))
-      .filter((group) => group.children.length > 0);
+    return controlGroups.filter((group) =>
+      allScores(group.nodes).some((score) => score.status === statusFilter)
+    );
   }, [controlGroups, statusFilter]);
 
   // Calculate bar chart data
   const barData = useMemo(() => {
     return controlGroups.map(group => {
-      const stats = calculateGroupCompliance(group.children);
+      const stats = calculateGroupCompliance(allScores(group.nodes));
       const compliance = stats.percentage ?? 0;
       return {
-        name: group.parent.title,
-        code: group.parent.controlId,
+        name: group.parent.control.title,
+        code: group.parent.control.controlId,
         compliance,
         fill: compliance >= 80 ? "#22c55e" : compliance >= 60 ? "#84cc16" : compliance >= 40 ? "#f59e0b" : "#ef4444",
       };
@@ -1096,7 +1105,7 @@ export function ComplianceAssessmentDetailClient({
     startMutation.mutate({ id: assessmentId });
     // Expand first group
     if (controlGroups.length > 0 && !expandedGroup) {
-      setExpandedGroup(controlGroups[0]!.parent.id);
+      setExpandedGroup(controlGroups[0]!.parent.control.id);
     }
   };
 
@@ -1483,15 +1492,15 @@ export function ComplianceAssessmentDetailClient({
                 ) : (
                   filteredControlGroups.map((group) => (
                     <ControlGroupCard
-                      key={group.parent.id}
+                      key={group.parent.control.id}
                       group={group}
                       assessmentId={assessmentId}
-                      isExpanded={expandedGroup === group.parent.id}
+                      isExpanded={expandedGroup === group.parent.control.id}
                       onToggle={() =>
                         setExpandedGroup(
-                          expandedGroup === group.parent.id
+                          expandedGroup === group.parent.control.id
                             ? null
-                            : group.parent.id
+                            : group.parent.control.id
                         )
                       }
                       onUpdate={handleUpdateControl}
