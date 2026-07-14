@@ -538,6 +538,11 @@ docker image prune -a
 
 ## Production Deployment Notes
 
+> Deploying the image to a managed platform (Azure Container Apps, ECS, Cloud Run, Kubernetes)
+> rather than Docker Compose? Compose supplies defaults that those platforms do not, so the
+> required-variable list is different. See **Deploying to a managed container platform** in
+> [INSTALL.md](INSTALL.md) for the full environment variable reference.
+
 ### Security Hardening
 
 1. **Change default passwords** in `.env`

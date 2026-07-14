@@ -32,6 +32,13 @@ WORKDIR /app
 # Set production environment
 ENV NODE_ENV=production
 
+# Bind to all interfaces. The Next.js standalone server defaults to localhost,
+# which is unreachable from outside the container — docker-compose.yml happens to
+# set HOSTNAME, but managed platforms (Azure Container Apps, ECS, Cloud Run) do
+# not, and their health probes would fail against a localhost-only listener.
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+
 # Install Chromium and its dependencies for Puppeteer PDF generation
 # Then apply all available security patches (ffmpeg, libpng, libsndfile, libyaml, etc.)
 RUN apk add --no-cache \

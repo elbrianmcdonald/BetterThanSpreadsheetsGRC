@@ -103,4 +103,28 @@ export const env = createEnv({
    * `SOME_VAR=''` will throw an error.
    */
   emptyStringAsUndefined: true,
+  /**
+   * The library default logs the offending variable names to stderr but throws a bare
+   * `Error("Invalid environment variables")`. Next.js wraps only the thrown message
+   * ("An error occurred while loading instrumentation hook: ..."), so on hosts that
+   * surface just the uncaught exception — Azure Container Apps, for one — the names are
+   * lost and a missing var looks like a platform fault. Put them in the message itself.
+   */
+  onValidationError: (issues) => {
+    const details = issues
+      .map((issue) => {
+        // `path` is optional in zod's issue type, but for a top-level env var it is
+        // always [VAR_NAME]. Fall back rather than crash the error reporter itself.
+        const name = issue.path?.join(".") || "(unknown variable)";
+        return `${name} (${issue.message})`;
+      })
+      .join(", ");
+    throw new Error(
+      `Invalid environment variables: ${details}. ` +
+        // Because of emptyStringAsUndefined above, a variable set to "" reports as
+        // "Required" — so "missing" here also means "set, but empty".
+        `Note that a variable set to an empty string counts as missing. ` +
+        `See the environment variable reference in INSTALL.md.`,
+    );
+  },
 });

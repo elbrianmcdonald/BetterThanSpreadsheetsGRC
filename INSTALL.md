@@ -264,6 +264,95 @@ Your external DB is untouched; the containerized DB starts fresh.
 
 ---
 
+## Deploying to a managed container platform
+
+Azure Container Apps, AWS ECS/Fargate, Google Cloud Run, and Kubernetes all run the image
+directly — there is no `.env` file and no Docker Compose to fill in defaults. **Every variable
+the app needs must be set explicitly on the platform.** This is the single most common way to
+get a container that builds fine and then refuses to start.
+
+The image is built with `SKIP_ENV_VALIDATION=true`, so a missing variable never fails the
+build — it fails at boot, on the running container.
+
+### Required
+
+`NODE_ENV=production` is baked into the image, and in production these three are mandatory:
+
+| Variable | Notes |
+|---|---|
+| `DATABASE_URL` | Full Postgres connection string, e.g. `postgresql://user:pass@host:5432/db`. Must be a parseable URL — a bare `host:port` is rejected. |
+| `AUTH_SECRET` | Session encryption secret. `openssl rand -base64 32`. |
+| `CRON_SECRET` | Bearer token for `/api/cron/*`. **Must be at least 32 characters.** `openssl rand -hex 32`. |
+
+> **An empty string counts as missing.** The app treats `FOO=""` exactly like an unset `FOO`. A
+> secret reference that points at a nonexistent secret resolves to an empty string, so it fails
+> the same way — check that your secret names actually match.
+
+### Networking
+
+The container listens on **port 3000**. The image sets `HOSTNAME=0.0.0.0` and `PORT=3000`, so
+the server binds all interfaces and health probes can reach it; override `PORT` if your platform
+requires a different one. Point ingress at 3000 and use `/api/health` as the probe path.
+
+### Optional
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `AUTH_URL` | — | Public base URL, e.g. `https://grc.example.com`. Set this if auth callbacks land on the wrong host. |
+| `SEED_ON_STARTUP` | `false` | Seed frameworks + demo data. The app also self-seeds when the DB has no users. |
+| `EMAIL_PROVIDER` | `console` | `sendgrid`, `ses`, or `console`. See the security note in `.env.example` before leaving this as `console`. |
+| `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME` | — | Sender identity when a real provider is configured. |
+| `SENDGRID_API_KEY` | — | Required when `EMAIL_PROVIDER=sendgrid`. |
+| `AWS_SES_REGION`, `AWS_SES_ACCESS_KEY_ID`, `AWS_SES_SECRET_ACCESS_KEY` | — | Required when `EMAIL_PROVIDER=ses`. |
+| `ENABLE_MALWARE_SCAN`, `CLAMAV_HOST`, `CLAMAV_PORT` | off | ClamAV evidence scanning. Needs a reachable ClamAV service. |
+| `WORKER_ENABLED` | `true` | Set `false` to disable in-process background workers. |
+| `WORKER_INTERVAL` | `30000` | Worker tick, in milliseconds. |
+
+> Two names in `docker-compose.yml` differ from what the app actually reads: Compose sets
+> `ENABLE_CLAMAV` and `NEXTAUTH_URL`, but the app reads **`ENABLE_MALWARE_SCAN`** and
+> **`AUTH_URL`**. Use the names in this table — the Compose spellings are silently ignored.
+
+### Azure Container Apps example
+
+Store the three required values as secrets, then reference them:
+
+```bash
+RG=my-resource-group
+APP=betterthanspreadsheetsgrc-app
+
+az containerapp secret set -n $APP -g $RG --secrets \
+  database-url="postgresql://user:pass@myserver.postgres.database.azure.com:5432/btsgrc?sslmode=require" \
+  auth-secret="$(openssl rand -base64 32)" \
+  cron-secret="$(openssl rand -hex 32)"
+
+az containerapp update -n $APP -g $RG --set-env-vars \
+  DATABASE_URL=secretref:database-url \
+  AUTH_SECRET=secretref:auth-secret \
+  CRON_SECRET=secretref:cron-secret
+
+az containerapp ingress update -n $APP -g $RG --target-port 3000
+```
+
+Then schedule the cron endpoints — see **[Scheduling cron jobs](#scheduling-cron-jobs)**. Nothing
+calls them for you on a managed platform.
+
+### If the container won't start
+
+Read the container's logs from the top. A missing or invalid variable is reported by name, before
+anything else runs:
+
+```
+ERROR: the app cannot start — required environment variables are missing or invalid:
+
+  CRON_SECRET   is not set. Generate one with: openssl rand -hex 32
+```
+
+If you instead see `Invalid environment variables` inside a Next.js instrumentation-hook stack
+trace, you are on an image built before this check existed — the variable names are on the
+`console.error` line immediately above the stack trace.
+
+---
+
 ## Scheduling cron jobs
 
 The app exposes three POST endpoints that perform daily background work. Each
