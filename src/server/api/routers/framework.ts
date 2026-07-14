@@ -2089,13 +2089,43 @@ export const frameworkRouter = createTRPCRouter({
               message: `Parent control "${input.parentControlId}" not found`,
             });
           }
-          // Prevent circular references
+          // Prevent circular references. Checking only for a direct self-parent
+          // is not enough: setting AC-02's parent to AC-03 and then AC-03's
+          // parent to AC-02 builds a cycle out of two individually-legal edits,
+          // and a cycle is unreachable from any root. Walk the proposed parent's
+          // ancestors and reject if this control is already among them — i.e.
+          // the new parent is a descendant of the control being re-parented.
+          // ctx.db is org-filtered, so this walk cannot cross a tenant boundary.
           if (parentControl.id === control.id) {
             throw new TRPCError({
               code: "BAD_REQUEST",
               message: "A control cannot be its own parent",
             });
           }
+
+          const seen = new Set<string>([parentControl.id]);
+          let ancestorId = parentControl.parentControlId;
+          while (ancestorId) {
+            if (ancestorId === control.id) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                  `Cannot set parent to "${input.parentControlId}": it is a descendant of this control, which would create a circular reference.`,
+              });
+            }
+            // A cycle already present in the data must not spin here forever.
+            if (seen.has(ancestorId)) break;
+            seen.add(ancestorId);
+
+            const ancestor: { parentControlId: string | null } | null =
+              await ctx.db.control.findFirst({
+                where: { id: ancestorId, organizationId: ctx.organizationId! },
+                select: { parentControlId: true },
+              });
+            if (!ancestor) break;
+            ancestorId = ancestor.parentControlId;
+          }
+
           parentDbId = parentControl.id;
         }
       }

@@ -404,6 +404,11 @@ export const complianceAssessmentRouter = createTRPCRouter({
                   controlId: true,
                   title: true,
                   description: true,
+                  // The framework's own guidance (NIST calls it Discussion): the
+                  // text that tells the assessor how to judge the control. It was
+                  // backfilled for 1,014 800-53 controls but never selected here,
+                  // so it reached /admin/frameworks and nowhere else.
+                  guidance: true,
                   parentControlId: true,
                   // Org-authored testing fields shown read-only in the
                   // scoring panel so the assessor can see how to verify the

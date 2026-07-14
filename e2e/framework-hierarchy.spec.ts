@@ -99,6 +99,54 @@ test.describe('Framework detail views render a hierarchy', () => {
     await assertNoError(page, 'nist csf 2.0 detail');
   });
 
+  test('clicking a parent row expands it; clicking a leaf row opens its detail modal', async ({
+    page,
+  }) => {
+    // The row itself is clickable, not only the chevron. A parent row expands —
+    // its modal would only re-list the children the chevron already shows — while
+    // a leaf, which has no children to reveal, opens the modal.
+    await openFramework(page, 'NIST SP 800-171');
+    await expect(page).toHaveURL(/\/admin\/frameworks\/[^/]+$/);
+
+    const parentRow = page.getByRole('row').filter({ has: page.getByText('03.01', { exact: true }) });
+    await expect(parentRow).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText('03.01.01', { exact: true })).toHaveCount(0);
+
+    // Click the title cell, not the chevron button inside the code cell.
+    await parentRow.getByRole('cell').nth(1).click();
+
+    // It expanded, and it did NOT open the redundant modal.
+    await expect(page.getByText('03.01.01', { exact: true })).toBeVisible({ timeout: 20000 });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
+    // A leaf has nothing to expand, so its row opens the modal.
+    const leafRow = page.getByRole('row').filter({ has: page.getByText('03.01.01', { exact: true }) });
+    await leafRow.getByRole('cell').nth(1).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('dialog')).toContainText('03.01.01');
+
+    await assertNoError(page, 'framework row click');
+  });
+
+  test('in flat search results a parent row opens the modal instead of being a dead click', async ({
+    page,
+  }) => {
+    // Expansion is disabled while searching (the results are flat), so routing a
+    // parent row to the chevron there would make it click into nothing.
+    await openFramework(page, 'NIST SP 800-171');
+    await page.getByPlaceholder('Search controls...').fill('03.01');
+    await expect(page.getByText(/Showing flat results/)).toBeVisible({ timeout: 20000 });
+
+    const parentRow = page.getByRole('row').filter({ has: page.getByText('03.01', { exact: true }) });
+    await expect(parentRow).toBeVisible();
+    await parentRow.getByRole('cell').nth(1).click();
+
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('dialog')).toContainText('03.01');
+
+    await assertNoError(page, 'framework row click while searching');
+  });
+
   test('the maturity view does not offer risk, finding, or health columns', async ({ page }) => {
     await openFramework(page, 'NIST Cybersecurity Framework 2.0');
     await expect(page).toHaveURL(/\/admin\/frameworks\/maturity\/[^/]+$/);

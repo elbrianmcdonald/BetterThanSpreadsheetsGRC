@@ -51,6 +51,25 @@ docker exec betterthanspreadsheetsGRC-app sh -c 'prisma db push --accept-data-lo
 docker compose up -d --build
 ```
 
+### Manual data migrations (`prisma/migrations-manual/`)
+
+Schema is applied automatically (`prisma db push` in `docker-entrypoint.sh`), but
+**data** migrations in `prisma/migrations-manual/` are NOT run by the entrypoint,
+by the seed, or by anything else. Deploying an image does not apply them — an
+operator must run them once per environment, and each has a runbook in `docs/`:
+
+| Script | Runbook | Applies to |
+|---|---|---|
+| `2026-07-11-role-consolidation.sql` | `docs/runbook-role-consolidation-deploy.md` | any DB still on the 8-role schema |
+| `2026-07-13-backfill-800-53-control-text.sql` | `docs/runbook-800-53-control-text-backfill.md` | any DB whose NIST 800-53 controls predate the OSCAL text import |
+
+The 800-53 backfill matters on every existing environment: the seed only creates
+800-53 controls when there are none (`prisma/seed.ts`, `existing80053 === 0`), so
+without running the SQL an upgraded database keeps the old text (every description
+a copy of its own title, no guidance) and **reports no error**. It overwrites
+`description` and `guidance` on every 800-53 control, destroying any hand-edits —
+back up first; read the runbook.
+
 ### Stopping Services
 
 ```bash

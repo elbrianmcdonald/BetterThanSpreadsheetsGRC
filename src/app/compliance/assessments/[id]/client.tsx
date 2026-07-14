@@ -62,6 +62,13 @@ import {
 
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
+import {
+  allScores,
+  ancestorsOfMatches,
+  buildControlTree,
+  flattenTree,
+  type ControlGroupTree,
+} from "@/lib/compliance/control-tree";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
 import { AssessmentFindingsList } from "@/components/findings/AssessmentFindingsList";
@@ -130,21 +137,12 @@ interface ControlScore {
     controlId: string;
     title: string;
     description: string | null;
+    /** NIST's Discussion — how to judge the control, not just what it says. */
+    guidance: string | null;
     parentControlId: string | null;
     testInstructions: string | null;
     acceptanceCriteria: string | null;
   };
-}
-
-interface ControlGroup {
-  parent: {
-    id: string;
-    controlId: string;
-    title: string;
-    description: string | null;
-  };
-  children: ControlScore[];
-  score?: ControlScore; // Score for parent control itself, if it has one
 }
 
 // =============================================================================
@@ -285,6 +283,10 @@ function ComplianceStatusBadge({ status }: { status: ComplianceStatus }) {
  */
 function ControlScoringItem({
   score,
+  depth,
+  hasChildren,
+  isExpanded,
+  onToggleExpand,
   assessmentId,
   onUpdate,
   isSaving,
@@ -292,6 +294,10 @@ function ControlScoringItem({
   onCreateFinding,
 }: {
   score: ControlScore;
+  depth: number;
+  hasChildren: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
   assessmentId: string;
   onUpdate: (controlId: string, status: ComplianceStatus, notes?: string | null) => void;
   isSaving: boolean;
@@ -316,6 +322,9 @@ function ControlScoringItem({
 
   return (
     <div
+      // Indent by depth so an enhancement (AC-02(01)) sits visibly under its
+      // base control (AC-02). 800-53 nests; ISO 27001 is flat and depth is 0.
+      style={{ marginLeft: `${depth * 1.5}rem` }}
       className={cn(
         "p-4 rounded-lg border transition-colors",
         score.status === ComplianceStatus.COMPLIANT
@@ -334,6 +343,23 @@ function ControlScoringItem({
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
+            {hasChildren ? (
+              <button
+                type="button"
+                aria-label={`${isExpanded ? "Collapse" : "Expand"} ${score.control.controlId}`}
+                aria-expanded={isExpanded}
+                onClick={onToggleExpand}
+                className="shrink-0 rounded-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            ) : (
+              <span className="w-4 shrink-0" />
+            )}
             <span className="font-mono text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded">
               {score.control.controlId}
             </span>
@@ -357,23 +383,56 @@ function ControlScoringItem({
         </div>
       </div>
 
-      {/* Control Description - Collapsible */}
+      {/* Control Description — the control's real NIST statement. Collapsible. */}
       {score.control.description && (
         <Collapsible className="mb-3">
           <CollapsibleTrigger asChild>
-            <button className="w-full p-2 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 transition-colors">
+            <button className="w-full p-2 bg-muted border border-border rounded-lg hover:bg-muted/70 transition-colors">
               <div className="flex items-center gap-2">
-                <HelpCircle className="h-4 w-4 text-blue-600 shrink-0" />
-                <span className="text-xs font-medium text-blue-800">
+                <HelpCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-foreground">
                   Control Details
                 </span>
-                <ChevronRight className="h-4 w-4 text-blue-600 ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
               </div>
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-1 p-3 bg-blue-50 border border-t-0 border-blue-100 rounded-b-lg">
-              <p className="text-xs text-blue-700">{score.control.description}</p>
+            <div className="mt-1 p-3 bg-muted border border-t-0 border-border rounded-b-lg">
+              {/* whitespace-pre-wrap: the description is NIST's structured
+                  statement — lettered clauses on their own indented lines. HTML
+                  collapses every newline and indent, so without this AC-02 reads
+                  as one unbroken run-on paragraph. */}
+              <p className="text-xs text-foreground whitespace-pre-wrap">
+                {score.control.description}
+              </p>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Guidance — NIST's Discussion for this control. It is the text that tells
+          the assessor how to JUDGE the control, so it belongs on the page where
+          they score it, not only in the framework admin. Collapsible: it runs to
+          several paragraphs and would bury the scoring controls if always open. */}
+      {score.control.guidance && (
+        <Collapsible className="mb-3">
+          <CollapsibleTrigger asChild>
+            <button className="w-full p-2 bg-muted border border-border rounded-lg hover:bg-muted/70 transition-colors">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-foreground">
+                  Guidance
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto transition-transform [[data-state=open]>&]:rotate-90" />
+              </div>
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-1 p-3 bg-muted border border-t-0 border-border rounded-b-lg">
+              <p className="text-xs text-foreground whitespace-pre-wrap">
+                {score.control.guidance}
+              </p>
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -542,6 +601,7 @@ function ControlScoringItem({
 function ControlGroupCard({
   group,
   assessmentId,
+  statusFilter,
   isExpanded,
   onToggle,
   onUpdate,
@@ -549,8 +609,9 @@ function ControlGroupCard({
   isEditable,
   onCreateFinding,
 }: {
-  group: ControlGroup;
+  group: ControlGroupTree<ControlScore>;
   assessmentId: string;
+  statusFilter: ComplianceStatus | "ALL";
   isExpanded: boolean;
   onToggle: () => void;
   onUpdate: (controlId: string, status: ComplianceStatus, notes?: string | null) => void;
@@ -558,9 +619,43 @@ function ControlGroupCard({
   isEditable: boolean;
   onCreateFinding?: (score: ControlScore) => void;
 }) {
-  const stats = calculateGroupCompliance(group.children);
+  // Which nested controls have their children revealed. Keyed by control id.
+  //
+  // The group's root (the family, or a base control in a baseline-scoped
+  // assessment) is a scoreable row of its own, so its members hang one level
+  // below it. Start it open: the card is already a disclosure, and hiding every
+  // base control behind a second chevron inside it would make the assessor click
+  // twice to see anything.
+  const [expandedControls, setExpandedControls] = useState<Set<string>>(
+    () => new Set(group.nodes.map((node) => node.score.control.id)),
+  );
+
+  // Filtering keeps this group because something in it matches — but the match
+  // can be an enhancement three levels down, hidden inside a collapsed base
+  // control. Open the chain above every match so the rows the filter promised
+  // are on screen the moment the group opens.
+  //
+  // Only on a filter change: a union, never a reset, and never re-run on a
+  // re-render, so it cannot fight the chevrons the user clicks afterwards.
+  useEffect(() => {
+    if (statusFilter === "ALL") return;
+    const reveal = ancestorsOfMatches(
+      group.nodes,
+      (score: ControlScore) => score.status === statusFilter,
+    );
+    if (reveal.size === 0) return;
+    setExpandedControls((prev) => new Set([...prev, ...reveal]));
+    // group.nodes is read fresh on each filter change; re-running when the tree
+    // is rebuilt (after any score edit) would re-open what the user collapsed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
+
+  const visibleRows = flattenTree(group.nodes, expandedControls);
+
+  // Stats over every descendant, not just the top row — this is what turns the
+  // old, lying "0/25 controls" into an honest "0/175".
+  const stats = calculateGroupCompliance(allScores(group.nodes));
   const scoredCount = stats.total - stats.notAssessed;
-  const isAllScored = stats.notAssessed === 0;
 
   return (
     <Card
@@ -584,9 +679,9 @@ function ControlGroupCard({
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             )}
             <Badge variant="outline" className="font-mono">
-              {group.parent.controlId}
+              {group.parent.control.controlId}
             </Badge>
-            <span className="font-medium">{group.parent.title}</span>
+            <span className="font-medium">{group.parent.control.title}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
@@ -603,23 +698,18 @@ function ControlGroupCard({
             )}
           </div>
         </div>
-        {!isExpanded && group.parent.description && (
+        {!isExpanded && group.parent.control.description && (
           <p className="text-sm text-muted-foreground ml-11 line-clamp-1">
-            {group.parent.description}
+            {group.parent.control.description}
           </p>
         )}
       </CardHeader>
 
       {isExpanded && (
         <CardContent className="space-y-4 pt-0">
-          {group.parent.description && (
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">{group.parent.description}</p>
-              </div>
-            </div>
-          )}
+          {/* The root's description is not repeated here: the root is now its own
+              row below, with its full statement behind its Control Details
+              disclosure. Printing it twice on one open card is just noise. */}
 
           {/* Group Stats */}
           <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
@@ -662,19 +752,32 @@ function ControlGroupCard({
             </div>
           </div>
 
-          {/* Child Controls */}
+          {/* Member controls, nested. A base control with enhancements gets an
+              expand chevron; its enhancements appear indented beneath it. */}
           <div className="space-y-3">
-            {group.children.map((childScore) => (
+            {visibleRows.map((node) => (
               <ControlScoringItem
-                key={childScore.id}
-                score={childScore}
+                key={node.score.id}
+                score={node.score}
+                depth={node.depth}
+                hasChildren={node.children.length > 0}
+                isExpanded={expandedControls.has(node.score.control.id)}
+                onToggleExpand={() =>
+                  setExpandedControls((prev) => {
+                    const next = new Set(prev);
+                    const id = node.score.control.id;
+                    if (next.has(id)) next.delete(id);
+                    else next.add(id);
+                    return next;
+                  })
+                }
                 assessmentId={assessmentId}
                 onUpdate={onUpdate}
                 isSaving={isSaving}
                 isEditable={isEditable}
                 onCreateFinding={
                   onCreateFinding
-                    ? () => onCreateFinding(childScore)
+                    ? () => onCreateFinding(node.score)
                     : undefined
                 }
               />
@@ -1007,75 +1110,34 @@ export function ComplianceAssessmentDetailClient({
     },
   });
 
-  // Group controls by parent
-  const controlGroups = useMemo(() => {
-    if (!assessment?.controlScores) return [];
+  // Group controls into a real tree. 800-53 is three levels deep (family ->
+  // base control -> enhancement); the old two-level grouping dropped all 872
+  // enhancements on the floor.
+  const controlGroups = useMemo(
+    () => buildControlTree(assessment?.controlScores ?? []),
+    [assessment?.controlScores],
+  );
 
-    const groups: ControlGroup[] = [];
-    const childMap = new Map<string, ControlScore[]>();
-    const parentControls = new Map<string, ControlScore>();
-
-    // First pass: identify parents and collect children
-    for (const score of assessment.controlScores) {
-      if (score.control.parentControlId) {
-        const children = childMap.get(score.control.parentControlId) || [];
-        children.push(score);
-        childMap.set(score.control.parentControlId, children);
-      } else {
-        // This is a top-level control
-        parentControls.set(score.control.id, score);
-      }
-    }
-
-    // Second pass: build groups
-    for (const [parentId, parentScore] of parentControls) {
-      const children = childMap.get(parentId) || [];
-
-      if (children.length > 0) {
-        // Has children - create a group
-        groups.push({
-          parent: parentScore.control,
-          children: children.sort((a, b) =>
-            a.control.controlId.localeCompare(b.control.controlId)
-          ),
-          score: parentScore,
-        });
-      } else {
-        // No children - treat as single control group
-        groups.push({
-          parent: parentScore.control,
-          children: [parentScore],
-          score: parentScore,
-        });
-      }
-    }
-
-    // Sort groups by control ID
-    return groups.sort((a, b) =>
-      a.parent.controlId.localeCompare(b.parent.controlId)
-    );
-  }, [assessment?.controlScores]);
-
-  // Status filter: show only groups where at least one child matches the
-  // selected status, and within each group show only matching children.
+  // Status filter: show only groups that contain at least one control with the
+  // selected status — at ANY depth, so a matching enhancement keeps its family
+  // visible. The group renders its full tree once opened, so the assessor can
+  // still see a match in the context of its siblings and parent — and the card
+  // auto-expands the chain above every match so none of them stays buried.
   const filteredControlGroups = useMemo(() => {
     if (statusFilter === "ALL") return controlGroups;
-    return controlGroups
-      .map((group) => ({
-        ...group,
-        children: group.children.filter((c) => c.status === statusFilter),
-      }))
-      .filter((group) => group.children.length > 0);
+    return controlGroups.filter((group) =>
+      allScores(group.nodes).some((score) => score.status === statusFilter)
+    );
   }, [controlGroups, statusFilter]);
 
   // Calculate bar chart data
   const barData = useMemo(() => {
     return controlGroups.map(group => {
-      const stats = calculateGroupCompliance(group.children);
+      const stats = calculateGroupCompliance(allScores(group.nodes));
       const compliance = stats.percentage ?? 0;
       return {
-        name: group.parent.title,
-        code: group.parent.controlId,
+        name: group.parent.control.title,
+        code: group.parent.control.controlId,
         compliance,
         fill: compliance >= 80 ? "#22c55e" : compliance >= 60 ? "#84cc16" : compliance >= 40 ? "#f59e0b" : "#ef4444",
       };
@@ -1096,7 +1158,7 @@ export function ComplianceAssessmentDetailClient({
     startMutation.mutate({ id: assessmentId });
     // Expand first group
     if (controlGroups.length > 0 && !expandedGroup) {
-      setExpandedGroup(controlGroups[0]!.parent.id);
+      setExpandedGroup(controlGroups[0]!.parent.control.id);
     }
   };
 
@@ -1483,15 +1545,16 @@ export function ComplianceAssessmentDetailClient({
                 ) : (
                   filteredControlGroups.map((group) => (
                     <ControlGroupCard
-                      key={group.parent.id}
+                      key={group.parent.control.id}
                       group={group}
                       assessmentId={assessmentId}
-                      isExpanded={expandedGroup === group.parent.id}
+                      statusFilter={statusFilter}
+                      isExpanded={expandedGroup === group.parent.control.id}
                       onToggle={() =>
                         setExpandedGroup(
-                          expandedGroup === group.parent.id
+                          expandedGroup === group.parent.control.id
                             ? null
-                            : group.parent.id
+                            : group.parent.control.id
                         )
                       }
                       onUpdate={handleUpdateControl}
