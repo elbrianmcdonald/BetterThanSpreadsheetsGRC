@@ -13,7 +13,6 @@ import { db } from "@/server/db";
 import { appRouter } from "@/server/api/root";
 import { randomUUID } from "crypto";
 import { UserRole, Severity, FindingSource, QuestionType } from "@prisma/client";
-import { TRPCError } from "@trpc/server";
 import { runWithOrganizationContext } from "@/server/db/middleware/organization-filter";
 
 const SLUG = "test-org-fnd-qr";
@@ -41,68 +40,68 @@ let vendorAssessmentA: { id: string };
  */
 async function seedVendorChain(organizationId: string, tag: string) {
   return runWithOrganizationContext(organizationId, async () => {
-  const vendor = await db.vendor.create({
-    data: {
-      id: randomUUID(),
-      identifier: `VND-2026-${tag}`,
-      organizationId,
-      name: `Vendor ${tag}`,
-      updatedAt: new Date(),
-    },
-  });
-  const assessment = await db.vendorAssessment.create({
-    data: {
-      id: randomUUID(),
-      identifier: `VA-2026-${tag}`,
-      organizationId,
-      vendorId: vendor.id,
-      title: `Assessment ${tag}`,
-      updatedAt: new Date(),
-    },
-  });
-  const template = await db.questionnaireTemplate.create({
-    data: {
-      id: randomUUID(),
-      organizationId,
-      name: `Template ${tag}`,
-      updatedAt: new Date(),
-    },
-  });
-  const section = await db.questionnaireSection.create({
-    data: {
-      id: randomUUID(),
-      templateId: template.id,
-      title: "Section 1",
-      updatedAt: new Date(),
-    },
-  });
-  const question = await db.questionnaireQuestion.create({
-    data: {
-      id: randomUUID(),
-      sectionId: section.id,
-      questionText: "Do you encrypt data at rest?",
-      questionType: QuestionType.YES_NO,
-      updatedAt: new Date(),
-    },
-  });
-  const questionnaire = await db.assessmentQuestionnaire.create({
-    data: {
-      id: randomUUID(),
-      assessmentId: assessment.id,
-      templateId: template.id,
-      updatedAt: new Date(),
-    },
-  });
-  const response = await db.questionnaireResponse.create({
-    data: {
-      id: randomUUID(),
-      questionnaireId: questionnaire.id,
-      questionId: question.id,
-      textResponse: "No",
-      updatedAt: new Date(),
-    },
-  });
-  return { vendor, assessment, response };
+    const vendor = await db.vendor.create({
+      data: {
+        id: randomUUID(),
+        identifier: `VND-2026-${tag}`,
+        organizationId,
+        name: `Vendor ${tag}`,
+        updatedAt: new Date(),
+      },
+    });
+    const assessment = await db.vendorAssessment.create({
+      data: {
+        id: randomUUID(),
+        identifier: `VA-2026-${tag}`,
+        organizationId,
+        vendorId: vendor.id,
+        title: `Assessment ${tag}`,
+        updatedAt: new Date(),
+      },
+    });
+    const template = await db.questionnaireTemplate.create({
+      data: {
+        id: randomUUID(),
+        organizationId,
+        name: `Template ${tag}`,
+        updatedAt: new Date(),
+      },
+    });
+    const section = await db.questionnaireSection.create({
+      data: {
+        id: randomUUID(),
+        templateId: template.id,
+        title: "Section 1",
+        updatedAt: new Date(),
+      },
+    });
+    const question = await db.questionnaireQuestion.create({
+      data: {
+        id: randomUUID(),
+        sectionId: section.id,
+        questionText: "Do you encrypt data at rest?",
+        questionType: QuestionType.YES_NO,
+        updatedAt: new Date(),
+      },
+    });
+    const questionnaire = await db.assessmentQuestionnaire.create({
+      data: {
+        id: randomUUID(),
+        assessmentId: assessment.id,
+        templateId: template.id,
+        updatedAt: new Date(),
+      },
+    });
+    const response = await db.questionnaireResponse.create({
+      data: {
+        id: randomUUID(),
+        questionnaireId: questionnaire.id,
+        questionId: question.id,
+        textResponse: "No",
+        updatedAt: new Date(),
+      },
+    });
+    return { vendor, assessment, response };
   });
 }
 
@@ -119,6 +118,10 @@ async function purge(slug: string) {
   await db.$executeRaw`DELETE FROM "VendorAssessment" WHERE "organizationId" = ${org.id}`;
   await db.$executeRaw`DELETE FROM "Vendor" WHERE "organizationId" = ${org.id}`;
   await db.$executeRaw`DELETE FROM "User" WHERE "organizationId" = ${org.id}`;
+  // IdentifierSequence has no FK to Organization, so it survives the org
+  // delete as an orphan row unless purged explicitly (generateIdentifier
+  // upserts one per org/prefix/year — see identifierService.ts).
+  await db.$executeRaw`DELETE FROM "IdentifierSequence" WHERE "organizationId" = ${org.id}`;
   await db.$executeRaw`DELETE FROM "Organization" WHERE id = ${org.id}`;
 }
 
@@ -217,12 +220,25 @@ describe("finding.create with questionnaireResponseId", () => {
   });
 
   it("rejects a second finding for the same response", async () => {
+    // Self-contained: seed a dedicated response so this test doesn't depend
+    // on the "derives vendor..." test running first (and its finding still
+    // existing against responseA).
+    const { response } = await seedVendorChain(orgA.id, "SECN");
+
+    await runWithOrganizationContext(orgA.id, () =>
+      callerA().finding.create({
+        ...basePayload,
+        title: "First finding for the isolated response",
+        questionnaireResponseId: response.id,
+      }),
+    );
+
     await expect(
       runWithOrganizationContext(orgA.id, () =>
         callerA().finding.create({
           ...basePayload,
           title: "A second finding for the same response",
-          questionnaireResponseId: responseA.id,
+          questionnaireResponseId: response.id,
         }),
       ),
     ).rejects.toThrow(/already been created for this response/i);
@@ -237,7 +253,7 @@ describe("finding.create with questionnaireResponseId", () => {
           questionnaireResponseId: responseB.id,
         }),
       ),
-    ).rejects.toThrow(TRPCError);
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   it("does not apply the one-per-response guard to non-vendor creates", async () => {
