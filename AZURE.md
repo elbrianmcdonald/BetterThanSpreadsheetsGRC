@@ -2,23 +2,238 @@
 
 A runbook for running BetterThanSpreadsheetsGRC on Azure Container Apps with the Azure CLI.
 
-If your container is **down right now**, jump to [Emergency: the container won't
-start](#emergency-the-container-wont-start). You probably do not need to redeploy.
+- Deploying for the **first time**? Start at [Fresh install](#fresh-install-from-nothing).
+- Container **down right now**? Jump to [Emergency](#emergency-the-container-wont-start).
+  You probably do not need to redeploy.
 
 ---
 
 ## Shell variables used throughout
 
 ```bash
-RG=my-resource-group
-APP=betterthanspreadsheetsgrc-app
-ACR=myregistry                      # ACR name, without .azurecr.io
+RG=btsgrc-rg                        # resource group
+LOC=eastus                          # region
+APP=betterthanspreadsheetsgrc-app   # container app name
+ENVIRONMENT=btsgrc-env              # Container Apps environment
+ACR=btsgrcacr$RANDOM                # ACR name: globally unique, lowercase alphanumeric only
+PG=btsgrc-pg-$RANDOM                # Postgres server: globally unique
 IMAGE=$ACR.azurecr.io/btsgrc        # image repository
-TAG=v1                              # bump this on every deploy; avoid :latest
+TAG=v1                              # bump on every deploy; never reuse a tag
 ```
 
-Avoid the `:latest` tag. Container Apps only creates a new revision when the image
-*reference* changes, so redeploying `:latest` can silently leave the old image running.
+ACR and Postgres server names are part of public DNS names, so they must be **globally unique**
+across all of Azure — `$RANDOM` above is a cheap way to get there. Note the values down; you will
+need them again.
+
+Avoid the `:latest` tag. Container Apps only creates a new revision when the image *reference*
+changes, so redeploying `:latest` can silently leave the old image running.
+
+---
+
+## Fresh install from nothing
+
+End state: a public HTTPS app on an Azure-managed Postgres, backed by your own container registry.
+Budget 20–30 minutes, most of it waiting on the Postgres server and the first image build.
+
+### 0. Install the Azure CLI and sign in
+
+```bash
+# Windows
+winget install -e --id Microsoft.AzureCLI
+
+# macOS
+brew install azure-cli
+
+# Debian/Ubuntu
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+```
+
+Restart your shell afterwards so `az` lands on `PATH`. Then:
+
+```bash
+az login                                    # opens a browser
+az account set --subscription "<name or id>"
+az account show -o table                    # confirm you are on the right subscription
+```
+
+Add the Container Apps extension and register the resource providers. **Skipping this is the most
+common first-run failure** — provider registration is per-subscription and can take a few minutes:
+
+```bash
+az extension add --name containerapp --upgrade
+
+az provider register --namespace Microsoft.App
+az provider register --namespace Microsoft.OperationalInsights
+az provider register --namespace Microsoft.ContainerRegistry
+az provider register --namespace Microsoft.DBforPostgreSQL
+
+# Wait until all four report "Registered"
+az provider show -n Microsoft.App --query registrationState -o tsv
+```
+
+### 1. Resource group
+
+```bash
+az group create -n $RG -l $LOC
+```
+
+### 2. Container registry, and build the image in it
+
+`az acr build` uploads the source and builds in the cloud, so **you do not need Docker locally**.
+
+```bash
+az acr create -n $ACR -g $RG --sku Basic
+
+# Run from the repository root — the trailing dot is the build context
+az acr build --registry $ACR --image btsgrc:$TAG .
+```
+
+The build takes 5–10 minutes. It runs `next build`, which is memory-hungry; the Basic SKU handles
+it, but if the build is OOM-killed, retry on a bigger agent pool or build locally and push instead
+(see [Path B](#path-b--build-locally-push-to-acr)).
+
+### 3. PostgreSQL
+
+```bash
+PGPASS="$(openssl rand -base64 24)"
+echo "Postgres password: $PGPASS"   # save this now; you cannot read it back later
+
+az postgres flexible-server create \
+  -n $PG -g $RG -l $LOC \
+  --admin-user btsgrc --admin-password "$PGPASS" \
+  --tier Burstable --sku-name Standard_B1ms \
+  --storage-size 32 --version 16 \
+  --public-access 0.0.0.0 \
+  --yes
+
+az postgres flexible-server db create -g $RG -s $PG -d btsgrc
+```
+
+`--public-access 0.0.0.0` is Azure shorthand for **"allow other Azure services, not the whole
+internet."** It is what lets the Container App reach the database. It does *not* expose Postgres
+publicly. For a stricter setup, use a VNet-integrated Container Apps environment and private
+access, which is beyond this guide.
+
+`Standard_B1ms` is the cheapest tier and is fine to start. The app is not write-heavy.
+
+### 4. Container Apps environment
+
+```bash
+az containerapp env create -n $ENVIRONMENT -g $RG -l $LOC
+```
+
+This provisions a Log Analytics workspace behind the scenes; it takes a few minutes.
+
+### 5. Create the app
+
+Generate the three required secrets and create the app in one shot. Read
+[Full environment variable reference](#full-environment-variable-reference) if you want to know
+what each one does — the short version is that **the app will not boot without all three**, and
+`CRON_SECRET` must be at least 32 characters.
+
+```bash
+DATABASE_URL="postgresql://btsgrc:${PGPASS}@${PG}.postgres.database.azure.com:5432/btsgrc?sslmode=require"
+
+az containerapp create \
+  -n $APP -g $RG --environment $ENVIRONMENT \
+  --image $IMAGE:$TAG \
+  --registry-server $ACR.azurecr.io --registry-identity system \
+  --ingress external --target-port 3000 \
+  --min-replicas 1 --max-replicas 1 \
+  --cpu 1.0 --memory 2.0Gi \
+  --secrets \
+     database-url="$DATABASE_URL" \
+     auth-secret="$(openssl rand -base64 32)" \
+     cron-secret="$(openssl rand -hex 32)" \
+  --env-vars \
+     DATABASE_URL=secretref:database-url \
+     AUTH_SECRET=secretref:auth-secret \
+     CRON_SECRET=secretref:cron-secret \
+     SEED_ON_STARTUP=true
+```
+
+Notes on the flags that are not obvious:
+
+- **`--registry-identity system`** gives the app a managed identity and grants it `AcrPull`, so no
+  registry password is ever stored. If your `az` is too old to support it, enable the ACR admin
+  user instead: `az acr update -n $ACR --admin-enabled true`, then pass `--registry-username $ACR`
+  and `--registry-password "$(az acr credential show -n $ACR --query 'passwords[0].value' -o tsv)"`.
+- **`--target-port 3000`** — what the container listens on. Get this wrong and the revision never
+  goes healthy.
+- **`--min-replicas 1 --max-replicas 1`** — both halves matter. See
+  [Scaling](#scaling--pin-to-a-single-replica); the short version is that scale-to-zero silently
+  stops the background workers, and a second replica double-runs them.
+- **`SEED_ON_STARTUP=true`** — loads the compliance frameworks and demo data. **Remove it after the
+  first successful boot** (step 7) so restarts do not re-seed.
+- **`--cpu 1.0 --memory 2.0Gi`** — the app runs Chromium for PDF export; less memory than this and
+  PDF generation will be OOM-killed.
+
+The database schema is created automatically: the container runs `prisma db push` on every start.
+
+### 6. Verify
+
+```bash
+az containerapp logs show -n $APP -g $RG --type console --follow
+```
+
+Wait for `✓ Ready in ...ms` and `[Scheduler] All workers started`. Then:
+
+```bash
+FQDN=$(az containerapp show -n $APP -g $RG --query properties.configuration.ingress.fqdn -o tsv)
+curl https://$FQDN/api/health
+# {"status":"healthy","timestamp":"..."}
+echo "https://$FQDN"
+```
+
+If it does not come up, go to [Troubleshooting](#troubleshooting). A startup failure at this stage
+is almost always a bad `DATABASE_URL` — check the password quoting and that `?sslmode=require` is
+present.
+
+### 7. Turn off seeding
+
+Once the app is up, drop the seed flag so restarts do not re-seed:
+
+```bash
+az containerapp update -n $APP -g $RG --remove-env-vars SEED_ON_STARTUP
+```
+
+Log in with the seeded admin account and **change the password immediately** — the credentials are
+in the seed script and are public knowledge.
+
+### 8. Schedule the cron jobs
+
+Nothing calls the cron endpoints for you. Without them, evidence-request reminders and SLA breach
+detection never run. See [Scheduling cron jobs](#scheduling-cron-jobs).
+
+### 9. Optional: custom domain
+
+```bash
+az containerapp hostname add -n $APP -g $RG --hostname grc.example.com
+az containerapp hostname bind -n $APP -g $RG --hostname grc.example.com --environment $ENVIRONMENT --validation-method CNAME
+```
+
+You will need a CNAME pointing at the FQDN and a TXT record for validation; `az` prints the exact
+values to create. Once the domain is live, set `AUTH_URL` so auth callbacks resolve correctly:
+
+```bash
+az containerapp update -n $APP -g $RG --set-env-vars AUTH_URL=https://grc.example.com
+```
+
+### What this costs
+
+Roughly, at the smallest usable sizes: a Burstable `Standard_B1ms` Postgres, a Basic ACR, and one
+always-on Container Apps replica. The `--min-replicas 1` pin means the app **never scales to zero**
+and therefore bills continuously — that is the deliberate tradeoff for keeping the background
+workers alive. Check current pricing with the Azure pricing calculator; do not trust a number
+written down in a repo.
+
+### Tear it all down
+
+```bash
+az group delete -n $RG --yes --no-wait
+```
+
+Everything in this guide lives in the one resource group.
 
 ---
 
