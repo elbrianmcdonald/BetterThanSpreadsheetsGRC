@@ -63,10 +63,11 @@ import {
 import { api } from "@/trpc/react";
 import { cn } from "@/lib/utils";
 import {
+  allScores,
+  ancestorsOfMatches,
   buildControlTree,
   flattenTree,
   type ControlGroupTree,
-  type ScoreNode,
 } from "@/lib/compliance/control-tree";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { CreateFindingDialog } from "@/components/findings/CreateFindingDialog";
@@ -227,16 +228,6 @@ function getComplianceColorClass(percentage: number | null): string {
 
 function getStatusLevel(status: ComplianceStatus) {
   return COMPLIANCE_LEVELS.find(l => l.value === status);
-}
-
-/**
- * Every score in a group, at any depth — a base control AND its enhancements.
- * The group's denominator has to count these: 800-53's AC family has ~175
- * controls once enhancements are included, not the 25 base controls the old
- * two-level grouping saw.
- */
-function allScores(nodes: ScoreNode<ControlScore>[]): ControlScore[] {
-  return nodes.flatMap((node) => [node.score, ...allScores(node.children)]);
 }
 
 /**
@@ -575,6 +566,7 @@ function ControlScoringItem({
 function ControlGroupCard({
   group,
   assessmentId,
+  statusFilter,
   isExpanded,
   onToggle,
   onUpdate,
@@ -584,6 +576,7 @@ function ControlGroupCard({
 }: {
   group: ControlGroupTree<ControlScore>;
   assessmentId: string;
+  statusFilter: ComplianceStatus | "ALL";
   isExpanded: boolean;
   onToggle: () => void;
   onUpdate: (controlId: string, status: ComplianceStatus, notes?: string | null) => void;
@@ -593,6 +586,27 @@ function ControlGroupCard({
 }) {
   // Which nested controls have their enhancements revealed. Keyed by control id.
   const [expandedControls, setExpandedControls] = useState<Set<string>>(new Set());
+
+  // Filtering keeps this group because something in it matches — but the match
+  // can be an enhancement three levels down, hidden inside a collapsed base
+  // control. Open the chain above every match so the rows the filter promised
+  // are on screen the moment the group opens.
+  //
+  // Only on a filter change: a union, never a reset, and never re-run on a
+  // re-render, so it cannot fight the chevrons the user clicks afterwards.
+  useEffect(() => {
+    if (statusFilter === "ALL") return;
+    const reveal = ancestorsOfMatches(
+      group.nodes,
+      (score: ControlScore) => score.status === statusFilter,
+    );
+    if (reveal.size === 0) return;
+    setExpandedControls((prev) => new Set([...prev, ...reveal]));
+    // group.nodes is read fresh on each filter change; re-running when the tree
+    // is rebuilt (after any score edit) would re-open what the user collapsed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
+
   const visibleRows = flattenTree(group.nodes, expandedControls);
 
   // Stats over every descendant, not just the top row — this is what turns the
@@ -1069,7 +1083,8 @@ export function ComplianceAssessmentDetailClient({
   // Status filter: show only groups that contain at least one control with the
   // selected status — at ANY depth, so a matching enhancement keeps its family
   // visible. The group renders its full tree once opened, so the assessor can
-  // still see a match in the context of its siblings and parent.
+  // still see a match in the context of its siblings and parent — and the card
+  // auto-expands the chain above every match so none of them stays buried.
   const filteredControlGroups = useMemo(() => {
     if (statusFilter === "ALL") return controlGroups;
     return controlGroups.filter((group) =>
@@ -1495,6 +1510,7 @@ export function ComplianceAssessmentDetailClient({
                       key={group.parent.control.id}
                       group={group}
                       assessmentId={assessmentId}
+                      statusFilter={statusFilter}
                       isExpanded={expandedGroup === group.parent.control.id}
                       onToggle={() =>
                         setExpandedGroup(
