@@ -145,6 +145,11 @@ const createFindingInput = z.object({
   discoveryProjectId: z.string().min(1).optional(),
   // Source questionnaire question (when spawned from a question card).
   sourceRiskAssessmentQuestionId: z.string().optional(),
+  // Vendor (TPRM) linkage — the finding was raised against a questionnaire
+  // response. vendorId / vendorAssessmentId are DERIVED from this id server-side
+  // (QuestionnaireResponse has no organizationId of its own), so a caller can't
+  // attach a finding to a vendor the response doesn't belong to.
+  questionnaireResponseId: z.string().optional(),
 });
 
 
@@ -602,6 +607,7 @@ export const findingRouter = createTRPCRouter({
         maturityDomainId,
         discoveryProjectId,
         sourceRiskAssessmentQuestionId,
+        questionnaireResponseId,
         likelihood,
         impact,
         exposure,
@@ -656,6 +662,57 @@ export const findingRouter = createTRPCRouter({
             message: "Only the assigned analyst can add findings to this assessment",
           });
         }
+      }
+
+      // Vendor (TPRM) linkage: walk response → questionnaire → assessment → vendor.
+      // This walk is also the org check — QuestionnaireResponse has no
+      // organizationId column, so ownership is only provable through the
+      // assessment. Absorbed from the deleted createFromQuestionnaireResponse.
+      let vendorLinkage: { vendorId: string; vendorAssessmentId: string } | null = null;
+      if (questionnaireResponseId) {
+        const response = await ctx.db.questionnaireResponse.findUnique({
+          where: { id: questionnaireResponseId },
+          select: {
+            questionnaire: {
+              select: {
+                assessment: {
+                  select: { id: true, organizationId: true, vendorId: true },
+                },
+              },
+            },
+          },
+        });
+        if (!response) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Questionnaire response not found",
+          });
+        }
+        const assessment = response.questionnaire.assessment;
+        if (assessment.organizationId !== organizationId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Assessment does not belong to this organization",
+          });
+        }
+
+        // One finding per response (FR46). Only ever checked on the vendor path —
+        // every other create flow leaves questionnaireResponseId undefined.
+        const existing = await ctx.db.finding.findFirst({
+          where: { questionnaireResponseId },
+          select: { id: true },
+        });
+        if (existing) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "A finding has already been created for this response",
+          });
+        }
+
+        vendorLinkage = {
+          vendorId: assessment.vendorId,
+          vendorAssessmentId: assessment.id,
+        };
       }
 
       // AC25: Generate sequential identifier
@@ -873,6 +930,10 @@ export const findingRouter = createTRPCRouter({
           sourceMaturityDomainId: maturityDomainId ?? null,
           sourceComplianceAssessmentId: complianceAssessmentId ?? null,
           sourceRiskAssessmentQuestionId: sourceRiskAssessmentQuestionId ?? null,
+          // Vendor (TPRM) linkage — derived above, never client-supplied.
+          questionnaireResponseId: questionnaireResponseId ?? null,
+          vendorId: vendorLinkage?.vendorId ?? null,
+          vendorAssessmentId: vendorLinkage?.vendorAssessmentId ?? null,
           // Gated lifecycle: PENDING until the assessment is approved (mirrors risks)
           discoveryProjectId: discoveryProjectId ?? null,
           discoveryStatus: discoveryProjectId ? RiskDiscoveryStatus.PENDING : null,
