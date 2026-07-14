@@ -790,7 +790,13 @@ export function FrameworkDetailClient({ frameworkId }: FrameworkDetailClientProp
                     onRetryChildren={handleRetryChildren}
                     healthByNodeId={healthByNodeId}
                     flat={isSearching || isFiltering}
-                    onRowClick={(node) => setSelectedControlId(node.id)}
+                    // A parent row expands — its detail modal would only re-list the
+                    // children the chevron already shows. Only a leaf opens the modal.
+                    onRowClick={(node) =>
+                      !isSearching && !isFiltering && node.childCount > 0
+                        ? handleToggleExpand(node)
+                        : setSelectedControlId(node.id)
+                    }
                     onEditTesting={(node, focus) => {
                       setEditingTestingControlId(node.id);
                       setEditingTestingField(focus === "ti" ? "testInstructions" : "acceptanceCriteria");
