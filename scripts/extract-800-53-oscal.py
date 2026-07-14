@@ -6,10 +6,10 @@ carries no control text, so every control's description was a copy of its title
 and its guidance was null. This pulls the real statement and discussion out of
 the official catalog.
 
-Also emits nist-800-53-r5-text-backfill.sql: an in-place UPDATE per control.
-Controls are never deleted and re-seeded — ControlAssessmentScore.control is
-onDelete: Cascade, so dropping the rows would take every live control score
-with it.
+Also emits prisma/migrations-manual/2026-07-13-backfill-800-53-control-text.sql:
+an in-place UPDATE per control. Controls are never deleted and re-seeded —
+ControlAssessmentScore.control is onDelete: Cascade, so dropping the rows would
+take every live control score with it.
 
 Usage:
     python scripts/extract-800-53-oscal.py <path-to-catalog.json>
@@ -39,34 +39,46 @@ def repo_control_id(oscal_id):
     return "%s-%02d(%02d)" % (family, int(base), int(enh))
 
 
-def render_param(param, params):
+GENERIC_ASSIGNMENT = "[Assignment: organization-defined value]"
+
+# NIST's legacy `_prm_` params bake "organization-defined " into the label itself,
+# while the newer `_odp` params do not. Rendering both through the same
+# "organization-defined %s" template doubled the prefix on 141 occurrences across
+# 111 controls (AC-01 included). Strip any prefix the label already carries so the
+# two generations render identically.
+ORG_DEFINED_PREFIX = re.compile(r"^\s*organization-defined\s+", re.IGNORECASE)
+
+
+def render_param(param, params, seen=frozenset()):
     """NIST's own print convention: an ODP renders as an Assignment or a Selection."""
     select = param.get("select")
     if select:
         # A choice can itself embed a placeholder, so resolve it before joining.
         choices = "; ".join(
-            resolve(c, params).strip() for c in select.get("choice", [])
+            resolve(c, params, seen).strip() for c in select.get("choice", [])
         )
         how_many = select.get("how-many")
         qualifier = " (one or more)" if how_many == "one-or-more" else ""
         return "[Selection%s: %s]" % (qualifier, choices)
     label = param.get("label") or param.get("id")
-    return "[Assignment: organization-defined %s]" % label
+    return "[Assignment: organization-defined %s]" % ORG_DEFINED_PREFIX.sub("", label)
 
 
-def resolve(prose, params):
+def resolve(prose, params, seen=frozenset()):
     if not prose:
         return ""
 
     def sub(match):
         pid = match.group(1)
         param = params.get(pid)
-        # An unresolved placeholder must never reach the UI as raw OSCAL syntax.
-        return (
-            render_param(param, params)
-            if param
-            else "[Assignment: organization-defined value]"
-        )
+        # A select choice can embed a placeholder, so resolve() and render_param()
+        # are mutually recursive. Today's catalog is acyclic, but a future revision
+        # with a self- or A->B->A-referencing param would recurse to RecursionError.
+        # Re-entering a param already on the stack degrades to the generic Assignment.
+        if not param or pid in seen:
+            # An unresolved placeholder must never reach the UI as raw OSCAL syntax.
+            return GENERIC_ASSIGNMENT
+        return render_param(param, params, seen | {pid})
 
     return PLACEHOLDER.sub(sub, prose)
 
@@ -137,6 +149,10 @@ def write_backfill_sql(out, dest):
         "-- Control: ControlAssessmentScore.control is onDelete: Cascade, so a",
         "-- delete-and-reseed would destroy every live control score.",
         "",
+        "-- The prose carries typographic apostrophes and an em-dash. Without this,",
+        "-- psql can inherit client_encoding from a cp1252 console and mojibake it.",
+        "SET client_encoding = 'UTF8';",
+        "",
         "BEGIN;",
         "",
     ]
@@ -153,7 +169,22 @@ def write_backfill_sql(out, dest):
                 sql_literal(cid),
             )
         )
-    lines.extend(["", "COMMIT;", ""])
+    # A zero-row UPDATE succeeds silently. If the OSCAL->repo id mapping were ever
+    # wrong, an operator would see a clean COMMIT over an untouched database. Fail loud.
+    lines.extend(
+        [
+            "",
+            "DO $$ DECLARE n int; BEGIN",
+            '  SELECT count(*) INTO n FROM "Control" c JOIN "Framework" f ON c."frameworkId" = f."id"',
+            '   WHERE f."code" = %s AND c."guidance" IS NOT NULL;' % sql_literal(FRAMEWORK_CODE),
+            "  IF n = 0 THEN RAISE EXCEPTION 'NIST 800-53 text backfill matched no rows "
+            "— the control-id mapping is wrong'; END IF;",
+            "END $$;",
+            "",
+            "COMMIT;",
+            "",
+        ]
+    )
 
     with io.open(dest, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(lines))
@@ -182,7 +213,11 @@ def main():
         json.dump(out, fh, indent=1, ensure_ascii=False, sort_keys=True)
         fh.write("\n")
 
-    sql_dest = os.path.join(dest_dir, "nist-800-53-r5-text-backfill.sql")
+    # The JSON is seed input loaded at runtime, so it lives in seeds/data/. The SQL is
+    # a one-shot data migration, so it follows the repo's migrations-manual convention.
+    sql_dir = os.path.join(repo_root, "prisma", "migrations-manual")
+    os.makedirs(sql_dir, exist_ok=True)
+    sql_dest = os.path.join(sql_dir, "2026-07-13-backfill-800-53-control-text.sql")
     write_backfill_sql(out, sql_dest)
 
     families = sum(1 for k in out if "-" not in k)
