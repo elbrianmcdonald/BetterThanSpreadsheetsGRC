@@ -111,6 +111,7 @@ export function CreateFindingDialog(props: CreateFindingDialogProps) {
           questionnaireResponseId={props.questionnaireResponseId}
           onCreated={handleCreated}
           onCancel={() => props.onOpenChange(false)}
+          suppressSuccessToast
         />
       </DialogContent>
     </Dialog>

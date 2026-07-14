@@ -198,6 +198,12 @@ interface CreateFindingFormProps {
   /** Cancel handler when hosted in a dialog (defaults to router.back()). */
   onCancel?: () => void;
   /**
+   * Suppress this form's own success toast(s) (2026-07-14): CreateFindingDialog
+   * shows its own richer "created — open" toast after `onCreated` runs, so the
+   * form's plain success toast would double up. Error toasts are unaffected.
+   */
+  suppressSuccessToast?: boolean;
+  /**
    * Where to navigate after a successful create (e.g. back to the source
    * assessment tab). Defaults to the new finding's detail page.
    */
@@ -218,6 +224,7 @@ export function CreateFindingForm({
   onCreated,
   onCancel,
   returnTo,
+  suppressSuccessToast,
 }: CreateFindingFormProps = {}) {
   const router = useRouter();
   const [selectedBUs, setSelectedBUs] = useState<string[]>([]);
@@ -428,9 +435,11 @@ export function CreateFindingForm({
               findingIds: [finding.id],
             });
           }
-          toast.success(
-            `Finding ${finding.identifier} created and added to the exploitation pathway`,
-          );
+          if (!suppressSuccessToast) {
+            toast.success(
+              `Finding ${finding.identifier} created and added to the exploitation pathway`,
+            );
+          }
         } catch (error) {
           toast.error(
             `Finding ${finding.identifier} created, but adding it to the pathway failed: ${
@@ -438,7 +447,7 @@ export function CreateFindingForm({
             }`,
           );
         }
-      } else {
+      } else if (!suppressSuccessToast) {
         toast.success(`Finding ${finding.identifier} created successfully`);
       }
 

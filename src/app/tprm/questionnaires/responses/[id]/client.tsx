@@ -277,7 +277,7 @@ interface ResponseItemProps {
     };
   };
   canCreateFinding: boolean;
-  onCreateFinding: (responseId: string, questionText: string, responseValue: string) => void;
+  onCreateFinding: (responseId: string, questionText: string) => void;
 }
 
 function ResponseItem({ response, canCreateFinding, onCreateFinding }: ResponseItemProps) {
@@ -376,7 +376,7 @@ function ResponseItem({ response, canCreateFinding, onCreateFinding }: ResponseI
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onCreateFinding(response.id, response.question.questionText, responseValue)}
+              onClick={() => onCreateFinding(response.id, response.question.questionText)}
             >
               <Plus className="mr-1 h-4 w-4" />
               Create Finding
