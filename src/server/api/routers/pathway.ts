@@ -1090,10 +1090,18 @@ async function assertAssessmentInOrg(
       }));
       break;
     case AssessmentKind.RISK:
-      exists = !!(await db.riskAssessment.findFirst({
-        where: { id: assessmentId, organizationId },
-        select: { id: true },
-      }));
+      // A RISK assessment workspace is a RiskAssessmentProject (what the tab
+      // passes as assessmentId). Accept that, and fall back to the legacy
+      // RiskAssessment table so either id type validates.
+      exists =
+        !!(await db.riskAssessmentProject.findFirst({
+          where: { id: assessmentId, organizationId },
+          select: { id: true },
+        })) ||
+        !!(await db.riskAssessment.findFirst({
+          where: { id: assessmentId, organizationId },
+          select: { id: true },
+        }));
       break;
     case AssessmentKind.BIA:
       // BIA requests are org-scoped via their BusinessProcess.
