@@ -61,8 +61,10 @@ export function AddStepForm({
   onCancel,
 }: {
   pathwayId: string;
-  assessmentKind: AssessmentKind;
-  assessmentId: string;
+  /** When absent (a master-library pathway with no assessment), findings/risks
+   * are drawn from the org-wide registers instead of one assessment. */
+  assessmentKind?: AssessmentKind;
+  assessmentId?: string;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -73,22 +75,37 @@ export function AddStepForm({
   const [note, setNote] = useState("");
   const [mitrePickerOpen, setMitrePickerOpen] = useState(false);
 
-  // Findings scoped to THIS assessment, not the org-wide register. Pathways
-  // link findings only — risks are aggregations built from findings.
-  const findingsQuery = api.finding.listForAssessment.useQuery({
-    assessmentId,
-    assessmentType: assessmentKind,
-  });
+  const hasAssessment = Boolean(assessmentKind && assessmentId);
 
-  const findings = findingsQuery.data ?? [];
+  // Findings: scoped to THIS assessment when in one, else the org-wide register.
+  const scopedFindings = api.finding.listForAssessment.useQuery(
+    { assessmentId: assessmentId ?? "", assessmentType: assessmentKind ?? "COMPLIANCE" },
+    { enabled: hasAssessment },
+  );
+  const orgFindings = api.finding.list.useQuery({ limit: 100 }, { enabled: !hasAssessment });
+  const findings = hasAssessment
+    ? scopedFindings.data ?? []
+    : (orgFindings.data?.items ?? []).map((f) => ({
+        id: f.id,
+        identifier: f.identifier,
+        title: f.title,
+      }));
+  const findingsLoading = hasAssessment ? scopedFindings.isLoading : orgFindings.isLoading;
 
-  // Risks scoped to THIS assessment (available for COMPLIANCE/VENDOR; empty for
-  // MATURITY/RISK/BIA where there is no Risk↔assessment linkage).
-  const risksQuery = api.risk.listForAssessment.useQuery({
-    assessmentId,
-    assessmentType: assessmentKind,
-  });
-  const risks = risksQuery.data ?? [];
+  // Risks: scoped to THIS assessment when in one, else the org-wide register.
+  const scopedRisks = api.risk.listForAssessment.useQuery(
+    { assessmentId: assessmentId ?? "", assessmentType: assessmentKind ?? "COMPLIANCE" },
+    { enabled: hasAssessment },
+  );
+  const orgRisks = api.risk.list.useQuery({ pageSize: 100 }, { enabled: !hasAssessment });
+  const risks = hasAssessment
+    ? scopedRisks.data ?? []
+    : (orgRisks.data?.risks ?? []).map((r) => ({
+        id: r.id,
+        identifier: r.identifier,
+        title: r.title,
+      }));
+  const risksLoading = hasAssessment ? scopedRisks.isLoading : orgRisks.isLoading;
 
   const addStep = api.pathway.addStep.useMutation({ onSuccess: onDone });
 
@@ -132,7 +149,7 @@ export function AddStepForm({
             const f = findings.find((x) => x.id === id);
             if (f) addMember({ kind: "finding", id: f.id, identifier: f.identifier, title: f.title });
           }}
-          disabled={findingsQuery.isLoading}
+          disabled={findingsLoading}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select a finding…" />
@@ -156,7 +173,7 @@ export function AddStepForm({
             const r = risks.find((x) => x.id === id);
             if (r) addMember({ kind: "risk", id: r.id, identifier: r.identifier, title: r.title });
           }}
-          disabled={risksQuery.isLoading || risks.length === 0}
+          disabled={risksLoading || risks.length === 0}
         >
           <SelectTrigger>
             <SelectValue

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Loader2, Plus, Crosshair, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,7 +30,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreatePathwayForm } from "@/components/pathway/CreatePathwayForm";
 
 type PathwayRow = {
   id: string;
@@ -43,13 +43,19 @@ type PathwayRow = {
 };
 
 export function PathwayLibraryClient() {
+  const router = useRouter();
   const utils = api.useUtils();
   const { data: pathways, isLoading } = api.pathway.list.useQuery();
-  const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<PathwayRow | null>(null);
   const [deleting, setDeleting] = useState<PathwayRow | null>(null);
 
   const refresh = () => void utils.pathway.list.invalidate();
+
+  // New pathway → create a bare pathway and open its editor page (no modal).
+  const createPathway = api.pathway.create.useMutation({
+    onSuccess: (p) => router.push(`/deliverables/pathway/${p.id}`),
+    onError: (e) => toast.error(e.message),
+  });
 
   return (
     <AppLayout breadcrumbs={[{ label: "Administration" }, { label: "Exploitation Pathways" }]}>
@@ -59,8 +65,16 @@ export function PathwayLibraryClient() {
         icon={<Crosshair />}
         description="Your library of attack paths (MITRE ATT&CK kill chains). Create pathways here, then select them onto assessments and tag them on findings and risks. Editing a pathway updates it everywhere it is linked."
         actions={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> New pathway
+          <Button
+            onClick={() => createPathway.mutate({ name: "Untitled pathway" })}
+            disabled={createPathway.isPending}
+          >
+            {createPathway.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            New pathway
           </Button>
         }
       />
@@ -135,26 +149,6 @@ export function PathwayLibraryClient() {
           </Table>
         </div>
       )}
-
-      {/* Create */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New exploitation pathway</DialogTitle>
-            <DialogDescription>
-              Add an attack path to the library. Steps and linked findings/risks are added later,
-              from an assessment.
-            </DialogDescription>
-          </DialogHeader>
-          <CreatePathwayForm
-            onCreated={() => {
-              setCreateOpen(false);
-              refresh();
-            }}
-            onCancel={() => setCreateOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Edit */}
       {editing && (
