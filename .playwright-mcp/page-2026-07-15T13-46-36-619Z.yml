@@ -1,0 +1,44 @@
+- generic [active] [ref=f22e1]:
+  - generic [ref=f22e2]:
+    - complementary [ref=f22e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f22e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f22e8]:
+          - generic [ref=f22e9]: BetterThanSpreadsheets
+          - generic [ref=f22e10]: GRC Platform
+      - navigation [ref=f22e11]:
+        - link "Home" [ref=f22e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f22e18]
+        - generic [ref=f22e26]:
+          - button "Assessments" [ref=f22e27]
+          - generic [ref=f22e35]:
+            - link "Overview" [ref=f22e37] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f22e41] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f22e45] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f22e49] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f22e54] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f22e58] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f22e62]
+        - button "Compliance" [ref=f22e70]
+        - button "Third Party" [ref=f22e78]
+        - button "Business Impact" [ref=f22e88]
+        - button "Help" [ref=f22e96]
+    - generic [ref=f22e104]:
+      - banner [ref=f22e105]:
+        - navigation "Breadcrumb" [ref=f22e106]:
+          - list [ref=f22e107]:
+            - listitem [ref=f22e108]:
+              - link "Home" [ref=f22e109] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f22e114]:
+              - generic [ref=f22e117]: Risk Assessments
+        - button [ref=f22e119]
+      - main [ref=f22e120]
+  - region "Notifications alt+T"

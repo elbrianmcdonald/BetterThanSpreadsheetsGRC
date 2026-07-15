@@ -1,0 +1,176 @@
+- generic [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - complementary [ref=f1e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f1e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e8]:
+          - generic [ref=f1e9]: BetterThanSpreadsheets
+          - generic [ref=f1e10]: GRC Platform
+      - generic [ref=f1e131]:
+        - combobox "Switch company" [ref=f1e137] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f1e138]
+      - navigation [ref=f1e11]:
+        - link "Home" [ref=f1e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f1e18]
+        - button "Governance" [ref=f1e141]
+        - generic [ref=f1e26]:
+          - button "Assessments" [ref=f1e27]
+          - generic [ref=f1e35]:
+            - link "Overview" [ref=f1e37] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f1e41] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f1e46] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f1e50] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f1e54] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f1e58] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f1e62]
+        - button "Compliance" [ref=f1e70]
+        - button "Third Party" [ref=f1e78]
+        - button "Business Impact" [ref=f1e88]
+        - button "Administration" [ref=f1e149]
+        - button "Help" [ref=f1e96]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f1e159] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f1e160]: A
+        - generic [ref=f1e161]:
+          - paragraph [ref=f1e162]: Alice Admin
+          - paragraph [ref=f1e163]: ADMINISTRATOR
+    - generic [ref=f1e104]:
+      - banner [ref=f1e105]:
+        - navigation "Breadcrumb" [ref=f1e106]:
+          - list [ref=f1e107]:
+            - listitem [ref=f1e108]:
+              - link "Home" [ref=f1e109] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f1e114]:
+              - generic [ref=f1e117]: Compliance
+            - listitem [ref=f1e118]:
+              - generic [ref=f1e121]: Assessments
+        - generic [ref=f1e122]:
+          - button [ref=f1e123]
+          - generic [ref=f1e164]:
+            - generic [ref=f1e165]: admin@acme-corp.com
+            - button "Sign Out" [ref=f1e166]
+      - main [ref=f1e124]:
+        - generic [ref=f1e125]:
+          - generic [ref=f1e169]:
+            - generic [ref=f1e170]:
+              - paragraph [ref=f1e171]: COMPLIANCE
+              - heading "Compliance Assessments" [level=1] [ref=f1e172]
+              - paragraph [ref=f1e179]: Manage frameworks and track compliance assessments
+            - button "Refresh" [ref=f1e181]
+          - generic [ref=f1e182]:
+            - link "ACTIVE FRAMEWORKS 5 1414 total controls" [ref=f1e183] [cursor=pointer]:
+              - /url: /admin/frameworks?status=active
+              - generic [ref=f1e184]:
+                - generic [ref=f1e185]: ACTIVE FRAMEWORKS
+                - generic [ref=f1e190]: "5"
+                - generic [ref=f1e191]: 1414 total controls
+            - link "ACTIVE ASSESSMENTS 2 1 draft, 1 completed" [ref=f1e192] [cursor=pointer]:
+              - /url: /compliance/assessments?tab=assessments&status=IN_PROGRESS,IN_REVIEW
+              - generic [ref=f1e193]:
+                - generic [ref=f1e194]: ACTIVE ASSESSMENTS
+                - generic [ref=f1e200]: "2"
+                - generic [ref=f1e201]: 1 draft, 1 completed
+            - link "AVG. COMPLIANCE 55% Across 3 scored assessments" [ref=f1e202] [cursor=pointer]:
+              - /url: /compliance/dashboard
+              - generic [ref=f1e203]:
+                - generic [ref=f1e204]: AVG. COMPLIANCE
+                - generic [ref=f1e210]: 55%
+                - generic [ref=f1e211]: Across 3 scored assessments
+            - link "OPEN GAPS 12 Non-compliant or partial controls" [ref=f1e212] [cursor=pointer]:
+              - /url: /compliance/assessments?tab=assessments&gaps=open
+              - generic [ref=f1e213]:
+                - generic [ref=f1e214]: OPEN GAPS
+                - generic [ref=f1e219]: "12"
+                - generic [ref=f1e220]: Non-compliant or partial controls
+          - generic [ref=f1e221]:
+            - tablist [ref=f1e222]:
+              - tab "Frameworks" [ref=f1e223]
+              - tab "Assessments 4" [active] [selected] [ref=f1e226]:
+                - text: Assessments
+                - generic [ref=f1e230]: "4"
+            - tabpanel "Assessments 4" [ref=f1e344]:
+              - generic [ref=f1e345]:
+                - combobox [ref=f1e346]:
+                  - generic: All Frameworks
+                - combobox [ref=f1e349]:
+                  - generic: All Business Units
+                - combobox [ref=f1e352]:
+                  - generic: All Assessors
+                - combobox [ref=f1e355]:
+                  - generic: All Statuses
+                - generic [ref=f1e358]: 4 of 4 assessments
+              - table [ref=f1e361]:
+                - rowgroup [ref=f1e362]:
+                  - row [ref=f1e363]:
+                    - columnheader "Assessment" [ref=f1e364]
+                    - columnheader "Framework" [ref=f1e365]
+                    - columnheader "Business Unit" [ref=f1e366]
+                    - columnheader "Assessor" [ref=f1e367]
+                    - columnheader "Status" [ref=f1e368]
+                    - columnheader "Compliance" [ref=f1e369]
+                    - columnheader "Progress" [ref=f1e370]
+                    - columnheader "Due Date" [ref=f1e371]
+                - rowgroup [ref=f1e372]:
+                  - row [ref=f1e373]:
+                    - cell "NIST80053 Assessment - July 2026 COMP-2026-0004" [ref=f1e374]:
+                      - link "NIST80053 Assessment - July 2026" [ref=f1e375] [cursor=pointer]:
+                        - /url: /compliance/assessments/cmrjrw3x4000g01mmlvdozzpu
+                      - generic [ref=f1e376]: COMP-2026-0004
+                    - cell "NIST80053" [ref=f1e377]
+                    - cell "Finance & Accounting" [ref=f1e379]
+                    - cell "Maria Manager" [ref=f1e380]
+                    - cell "Draft" [ref=f1e381]
+                    - cell "—" [ref=f1e383]
+                    - cell "0%" [ref=f1e384]
+                    - cell "—" [ref=f1e388]
+                  - row [ref=f1e389]:
+                    - cell "ISO 27001 Finance Unit Assessment COMP-2026-0003" [ref=f1e390]:
+                      - link "ISO 27001 Finance Unit Assessment" [ref=f1e391] [cursor=pointer]:
+                        - /url: /compliance/assessments/demo-ca-003
+                      - generic [ref=f1e392]: COMP-2026-0003
+                    - cell "ISO27001" [ref=f1e393]
+                    - cell "Finance & Accounting" [ref=f1e395]
+                    - cell "Bob Analyst" [ref=f1e396]
+                    - cell "Completed" [ref=f1e397]
+                    - cell "87%" [ref=f1e399]
+                    - cell "100%" [ref=f1e400]
+                    - cell "—" [ref=f1e405]
+                  - row [ref=f1e406]:
+                    - cell "NIST 800-53 Moderate Baseline Assessment COMP-2026-0002" [ref=f1e407]:
+                      - link "NIST 800-53 Moderate Baseline Assessment" [ref=f1e408] [cursor=pointer]:
+                        - /url: /compliance/assessments/demo-ca-002
+                      - generic [ref=f1e409]: COMP-2026-0002
+                    - cell "NIST80053" [ref=f1e410]
+                    - cell "IT Operations" [ref=f1e412]
+                    - cell "Bob Analyst" [ref=f1e413]
+                    - cell "In Progress" [ref=f1e414]
+                    - cell "0%" [ref=f1e416]
+                    - cell "0%" [ref=f1e417]
+                    - cell "—" [ref=f1e421]
+                  - row [ref=f1e422]:
+                    - cell "ISO 27001 Annual Assessment COMP-2026-0001" [ref=f1e423]:
+                      - link "ISO 27001 Annual Assessment" [ref=f1e424] [cursor=pointer]:
+                        - /url: /compliance/assessments/demo-ca-001
+                      - generic [ref=f1e425]: COMP-2026-0001
+                    - cell "ISO27001" [ref=f1e426]
+                    - cell "Engineering" [ref=f1e428]
+                    - cell "Bob Analyst" [ref=f1e429]
+                    - cell "In Progress" [ref=f1e430]
+                    - cell "78%" [ref=f1e432]
+                    - cell "87%" [ref=f1e433]
+                    - cell "—" [ref=f1e438]
+  - region "Notifications alt+T"
+  - alert [ref=f1e130]

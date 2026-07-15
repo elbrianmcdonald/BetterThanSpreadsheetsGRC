@@ -1,0 +1,293 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+        - generic:
+          - button:
+            - generic: Risk
+          - generic:
+            - generic:
+              - link:
+                - /url: /risks/dashboard
+                - generic: Risk Dashboard
+            - generic:
+              - link:
+                - /url: /risks/enterprise
+                - generic: Enterprise Risks
+            - generic:
+              - link:
+                - /url: /risks
+                - generic: Risk Register
+            - generic:
+              - link:
+                - /url: /findings
+                - generic: Findings Register
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - link:
+                - /url: /findings
+                - generic: Findings
+            - listitem:
+              - generic: New Finding
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - heading [level=1]: Create New Finding
+            - paragraph: Document a security finding from audits, penetration tests, vulnerability scans, or other security assessments. Complete the form below to create a new finding record.
+          - generic:
+            - generic:
+              - generic: Finding Details
+              - generic: Provide detailed information about the security finding. Fields marked with * are required.
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - text: Source
+                    - generic: "*"
+                  - combobox:
+                    - generic: How was this discovered?
+                  - combobox
+                - generic:
+                  - generic:
+                    - generic: Finding
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: Finding Title *
+                            - textbox:
+                              - /placeholder: Short, specific finding label...
+                          - generic:
+                            - generic: Finding Category
+                            - combobox:
+                              - generic: Uncategorized
+                            - combobox
+                            - paragraph: Aligned to the taxonomy managed in Administration → Taxonomy.
+                        - generic:
+                          - generic: Description *
+                          - textbox:
+                            - /placeholder: Describe the finding in detail. Include what was observed, why it matters, and the potential consequences...
+                        - generic:
+                          - generic: Linked Risks
+                          - paragraph: Link this finding to one or more risks from the risk register.
+                          - generic:
+                            - combobox:
+                              - generic: Link a risk...
+                            - combobox
+                        - generic:
+                          - generic:
+                            - heading [level=4]: MITRE ATT&CK Mapping
+                          - generic:
+                            - generic: Initial Access Vector
+                            - paragraph: How would a threat actor initially gain access?
+                            - generic:
+                              - button: Select Initial Access Technique
+                          - generic:
+                            - generic: Threat Actor Steps
+                            - paragraph: What techniques might be used during the attack?
+                            - generic:
+                              - button: Add Technique
+                          - generic:
+                            - generic: Threat Actor Objectives
+                            - paragraph: What is the threat actor trying to achieve?
+                            - generic:
+                              - button: Add Objective
+                        - generic:
+                          - generic:
+                            - heading [level=4]: Controls
+                          - generic:
+                            - generic: Mitigating Controls
+                            - paragraph: Controls currently in place that reduce this risk. Pulls from the organizational control library at /controls.
+                            - generic:
+                              - combobox: Add mitigating control...
+                          - generic:
+                            - generic: Control Gaps
+                            - paragraph: Controls that are missing or insufficient and need to be implemented
+                            - generic:
+                              - combobox: Add control gap...
+                        - generic:
+                          - generic:
+                            - generic:
+                              - heading [level=4]: Severity Scoring
+                            - generic:
+                              - checkbox
+                              - generic: Finding eliminated
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - heading [level=5]: Inherent Severity
+                                  - paragraph: Risk severity before controls are applied
+                                - generic:
+                                  - generic:
+                                    - generic: Likelihood
+                                    - combobox:
+                                      - generic: Select...
+                                    - combobox
+                                  - generic:
+                                    - generic: Impact
+                                    - combobox:
+                                      - generic: Select...
+                                    - combobox
+                                - generic: "Score: ? × ?"
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - heading [level=5]: Residual Severity
+                                  - paragraph: Risk severity after controls are applied
+                                - generic:
+                                  - generic:
+                                    - generic: Likelihood
+                                    - combobox:
+                                      - generic: Select...
+                                    - combobox
+                                  - generic:
+                                    - generic: Impact
+                                    - combobox:
+                                      - generic: Select...
+                                    - combobox
+                                - generic: "Score: ? × ?"
+                        - generic:
+                          - generic:
+                            - heading [level=4]: Remediation Options
+                          - paragraph: Document the treatment alternatives evaluated for this finding. Each option is saved against the finding and available on its detail page.
+                          - generic:
+                            - paragraph: No remediation options yet. Add one or more to document treatment alternatives for this risk.
+                            - button: Add remediation option
+                        - generic:
+                          - generic:
+                            - heading [level=4]: Evidence
+                          - generic:
+                            - paragraph: Evidence files will be uploaded after the assessment is created.
+                            - generic:
+                              - paragraph: Evidence upload will be available after creating the assessment
+                - paragraph: Severity scored against Standard 3×3 Risk Matrix (org default).
+                - generic:
+                  - generic:
+                    - generic: Affected Business Units
+                    - button: Create New
+                  - tree:
+                    - generic:
+                      - generic:
+                        - textbox:
+                          - /placeholder: Search business units...
+                    - group:
+                      - generic:
+                        - treeitem:
+                          - generic:
+                            - generic: Engineering
+                            - generic: ENG
+                        - treeitem:
+                          - generic:
+                            - generic: Finance & Accounting
+                            - generic: FIN
+                        - treeitem:
+                          - generic:
+                            - generic: Human Resources
+                            - generic: HR
+                        - treeitem:
+                          - generic:
+                            - generic: IT Operations
+                            - generic: ITO
+                        - treeitem:
+                          - generic:
+                            - generic: Sales & Marketing
+                            - generic: SAL
+                  - paragraph: Select business units affected by this finding. Can't find one? Click "Create New" above.
+                - generic:
+                  - generic: Assignee
+                  - combobox:
+                    - generic: Select assignee...
+                  - paragraph: Assign to a team member for triage
+                - generic:
+                  - generic:
+                    - checkbox
+                    - checkbox
+                    - generic:
+                      - generic: Part of an exploitation pathway
+                      - paragraph: Add this to an attack chain so it's flagged with ⬡ in the register.
+                - generic:
+                  - button: Cancel
+                  - button: Create Finding
+  - region "Notifications alt+T"
+  - alert
+  - dialog [ref=f6e391]:
+    - generic [ref=f6e392]:
+      - heading "Create Business Unit" [level=2] [ref=f6e393]
+      - paragraph [ref=f6e394]: Add a new business unit to your organization. It will be automatically added to the affected business units for this finding.
+    - generic [ref=f6e395]:
+      - generic [ref=f6e396]:
+        - generic [ref=f6e397]:
+          - text: Name
+          - generic [ref=f6e398]: "*"
+        - textbox "Name *" [active] [ref=f6e399]:
+          - /placeholder: Enter business unit name
+      - generic [ref=f6e400]:
+        - generic [ref=f6e401]: Code (optional)
+        - textbox "Code (optional)" [ref=f6e402]:
+          - /placeholder: e.g., ENG, SALES, HR
+        - paragraph [ref=f6e403]: Short identifier for quick reference (max 20 characters)
+      - generic [ref=f6e404]:
+        - generic [ref=f6e405]: Parent Business Unit (optional)
+        - combobox "Parent Business Unit (optional)" [ref=f6e406]:
+          - generic: None (top-level)
+        - paragraph [ref=f6e409]: Optionally place this under an existing business unit
+    - generic [ref=f6e410]:
+      - button "Cancel" [ref=f6e411]
+      - button "Create Business Unit" [disabled]
+    - button "Close" [ref=f6e412]

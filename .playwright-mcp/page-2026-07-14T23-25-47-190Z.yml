@@ -1,0 +1,321 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+        - generic:
+          - button:
+            - generic: Risk
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+          - generic:
+            - generic:
+              - link:
+                - /url: /tprm/dashboard
+                - generic: TPRM Dashboard
+            - generic:
+              - link:
+                - /url: /vendors
+                - generic: Vendor Registry
+            - generic:
+              - link:
+                - /url: /tprm/questionnaires
+                - generic: Questionnaires
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - generic: Third Party
+            - listitem:
+              - link:
+                - /url: /tprm/assessments
+                - generic: Assessments
+            - listitem:
+              - link:
+                - /url: /tprm/assessments/demo-vas-002
+                - generic: VA-2026-0002
+            - listitem:
+              - generic: Questionnaire Responses
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1]: Verify TPRM Template 8c9f
+                - paragraph: Responses for LegacyServ Inc
+            - generic:
+              - paragraph: Assessment
+              - link:
+                - /url: /tprm/assessments/demo-vas-002
+                - text: VA-2026-0002
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: Security
+                    - generic: 1 response
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - paragraph: Do you encrypt data at rest?
+                          - generic:
+                            - generic:
+                              - generic:
+                                - paragraph: "Response:"
+                                - paragraph: "No"
+                            - generic:
+                              - button: Create Finding
+  - region "Notifications alt+T"
+  - alert
+  - dialog:
+    - generic:
+      - heading [level=2]: Create finding
+      - paragraph: Capture an issue spotted during this assessment. It'll be linked back automatically so you can pick it up in the Findings register.
+      - generic: LegacyServ Inc — Do you encrypt data at rest?
+    - generic:
+      - generic:
+        - generic:
+          - text: Source
+          - generic: "*"
+        - combobox:
+          - generic:
+            - generic:
+              - generic: Manual Discovery
+              - generic: Manually discovered
+        - combobox
+      - generic:
+        - generic:
+          - generic: "Finding: Concern: no encryption at rest VERIFY-TPRM-8c9f"
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Finding Title *
+                  - textbox:
+                    - /placeholder: Short, specific finding label...
+                    - text: "Concern: no encryption at rest VERIFY-TPRM-8c9f"
+                - generic:
+                  - generic: Finding Category
+                  - combobox:
+                    - generic: Uncategorized
+                  - combobox
+                  - paragraph: Aligned to the taxonomy managed in Administration → Taxonomy.
+              - generic:
+                - generic: Description *
+                - textbox:
+                  - /placeholder: Describe the finding in detail. Include what was observed, why it matters, and the potential consequences...
+                  - text: The vendor confirmed that data at rest is not encrypted, exposing sensitive information if storage is compromised.
+              - generic:
+                - generic: Linked Risks
+                - paragraph: Link this finding to one or more risks from the risk register.
+                - generic:
+                  - combobox:
+                    - generic: Link a risk...
+                  - combobox
+              - generic:
+                - generic:
+                  - heading [level=4]: MITRE ATT&CK Mapping
+                - generic:
+                  - generic: Initial Access Vector
+                  - paragraph: How would a threat actor initially gain access?
+                  - generic:
+                    - button: Select Initial Access Technique
+                - generic:
+                  - generic: Threat Actor Steps
+                  - paragraph: What techniques might be used during the attack?
+                  - generic:
+                    - button: Add Technique
+                - generic:
+                  - generic: Threat Actor Objectives
+                  - paragraph: What is the threat actor trying to achieve?
+                  - generic:
+                    - button: Add Objective
+              - generic:
+                - generic:
+                  - heading [level=4]: Controls
+                - generic:
+                  - generic: Mitigating Controls
+                  - paragraph: Controls currently in place that reduce this risk. Pulls from the organizational control library at /controls.
+                  - generic:
+                    - combobox: Add mitigating control...
+                - generic:
+                  - generic: Control Gaps
+                  - paragraph: Controls that are missing or insufficient and need to be implemented
+                  - generic:
+                    - combobox: Add control gap...
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=4]: Severity Scoring
+                  - generic:
+                    - checkbox
+                    - generic: Finding eliminated
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - heading [level=5]: Inherent Severity
+                        - paragraph: Risk severity before controls are applied
+                      - generic:
+                        - generic:
+                          - generic: Likelihood
+                          - combobox:
+                            - generic:
+                              - generic:
+                                - generic: "3"
+                                - generic: Likely
+                          - combobox
+                        - generic:
+                          - generic: Impact
+                          - combobox [expanded]:
+                            - generic: Select...
+                          - combobox
+                      - generic: "Score: 3 × ?"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - heading [level=5]: Residual Severity
+                        - paragraph: Risk severity after controls are applied
+                      - generic:
+                        - generic:
+                          - generic: Likelihood
+                          - combobox:
+                            - generic: Select...
+                          - combobox
+                        - generic:
+                          - generic: Impact
+                          - combobox:
+                            - generic: Select...
+                          - combobox
+                      - generic: "Score: ? × ?"
+              - generic:
+                - generic:
+                  - heading [level=4]: Remediation Options
+                - paragraph: Document the treatment alternatives evaluated for this finding. Each option is saved against the finding and available on its detail page.
+                - generic:
+                  - paragraph: No remediation options yet. Add one or more to document treatment alternatives for this risk.
+                  - button: Add remediation option
+              - generic:
+                - generic:
+                  - heading [level=4]: Evidence
+                - generic:
+                  - paragraph: Evidence files will be uploaded after the assessment is created.
+                  - generic:
+                    - paragraph: Evidence upload will be available after creating the assessment
+      - paragraph: Severity scored against Standard 3×3 Risk Matrix (org default).
+      - generic:
+        - generic:
+          - generic: Affected Business Units
+          - button: Create New
+        - tree:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search business units...
+          - group:
+            - generic:
+              - treeitem:
+                - generic:
+                  - generic: Engineering
+                  - generic: ENG
+              - treeitem:
+                - generic:
+                  - generic: Finance & Accounting
+                  - generic: FIN
+              - treeitem:
+                - generic:
+                  - generic: Human Resources
+                  - generic: HR
+              - treeitem:
+                - generic:
+                  - generic: IT Operations
+                  - generic: ITO
+              - treeitem:
+                - generic:
+                  - generic: Sales & Marketing
+                  - generic: SAL
+        - paragraph: Select business units affected by this finding. Can't find one? Click "Create New" above.
+      - generic:
+        - generic: Assignee
+        - combobox:
+          - generic: Select assignee...
+        - paragraph: Assign to a team member for triage
+      - generic:
+        - generic:
+          - checkbox
+          - checkbox
+          - generic:
+            - generic: Part of an exploitation pathway
+            - paragraph: Add this to an attack chain so it's flagged with ⬡ in the register.
+      - generic:
+        - button: Cancel
+        - button: Create Finding
+    - button:
+      - generic: Close
+  - listbox [ref=f5e439]:
+    - option "1 Minor" [active] [ref=f5e440]:
+      - generic [ref=f5e443]:
+        - generic [ref=f5e444]: "1"
+        - generic [ref=f5e445]: Minor
+    - option "2 Moderate" [ref=f5e446]:
+      - generic [ref=f5e449]:
+        - generic [ref=f5e450]: "2"
+        - generic [ref=f5e451]: Moderate
+    - option "3 Major" [ref=f5e452]:
+      - generic [ref=f5e455]:
+        - generic [ref=f5e456]: "3"
+        - generic [ref=f5e457]: Major

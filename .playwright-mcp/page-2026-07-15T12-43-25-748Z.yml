@@ -1,0 +1,25 @@
+- generic [active] [ref=f8e1]:
+  - generic [ref=f8e3]:
+    - generic [ref=f8e4]:
+      - generic [ref=f8e8]: BetterThanSpreadsheets
+      - paragraph [ref=f8e9]: Enterprise GRC Platform
+    - generic [ref=f8e10]:
+      - heading "Sign in to your account" [level=1] [ref=f8e11]
+      - paragraph [ref=f8e12]: Enter your credentials to access the platform.
+      - generic [ref=f8e13]:
+        - generic [ref=f8e14]:
+          - generic [ref=f8e15]: Email address
+          - textbox "Email address" [ref=f8e20]:
+            - /placeholder: user@example.com
+        - generic [ref=f8e21]:
+          - generic [ref=f8e22]: Password
+          - textbox "Password" [ref=f8e27]:
+            - /placeholder: Enter your password
+        - button "Sign in" [ref=f8e28]
+      - generic [ref=f8e29]:
+        - link "Forgot your password?" [ref=f8e30] [cursor=pointer]:
+          - /url: /forgot-password
+        - paragraph [ref=f8e31]: Don't have an account? Contact your Organization Administrator
+    - paragraph [ref=f8e35]: Your password is securely hashed with bcrypt. Sessions expire after 24 hours of inactivity.
+  - region "Notifications alt+T"
+  - alert [ref=f8e36]

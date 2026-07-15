@@ -1,0 +1,94 @@
+- generic [ref=f21e1]:
+  - generic [ref=f21e2]:
+    - complementary [ref=f21e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f21e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f21e8]:
+          - generic [ref=f21e9]: BetterThanSpreadsheets
+          - generic [ref=f21e10]: GRC Platform
+      - generic [ref=f21e135]:
+        - combobox "Switch company" [ref=f21e141] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f21e142]
+      - navigation [ref=f21e11]:
+        - link "Home" [ref=f21e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f21e18]
+        - button "Governance" [ref=f21e145]
+        - generic [ref=f21e26]:
+          - button "Assessments" [ref=f21e27]
+          - generic [ref=f21e35]:
+            - link "Overview" [ref=f21e37] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f21e41] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f21e46] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f21e50] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f21e54] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f21e58] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f21e62]
+        - button "Compliance" [ref=f21e70]
+        - button "Third Party" [ref=f21e78]
+        - button "Business Impact" [ref=f21e88]
+        - button "Administration" [ref=f21e153]
+        - button "Help" [ref=f21e96]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f21e163] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f21e164]: A
+        - generic [ref=f21e165]:
+          - paragraph [ref=f21e166]: Alice Admin
+          - paragraph [ref=f21e167]: ADMINISTRATOR
+    - generic [ref=f21e104]:
+      - banner [ref=f21e105]:
+        - navigation "Breadcrumb" [ref=f21e106]:
+          - list [ref=f21e107]:
+            - listitem [ref=f21e108]:
+              - link "Home" [ref=f21e109] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f21e114]:
+              - link "Compliance" [ref=f21e117] [cursor=pointer]:
+                - /url: /compliance/assessments
+            - listitem [ref=f21e119]:
+              - link "Assessments" [ref=f21e122] [cursor=pointer]:
+                - /url: /compliance/assessments
+            - listitem [ref=f21e124]:
+              - generic [ref=f21e127]: COMP-2026-0002
+        - generic [ref=f21e128]:
+          - button [ref=f21e129]
+          - generic [ref=f21e168]:
+            - generic [ref=f21e169]: admin@acme-corp.com
+            - button "Sign Out" [ref=f21e170]
+      - main [ref=f21e130]:
+        - generic [ref=f21e131]:
+          - button "Back to Assessments" [ref=f21e173]
+          - tablist [ref=f21e174]:
+            - navigation [ref=f21e175]:
+              - tab "Executive Summary" [ref=f21e176]
+              - tab "Overview" [ref=f21e180]
+              - tab "Schedule" [ref=f21e185]
+              - tab "Stakeholders" [ref=f21e189]
+              - tab "Controls" [ref=f21e196]
+              - tab "Findings" [ref=f21e200]
+              - tab "Risks" [ref=f21e211]
+              - tab "Evidence" [ref=f21e215]
+              - tab "Exploitation Pathways" [active] [selected] [ref=f21e219]
+              - tab "Action Plans" [ref=f21e226]
+          - tabpanel [ref=f21e231]:
+            - generic [ref=f21e2297]:
+              - paragraph [ref=f21e2303]: Exploitation pathways
+              - paragraph [ref=f21e2304]: Chain findings into MITRE ATT&CK kill chains for this assessment. Select a pathway to view and edit its full narrative.
+              - generic [ref=f21e2305]:
+                - button "New pathway" [ref=f21e2306]
+                - combobox [ref=f21e2308]:
+                  - generic: Link existing pathway…
+              - generic [ref=f21e2311]: Create your first exploitation pathway to start mapping a kill chain.
+  - region "Notifications alt+T"
+  - alert [ref=f21e134]

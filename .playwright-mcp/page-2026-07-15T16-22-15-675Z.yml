@@ -1,0 +1,44 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]:
+    - complementary [ref=f1e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f1e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e8]:
+          - generic [ref=f1e9]: BetterThanSpreadsheets
+          - generic [ref=f1e10]: GRC Platform
+      - navigation [ref=f1e11]:
+        - link "Home" [ref=f1e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f1e18]
+        - button "Assessments" [ref=f1e27]
+        - generic [ref=f1e35]:
+          - button "Risk" [ref=f1e36]
+          - generic [ref=f1e43]:
+            - link "Risk Dashboard" [ref=f1e45] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f1e49] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f1e53] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f1e57] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f1e61]
+        - button "Third Party" [ref=f1e69]
+        - button "Business Impact" [ref=f1e79]
+        - button "Help" [ref=f1e87]
+    - generic [ref=f1e95]:
+      - banner [ref=f1e96]:
+        - navigation "Breadcrumb" [ref=f1e97]:
+          - list [ref=f1e98]:
+            - listitem [ref=f1e99]:
+              - link "Home" [ref=f1e100] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f1e105]:
+              - link "Exploitation Pathways" [ref=f1e108] [cursor=pointer]:
+                - /url: /admin/pathways
+            - listitem [ref=f1e110]:
+              - generic [ref=f1e113]: Pathway
+        - button [ref=f1e115]
+      - main [ref=f1e116]
+  - region "Notifications alt+T"
+  - alert [ref=f1e120]

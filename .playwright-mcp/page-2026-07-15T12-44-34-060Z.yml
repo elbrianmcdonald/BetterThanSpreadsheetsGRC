@@ -1,0 +1,129 @@
+- generic [active] [ref=f9e1]:
+  - generic [ref=f9e2]:
+    - complementary [ref=f9e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f9e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f9e8]:
+          - generic [ref=f9e9]: BetterThanSpreadsheets
+          - generic [ref=f9e10]: GRC Platform
+      - generic [ref=f9e114]:
+        - combobox "Switch company" [ref=f9e120] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f9e121]
+      - navigation [ref=f9e11]:
+        - link "Home" [ref=f9e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f9e18]
+        - button "Governance" [ref=f9e124]
+        - button "Assessments" [ref=f9e27]
+        - button "Risk" [ref=f9e36]
+        - button "Compliance" [ref=f9e44]
+        - button "Third Party" [ref=f9e52]
+        - button "Business Impact" [ref=f9e62]
+        - generic [ref=f9e131]:
+          - button "Administration" [ref=f9e132]
+          - generic [ref=f9e142]:
+            - link "Evidence" [ref=f9e144] [cursor=pointer]:
+              - /url: /admin/evidence
+            - link "User Management" [ref=f9e148] [cursor=pointer]:
+              - /url: /admin/users
+            - generic [ref=f9e151]:
+              - generic [ref=f9e152]: Platform
+              - link "Companies" [ref=f9e153] [cursor=pointer]:
+                - /url: /admin/companies
+            - link "Business Units" [ref=f9e157] [cursor=pointer]:
+              - /url: /admin/business-units
+            - link "Risk Matrices" [ref=f9e161] [cursor=pointer]:
+              - /url: /admin/risk-matrices
+            - link "RA Templates" [ref=f9e165] [cursor=pointer]:
+              - /url: /admin/risk-assessment-templates
+            - link "Backups" [ref=f9e169] [cursor=pointer]:
+              - /url: /admin/backups
+            - generic [ref=f9e172]:
+              - generic [ref=f9e173]: Data
+              - link "Mappings" [ref=f9e174] [cursor=pointer]:
+                - /url: /admin/mappings
+            - link "MITRE ATT&CK" [ref=f9e178] [cursor=pointer]:
+              - /url: /mitre/tactics
+            - link "Exploitation Pathways" [ref=f9e182] [cursor=pointer]:
+              - /url: /admin/pathways
+        - button "Help" [ref=f9e70]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f9e186] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f9e187]: A
+        - generic [ref=f9e188]:
+          - paragraph [ref=f9e189]: Alice Admin
+          - paragraph [ref=f9e190]: ADMINISTRATOR
+    - generic [ref=f9e78]:
+      - banner [ref=f9e79]:
+        - navigation "Breadcrumb" [ref=f9e80]:
+          - list [ref=f9e81]:
+            - listitem [ref=f9e82]:
+              - link "Home" [ref=f9e83] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f9e88]:
+              - generic [ref=f9e91]: Administration
+            - listitem [ref=f9e92]:
+              - generic [ref=f9e95]: Exploitation Pathways
+        - generic [ref=f9e96]:
+          - button [ref=f9e97]
+          - generic [ref=f9e191]:
+            - generic [ref=f9e192]: admin@acme-corp.com
+            - button "Sign Out" [ref=f9e193]
+      - main [ref=f9e98]:
+        - generic [ref=f9e99]:
+          - generic [ref=f9e100]:
+            - paragraph [ref=f9e101]: ADMINISTRATION
+            - heading "Exploitation Pathways" [level=1] [ref=f9e102]
+            - paragraph [ref=f9e107]: Your library of attack paths (MITRE ATT&CK kill chains). Create pathways here, then select them onto assessments and tag them on findings and risks. Editing a pathway updates it everywhere it is linked.
+          - button "New pathway" [ref=f9e109]
+        - table [ref=f9e197]:
+          - rowgroup [ref=f9e198]:
+            - row [ref=f9e199]:
+              - columnheader "Name" [ref=f9e200]
+              - columnheader "Steps" [ref=f9e201]
+              - columnheader "Assessments" [ref=f9e202]
+              - columnheader "Linked items" [ref=f9e203]
+              - columnheader "Updated" [ref=f9e204]
+              - columnheader [ref=f9e205]
+          - rowgroup [ref=f9e206]:
+            - row [ref=f9e247]:
+              - cell "Playwright Verify Pathway Created via automated verification" [ref=f9e248]:
+                - generic [ref=f9e249]: Playwright Verify Pathway
+                - generic [ref=f9e250]: Created via automated verification
+              - cell "0" [ref=f9e251]
+              - cell "0" [ref=f9e252]
+              - cell "0 findings 0 risks" [ref=f9e253]:
+                - generic [ref=f9e254]:
+                  - generic [ref=f9e255]: 0 findings
+                  - generic [ref=f9e256]: 0 risks
+              - cell "7/15/2026" [ref=f9e257]
+              - cell [ref=f9e258]:
+                - generic [ref=f9e259]:
+                  - link "Open pathway" [ref=f9e260] [cursor=pointer]:
+                    - /url: /deliverables/pathway/cmrm2o00v000001o17jf867zu
+                  - button "Edit" [ref=f9e261]
+                  - button "Delete" [ref=f9e262]
+            - row [ref=f9e207]:
+              - cell "Ransomware Data-Exfiltration Chain Plausible with current gaps" [ref=f9e208]:
+                - generic [ref=f9e209]: Ransomware Data-Exfiltration Chain
+                - generic [ref=f9e210]: Plausible with current gaps
+              - cell "4" [ref=f9e211]
+              - cell "0" [ref=f9e212]
+              - cell "0 findings 0 risks" [ref=f9e213]:
+                - generic [ref=f9e214]:
+                  - generic [ref=f9e215]: 0 findings
+                  - generic [ref=f9e216]: 0 risks
+              - cell "7/13/2026" [ref=f9e217]
+              - cell [ref=f9e218]:
+                - generic [ref=f9e219]:
+                  - link "Open pathway" [ref=f9e220] [cursor=pointer]:
+                    - /url: /deliverables/pathway/demo-ra-pathway-1
+                  - button "Edit" [ref=f9e221]
+                  - button "Delete" [ref=f9e222]
+  - region "Notifications alt+T"
+  - alert [ref=f9e113]

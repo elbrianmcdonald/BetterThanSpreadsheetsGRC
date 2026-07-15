@@ -1,0 +1,43 @@
+- generic [active] [ref=f13e1]:
+  - generic [ref=f13e2]:
+    - complementary [ref=f13e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f13e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f13e8]:
+          - generic [ref=f13e9]: BetterThanSpreadsheets
+          - generic [ref=f13e10]: GRC Platform
+      - navigation [ref=f13e11]:
+        - link "Home" [ref=f13e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f13e18]
+        - button "Assessments" [ref=f13e27]
+        - generic [ref=f13e35]:
+          - button "Risk" [ref=f13e36]
+          - generic [ref=f13e43]:
+            - link "Risk Dashboard" [ref=f13e45] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f13e49] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f13e54] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f13e58] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f13e62]
+        - button "Third Party" [ref=f13e70]
+        - button "Business Impact" [ref=f13e80]
+        - button "Help" [ref=f13e88]
+    - generic [ref=f13e96]:
+      - banner [ref=f13e97]:
+        - navigation "Breadcrumb" [ref=f13e98]:
+          - list [ref=f13e99]:
+            - listitem [ref=f13e100]:
+              - link "Home" [ref=f13e101] [cursor=pointer]:
+                - /url: /
+        - button [ref=f13e107]
+      - main [ref=f13e108]:
+        - generic [ref=f13e111]:
+          - paragraph [ref=f13e112]: RISK
+          - heading "Enterprise Risks" [level=1] [ref=f13e113]
+          - paragraph [ref=f13e118]: Top-level rollup risks. Each individual risk can be aligned to one of these.
+  - region "Notifications alt+T"
+  - alert [ref=f13e122]

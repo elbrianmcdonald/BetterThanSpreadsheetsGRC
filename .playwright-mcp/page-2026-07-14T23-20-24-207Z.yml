@@ -1,0 +1,162 @@
+- generic [active] [ref=f3e1]:
+  - generic [ref=f3e157]:
+    - complementary [ref=f3e158]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f3e159] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f3e163]:
+          - generic [ref=f3e164]: BetterThanSpreadsheets
+          - generic [ref=f3e165]: GRC Platform
+      - generic [ref=f3e166]:
+        - combobox "Switch company" [ref=f3e172] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f3e173]
+      - navigation [ref=f3e175]:
+        - link "Home" [ref=f3e176] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f3e182]
+        - button "Governance" [ref=f3e191]
+        - generic [ref=f3e198]:
+          - button "Assessments" [ref=f3e199]
+          - generic [ref=f3e207]:
+            - link "Overview" [ref=f3e209] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f3e213] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f3e217] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f3e221] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f3e225] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f3e230] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f3e234]
+        - button "Compliance" [ref=f3e242]
+        - button "Third Party" [ref=f3e250]
+        - button "Business Impact" [ref=f3e260]
+        - button "Administration" [ref=f3e268]
+        - button "Help" [ref=f3e279]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f3e287] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f3e288]: A
+        - generic [ref=f3e289]:
+          - paragraph [ref=f3e290]: Alice Admin
+          - paragraph [ref=f3e291]: ADMINISTRATOR
+    - generic [ref=f3e292]:
+      - banner [ref=f3e293]:
+        - navigation "Breadcrumb" [ref=f3e294]:
+          - list [ref=f3e295]:
+            - listitem [ref=f3e296]:
+              - link "Home" [ref=f3e297] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f3e302]:
+              - link "Maturity" [ref=f3e305] [cursor=pointer]:
+                - /url: /maturity/dashboard
+            - listitem [ref=f3e307]:
+              - generic [ref=f3e310]: Dashboard
+        - generic [ref=f3e311]:
+          - button [ref=f3e312]
+          - generic [ref=f3e313]:
+            - generic [ref=f3e314]: admin@acme-corp.com
+            - button "Sign Out" [ref=f3e315]
+      - main [ref=f3e318]:
+        - generic [ref=f3e320]:
+          - paragraph [ref=f3e321]: GOVERNANCE
+          - heading "Maturity Dashboard" [level=1] [ref=f3e322]
+          - paragraph [ref=f3e328]: Track and improve organizational maturity across security frameworks
+        - generic [ref=f3e329]:
+          - generic [ref=f3e330]:
+            - generic [ref=f3e331]:
+              - generic [ref=f3e332]: Maturity Overview
+              - generic [ref=f3e337]:
+                - combobox [ref=f3e338]:
+                  - generic: NIST CSF 2.0
+                - combobox [ref=f3e341]:
+                  - generic [ref=f3e342]: All Business Units
+                - button "New Assessment" [ref=f3e349]
+            - generic [ref=f3e517]: "Last updated: Jul 14, 2026, 6:20 PM"
+          - generic [ref=f3e351]:
+            - generic [ref=f3e352]:
+              - link "— Maturity Level" [ref=f3e353] [cursor=pointer]:
+                - /url: /maturity/cmrl9xu7u000401pa4butgo8f
+                - generic [ref=f3e354]: —
+                - generic [ref=f3e355]: Maturity Level
+              - link "0 Domains Scored" [ref=f3e356] [cursor=pointer]:
+                - /url: /maturity/cmrl9xu7u000401pa4butgo8f?filter=scored
+                - generic [ref=f3e362]:
+                  - generic [ref=f3e363]: "0"
+                  - generic [ref=f3e364]: Domains Scored
+              - link "0 Total Domains" [ref=f3e365] [cursor=pointer]:
+                - /url: /maturity/cmrl9xu7u000401pa4butgo8f
+                - generic [ref=f3e370]:
+                  - generic [ref=f3e371]: "0"
+                  - generic [ref=f3e372]: Total Domains
+              - link "0 Below Target" [ref=f3e373] [cursor=pointer]:
+                - /url: /maturity/cmrl9xu7u000401pa4butgo8f?filter=below-target
+                - generic [ref=f3e378]:
+                  - generic [ref=f3e379]: "0"
+                  - generic [ref=f3e380]: Below Target
+            - generic [ref=f3e382]:
+              - generic [ref=f3e383]: Scoring Progress
+              - generic [ref=f3e384]: 0 / 0 domains
+            - generic [ref=f3e386]:
+              - link "View Assessment" [ref=f3e518] [cursor=pointer]:
+                - /url: /maturity/cmrl9xu7u000401pa4butgo8f
+              - button "Start New Assessment" [ref=f3e387]
+        - generic [ref=f3e388]:
+          - generic [ref=f3e389]:
+            - heading "Maturity Assessments" [level=2] [ref=f3e394]
+            - button "New Assessment" [ref=f3e396]
+          - generic [ref=f3e397]:
+            - tablist [ref=f3e398]:
+              - tab "All (1)" [selected] [ref=f3e519]:
+                - text: All
+                - generic [ref=f3e400]: (1)
+              - tab "In Progress (1)" [ref=f3e520]:
+                - text: In Progress
+                - generic [ref=f3e405]: (1)
+              - tab "Completed (0)" [ref=f3e406]:
+                - text: Completed
+                - generic [ref=f3e410]: (0)
+            - tabpanel "All (1)" [ref=f3e521]:
+              - generic [ref=f3e523]:
+                - generic [ref=f3e525]:
+                  - generic [ref=f3e526]:
+                    - generic [ref=f3e527]:
+                      - generic [ref=f3e528]: NIST CSF 2.0
+                      - generic [ref=f3e529]: Draft
+                    - generic [ref=f3e530]: Maturity Verify Run 8c9f
+                    - generic [ref=f3e531]: MAT-2026-0001
+                  - generic [ref=f3e532]:
+                    - generic [ref=f3e533]: —
+                    - generic [ref=f3e534]: Level
+                - generic [ref=f3e535]:
+                  - generic [ref=f3e536]:
+                    - generic [ref=f3e537]:
+                      - generic [ref=f3e538]: Progress
+                      - generic [ref=f3e539]: 6 domains scored
+                    - progressbar [ref=f3e540]
+                  - generic [ref=f3e542]:
+                    - generic [ref=f3e543]:
+                      - generic [ref=f3e544]: —
+                      - generic [ref=f3e545]: Current
+                    - generic [ref=f3e546]:
+                      - generic [ref=f3e547]: —
+                      - generic [ref=f3e548]: Target
+                    - generic [ref=f3e549]:
+                      - generic [ref=f3e550]: "6"
+                      - generic [ref=f3e551]: Scored
+                  - generic [ref=f3e552]:
+                    - generic [ref=f3e553]: Alice Admin
+                    - generic [ref=f3e558]:
+                      - generic [ref=f3e559]: Function
+                      - generic [ref=f3e560]: Jul 14, 2026
+                  - link [ref=f3e561] [cursor=pointer]:
+                    - /url: /maturity/cmrl9xu7u000401pa4butgo8f
+                    - button "View Assessment" [ref=f3e562]
+  - region "Notifications alt+T"
+  - alert [ref=f3e156]

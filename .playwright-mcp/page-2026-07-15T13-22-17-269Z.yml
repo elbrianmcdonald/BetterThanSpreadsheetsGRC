@@ -1,0 +1,114 @@
+- generic [active] [ref=f15e1]:
+  - generic [ref=f15e2]:
+    - complementary [ref=f15e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f15e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f15e8]:
+          - generic [ref=f15e9]: BetterThanSpreadsheets
+          - generic [ref=f15e10]: GRC Platform
+      - navigation [ref=f15e11]:
+        - link "Home" [ref=f15e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f15e18]
+        - button "Assessments" [ref=f15e27]
+        - generic [ref=f15e35]:
+          - button "Risk" [ref=f15e36]
+          - generic [ref=f15e43]:
+            - link "Risk Dashboard" [ref=f15e45] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f15e49] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f15e53] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f15e58] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f15e62]
+        - button "Third Party" [ref=f15e70]
+        - button "Business Impact" [ref=f15e80]
+        - button "Help" [ref=f15e88]
+    - generic [ref=f15e96]:
+      - banner [ref=f15e97]:
+        - navigation "Breadcrumb" [ref=f15e98]:
+          - list [ref=f15e99]:
+            - listitem [ref=f15e100]:
+              - link "Home" [ref=f15e101] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f15e106]:
+              - link "Risks" [ref=f15e109] [cursor=pointer]:
+                - /url: /risks
+            - listitem [ref=f15e111]:
+              - generic [ref=f15e114]: New Risk
+        - button [ref=f15e116]
+      - main [ref=f15e117]:
+        - generic [ref=f15e118]:
+          - generic [ref=f15e119]:
+            - heading "Create Risk" [level=1] [ref=f15e120]
+            - paragraph [ref=f15e121]: Define the risk and how it's scored — from linked findings, a manual judgment, or both.
+          - generic [ref=f15e122]:
+            - generic [ref=f15e123]:
+              - generic [ref=f15e124]:
+                - text: Name
+                - generic [ref=f15e125]: "*"
+              - textbox "Name *" [ref=f15e126]:
+                - /placeholder: Short, specific risk name...
+            - generic [ref=f15e127]:
+              - generic [ref=f15e128]:
+                - text: Description
+                - generic [ref=f15e129]: "*"
+              - textbox "Description *" [ref=f15e130]:
+                - /placeholder: What could happen, why it matters, and the potential consequences...
+            - generic [ref=f15e131]:
+              - generic [ref=f15e132]:
+                - generic [ref=f15e133]: Owner
+                - combobox [ref=f15e134]: Select person...
+                - paragraph [ref=f15e136]: Accountable for this risk.
+              - generic [ref=f15e137]:
+                - generic [ref=f15e138]: Business Unit
+                - tree "Business unit selection" [ref=f15e139]:
+                  - textbox "Search business units" [ref=f15e145]:
+                    - /placeholder: Select or create business unit...
+                  - group [ref=f15e146]
+              - generic [ref=f15e151]:
+                - generic [ref=f15e152]: Risk Category
+                - combobox "Risk Category" [ref=f15e153]
+                - combobox [ref=f15e156]
+                - paragraph [ref=f15e157]: Aligned to the taxonomy managed in Administration → Taxonomy.
+              - generic [ref=f15e158]:
+                - generic [ref=f15e159]: Enterprise Risk
+                - combobox "Enterprise Risk" [ref=f15e160]
+                - combobox [ref=f15e163]
+                - paragraph [ref=f15e164]: Optional roll-up parent for executive reporting.
+              - generic [ref=f15e165]:
+                - generic [ref=f15e166]:
+                  - text: Risk Matrix
+                  - generic [ref=f15e167]: "*"
+                - generic [ref=f15e168]: Loading risk matrices...
+                - paragraph [ref=f15e172]: Locked to this risk at creation.
+              - generic [ref=f15e173]:
+                - generic [ref=f15e174]: Review interval (days)
+                - spinbutton "Review interval (days)" [ref=f15e175]
+                - paragraph [ref=f15e176]: Leave empty for no scheduled review.
+            - generic [ref=f15e177]:
+              - generic [ref=f15e178]:
+                - generic [ref=f15e179]: Score at creation
+                - paragraph [ref=f15e180]: "A risk is never unscored: link the findings that evidence it (the score derives from the highest open finding) and/or set a manual judgment score. Both can be changed later."
+              - generic [ref=f15e181]:
+                - generic [ref=f15e182]:
+                  - generic [ref=f15e183]: Linked Findings
+                  - textbox "Search open findings..." [ref=f15e188]
+                  - paragraph [ref=f15e190]: No open findings available.
+                  - paragraph [ref=f15e191]: No findings linked yet.
+                - generic [ref=f15e192]:
+                  - checkbox "Set a manual score (overrides the calculated rollup)" [ref=f15e193]
+                  - generic [ref=f15e194] [cursor=pointer]: Set a manual score (overrides the calculated rollup)
+            - generic [ref=f15e196]:
+              - checkbox "Link to exploitation pathways" [ref=f15e197]
+              - checkbox
+              - generic [ref=f15e198]:
+                - generic [ref=f15e199] [cursor=pointer]: Link to exploitation pathways
+                - paragraph [ref=f15e200]: Optionally align this to one or more attack paths from the library. Creating a new one adds it to the library.
+            - generic [ref=f15e201]:
+              - button "Cancel" [ref=f15e202]
+              - button "Create Risk" [ref=f15e203]
+  - region "Notifications alt+T"
+  - alert [ref=f15e204]

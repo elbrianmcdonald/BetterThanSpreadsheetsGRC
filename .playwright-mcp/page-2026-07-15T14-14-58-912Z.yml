@@ -1,0 +1,176 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+        - generic:
+          - button:
+            - generic: Risk
+          - generic:
+            - generic:
+              - link:
+                - /url: /risks/dashboard
+                - generic: Risk Dashboard
+            - generic:
+              - link:
+                - /url: /risks/enterprise
+                - generic: Enterprise Risks
+            - generic:
+              - link:
+                - /url: /risks
+                - generic: Risk Register
+            - generic:
+              - link:
+                - /url: /findings
+                - generic: Findings Register
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - link:
+                - /url: /admin/pathways
+                - generic: Exploitation Pathways
+            - listitem:
+              - generic: Cloud creds to data exfiltrati...
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - generic:
+            - paragraph: Exploitation Pathway
+            - heading [level=1]:
+              - text: Cloud creds to data exfiltration
+              - button
+            - paragraph: Individually, these findings rate across severities. Chained together they form a single rehearsable path.
+          - button:
+            - generic: Overall description
+            - generic: Add an overall description and blast radius for this exploitation pathway.
+          - generic:
+            - complementary:
+              - generic:
+                - heading [level=3]: Findings in the pathway
+                - generic: 0 linked
+              - paragraph: No findings linked to this pathway yet.
+              - generic:
+                - paragraph:
+                  - text: Breaking
+                  - strong: any single link
+                  - text: "collapses the pathway. Fastest break:"
+                - paragraph: —
+            - generic:
+              - generic:
+                - generic:
+                  - paragraph: MITRE ATT&CK® · Technique flow
+                  - heading [level=2]: How the chain executes
+                - generic:
+                  - tablist:
+                    - tab: Kill Chain
+                    - tab: ATT&CK Matrix
+                    - tab [selected]: Attack Narrative
+                  - button [expanded]: Close
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: Add finding
+                    - combobox [expanded]:
+                      - generic: Select a finding…
+                  - generic:
+                    - generic: Add risk
+                    - combobox:
+                      - generic: Select a risk…
+                  - generic:
+                    - generic:
+                      - text: Linked findings & risks
+                      - generic: "*"
+                    - paragraph: Add at least one finding or risk to this step.
+                  - generic:
+                    - generic:
+                      - text: MITRE ATT&CK technique
+                      - generic: "*"
+                    - button: Search MITRE ATT&CK…
+                  - generic:
+                    - generic: Note (optional)
+                    - textbox:
+                      - /placeholder: How this step compounds the chain…
+                  - generic:
+                    - button: Cancel
+                    - button [disabled]: Add step
+              - paragraph: No steps in this pathway yet.
+              - generic:
+                - generic: Sequence step
+                - generic:
+                  - generic: T0000
+                  - text: ATT&CK technique ID
+                - generic: Hover any element to trace it across both panels.
+  - region "Notifications alt+T"
+  - alert: BetterThanSpreadsheetsGRC
+  - listbox [ref=f23e491]:
+    - 'option "FND-2026-0108 · Concern: no encryption at rest VERIFY-TPRM-8c9f" [active] [ref=f23e492]'
+    - option "FND-2026-0107 · GV.OC-01 organizational mission VERIFY-MATURITY-8c9f" [ref=f23e495]
+    - option "FND-2026-0106 · A.5.18 Access Rights VERIFY-COMPLIANCE-8c9f" [ref=f23e498]
+    - option "FND-2026-0105 · No Post-Incident Lessons-Learned Feedback Loop" [ref=f23e501]
+    - option "FND-2026-0104 · Tier-2 Disaster-Recovery Runbooks Incomplete" [ref=f23e504]
+    - option "FND-2026-0103 · On-Prem AD Security Logs Not Forwarded to SIEM" [ref=f23e507]
+    - option "FND-2026-0102 · Incomplete Vulnerability Scan Coverage" [ref=f23e510]
+    - option "FND-2026-0101 · Production RDS Instances Unencrypted at Rest" [ref=f23e513]
+    - option "FND-2026-0012 · Unsupported Windows Server 2012 in Production" [ref=f23e516]
+    - option "FND-2026-0011 · Excessive Mailbox Delegation in O365" [ref=f23e519]
+    - option "FND-2026-0010 · Backups Reachable from Production Network" [ref=f23e522]
+    - option "FND-2026-0009 · RDP Exposed Directly to the Internet" [ref=f23e525]
+    - option "FND-2026-0008 · No Endpoint Detection & Response on Servers" [ref=f23e528]
+    - option "FND-2026-0007 · Hardcoded Secrets in Source Repository" [ref=f23e531]
+    - option "FND-2026-0006 · Missing DMARC Policy on Corporate Email Domain" [ref=f23e534]
+    - option "FND-2026-0005 · Stale Service Accounts with Elevated Privileges" [ref=f23e537]
+    - option "FND-2026-0004 · Unencrypted Database Backups in Secondary Region" [ref=f23e540]
+    - option "FND-2026-0003 · Excessive S3 Bucket Permissions in Production" [ref=f23e543]
+    - option "FND-2026-0002 · Missing WAF on Public-Facing API Gateway" [ref=f23e546]
+    - option "FND-2026-0001 · Outdated TLS 1.0 Configuration on Edge Servers" [ref=f23e549]

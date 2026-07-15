@@ -1,0 +1,48 @@
+- generic [active] [ref=f20e1]:
+  - generic [ref=f20e2]:
+    - complementary [ref=f20e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f20e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f20e8]:
+          - generic [ref=f20e9]: BetterThanSpreadsheets
+          - generic [ref=f20e10]: GRC Platform
+      - navigation [ref=f20e11]:
+        - link "Home" [ref=f20e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f20e18]
+        - generic [ref=f20e26]:
+          - button "Assessments" [ref=f20e27]
+          - generic [ref=f20e35]:
+            - link "Overview" [ref=f20e37] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f20e41] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f20e46] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f20e50] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f20e54] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f20e58] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f20e62]
+        - button "Compliance" [ref=f20e70]
+        - button "Third Party" [ref=f20e78]
+        - button "Business Impact" [ref=f20e88]
+        - button "Help" [ref=f20e96]
+    - generic [ref=f20e104]:
+      - banner [ref=f20e105]:
+        - navigation "Breadcrumb" [ref=f20e106]:
+          - list [ref=f20e107]:
+            - listitem [ref=f20e108]:
+              - link "Home" [ref=f20e109] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f20e114]:
+              - generic [ref=f20e117]: Compliance
+            - listitem [ref=f20e118]:
+              - generic [ref=f20e121]: Assessments
+        - button [ref=f20e123]
+      - main [ref=f20e124]:
+        - paragraph [ref=f20e129]: Loading compliance data...
+  - region "Notifications alt+T"
+  - alert [ref=f20e130]

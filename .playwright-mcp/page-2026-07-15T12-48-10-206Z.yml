@@ -1,0 +1,232 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+        - generic:
+          - button:
+            - generic: Risk
+          - generic:
+            - generic:
+              - link:
+                - /url: /risks/dashboard
+                - generic: Risk Dashboard
+            - generic:
+              - link:
+                - /url: /risks/enterprise
+                - generic: Enterprise Risks
+            - generic:
+              - link:
+                - /url: /risks
+                - generic: Risk Register
+            - generic:
+              - link:
+                - /url: /findings
+                - generic: Findings Register
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - generic:
+            - link:
+              - /url: /risks/enterprise
+              - text: Back to Enterprise Risks
+          - generic:
+            - generic:
+              - heading [level=1]: Data Breach / Privacy Incident
+              - generic:
+                - generic: Medium
+                - generic: "Source: Calculated from children"
+            - generic:
+              - button: Edit
+              - button: Record Review
+              - button [expanded]: Delete
+          - generic:
+            - generic: Overview
+            - generic:
+              - generic:
+                - paragraph: Owner
+                - paragraph: —
+              - generic:
+                - paragraph: Effective Score
+                - paragraph:
+                  - text: "6.00"
+                  - generic: Medium
+              - generic:
+                - paragraph: Description
+                - paragraph: Unauthorized disclosure or loss of sensitive, regulated, or personal data.
+              - generic:
+                - paragraph: Risk Matrix
+                - paragraph: Standard 3×3 Risk Matrix
+              - generic:
+                - paragraph: Review cadence
+                - paragraph: No schedule
+          - generic:
+            - generic:
+              - generic: Risk Heatmap
+              - generic: Tagged risks plotted on Standard 3×3 Risk Matrix
+            - generic:
+              - generic:
+                - generic:
+                  - img:
+                    - generic:
+                      - generic: "3"
+                      - button:
+                        - generic: "1"
+                    - generic: "6"
+                    - generic: "9"
+                    - generic:
+                      - generic: "2"
+                      - button:
+                        - generic: "2"
+                    - generic: "4"
+                    - generic: "6"
+                    - generic: "1"
+                    - generic: "2"
+                    - generic: "3"
+                    - generic: "3"
+                    - generic: "2"
+                    - generic: "1"
+                    - generic: "1"
+                    - generic: "2"
+                    - generic: "3"
+                  - generic: Likelihood → · Impact ↑
+                - generic:
+                  - generic:
+                    - heading [level=3]: Ranked by risk score
+                    - generic: L × I
+                  - generic:
+                    - button:
+                      - generic: "3"
+                      - generic: RISK-2026-0004
+                      - generic: Unencrypted Disaster-Recovery Backups
+                      - generic: Low
+                    - button:
+                      - generic: "2"
+                      - generic: RISK-2026-0005
+                      - generic: Over-Permissioned Production S3 Buckets
+                      - generic: Low
+          - generic:
+            - generic:
+              - generic: Tagged Risks (2)
+              - generic:
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader: Risk
+                        - columnheader: Severity
+                        - columnheader: Score
+                    - rowgroup:
+                      - row:
+                        - cell:
+                          - link:
+                            - /url: /risks/demo-risk-0005
+                            - text: RISK-2026-0005
+                        - cell:
+                          - generic: MEDIUM
+                        - cell: Medium
+                      - row:
+                        - cell:
+                          - link:
+                            - /url: /risks/demo-risk-0004
+                            - text: RISK-2026-0004
+                        - cell:
+                          - generic: MEDIUM
+                        - cell: Medium
+            - generic:
+              - generic: Tagged Findings (2)
+              - generic:
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader: Finding
+                        - columnheader: Severity
+                        - columnheader: Status
+                    - rowgroup:
+                      - row:
+                        - cell:
+                          - link:
+                            - /url: /findings/demo-find-004
+                            - text: FND-2026-0004
+                        - cell:
+                          - generic: Medium
+                        - cell: NEW
+                      - row:
+                        - cell:
+                          - link:
+                            - /url: /findings/demo-find-003
+                            - text: FND-2026-0003
+                        - cell:
+                          - generic: Medium
+                        - cell: TRIAGED
+          - generic:
+            - generic:
+              - generic: Severity Trend
+              - generic: "Single snapshot: 6.00 on 7/13/2026"
+            - generic:
+              - generic: Review History
+              - generic:
+                - paragraph: No reviews recorded yet.
+  - region "Notifications alt+T"
+  - alert
+  - dialog [ref=f14e271]:
+    - heading "Delete enterprise risk?" [level=2] [ref=f14e273]
+    - paragraph [ref=f14e274]: This permanently deletes Data Breach / Privacy Incident and its review and trend history. Any risks or findings tagged to it will be untagged (not deleted). This cannot be undone.
+    - generic [ref=f14e275]:
+      - button "Cancel" [active] [ref=f14e276]
+      - button "Delete" [ref=f14e277]
+    - button "Close" [ref=f14e278]

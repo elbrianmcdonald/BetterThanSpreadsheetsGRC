@@ -1,0 +1,233 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - complementary [ref=f4e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f4e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f4e8]:
+          - generic [ref=f4e9]: BetterThanSpreadsheets
+          - generic [ref=f4e10]: GRC Platform
+      - generic [ref=f4e150]:
+        - combobox "Switch company" [ref=f4e156] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f4e157]
+      - navigation [ref=f4e11]:
+        - link "Home" [ref=f4e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f4e18]
+        - button "Governance" [ref=f4e27]
+        - button "Assessments" [ref=f4e35]
+        - generic [ref=f4e43]:
+          - button "Risk" [ref=f4e44]
+          - generic [ref=f4e51]:
+            - link "Risk Dashboard" [ref=f4e53] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f4e57] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f4e61] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f4e65] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f4e69]
+        - button "Third Party" [ref=f4e77]
+        - button "Business Impact" [ref=f4e87]
+        - button "Administration" [ref=f4e95]
+        - button "Help" [ref=f4e106]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f4e114] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f4e115]: A
+        - generic [ref=f4e116]:
+          - paragraph [ref=f4e117]: Alice Admin
+          - paragraph [ref=f4e118]: ADMINISTRATOR
+    - generic [ref=f4e119]:
+      - banner [ref=f4e120]:
+        - navigation "Breadcrumb" [ref=f4e121]:
+          - list [ref=f4e122]:
+            - listitem [ref=f4e123]:
+              - link "Home" [ref=f4e124] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f4e129]:
+              - link "Maturity" [ref=f4e132] [cursor=pointer]:
+                - /url: /maturity
+            - listitem [ref=f4e134]:
+              - generic [ref=f4e137]: Maturity Verify Run 8c9f
+        - generic [ref=f4e138]:
+          - button [ref=f4e139]
+          - generic [ref=f4e140]:
+            - generic [ref=f4e141]: admin@acme-corp.com
+            - button "Sign Out" [ref=f4e142]
+      - main [ref=f4e145]:
+        - generic [ref=f4e146]:
+          - button "Back to Assessments" [ref=f4e159]
+          - tablist [ref=f4e160]:
+            - navigation [ref=f4e161]:
+              - tab "Executive Summary" [ref=f4e162]
+              - tab "Assessment" [selected] [ref=f4e166]
+              - tab "Schedule" [ref=f4e172]
+              - tab "Stakeholders" [ref=f4e176]
+              - tab "Evidence" [ref=f4e183]
+              - tab "Action Plans" [ref=f4e187]
+          - generic [ref=f4e394]:
+            - generic [ref=f4e396]:
+              - generic [ref=f4e397]:
+                - generic [ref=f4e398]:
+                  - generic [ref=f4e399]: NIST CSF 2.0
+                  - generic [ref=f4e400]: Draft
+                - generic [ref=f4e401]: Maturity Verify Run 8c9f
+                - generic [ref=f4e402]: MAT-2026-0001 | Function Level | Self-Assessment
+              - generic [ref=f4e403]:
+                - link "Export PDF" [ref=f4e404] [cursor=pointer]:
+                  - /url: /api/maturity/cmrl9xu7u000401pa4butgo8f/pdf
+                - button "Edit" [disabled]
+                - button "Assign" [ref=f4e405]
+                - button "Delete" [ref=f4e406]
+            - generic [ref=f4e408]:
+              - generic [ref=f4e409]:
+                - generic [ref=f4e410]: AA
+                - generic [ref=f4e412]: Alice Admin
+              - generic [ref=f4e413]: Created Jul 14, 2026
+          - generic [ref=f4e417]:
+            - generic [ref=f4e418]:
+              - generic [ref=f4e419]:
+                - heading "Assessment (6 items)" [level=2] [ref=f4e420]
+                - button "Start Assessment" [ref=f4e421]
+              - generic [ref=f4e422]:
+                - generic [ref=f4e423]:
+                  - generic [ref=f4e425] [cursor=pointer]:
+                    - generic [ref=f4e426]:
+                      - generic [ref=f4e429]: GV
+                      - generic [ref=f4e430]: Govern
+                    - generic [ref=f4e431]:
+                      - generic [ref=f4e565]: 0/31 scored
+                      - generic [ref=f4e432]: Not Assessed
+                  - generic [ref=f4e566]:
+                    - paragraph [ref=f4e571]: The organization's cybersecurity risk management strategy, expectations, and policy are established, communicated, and monitored. The GOVERN Function provides outcomes to inform what an organization may do to achieve and prioritize the outcomes of the other five Functions in the context of its mission and stakeholder expectations.
+                    - generic [ref=f4e572]:
+                      - generic [ref=f4e574]:
+                        - generic [ref=f4e575]:
+                          - paragraph [ref=f4e576]: Average Implementation Tier
+                          - paragraph [ref=f4e577]: Based on subcategory scoring
+                        - generic [ref=f4e578]:
+                          - generic [ref=f4e579]: Tier ?
+                          - paragraph [ref=f4e580]: Not Assessed
+                      - generic [ref=f4e582]:
+                        - generic [ref=f4e583]:
+                          - paragraph [ref=f4e584]: Target Tier
+                          - paragraph [ref=f4e585]: Set your target implementation tier
+                        - combobox [ref=f4e586]:
+                          - generic: Not Set
+                    - generic [ref=f4e589]:
+                      - generic [ref=f4e591] [cursor=pointer]:
+                        - generic [ref=f4e592]:
+                          - generic [ref=f4e595]: GV.OC
+                          - generic [ref=f4e596]: Organizational Context
+                        - generic [ref=f4e597]: 0/5
+                      - generic [ref=f4e600] [cursor=pointer]:
+                        - generic [ref=f4e601]:
+                          - generic [ref=f4e604]: GV.RM
+                          - generic [ref=f4e605]: Risk Management Strategy
+                        - generic [ref=f4e606]: 0/7
+                      - generic [ref=f4e609] [cursor=pointer]:
+                        - generic [ref=f4e610]:
+                          - generic [ref=f4e613]: GV.RR
+                          - generic [ref=f4e614]: Roles, Responsibilities, and Authorities
+                        - generic [ref=f4e615]: 0/4
+                      - generic [ref=f4e618] [cursor=pointer]:
+                        - generic [ref=f4e619]:
+                          - generic [ref=f4e622]: GV.PO
+                          - generic [ref=f4e623]: Policy
+                        - generic [ref=f4e624]: 0/2
+                      - generic [ref=f4e627] [cursor=pointer]:
+                        - generic [ref=f4e628]:
+                          - generic [ref=f4e631]: GV.OV
+                          - generic [ref=f4e632]: Oversight
+                        - generic [ref=f4e633]: 0/3
+                      - generic [ref=f4e636] [cursor=pointer]:
+                        - generic [ref=f4e637]:
+                          - generic [ref=f4e640]: GV.SC
+                          - generic [ref=f4e641]: Cybersecurity Supply Chain Risk Management
+                        - generic [ref=f4e642]: 0/10
+                    - generic [ref=f4e648]:
+                      - paragraph [ref=f4e649]: NIST CSF Implementation Tiers
+                      - paragraph [ref=f4e650]: Score each subcategory based on your implementation level. Fully/Largely Implemented counts as achieving the control.
+                - generic [ref=f4e435] [cursor=pointer]:
+                  - generic [ref=f4e436]:
+                    - generic [ref=f4e437]:
+                      - generic [ref=f4e440]: ID
+                      - generic [ref=f4e441]: Identify
+                    - generic [ref=f4e442]: Not Assessed
+                  - paragraph [ref=f4e444]: The organization's current cybersecurity risks are understood. Understanding its assets, suppliers, and related cybersecurity risks enables an organization to prioritize its efforts consistent with its risk management strategy and the mission needs identified under GOVERN.
+                - generic [ref=f4e446] [cursor=pointer]:
+                  - generic [ref=f4e447]:
+                    - generic [ref=f4e448]:
+                      - generic [ref=f4e451]: PR
+                      - generic [ref=f4e452]: Protect
+                    - generic [ref=f4e453]: Not Assessed
+                  - paragraph [ref=f4e455]: Safeguards to manage the organization's cybersecurity risks are used. Once assets and risks are identified, PROTECT supports the ability to secure those assets to prevent or lower the likelihood and impact of adverse cybersecurity events.
+                - generic [ref=f4e457] [cursor=pointer]:
+                  - generic [ref=f4e458]:
+                    - generic [ref=f4e459]:
+                      - generic [ref=f4e462]: DE
+                      - generic [ref=f4e463]: Detect
+                    - generic [ref=f4e464]: Not Assessed
+                  - paragraph [ref=f4e466]: Possible cybersecurity attacks and compromises are found and analyzed. DETECT enables timely discovery and analysis of anomalies, indicators of compromise, and other potentially adverse events that may indicate that cybersecurity attacks and incidents are occurring.
+                - generic [ref=f4e468] [cursor=pointer]:
+                  - generic [ref=f4e469]:
+                    - generic [ref=f4e470]:
+                      - generic [ref=f4e473]: RS
+                      - generic [ref=f4e474]: Respond
+                    - generic [ref=f4e475]: Not Assessed
+                  - paragraph [ref=f4e477]: Actions regarding a detected cybersecurity incident are taken. RESPOND supports the ability to contain the impact of cybersecurity incidents. Outcomes within this Function cover incident management, analysis, mitigation, reporting, and communication.
+                - generic [ref=f4e479] [cursor=pointer]:
+                  - generic [ref=f4e480]:
+                    - generic [ref=f4e481]:
+                      - generic [ref=f4e484]: RC
+                      - generic [ref=f4e485]: Recover
+                    - generic [ref=f4e486]: Not Assessed
+                  - paragraph [ref=f4e488]: Assets and operations affected by a cybersecurity incident are restored. RECOVER supports timely restoration of normal operations to reduce the impact of cybersecurity incidents and enable appropriate communication during recovery efforts.
+            - generic [ref=f4e489]:
+              - generic [ref=f4e490]:
+                - generic [ref=f4e491]: Overall Score
+                - generic [ref=f4e496]:
+                  - generic [ref=f4e497]:
+                    - generic [ref=f4e498]: "?"
+                    - paragraph [ref=f4e499]: Not Assessed
+                    - paragraph [ref=f4e500]: Score domains to calculate
+                  - generic [ref=f4e501]:
+                    - generic [ref=f4e502]:
+                      - generic [ref=f4e503]: Progress
+                      - generic [ref=f4e504]: 0 / 6 domains
+                    - progressbar [ref=f4e505]
+              - generic [ref=f4e507]:
+                - generic [ref=f4e508]: Target Planning
+                - paragraph [ref=f4e515]: No target set
+              - generic [ref=f4e516]:
+                - generic [ref=f4e517]: Actions
+                - generic [ref=f4e519]:
+                  - button "Create Snapshot" [disabled]
+                  - button "Submit for Review" [disabled]
+          - generic [ref=f4e520]:
+            - generic [ref=f4e521]:
+              - generic [ref=f4e522]:
+                - generic [ref=f4e523]: Domain Maturity
+                - generic [ref=f4e528]: Current vs Target levels across domains
+              - generic [ref=f4e531]:
+                - paragraph [ref=f4e536]: No scores yet
+                - paragraph [ref=f4e537]: Score domains to see progress
+            - generic [ref=f4e538]:
+              - generic [ref=f4e539]:
+                - generic [ref=f4e540]: Maturity Trend
+                - generic [ref=f4e544]: Historical maturity levels from snapshots
+              - generic [ref=f4e547]:
+                - paragraph [ref=f4e551]: No trend data yet
+                - paragraph [ref=f4e552]: Create snapshots to track progress
+          - generic [ref=f4e553]:
+            - generic [ref=f4e556]:
+              - generic [ref=f4e557]: Findings from this assessment
+              - generic [ref=f4e560]: Every finding entered via the "Create finding" button on a control / subcategory / practice / activity in this assessment shows up here.
+            - paragraph [ref=f4e562]: No findings entered from this assessment yet. Click the "Finding" button next to any scored item above to capture one.
+  - region "Notifications alt+T"
+  - alert [ref=f4e149]

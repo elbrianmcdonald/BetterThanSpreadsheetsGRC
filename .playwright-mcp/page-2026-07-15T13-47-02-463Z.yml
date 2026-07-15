@@ -1,0 +1,561 @@
+- generic [active] [ref=f22e1]:
+  - generic [ref=f22e342]:
+    - complementary [ref=f22e343]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f22e344] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f22e348]:
+          - generic [ref=f22e349]: BetterThanSpreadsheets
+          - generic [ref=f22e350]: GRC Platform
+      - generic [ref=f22e351]:
+        - combobox "Switch company" [ref=f22e357] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f22e358]
+      - navigation [ref=f22e360]:
+        - link "Home" [ref=f22e361] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f22e367]
+        - button "Governance" [ref=f22e376]
+        - generic [ref=f22e383]:
+          - button "Assessments" [ref=f22e384]
+          - generic [ref=f22e392]:
+            - link "Overview" [ref=f22e394] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f22e398] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f22e402] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f22e406] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f22e411] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f22e415] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f22e419]
+        - button "Compliance" [ref=f22e427]
+        - button "Third Party" [ref=f22e435]
+        - button "Business Impact" [ref=f22e445]
+        - button "Administration" [ref=f22e453]
+        - button "Help" [ref=f22e464]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f22e472] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f22e473]: A
+        - generic [ref=f22e474]:
+          - paragraph [ref=f22e475]: Alice Admin
+          - paragraph [ref=f22e476]: ADMINISTRATOR
+    - generic [ref=f22e477]:
+      - banner [ref=f22e478]:
+        - navigation "Breadcrumb" [ref=f22e479]:
+          - list [ref=f22e480]:
+            - listitem [ref=f22e481]:
+              - link "Home" [ref=f22e482] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f22e487]:
+              - link "Risk Assessments" [ref=f22e490] [cursor=pointer]:
+                - /url: /risk-assessments
+            - listitem [ref=f22e492]:
+              - generic [ref=f22e495]: Assessment
+        - generic [ref=f22e496]:
+          - button [ref=f22e497]
+          - generic [ref=f22e498]:
+            - generic [ref=f22e499]: admin@acme-corp.com
+            - button "Sign Out" [ref=f22e500]
+      - main [ref=f22e503]:
+        - generic [ref=f22e504]:
+          - generic [ref=f22e505]:
+            - generic [ref=f22e512]:
+              - generic [ref=f22e513]:
+                - heading "Q3 Internal IT Risk Review" [level=1] [ref=f22e514]
+                - generic [ref=f22e515]: APPROVED
+              - generic [ref=f22e516]:
+                - generic [ref=f22e517]: Bob Analyst
+                - generic [ref=f22e521]: Due May 14, 2026
+            - generic [ref=f22e524]: Approved May 5, 2026
+          - generic [ref=f22e527]:
+            - generic [ref=f22e528]:
+              - generic [ref=f22e529]:
+                - generic [ref=f22e530]: Total Risks
+                - generic [ref=f22e531]: "2"
+              - generic [ref=f22e532]:
+                - generic [ref=f22e533]: Remediating
+                - generic [ref=f22e534]: "0"
+              - generic [ref=f22e535]:
+                - generic [ref=f22e536]: Accepted
+                - generic [ref=f22e537]: "0"
+              - generic [ref=f22e538]:
+                - generic [ref=f22e539]: No Decision
+                - generic [ref=f22e540]: "2"
+              - generic [ref=f22e541]:
+                - generic [ref=f22e542]: SLA Breached
+                - generic [ref=f22e543]: "0"
+              - generic [ref=f22e544]:
+                - generic [ref=f22e545]: Completed
+                - generic [ref=f22e546]: "0"
+            - generic [ref=f22e547]:
+              - generic [ref=f22e548]: Treatment Progress
+              - generic [ref=f22e549]: 0%
+          - tablist [ref=f22e551]:
+            - navigation [ref=f22e552]:
+              - tab "Executive Summary" [selected] [ref=f22e553]
+              - tab "Overview" [ref=f22e557]
+              - tab "Schedule" [ref=f22e562]
+              - tab "Stakeholders" [ref=f22e566]
+              - tab "Questionnaire" [ref=f22e573]
+              - tab "Identified Risks 2" [ref=f22e578]:
+                - generic [ref=f22e582]: Identified Risks
+                - generic [ref=f22e583]: "2"
+              - tab "Findings 5" [ref=f22e584]:
+                - generic [ref=f22e594]: Findings
+                - generic [ref=f22e595]: "5"
+              - tab "Controls" [ref=f22e596]
+              - tab "Evidence" [ref=f22e600]
+              - tab "Exploitation Pathways" [ref=f22e604]
+              - tab "Action Plans" [ref=f22e611]
+              - tab "History" [ref=f22e616]
+              - tab "Audit Trail" [ref=f22e620]
+          - tabpanel [ref=f22e626]:
+            - generic [ref=f22e627]:
+              - generic [ref=f22e628]:
+                - generic [ref=f22e629]: Deliverable · risk
+                - generic [ref=f22e630]:
+                  - button "Present" [ref=f22e631]
+                  - button "Export PDF" [ref=f22e632]
+              - generic [ref=f22e633]:
+                - generic [ref=f22e634]:
+                  - text: CONFIDENTIAL
+                  - generic [ref=f22e635]: Cybersecurity Assessment
+                  - heading "Q3 Internal IT Risk Review" [level=1] [ref=f22e636]
+                  - generic [ref=f22e637]:
+                    - generic [ref=f22e638]:
+                      - generic [ref=f22e639]: Engagement
+                      - generic [ref=f22e640]: Acme Corporation
+                    - generic [ref=f22e641]:
+                      - generic [ref=f22e642]: Period
+                      - generic [ref=f22e643]: Q2 2026
+                    - generic [ref=f22e644]:
+                      - generic [ref=f22e645]: Prepared by
+                      - generic [ref=f22e646]: Alice Admin
+                - generic [ref=f22e647]:
+                  - group "Scorecard" [ref=f22e648]:
+                    - generic [ref=f22e649]:
+                      - generic [ref=f22e650]: Security posture
+                      - generic [ref=f22e651]:
+                        - generic [ref=f22e652]: "36"
+                        - generic [ref=f22e653]: / 100
+                    - generic [ref=f22e654]:
+                      - generic [ref=f22e655]: Risk exposure
+                      - generic [ref=f22e656]:
+                        - generic [ref=f22e657]: "64"
+                        - generic [ref=f22e658]: / 100
+                    - generic [ref=f22e659]:
+                      - generic [ref=f22e660]: High findings
+                      - generic [ref=f22e661]: "1"
+                  - button "Customize sections" [ref=f22e664]
+                  - generic [ref=f22e665]:
+                    - generic [ref=f22e666]:
+                      - generic [ref=f22e667]: "01"
+                      - heading "Executive Statement" [level=2] [ref=f22e669]
+                    - generic [ref=f22e671]:
+                      - 'textbox "Summarize the engagement''s outcome for leadership: posture, top exposures, and the headline recommendation." [ref=f22e672]': "This quarterly review assessed twelve NIST CSF 2.0 control areas across the Identify, Protect, Detect, Respond, and Recover functions. Overall posture is moderate: identity, access, and monitoring controls are largely effective, while data-at-rest encryption and post-incident lessons-learned processes are the two highest-priority gaps. Remediation is tracked in the engagement action plan with target dates in Q3."
+                      - generic [ref=f22e673]:
+                        - generic [ref=f22e674]: 415 / 10,000
+                        - button "Save statement" [disabled]
+                  - generic [ref=f22e675]:
+                    - generic [ref=f22e676]:
+                      - generic [ref=f22e677]: "02"
+                      - heading "Graphs" [level=2] [ref=f22e679]
+                    - generic [ref=f22e680]:
+                      - generic [ref=f22e681]:
+                        - paragraph [ref=f22e682]: Risk heatmap — Standard 3×3 Risk Matrix
+                        - generic [ref=f22e683]:
+                          - img "Likelihood by impact risk heatmap" [ref=f22e684]:
+                            - generic [ref=f22e685]: "3"
+                            - generic [ref=f22e688]:
+                              - generic [ref=f22e690]: "6"
+                              - button "Finding FND-2026-0102" [ref=f22e691] [cursor=pointer]:
+                                - generic: "2"
+                              - button "Finding FND-2026-0104" [ref=f22e693] [cursor=pointer]:
+                                - generic: "3"
+                            - generic [ref=f22e695]:
+                              - generic [ref=f22e697]: "9"
+                              - button "Finding FND-2026-0101" [ref=f22e698] [cursor=pointer]:
+                                - generic: "1"
+                            - generic [ref=f22e700]: "2"
+                            - generic [ref=f22e703]:
+                              - generic [ref=f22e705]: "4"
+                              - button "Finding FND-2026-0103" [ref=f22e706] [cursor=pointer]:
+                                - generic: "4"
+                              - button "Finding FND-2026-0105" [ref=f22e708] [cursor=pointer]:
+                                - generic: "5"
+                            - generic [ref=f22e710]: "6"
+                            - generic [ref=f22e713]: "1"
+                            - generic [ref=f22e716]: "2"
+                            - generic [ref=f22e719]: "3"
+                            - generic [ref=f22e722]: "3"
+                            - generic [ref=f22e723]: "2"
+                            - generic [ref=f22e724]: "1"
+                            - generic [ref=f22e725]: "1"
+                            - generic [ref=f22e726]: "2"
+                            - generic [ref=f22e727]: "3"
+                          - generic [ref=f22e728]: x = Likelihood · y = Impact
+                          - generic [ref=f22e729]:
+                            - generic [ref=f22e730]:
+                              - generic [ref=f22e731]: Low
+                              - generic [ref=f22e732]: "0"
+                            - generic [ref=f22e733]:
+                              - generic [ref=f22e734]: Medium
+                              - generic [ref=f22e735]: "4"
+                            - generic [ref=f22e736]:
+                              - generic [ref=f22e737]: High
+                              - generic [ref=f22e738]: "1"
+                      - generic [ref=f22e739]:
+                        - paragraph [ref=f22e740]: Prioritization — effort vs. risk reduction
+                        - img "Effort versus risk-reduction impact bubble chart" [ref=f22e741]:
+                          - generic [ref=f22e743]: QUICK WINS
+                          - generic [ref=f22e744]: "1"
+                          - generic [ref=f22e745]: "2"
+                          - generic [ref=f22e746]: "3"
+                          - generic [ref=f22e747]: "4"
+                          - generic [ref=f22e748]: "5"
+                          - generic [ref=f22e749]: RISK REDUCTION
+                          - generic [ref=f22e750]: Small
+                          - generic [ref=f22e751]: Medium
+                          - generic [ref=f22e752]: Large
+                          - generic [ref=f22e753]: EFFORT
+                          - generic "Forward on-prem AD security logs to the SIEM" [ref=f22e755]
+                          - generic "Enable encryption at rest for all production RDS instances" [ref=f22e757]
+                          - generic "Extend vulnerability scanning to developer and OT segments" [ref=f22e759]
+                          - generic "Complete Tier-2 DR runbooks and add a lessons-learned loop" [ref=f22e761]
+                  - generic [ref=f22e762]:
+                    - generic [ref=f22e763]:
+                      - generic [ref=f22e764]: "03"
+                      - heading "Action Plans" [level=2] [ref=f22e766]
+                    - generic [ref=f22e768]:
+                      - button "AP-2026-0103 Forward on-prem AD security logs to the SIEM SOC closes 1 finding Effort Effort S Cost Cost None Risk ↓ Risk reduction 3 of 5" [ref=f22e770]:
+                        - generic [ref=f22e771]: AP-2026-0103
+                        - generic [ref=f22e772]:
+                          - generic [ref=f22e773]: Forward on-prem AD security logs to the SIEM
+                          - generic [ref=f22e775]:
+                            - generic [ref=f22e776]: SOC
+                            - generic [ref=f22e777]: ·
+                            - generic [ref=f22e778]: closes 1 finding
+                        - generic [ref=f22e779]:
+                          - generic [ref=f22e780]:
+                            - generic [ref=f22e781]: Effort
+                            - generic "Effort S" [ref=f22e782]: S
+                          - generic [ref=f22e783]:
+                            - generic [ref=f22e784]: Cost
+                            - generic "Cost None" [ref=f22e785]: –
+                          - generic [ref=f22e786]:
+                            - generic [ref=f22e787]: Risk ↓
+                            - img "Risk reduction 3 of 5" [ref=f22e788]:
+                              - generic [ref=f22e791]: 3/5
+                      - button "AP-2026-0101 Enable encryption at rest for all production RDS instances Breaks pathway Infrastructure closes 1 finding Effort Effort M Cost Cost None Risk ↓ Risk reduction 5 of 5" [ref=f22e795]:
+                        - generic [ref=f22e796]: AP-2026-0101
+                        - generic [ref=f22e797]:
+                          - generic [ref=f22e798]:
+                            - generic [ref=f22e799]: Enable encryption at rest for all production RDS instances
+                            - generic "Breaks the exploitation pathway" [ref=f22e800]: Breaks pathway
+                          - generic [ref=f22e804]:
+                            - generic [ref=f22e805]: Infrastructure
+                            - generic [ref=f22e806]: ·
+                            - generic [ref=f22e807]: closes 1 finding
+                        - generic [ref=f22e808]:
+                          - generic [ref=f22e809]:
+                            - generic [ref=f22e810]: Effort
+                            - generic "Effort M" [ref=f22e811]: M
+                          - generic [ref=f22e812]:
+                            - generic [ref=f22e813]: Cost
+                            - generic "Cost None" [ref=f22e814]: –
+                          - generic [ref=f22e815]:
+                            - generic [ref=f22e816]: Risk ↓
+                            - img "Risk reduction 5 of 5" [ref=f22e817]:
+                              - generic [ref=f22e820]: 5/5
+                      - button "AP-2026-0102 Extend vulnerability scanning to developer and OT segments IT Security closes 1 finding Effort Effort M Cost Cost None Risk ↓ Risk reduction 4 of 5" [ref=f22e824]:
+                        - generic [ref=f22e825]: AP-2026-0102
+                        - generic [ref=f22e826]:
+                          - generic [ref=f22e827]: Extend vulnerability scanning to developer and OT segments
+                          - generic [ref=f22e829]:
+                            - generic [ref=f22e830]: IT Security
+                            - generic [ref=f22e831]: ·
+                            - generic [ref=f22e832]: closes 1 finding
+                        - generic [ref=f22e833]:
+                          - generic [ref=f22e834]:
+                            - generic [ref=f22e835]: Effort
+                            - generic "Effort M" [ref=f22e836]: M
+                          - generic [ref=f22e837]:
+                            - generic [ref=f22e838]: Cost
+                            - generic "Cost None" [ref=f22e839]: –
+                          - generic [ref=f22e840]:
+                            - generic [ref=f22e841]: Risk ↓
+                            - img "Risk reduction 4 of 5" [ref=f22e842]:
+                              - generic [ref=f22e845]: 4/5
+                      - button "AP-2026-0104 Complete Tier-2 DR runbooks and add a lessons-learned loop IT Operations closes 2 findings Effort Effort L Cost Cost None Risk ↓ Risk reduction 4 of 5" [ref=f22e849]:
+                        - generic [ref=f22e850]: AP-2026-0104
+                        - generic [ref=f22e851]:
+                          - generic [ref=f22e852]: Complete Tier-2 DR runbooks and add a lessons-learned loop
+                          - generic [ref=f22e854]:
+                            - generic [ref=f22e855]: IT Operations
+                            - generic [ref=f22e856]: ·
+                            - generic [ref=f22e857]: closes 2 findings
+                        - generic [ref=f22e858]:
+                          - generic [ref=f22e859]:
+                            - generic [ref=f22e860]: Effort
+                            - generic "Effort L" [ref=f22e861]: L
+                          - generic [ref=f22e862]:
+                            - generic [ref=f22e863]: Cost
+                            - generic "Cost None" [ref=f22e864]: –
+                          - generic [ref=f22e865]:
+                            - generic [ref=f22e866]: Risk ↓
+                            - img "Risk reduction 4 of 5" [ref=f22e867]:
+                              - generic [ref=f22e870]: 4/5
+                  - generic [ref=f22e873]:
+                    - generic [ref=f22e874]:
+                      - generic [ref=f22e875]: "04"
+                      - heading "Risks" [level=2] [ref=f22e877]
+                    - table [ref=f22e880]:
+                      - rowgroup [ref=f22e881]:
+                        - row [ref=f22e882]:
+                          - columnheader "ID" [ref=f22e883]
+                          - columnheader "Risk" [ref=f22e884]
+                          - columnheader "L×I" [ref=f22e885]
+                          - columnheader "Score" [ref=f22e886]
+                          - columnheader "Treatment" [ref=f22e887]
+                          - columnheader "Severity" [ref=f22e888]
+                      - rowgroup [ref=f22e889]:
+                        - row [ref=f22e890]:
+                          - cell "RISK-2026-0102" [ref=f22e891]
+                          - cell "Prolonged Outage from Incomplete DR Procedures" [ref=f22e893]
+                          - cell "2×3" [ref=f22e895]
+                          - cell "6" [ref=f22e896]
+                          - cell "—" [ref=f22e897]
+                          - cell "Medium" [ref=f22e898]
+                        - row [ref=f22e900]:
+                          - cell "RISK-2026-0101" [ref=f22e901]
+                          - cell "Customer Data Exposure via Unencrypted Database" [ref=f22e903]
+                          - cell "3×3" [ref=f22e905]
+                          - cell "9" [ref=f22e906]
+                          - cell "—" [ref=f22e907]
+                          - cell "High" [ref=f22e908]
+                  - generic [ref=f22e910]:
+                    - generic [ref=f22e911]:
+                      - generic [ref=f22e912]: "05"
+                      - heading "Exploitation Pathway" [level=2] [ref=f22e914]
+                    - generic [ref=f22e917]:
+                      - generic [ref=f22e918]:
+                        - paragraph [ref=f22e919]: Exploitation Pathway
+                        - heading "Ransomware Data-Exfiltration Chain" [level=1] [ref=f22e920]
+                        - paragraph [ref=f22e921]: Individually, these findings rate across severities. Chained together they form a single rehearsable path.
+                      - generic [ref=f22e922]:
+                        - button "Edit" [ref=f22e923]
+                        - generic [ref=f22e927]:
+                          - generic [ref=f22e928]: ▲
+                          - generic [ref=f22e929]:
+                            - heading "Plausible with current gaps" [level=2] [ref=f22e930]
+                            - paragraph [ref=f22e931]: An external attacker exploits an unscanned, exposed host, evades detection because on-prem AD logs never reach the SIEM, reaches the unencrypted production database to exfiltrate regulated data, and finally triggers a disruptive event the incomplete Tier-2 DR runbooks cannot quickly recover from.
+                        - generic [ref=f22e932]:
+                          - paragraph [ref=f22e933]: Blast radius
+                          - paragraph [ref=f22e934]: Regulated customer PII, production database availability, and Tier-2 business services.
+                      - generic [ref=f22e935]:
+                        - complementary [ref=f22e936]:
+                          - generic [ref=f22e937]:
+                            - heading "Findings in the pathway" [level=3] [ref=f22e938]
+                            - generic [ref=f22e939]: 4 linked
+                          - list [ref=f22e940]:
+                            - listitem [ref=f22e941]:
+                              - button "1 FND-2026-0102 2×3 Incomplete Vulnerability Scan Coverage" [ref=f22e942]:
+                                - generic [ref=f22e943]: "1"
+                                - generic [ref=f22e944]:
+                                  - generic [ref=f22e945]:
+                                    - generic [ref=f22e946]: FND-2026-0102
+                                    - generic [ref=f22e947]: 2×3
+                                  - generic [ref=f22e950]: Incomplete Vulnerability Scan Coverage
+                            - listitem [ref=f22e951]:
+                              - button "2 FND-2026-0103 2×2 On-Prem AD Security Logs Not Forwarded to SIEM" [ref=f22e952]:
+                                - generic [ref=f22e953]: "2"
+                                - generic [ref=f22e954]:
+                                  - generic [ref=f22e955]:
+                                    - generic [ref=f22e956]: FND-2026-0103
+                                    - generic [ref=f22e957]: 2×2
+                                  - generic [ref=f22e960]: On-Prem AD Security Logs Not Forwarded to SIEM
+                            - listitem [ref=f22e961]:
+                              - button "3 FND-2026-0101 3×3 Production RDS Instances Unencrypted at Rest" [ref=f22e962]:
+                                - generic [ref=f22e963]: "3"
+                                - generic [ref=f22e964]:
+                                  - generic [ref=f22e965]:
+                                    - generic [ref=f22e966]: FND-2026-0101
+                                    - generic [ref=f22e967]: 3×3
+                                  - generic [ref=f22e970]: Production RDS Instances Unencrypted at Rest
+                            - listitem [ref=f22e971]:
+                              - button "4 FND-2026-0104 2×3 Tier-2 Disaster-Recovery Runbooks Incomplete" [ref=f22e972]:
+                                - generic [ref=f22e973]: "4"
+                                - generic [ref=f22e974]:
+                                  - generic [ref=f22e975]:
+                                    - generic [ref=f22e976]: FND-2026-0104
+                                    - generic [ref=f22e977]: 2×3
+                                  - generic [ref=f22e980]: Tier-2 Disaster-Recovery Runbooks Incomplete
+                          - generic [ref=f22e981]:
+                            - paragraph [ref=f22e982]:
+                              - text: Breaking
+                              - strong [ref=f22e983]: any single link
+                              - text: "collapses the pathway. Fastest break:"
+                            - paragraph [ref=f22e984]: —
+                        - generic [ref=f22e985]:
+                          - generic [ref=f22e986]:
+                            - generic [ref=f22e987]:
+                              - paragraph [ref=f22e988]: MITRE ATT&CK® · Technique flow
+                              - heading "How the chain executes" [level=2] [ref=f22e989]
+                            - generic [ref=f22e990]:
+                              - tablist "Pathway visualization" [ref=f22e991]:
+                                - tab "Kill Chain" [ref=f22e992]
+                                - tab "ATT&CK Matrix" [ref=f22e993]
+                                - tab "Attack Narrative" [selected] [ref=f22e994]
+                              - button "Add step" [ref=f22e995]
+                          - generic [ref=f22e997]:
+                            - generic [ref=f22e998]: "1"
+                            - generic [ref=f22e1001]:
+                              - generic [ref=f22e1002]:
+                                - generic [ref=f22e1003]: Initial Access
+                                - generic [ref=f22e1004]: T1190
+                              - generic [ref=f22e1005]:
+                                - heading "Exploit Public-Facing Application" [level=4] [ref=f22e1006]
+                                - generic "Part of the exploitation pathway" [ref=f22e1007]: ⬡
+                              - paragraph [ref=f22e1008]: Unscanned hosts leave an exploitable entry point.
+                              - generic [ref=f22e1010]:
+                                - generic [ref=f22e1011]: FND-2026-0102
+                                - generic [ref=f22e1012]: Incomplete Vulnerability Scan Coverage
+                                - generic [ref=f22e1014]: 2×3
+                            - generic [ref=f22e1015]: "2"
+                            - generic [ref=f22e1018]:
+                              - generic [ref=f22e1019]:
+                                - generic [ref=f22e1020]: Defense Evasion
+                                - generic [ref=f22e1021]: T1562
+                              - generic [ref=f22e1022]:
+                                - 'heading "Impair Defenses: Disable or Modify Tools" [level=4] [ref=f22e1023]'
+                                - generic "Part of the exploitation pathway" [ref=f22e1024]: ⬡
+                              - paragraph [ref=f22e1025]: Missing AD log forwarding blinds detection.
+                              - generic [ref=f22e1027]:
+                                - generic [ref=f22e1028]: FND-2026-0103
+                                - generic [ref=f22e1029]: On-Prem AD Security Logs Not Forwarded to SIEM
+                                - generic [ref=f22e1031]: 2×2
+                            - generic [ref=f22e1032]: "3"
+                            - generic [ref=f22e1035]:
+                              - generic [ref=f22e1036]:
+                                - generic [ref=f22e1037]: Collection
+                                - generic [ref=f22e1038]: T1213
+                              - generic [ref=f22e1039]:
+                                - heading "Data from Information Repositories" [level=4] [ref=f22e1040]
+                                - generic "Part of the exploitation pathway" [ref=f22e1041]: ⬡
+                              - paragraph [ref=f22e1042]: The unencrypted database yields regulated data directly.
+                              - generic [ref=f22e1044]:
+                                - generic [ref=f22e1045]: FND-2026-0101
+                                - generic [ref=f22e1046]: Production RDS Instances Unencrypted at Rest
+                                - generic [ref=f22e1048]: 3×3
+                            - generic [ref=f22e1049]: "4"
+                            - generic [ref=f22e1051]:
+                              - generic [ref=f22e1052]:
+                                - generic [ref=f22e1053]: Impact
+                                - generic [ref=f22e1054]: T1486
+                              - generic [ref=f22e1055]:
+                                - heading "Data Encrypted for Impact" [level=4] [ref=f22e1056]
+                                - generic "Part of the exploitation pathway" [ref=f22e1057]: ⬡
+                              - paragraph [ref=f22e1058]: Incomplete Tier-2 DR runbooks prolong the outage.
+                              - generic [ref=f22e1060]:
+                                - generic [ref=f22e1061]: FND-2026-0104
+                                - generic [ref=f22e1062]: Tier-2 Disaster-Recovery Runbooks Incomplete
+                                - generic [ref=f22e1064]: 2×3
+                          - generic [ref=f22e1065]:
+                            - generic [ref=f22e1066]: Sequence step
+                            - generic [ref=f22e1068]:
+                              - generic [ref=f22e1069]: T0000
+                              - text: ATT&CK technique ID
+                            - generic [ref=f22e1070]: Hover any element to trace it across both panels.
+                  - generic [ref=f22e1071]:
+                    - generic [ref=f22e1072]:
+                      - generic [ref=f22e1073]: "06"
+                      - heading "Findings" [level=2] [ref=f22e1075]
+                    - table [ref=f22e1078]:
+                      - rowgroup [ref=f22e1079]:
+                        - row [ref=f22e1080]:
+                          - columnheader "ID" [ref=f22e1081]
+                          - columnheader "Finding" [ref=f22e1082]
+                          - columnheader "Domain" [ref=f22e1083]
+                          - columnheader "L×I" [ref=f22e1084]
+                          - columnheader "Severity" [ref=f22e1085]
+                      - rowgroup [ref=f22e1086]:
+                        - row [ref=f22e1087] [cursor=pointer]:
+                          - cell "FND-2026-0101" [ref=f22e1088]
+                          - cell "Production RDS Instances Unencrypted at Rest" [ref=f22e1090]
+                          - cell "SCANNER" [ref=f22e1092]
+                          - cell "3×3" [ref=f22e1093]
+                          - cell "High" [ref=f22e1094]
+                        - row [ref=f22e1096] [cursor=pointer]:
+                          - cell "FND-2026-0102" [ref=f22e1097]
+                          - cell "Incomplete Vulnerability Scan Coverage" [ref=f22e1099]
+                          - cell "SCANNER" [ref=f22e1101]
+                          - cell "2×3" [ref=f22e1102]
+                          - cell "Medium" [ref=f22e1103]
+                        - row [ref=f22e1105] [cursor=pointer]:
+                          - cell "FND-2026-0104" [ref=f22e1106]
+                          - cell "Tier-2 Disaster-Recovery Runbooks Incomplete" [ref=f22e1108]
+                          - cell "AUDIT" [ref=f22e1110]
+                          - cell "2×3" [ref=f22e1111]
+                          - cell "Medium" [ref=f22e1112]
+                        - row [ref=f22e1114] [cursor=pointer]:
+                          - cell "FND-2026-0103" [ref=f22e1115]
+                          - cell "On-Prem AD Security Logs Not Forwarded to SIEM" [ref=f22e1117]
+                          - cell "AUDIT" [ref=f22e1119]
+                          - cell "2×2" [ref=f22e1120]
+                          - cell "Medium" [ref=f22e1121]
+                        - row [ref=f22e1123] [cursor=pointer]:
+                          - cell "FND-2026-0105" [ref=f22e1124]
+                          - cell "No Post-Incident Lessons-Learned Feedback Loop" [ref=f22e1126]
+                          - cell "MANUAL" [ref=f22e1128]
+                          - cell "2×2" [ref=f22e1129]
+                          - cell "Medium" [ref=f22e1130]
+                  - generic [ref=f22e1132]:
+                    - generic [ref=f22e1133]:
+                      - generic [ref=f22e1134]: "07"
+                      - heading "People Interviewed" [level=2] [ref=f22e1136]
+                    - generic [ref=f22e1138]:
+                      - table [ref=f22e1140]:
+                        - rowgroup [ref=f22e1141]:
+                          - row [ref=f22e1142]:
+                            - columnheader "Name" [ref=f22e1143]
+                            - columnheader "Role" [ref=f22e1144]
+                            - columnheader "Domain" [ref=f22e1145]
+                            - columnheader "RACI" [ref=f22e1146]
+                        - rowgroup [ref=f22e1147]:
+                          - row [ref=f22e1148]:
+                            - cell "Dana Cole" [ref=f22e1149]
+                            - cell "MANAGER" [ref=f22e1150]
+                            - cell "Executive Sponsor" [ref=f22e1151]
+                            - cell "Accountable" [ref=f22e1152]
+                          - row [ref=f22e1153]:
+                            - cell "Bob Analyst" [ref=f22e1154]
+                            - cell "GRC Analyst" [ref=f22e1155]
+                            - cell "Assessment Lead" [ref=f22e1156]
+                            - cell "Responsible" [ref=f22e1157]
+                          - row [ref=f22e1158]:
+                            - cell "Tom Bradley" [ref=f22e1159]
+                            - cell "IT Operations Manager" [ref=f22e1160]
+                            - cell "Identify / Protect" [ref=f22e1161]
+                            - cell "Consulted" [ref=f22e1162]
+                          - row [ref=f22e1163]:
+                            - cell "Marcus Lee" [ref=f22e1164]
+                            - cell "SOC Lead" [ref=f22e1165]
+                            - cell "Detect / Respond" [ref=f22e1166]
+                            - cell "Consulted" [ref=f22e1167]
+                          - row [ref=f22e1168]:
+                            - cell "Priya Shah" [ref=f22e1169]
+                            - cell "Platform Engineer" [ref=f22e1170]
+                            - cell "Protect" [ref=f22e1171]
+                            - cell "Informed" [ref=f22e1172]
+                      - generic [ref=f22e1173]:
+                        - paragraph [ref=f22e1174]: Additional session attendees
+                        - generic [ref=f22e1175]: Alice Admin
+  - region "Notifications alt+T"
+  - alert [ref=f22e341]: BetterThanSpreadsheetsGRC

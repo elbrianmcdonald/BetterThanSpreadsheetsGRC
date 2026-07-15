@@ -1,0 +1,285 @@
+- generic [ref=f15e1]:
+  - generic [ref=f15e2]:
+    - complementary [ref=f15e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f15e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f15e8]:
+          - generic [ref=f15e9]: BetterThanSpreadsheets
+          - generic [ref=f15e10]: GRC Platform
+      - generic [ref=f15e205]:
+        - combobox "Switch company" [ref=f15e211] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f15e212]
+      - navigation [ref=f15e11]:
+        - link "Home" [ref=f15e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f15e18]
+        - button "Governance" [ref=f15e215]
+        - button "Assessments" [ref=f15e27]
+        - generic [ref=f15e35]:
+          - button "Risk" [ref=f15e36]
+          - generic [ref=f15e43]:
+            - link "Risk Dashboard" [ref=f15e45] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f15e49] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f15e53] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f15e58] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f15e62]
+        - button "Third Party" [ref=f15e70]
+        - button "Business Impact" [ref=f15e80]
+        - button "Administration" [ref=f15e223]
+        - button "Help" [ref=f15e88]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f15e233] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f15e234]: A
+        - generic [ref=f15e235]:
+          - paragraph [ref=f15e236]: Alice Admin
+          - paragraph [ref=f15e237]: ADMINISTRATOR
+    - generic [ref=f15e96]:
+      - banner [ref=f15e97]:
+        - navigation "Breadcrumb" [ref=f15e98]:
+          - list [ref=f15e99]:
+            - listitem [ref=f15e100]:
+              - link "Home" [ref=f15e101] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f15e106]:
+              - link "Risks" [ref=f15e109] [cursor=pointer]:
+                - /url: /risks
+            - listitem [ref=f15e111]:
+              - generic [ref=f15e114]: New Risk
+        - generic [ref=f15e115]:
+          - button [ref=f15e116]
+          - generic [ref=f15e238]:
+            - generic [ref=f15e239]: admin@acme-corp.com
+            - button "Sign Out" [ref=f15e240]
+      - main [ref=f15e117]:
+        - generic [ref=f15e118]:
+          - generic [ref=f15e119]:
+            - heading "Create Risk" [level=1] [ref=f15e120]
+            - paragraph [ref=f15e121]: Define the risk and how it's scored — from linked findings, a manual judgment, or both.
+          - generic [ref=f15e122]:
+            - generic [ref=f15e123]:
+              - generic [ref=f15e124]:
+                - text: Name
+                - generic [ref=f15e125]: "*"
+              - textbox "Name *" [ref=f15e126]:
+                - /placeholder: Short, specific risk name...
+                - text: Pathway tag verification risk
+            - generic [ref=f15e127]:
+              - generic [ref=f15e128]:
+                - text: Description
+                - generic [ref=f15e129]: "*"
+              - textbox "Description *" [ref=f15e130]:
+                - /placeholder: What could happen, why it matters, and the potential consequences...
+                - text: Risk created to verify pathway-level tagging links into the master library.
+            - generic [ref=f15e131]:
+              - generic [ref=f15e132]:
+                - generic [ref=f15e133]: Owner
+                - combobox [ref=f15e134]: Select person...
+                - paragraph [ref=f15e136]: Accountable for this risk.
+              - generic [ref=f15e137]:
+                - generic [ref=f15e138]: Business Unit
+                - tree "Business unit selection" [ref=f15e139]:
+                  - textbox "Search business units" [ref=f15e145]:
+                    - /placeholder: Select or create business unit...
+                  - group [ref=f15e146]:
+                    - generic [ref=f15e147]:
+                      - treeitem "Engineering ENG" [ref=f15e243]:
+                        - generic [ref=f15e244] [cursor=pointer]:
+                          - generic [ref=f15e246]: Engineering
+                          - generic [ref=f15e247]: ENG
+                      - treeitem "Finance & Accounting FIN" [ref=f15e248]:
+                        - generic [ref=f15e249] [cursor=pointer]:
+                          - generic [ref=f15e251]: Finance & Accounting
+                          - generic [ref=f15e252]: FIN
+                      - treeitem "Human Resources HR" [ref=f15e253]:
+                        - generic [ref=f15e254] [cursor=pointer]:
+                          - generic [ref=f15e256]: Human Resources
+                          - generic [ref=f15e257]: HR
+                      - treeitem "IT Operations ITO" [ref=f15e258]:
+                        - generic [ref=f15e259] [cursor=pointer]:
+                          - generic [ref=f15e261]: IT Operations
+                          - generic [ref=f15e262]: ITO
+                      - treeitem "Sales & Marketing SAL" [ref=f15e263]:
+                        - generic [ref=f15e264] [cursor=pointer]:
+                          - generic [ref=f15e266]: Sales & Marketing
+                          - generic [ref=f15e267]: SAL
+                      - treeitem "Verify Nested BU 8c9f" [ref=f15e268]
+              - generic [ref=f15e151]:
+                - generic [ref=f15e152]: Risk Category
+                - combobox "Risk Category" [ref=f15e153]:
+                  - generic: Uncategorized
+                - combobox [ref=f15e272]
+                - paragraph [ref=f15e157]: Aligned to the taxonomy managed in Administration → Taxonomy.
+              - generic [ref=f15e158]:
+                - generic [ref=f15e159]: Enterprise Risk
+                - combobox "Enterprise Risk" [ref=f15e160]:
+                  - generic: Not aligned
+                - combobox [ref=f15e273]
+                - paragraph [ref=f15e164]: Optional roll-up parent for executive reporting.
+              - generic [ref=f15e165]:
+                - generic [ref=f15e166]:
+                  - text: Risk Matrix
+                  - generic [ref=f15e167]: "*"
+                - combobox [ref=f15e274]:
+                  - generic: Select a risk matrix...
+                - combobox [ref=f15e277]
+                - paragraph [ref=f15e172]: Locked to this risk at creation.
+              - generic [ref=f15e173]:
+                - generic [ref=f15e174]: Review interval (days)
+                - spinbutton "Review interval (days)" [ref=f15e175]
+                - paragraph [ref=f15e176]: Leave empty for no scheduled review.
+            - generic [ref=f15e177]:
+              - generic [ref=f15e178]:
+                - generic [ref=f15e179]: Score at creation
+                - paragraph [ref=f15e180]: "A risk is never unscored: link the findings that evidence it (the score derives from the highest open finding) and/or set a manual judgment score. Both can be changed later."
+              - generic [ref=f15e181]:
+                - generic [ref=f15e182]:
+                  - generic [ref=f15e183]: Linked Findings
+                  - textbox "Search open findings..." [ref=f15e188]
+                  - generic [ref=f15e189]:
+                    - generic [ref=f15e278] [cursor=pointer]:
+                      - 'checkbox "FND-2026-0108 Concern: no encryption at rest VERIFY-TPRM-8c9f High" [checked] [active] [ref=f15e279]'
+                      - checkbox [checked]
+                      - generic [ref=f15e280]: FND-2026-0108
+                      - generic [ref=f15e281]: "Concern: no encryption at rest VERIFY-TPRM-8c9f"
+                      - generic [ref=f15e282]: High
+                    - generic [ref=f15e284] [cursor=pointer]:
+                      - checkbox "FND-2026-0107 GV.OC-01 organizational mission VERIFY-MATURITY-8c9f Medium" [ref=f15e285]
+                      - checkbox
+                      - generic [ref=f15e286]: FND-2026-0107
+                      - generic [ref=f15e287]: GV.OC-01 organizational mission VERIFY-MATURITY-8c9f
+                      - generic [ref=f15e288]: Medium
+                    - generic [ref=f15e290] [cursor=pointer]:
+                      - checkbox "FND-2026-0106 A.5.18 Access Rights VERIFY-COMPLIANCE-8c9f High" [ref=f15e291]
+                      - checkbox
+                      - generic [ref=f15e292]: FND-2026-0106
+                      - generic [ref=f15e293]: A.5.18 Access Rights VERIFY-COMPLIANCE-8c9f
+                      - generic [ref=f15e294]: High
+                    - generic [ref=f15e296] [cursor=pointer]:
+                      - checkbox "FND-2026-0105 No Post-Incident Lessons-Learned Feedback Loop Medium" [ref=f15e297]
+                      - checkbox
+                      - generic [ref=f15e298]: FND-2026-0105
+                      - generic [ref=f15e299]: No Post-Incident Lessons-Learned Feedback Loop
+                      - generic [ref=f15e300]: Medium
+                    - generic [ref=f15e302] [cursor=pointer]:
+                      - checkbox "FND-2026-0104 Tier-2 Disaster-Recovery Runbooks Incomplete Medium" [ref=f15e303]
+                      - checkbox
+                      - generic [ref=f15e304]: FND-2026-0104
+                      - generic [ref=f15e305]: Tier-2 Disaster-Recovery Runbooks Incomplete
+                      - generic [ref=f15e306]: Medium
+                    - generic [ref=f15e308] [cursor=pointer]:
+                      - checkbox "FND-2026-0103 On-Prem AD Security Logs Not Forwarded to SIEM Medium" [ref=f15e309]
+                      - checkbox
+                      - generic [ref=f15e310]: FND-2026-0103
+                      - generic [ref=f15e311]: On-Prem AD Security Logs Not Forwarded to SIEM
+                      - generic [ref=f15e312]: Medium
+                    - generic [ref=f15e314] [cursor=pointer]:
+                      - checkbox "FND-2026-0102 Incomplete Vulnerability Scan Coverage Medium" [ref=f15e315]
+                      - checkbox
+                      - generic [ref=f15e316]: FND-2026-0102
+                      - generic [ref=f15e317]: Incomplete Vulnerability Scan Coverage
+                      - generic [ref=f15e318]: Medium
+                    - generic [ref=f15e320] [cursor=pointer]:
+                      - checkbox "FND-2026-0101 Production RDS Instances Unencrypted at Rest High" [ref=f15e321]
+                      - checkbox
+                      - generic [ref=f15e322]: FND-2026-0101
+                      - generic [ref=f15e323]: Production RDS Instances Unencrypted at Rest
+                      - generic [ref=f15e324]: High
+                    - generic [ref=f15e326] [cursor=pointer]:
+                      - checkbox "FND-2026-0012 Unsupported Windows Server 2012 in Production Medium" [ref=f15e327]
+                      - checkbox
+                      - generic [ref=f15e328]: FND-2026-0012
+                      - generic [ref=f15e329]: Unsupported Windows Server 2012 in Production
+                      - generic [ref=f15e330]: Medium
+                    - generic [ref=f15e332] [cursor=pointer]:
+                      - checkbox "FND-2026-0011 Excessive Mailbox Delegation in O365 Low" [ref=f15e333]
+                      - checkbox
+                      - generic [ref=f15e334]: FND-2026-0011
+                      - generic [ref=f15e335]: Excessive Mailbox Delegation in O365
+                      - generic [ref=f15e336]: Low
+                    - generic [ref=f15e338] [cursor=pointer]:
+                      - checkbox "FND-2026-0010 Backups Reachable from Production Network Medium" [ref=f15e339]
+                      - checkbox
+                      - generic [ref=f15e340]: FND-2026-0010
+                      - generic [ref=f15e341]: Backups Reachable from Production Network
+                      - generic [ref=f15e342]: Medium
+                    - generic [ref=f15e344] [cursor=pointer]:
+                      - checkbox "FND-2026-0009 RDP Exposed Directly to the Internet High" [ref=f15e345]
+                      - checkbox
+                      - generic [ref=f15e346]: FND-2026-0009
+                      - generic [ref=f15e347]: RDP Exposed Directly to the Internet
+                      - generic [ref=f15e348]: High
+                    - generic [ref=f15e350] [cursor=pointer]:
+                      - checkbox "FND-2026-0008 No Endpoint Detection & Response on Servers Medium" [ref=f15e351]
+                      - checkbox
+                      - generic [ref=f15e352]: FND-2026-0008
+                      - generic [ref=f15e353]: No Endpoint Detection & Response on Servers
+                      - generic [ref=f15e354]: Medium
+                    - generic [ref=f15e356] [cursor=pointer]:
+                      - checkbox "FND-2026-0007 Hardcoded Secrets in Source Repository High" [ref=f15e357]
+                      - checkbox
+                      - generic [ref=f15e358]: FND-2026-0007
+                      - generic [ref=f15e359]: Hardcoded Secrets in Source Repository
+                      - generic [ref=f15e360]: High
+                    - generic [ref=f15e362] [cursor=pointer]:
+                      - checkbox "FND-2026-0005 Stale Service Accounts with Elevated Privileges Medium" [ref=f15e363]
+                      - checkbox
+                      - generic [ref=f15e364]: FND-2026-0005
+                      - generic [ref=f15e365]: Stale Service Accounts with Elevated Privileges
+                      - generic [ref=f15e366]: Medium
+                    - generic [ref=f15e368] [cursor=pointer]:
+                      - checkbox "FND-2026-0004 Unencrypted Database Backups in Secondary Region Medium" [ref=f15e369]
+                      - checkbox
+                      - generic [ref=f15e370]: FND-2026-0004
+                      - generic [ref=f15e371]: Unencrypted Database Backups in Secondary Region
+                      - generic [ref=f15e372]: Medium
+                    - generic [ref=f15e374] [cursor=pointer]:
+                      - checkbox "FND-2026-0003 Excessive S3 Bucket Permissions in Production Medium" [ref=f15e375]
+                      - checkbox
+                      - generic [ref=f15e376]: FND-2026-0003
+                      - generic [ref=f15e377]: Excessive S3 Bucket Permissions in Production
+                      - generic [ref=f15e378]: Medium
+                    - generic [ref=f15e380] [cursor=pointer]:
+                      - checkbox "FND-2026-0001 Outdated TLS 1.0 Configuration on Edge Servers Medium" [ref=f15e381]
+                      - checkbox
+                      - generic [ref=f15e382]: FND-2026-0001
+                      - generic [ref=f15e383]: Outdated TLS 1.0 Configuration on Edge Servers
+                      - generic [ref=f15e384]: Medium
+                  - paragraph [ref=f15e191]: 1 finding linked — score will derive from the highest.
+                - generic [ref=f15e192]:
+                  - checkbox "Set a manual score (overrides the calculated rollup)" [ref=f15e193]
+                  - generic [ref=f15e194] [cursor=pointer]: Set a manual score (overrides the calculated rollup)
+            - generic [ref=f15e195]:
+              - generic [ref=f15e196]:
+                - checkbox "Link to exploitation pathways" [checked] [ref=f15e197]
+                - checkbox [checked]
+                - generic [ref=f15e198]:
+                  - generic [ref=f15e199] [cursor=pointer]: Link to exploitation pathways
+                  - paragraph [ref=f15e200]: Optionally align this to one or more attack paths from the library. Creating a new one adds it to the library.
+              - generic [ref=f15e386]:
+                - generic [ref=f15e405]:
+                  - generic [ref=f15e406]: Ransomware Data-Exfiltration Chain
+                  - button "Remove Ransomware Data-Exfiltration Chain" [ref=f15e407]
+                - generic [ref=f15e387]:
+                  - generic [ref=f15e388]: Existing pathway
+                  - combobox [ref=f15e389]:
+                    - generic: Select a pathway…
+                  - combobox [ref=f15e411]
+                - generic [ref=f15e393]:
+                  - generic [ref=f15e394]: Create new pathway
+                  - generic [ref=f15e395]:
+                    - textbox "New pathway name (e.g. Initial access → domain admin)" [ref=f15e396]
+                    - button [disabled]
+            - generic [ref=f15e201]:
+              - button "Cancel" [ref=f15e202]
+              - button "Create Risk" [ref=f15e203]
+  - region "Notifications alt+T"
+  - alert [ref=f15e204]

@@ -1,0 +1,115 @@
+- generic [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - complementary [ref=f2e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f2e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f2e8]:
+          - generic [ref=f2e9]: BetterThanSpreadsheets
+          - generic [ref=f2e10]: GRC Platform
+      - generic [ref=f2e135]:
+        - combobox "Switch company" [ref=f2e141] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f2e142]
+      - navigation [ref=f2e11]:
+        - link "Home" [ref=f2e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f2e18]
+        - button "Governance" [ref=f2e145]
+        - generic [ref=f2e26]:
+          - button "Assessments" [ref=f2e27]
+          - generic [ref=f2e35]:
+            - link "Overview" [ref=f2e37] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f2e41] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f2e46] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f2e50] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f2e54] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f2e58] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f2e62]
+        - button "Compliance" [ref=f2e70]
+        - button "Third Party" [ref=f2e78]
+        - button "Business Impact" [ref=f2e88]
+        - button "Administration" [ref=f2e153]
+        - button "Help" [ref=f2e96]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f2e163] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f2e164]: A
+        - generic [ref=f2e165]:
+          - paragraph [ref=f2e166]: Alice Admin
+          - paragraph [ref=f2e167]: ADMINISTRATOR
+    - generic [ref=f2e104]:
+      - banner [ref=f2e105]:
+        - navigation "Breadcrumb" [ref=f2e106]:
+          - list [ref=f2e107]:
+            - listitem [ref=f2e108]:
+              - link "Home" [ref=f2e109] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f2e114]:
+              - link "Compliance" [ref=f2e117] [cursor=pointer]:
+                - /url: /compliance/assessments
+            - listitem [ref=f2e119]:
+              - link "Assessments" [ref=f2e122] [cursor=pointer]:
+                - /url: /compliance/assessments
+            - listitem [ref=f2e124]:
+              - generic [ref=f2e127]: COMP-2026-0001
+        - generic [ref=f2e128]:
+          - button [ref=f2e129]
+          - generic [ref=f2e168]:
+            - generic [ref=f2e169]: admin@acme-corp.com
+            - button "Sign Out" [ref=f2e170]
+      - main [ref=f2e130]:
+        - generic [ref=f2e131]:
+          - button "Back to Assessments" [ref=f2e173]
+          - tablist [ref=f2e174]:
+            - navigation [ref=f2e175]:
+              - tab "Executive Summary" [ref=f2e176]
+              - tab "Overview" [ref=f2e180]
+              - tab "Schedule" [ref=f2e185]
+              - tab "Stakeholders" [ref=f2e189]
+              - tab "Controls" [ref=f2e196]
+              - tab "Findings" [active] [selected] [ref=f2e200]
+              - tab "Risks" [ref=f2e211]
+              - tab "Evidence" [ref=f2e215]
+              - tab "Exploitation Pathways" [ref=f2e219]
+              - tab "Action Plans" [ref=f2e226]
+          - tabpanel [ref=f2e231]:
+            - generic [ref=f2e2050]:
+              - generic [ref=f2e2053]:
+                - generic [ref=f2e2054]:
+                  - text: Findings from this assessment
+                  - generic [ref=f2e2057]: "1"
+                - generic [ref=f2e2058]: Every finding entered via the "Create finding" button on a control / subcategory / practice / activity in this assessment shows up here.
+              - table [ref=f2e2061]:
+                - rowgroup [ref=f2e2062]:
+                  - row [ref=f2e2063]:
+                    - columnheader "ID" [ref=f2e2064]
+                    - columnheader "Linked to" [ref=f2e2065]
+                    - columnheader "Title" [ref=f2e2066]
+                    - columnheader "Severity" [ref=f2e2067]
+                    - columnheader "Status" [ref=f2e2068]
+                    - columnheader "Created by" [ref=f2e2069]
+                    - columnheader "Created" [ref=f2e2070]
+                    - columnheader [ref=f2e2071]
+                - rowgroup [ref=f2e2072]:
+                  - row [ref=f2e2073]:
+                    - cell "FND-2026-0106" [ref=f2e2074]
+                    - cell "A.5.18 — Access Rights" [ref=f2e2075]
+                    - cell "A.5.18 Access Rights VERIFY-COMPLIANCE-8c9f" [ref=f2e2076]
+                    - cell "High" [ref=f2e2077]
+                    - cell "NEW" [ref=f2e2079]
+                    - cell "Alice Admin" [ref=f2e2081]
+                    - cell "7/14/2026, 6:17:48 PM" [ref=f2e2082]
+                    - cell [ref=f2e2083]:
+                      - link "Open" [ref=f2e2084] [cursor=pointer]:
+                        - /url: /findings/cmrl9umj7000201pawebtypla
+  - region "Notifications alt+T"
+  - alert [ref=f2e134]

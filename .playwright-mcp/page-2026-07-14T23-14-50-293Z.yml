@@ -1,0 +1,90 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e8]:
+          - generic [ref=e9]: BetterThanSpreadsheets
+          - generic [ref=e10]: GRC Platform
+      - navigation [ref=e11]:
+        - link "Home" [ref=e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=e18]
+        - button "Assessments" [ref=e27]
+        - generic [ref=e35]:
+          - button "Risk" [ref=e36]
+          - generic [ref=e43]:
+            - link "Risk Dashboard" [ref=e45] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=e49] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=e53] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=e57] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=e61]
+        - button "Third Party" [ref=e69]
+        - button "Business Impact" [ref=e79]
+        - button "Help" [ref=e87]
+    - generic [ref=e95]:
+      - banner [ref=e96]:
+        - navigation "Breadcrumb" [ref=e97]:
+          - list [ref=e98]:
+            - listitem [ref=e99]:
+              - link "Home" [ref=e100] [cursor=pointer]:
+                - /url: /
+        - button [ref=e106]
+      - main [ref=e107]:
+        - generic [ref=e108]:
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - paragraph [ref=e111]: Workspace
+              - heading "Welcome back, Alice" [level=1] [ref=e112]
+              - paragraph [ref=e113]: 0 open tasks
+            - generic [ref=e114]:
+              - link "Open risks 0" [ref=e115] [cursor=pointer]:
+                - /url: /risks?status=OPEN,ASSIGNED
+                - generic [ref=e116]: Open risks
+                - generic [ref=e117]: "0"
+              - link "Findings 0" [ref=e118] [cursor=pointer]:
+                - /url: /findings?status=NEW,NEEDS_INFO,TRIAGED
+                - generic [ref=e119]: Findings
+                - generic [ref=e120]: "0"
+          - generic [ref=e121]:
+            - generic [ref=e123]:
+              - generic [ref=e126]: Assigned to me
+              - generic [ref=e129]: All types
+              - generic [ref=e132]: Any priority
+              - generic [ref=e135]: 0 items
+            - generic [ref=e141]:
+              - generic [ref=e143]:
+                - generic [ref=e144]:
+                  - heading "Task status" [level=3] [ref=e145]
+                  - generic [ref=e146]: 0% on track
+                - generic [ref=e147]:
+                  - generic [ref=e149]:
+                    - generic [ref=e150]: "0"
+                    - generic [ref=e151]: tasks
+                  - generic [ref=e152]:
+                    - generic [ref=e153]:
+                      - generic [ref=e155]: On-time
+                      - generic [ref=e156]: "0"
+                    - generic [ref=e157]:
+                      - generic [ref=e159]: Due today
+                      - generic [ref=e160]: "0"
+                    - generic [ref=e161]:
+                      - generic [ref=e163]: Overdue
+                      - generic [ref=e164]: "0"
+              - generic [ref=e166]:
+                - heading "Quick actions" [level=3] [ref=e167]
+                - generic [ref=e168]:
+                  - link "New Risk" [ref=e169] [cursor=pointer]:
+                    - /url: /risks/new
+                  - link "New Finding" [ref=e173] [cursor=pointer]:
+                    - /url: /findings/new
+              - generic [ref=e179]:
+                - heading "Activity" [level=3] [ref=e180]
+                - link "All" [ref=e181] [cursor=pointer]:
+                  - /url: /admin/settings
+  - region "Notifications alt+T"
+  - alert [ref=e186]

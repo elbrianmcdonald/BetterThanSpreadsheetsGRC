@@ -1,0 +1,223 @@
+- generic [active] [ref=f6e1]:
+  - generic [ref=f6e2]:
+    - complementary [ref=f6e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f6e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f6e8]:
+          - generic [ref=f6e9]: BetterThanSpreadsheets
+          - generic [ref=f6e10]: GRC Platform
+      - generic [ref=f6e321]:
+        - combobox "Switch company" [ref=f6e327] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f6e328]
+      - navigation [ref=f6e11]:
+        - link "Home" [ref=f6e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f6e18]
+        - button "Governance" [ref=f6e331]
+        - button "Assessments" [ref=f6e27]
+        - generic [ref=f6e35]:
+          - button "Risk" [ref=f6e36]
+          - generic [ref=f6e43]:
+            - link "Risk Dashboard" [ref=f6e45] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f6e49] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f6e53] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f6e57] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f6e62]
+        - button "Third Party" [ref=f6e70]
+        - button "Business Impact" [ref=f6e80]
+        - button "Administration" [ref=f6e339]
+        - button "Help" [ref=f6e88]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f6e349] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f6e350]: A
+        - generic [ref=f6e351]:
+          - paragraph [ref=f6e352]: Alice Admin
+          - paragraph [ref=f6e353]: ADMINISTRATOR
+    - generic [ref=f6e96]:
+      - banner [ref=f6e97]:
+        - navigation "Breadcrumb" [ref=f6e98]:
+          - list [ref=f6e99]:
+            - listitem [ref=f6e100]:
+              - link "Home" [ref=f6e101] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f6e106]:
+              - link "Findings" [ref=f6e109] [cursor=pointer]:
+                - /url: /findings
+            - listitem [ref=f6e111]:
+              - generic [ref=f6e114]: New Finding
+        - generic [ref=f6e115]:
+          - button [ref=f6e116]
+          - generic [ref=f6e354]:
+            - generic [ref=f6e355]: admin@acme-corp.com
+            - button "Sign Out" [ref=f6e356]
+      - main [ref=f6e117]:
+        - generic [ref=f6e118]:
+          - generic [ref=f6e119]:
+            - heading "Create New Finding" [level=1] [ref=f6e126]
+            - paragraph [ref=f6e127]: Document a security finding from audits, penetration tests, vulnerability scans, or other security assessments. Complete the form below to create a new finding record.
+          - generic [ref=f6e128]:
+            - generic [ref=f6e129]:
+              - generic [ref=f6e130]: Finding Details
+              - generic [ref=f6e131]: Provide detailed information about the security finding. Fields marked with * are required.
+            - generic [ref=f6e133]:
+              - generic [ref=f6e134]:
+                - generic [ref=f6e135]:
+                  - text: Source
+                  - generic [ref=f6e136]: "*"
+                - combobox "Source *" [ref=f6e137]:
+                  - generic: How was this discovered?
+                - combobox [ref=f6e140]
+              - generic [ref=f6e142]:
+                - generic [ref=f6e143] [cursor=pointer]: Finding
+                - generic [ref=f6e152]:
+                  - generic [ref=f6e153]:
+                    - generic [ref=f6e154]:
+                      - generic [ref=f6e155]: Finding Title *
+                      - textbox "Finding Title *" [ref=f6e156]:
+                        - /placeholder: Short, specific finding label...
+                    - generic [ref=f6e157]:
+                      - generic [ref=f6e158]: Finding Category
+                      - combobox "Finding Category" [ref=f6e159]:
+                        - generic: Uncategorized
+                      - combobox [ref=f6e359]
+                      - paragraph [ref=f6e163]: Aligned to the taxonomy managed in Administration → Taxonomy.
+                  - generic [ref=f6e164]:
+                    - generic [ref=f6e165]: Description *
+                    - textbox "Description *" [ref=f6e166]:
+                      - /placeholder: Describe the finding in detail. Include what was observed, why it matters, and the potential consequences...
+                  - generic [ref=f6e167]:
+                    - generic [ref=f6e168]: Linked Risks
+                    - paragraph [ref=f6e169]: Link this finding to one or more risks from the risk register.
+                    - generic [ref=f6e170]:
+                      - combobox "Linked Risks" [ref=f6e171]:
+                        - generic: Link a risk...
+                      - combobox [ref=f6e360]
+                  - generic [ref=f6e175]:
+                    - heading "MITRE ATT&CK Mapping" [level=4] [ref=f6e181]
+                    - generic [ref=f6e182]:
+                      - generic [ref=f6e183]: Initial Access Vector
+                      - paragraph [ref=f6e184]: How would a threat actor initially gain access?
+                      - button "Select Initial Access Technique" [ref=f6e186]
+                    - generic [ref=f6e187]:
+                      - generic [ref=f6e188]: Threat Actor Steps
+                      - paragraph [ref=f6e189]: What techniques might be used during the attack?
+                      - button "Add Technique" [ref=f6e191]
+                    - generic [ref=f6e192]:
+                      - generic [ref=f6e193]: Threat Actor Objectives
+                      - paragraph [ref=f6e194]: What is the threat actor trying to achieve?
+                      - button "Add Objective" [ref=f6e196]
+                  - generic [ref=f6e197]:
+                    - heading "Controls" [level=4] [ref=f6e201]
+                    - generic [ref=f6e202]:
+                      - generic [ref=f6e203]: Mitigating Controls
+                      - paragraph [ref=f6e204]: Controls currently in place that reduce this risk. Pulls from the organizational control library at /controls.
+                      - combobox [ref=f6e206]: Add mitigating control...
+                    - generic [ref=f6e207]:
+                      - generic [ref=f6e208]: Control Gaps
+                      - paragraph [ref=f6e209]: Controls that are missing or insufficient and need to be implemented
+                      - combobox [ref=f6e211]: Add control gap...
+                  - generic [ref=f6e212]:
+                    - generic [ref=f6e213]:
+                      - heading "Severity Scoring" [level=4] [ref=f6e217]
+                      - generic [ref=f6e218]:
+                        - checkbox "Finding eliminated" [ref=f6e219]
+                        - generic "Controls fully remove this finding — no residual score required." [ref=f6e220] [cursor=pointer]: Finding eliminated
+                    - generic [ref=f6e221]:
+                      - generic [ref=f6e223]:
+                        - generic [ref=f6e224]:
+                          - heading "Inherent Severity" [level=5] [ref=f6e225]
+                          - paragraph [ref=f6e226]: Risk severity before controls are applied
+                        - generic [ref=f6e227]:
+                          - generic [ref=f6e228]:
+                            - generic [ref=f6e229]: Likelihood
+                            - combobox "Likelihood" [ref=f6e230]:
+                              - generic: Select...
+                            - combobox [ref=f6e361]
+                          - generic [ref=f6e234]:
+                            - generic [ref=f6e235]: Impact
+                            - combobox "Impact" [ref=f6e236]:
+                              - generic: Select...
+                            - combobox [ref=f6e362]
+                        - generic [ref=f6e240]: "Score: ? × ?"
+                      - generic [ref=f6e244]:
+                        - generic [ref=f6e245]:
+                          - heading "Residual Severity" [level=5] [ref=f6e246]
+                          - paragraph [ref=f6e247]: Risk severity after controls are applied
+                        - generic [ref=f6e248]:
+                          - generic [ref=f6e249]:
+                            - generic [ref=f6e250]: Likelihood
+                            - combobox "Likelihood" [ref=f6e251]:
+                              - generic: Select...
+                            - combobox [ref=f6e363]
+                          - generic [ref=f6e255]:
+                            - generic [ref=f6e256]: Impact
+                            - combobox "Impact" [ref=f6e257]:
+                              - generic: Select...
+                            - combobox [ref=f6e364]
+                        - generic [ref=f6e261]: "Score: ? × ?"
+                  - generic [ref=f6e264]:
+                    - heading "Remediation Options" [level=4] [ref=f6e270]
+                    - paragraph [ref=f6e271]: Document the treatment alternatives evaluated for this finding. Each option is saved against the finding and available on its detail page.
+                    - generic [ref=f6e272]:
+                      - paragraph [ref=f6e273]: No remediation options yet. Add one or more to document treatment alternatives for this risk.
+                      - button "Add remediation option" [ref=f6e274]
+                  - generic [ref=f6e275]:
+                    - heading "Evidence" [level=4] [ref=f6e280]
+                    - generic [ref=f6e281]:
+                      - paragraph [ref=f6e282]: Evidence files will be uploaded after the assessment is created.
+                      - paragraph [ref=f6e287]: Evidence upload will be available after creating the assessment
+              - paragraph [ref=f6e288]: Severity scored against Standard 3×3 Risk Matrix (org default).
+              - generic [ref=f6e289]:
+                - generic [ref=f6e290]:
+                  - generic [ref=f6e291]: Affected Business Units
+                  - button "Create New" [ref=f6e292]
+                - tree "Business unit selection" [ref=f6e293]:
+                  - textbox "Search business units" [ref=f6e299]:
+                    - /placeholder: Search business units...
+                  - group [ref=f6e300]:
+                    - generic [ref=f6e301]:
+                      - treeitem "Engineering ENG" [ref=f6e365]:
+                        - generic [ref=f6e366] [cursor=pointer]:
+                          - generic [ref=f6e368]: Engineering
+                          - generic [ref=f6e369]: ENG
+                      - treeitem "Finance & Accounting FIN" [ref=f6e370]:
+                        - generic [ref=f6e371] [cursor=pointer]:
+                          - generic [ref=f6e373]: Finance & Accounting
+                          - generic [ref=f6e374]: FIN
+                      - treeitem "Human Resources HR" [ref=f6e375]:
+                        - generic [ref=f6e376] [cursor=pointer]:
+                          - generic [ref=f6e378]: Human Resources
+                          - generic [ref=f6e379]: HR
+                      - treeitem "IT Operations ITO" [ref=f6e380]:
+                        - generic [ref=f6e381] [cursor=pointer]:
+                          - generic [ref=f6e383]: IT Operations
+                          - generic [ref=f6e384]: ITO
+                      - treeitem "Sales & Marketing SAL" [ref=f6e385]:
+                        - generic [ref=f6e386] [cursor=pointer]:
+                          - generic [ref=f6e388]: Sales & Marketing
+                          - generic [ref=f6e389]: SAL
+                - paragraph [ref=f6e305]: Select business units affected by this finding. Can't find one? Click "Create New" above.
+              - generic [ref=f6e306]:
+                - generic [ref=f6e307]: Assignee
+                - combobox "Select assignee..." [ref=f6e308]
+                - paragraph [ref=f6e310]: Assign to a team member for triage
+              - generic [ref=f6e312]:
+                - checkbox "Part of an exploitation pathway" [ref=f6e313]
+                - checkbox
+                - generic [ref=f6e314]:
+                  - generic [ref=f6e315] [cursor=pointer]: Part of an exploitation pathway
+                  - paragraph [ref=f6e316]: Add this to an attack chain so it's flagged with ⬡ in the register.
+              - generic [ref=f6e317]:
+                - button "Cancel" [ref=f6e318]
+                - button "Create Finding" [ref=f6e319]
+  - region "Notifications alt+T"
+  - alert [ref=f6e320]

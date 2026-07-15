@@ -1,0 +1,39 @@
+- generic [active] [ref=f16e1]:
+  - generic [ref=f16e2]:
+    - complementary [ref=f16e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f16e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f16e8]:
+          - generic [ref=f16e9]: BetterThanSpreadsheets
+          - generic [ref=f16e10]: GRC Platform
+      - navigation [ref=f16e11]:
+        - link "Home" [ref=f16e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f16e18]
+        - button "Assessments" [ref=f16e27]
+        - button "Risk" [ref=f16e36]
+        - button "Compliance" [ref=f16e44]
+        - button "Third Party" [ref=f16e52]
+        - button "Business Impact" [ref=f16e62]
+        - button "Help" [ref=f16e70]
+    - generic [ref=f16e78]:
+      - banner [ref=f16e79]:
+        - navigation "Breadcrumb" [ref=f16e80]:
+          - list [ref=f16e81]:
+            - listitem [ref=f16e82]:
+              - link "Home" [ref=f16e83] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f16e88]:
+              - generic [ref=f16e91]: Administration
+            - listitem [ref=f16e92]:
+              - generic [ref=f16e95]: Exploitation Pathways
+        - button [ref=f16e97]
+      - main [ref=f16e98]:
+        - generic [ref=f16e99]:
+          - generic [ref=f16e100]:
+            - paragraph [ref=f16e101]: ADMINISTRATION
+            - heading "Exploitation Pathways" [level=1] [ref=f16e102]
+            - paragraph [ref=f16e107]: Your library of attack paths (MITRE ATT&CK kill chains). Create pathways here, then select them onto assessments and tag them on findings and risks. Editing a pathway updates it everywhere it is linked.
+          - button "New pathway" [ref=f16e109]
+  - region "Notifications alt+T"
+  - alert [ref=f16e113]

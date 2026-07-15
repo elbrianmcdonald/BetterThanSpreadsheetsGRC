@@ -1,0 +1,193 @@
+- generic [ref=f24e1]:
+  - generic [ref=f24e113]:
+    - complementary [ref=f24e114]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f24e115] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f24e119]:
+          - generic [ref=f24e120]: BetterThanSpreadsheets
+          - generic [ref=f24e121]: GRC Platform
+      - generic [ref=f24e122]:
+        - combobox "Switch company" [ref=f24e128] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f24e129]
+      - navigation [ref=f24e131]:
+        - link "Home" [ref=f24e132] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f24e138]
+        - button "Governance" [ref=f24e147]
+        - button "Assessments" [ref=f24e155]
+        - generic [ref=f24e163]:
+          - button "Risk" [ref=f24e164]
+          - generic [ref=f24e171]:
+            - link "Risk Dashboard" [ref=f24e173] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f24e177] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f24e181] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f24e185] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f24e189]
+        - button "Third Party" [ref=f24e197]
+        - button "Business Impact" [ref=f24e207]
+        - button "Administration" [ref=f24e215]
+        - button "Help" [ref=f24e226]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f24e234] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f24e235]: A
+        - generic [ref=f24e236]:
+          - paragraph [ref=f24e237]: Alice Admin
+          - paragraph [ref=f24e238]: ADMINISTRATOR
+    - generic [ref=f24e239]:
+      - banner [ref=f24e240]:
+        - navigation "Breadcrumb" [ref=f24e241]:
+          - list [ref=f24e242]:
+            - listitem [ref=f24e243]:
+              - link "Home" [ref=f24e244] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f24e249]:
+              - link "Exploitation Pathways" [ref=f24e252] [cursor=pointer]:
+                - /url: /admin/pathways
+            - listitem [ref=f24e254]:
+              - generic [ref=f24e257]: Untitled pathway
+        - generic [ref=f24e258]:
+          - button [ref=f24e259]
+          - generic [ref=f24e260]:
+            - generic [ref=f24e261]: admin@acme-corp.com
+            - button "Sign Out" [ref=f24e262]
+      - main [ref=f24e265]:
+        - generic [ref=f24e266]:
+          - generic [ref=f24e267]:
+            - paragraph [ref=f24e268]: Exploitation Pathway
+            - heading [level=1] [ref=f24e269]:
+              - text: Untitled pathway
+              - button "Rename pathway" [ref=f24e270]
+            - paragraph [ref=f24e274]: Individually, these findings rate across severities. Chained together they form a single rehearsable path.
+          - button "Overall description Add an overall description and blast radius for this exploitation pathway." [ref=f24e275]:
+            - generic [ref=f24e276]: Overall description
+            - generic [ref=f24e281]: Add an overall description and blast radius for this exploitation pathway.
+          - generic [ref=f24e282]:
+            - complementary [ref=f24e283]:
+              - generic [ref=f24e284]:
+                - heading "Findings in the pathway" [level=3] [ref=f24e285]
+                - generic [ref=f24e286]: 0 linked
+              - paragraph [ref=f24e287]: No findings linked to this pathway yet.
+              - generic [ref=f24e288]:
+                - paragraph [ref=f24e289]:
+                  - text: Breaking
+                  - strong [ref=f24e290]: any single link
+                  - text: "collapses the pathway. Fastest break:"
+                - paragraph [ref=f24e291]: —
+            - generic [ref=f24e292]:
+              - generic [ref=f24e293]:
+                - generic [ref=f24e294]:
+                  - paragraph [ref=f24e295]: MITRE ATT&CK® · Technique flow
+                  - heading "How the chain executes" [level=2] [ref=f24e296]
+                - generic [ref=f24e297]:
+                  - tablist "Pathway visualization" [ref=f24e298]:
+                    - tab "Kill Chain" [ref=f24e299]
+                    - tab "ATT&CK Matrix" [ref=f24e300]
+                    - tab "Attack Narrative" [selected] [ref=f24e301]
+                  - button "Close" [expanded] [ref=f24e312]
+              - generic [ref=f24e317]:
+                - generic [ref=f24e318]:
+                  - generic [ref=f24e319]: Add finding
+                  - combobox [expanded] [ref=f24e320]: Search findings…
+                - generic [ref=f24e321]:
+                  - generic [ref=f24e322]: Add risk
+                  - combobox [ref=f24e323]: Search risks…
+                - generic [ref=f24e324]:
+                  - generic [ref=f24e325]:
+                    - text: Linked findings & risks
+                    - generic [ref=f24e326]: "*"
+                  - paragraph [ref=f24e327]: Add at least one finding or risk to this step.
+                - generic [ref=f24e328]:
+                  - generic [ref=f24e329]:
+                    - text: MITRE ATT&CK technique
+                    - generic [ref=f24e330]: "*"
+                  - button "Search MITRE ATT&CK…" [ref=f24e331]
+                - generic [ref=f24e332]:
+                  - generic [ref=f24e333]: Note (optional)
+                  - textbox "Note (optional)" [ref=f24e334]:
+                    - /placeholder: How this step compounds the chain…
+                - generic [ref=f24e335]:
+                  - button "Cancel" [ref=f24e336]
+                  - button "Add step" [disabled]
+              - paragraph [ref=f24e304]: No steps in this pathway yet.
+              - generic [ref=f24e305]:
+                - generic [ref=f24e306]: Sequence step
+                - generic [ref=f24e308]:
+                  - generic [ref=f24e309]: T0000
+                  - text: ATT&CK technique ID
+                - generic [ref=f24e310]: Hover any element to trace it across both panels.
+  - region "Notifications alt+T"
+  - alert [ref=f24e311]: BetterThanSpreadsheetsGRC
+  - dialog [ref=f24e338]:
+    - generic [ref=f24e339]:
+      - combobox [expanded] [active] [ref=f24e345]
+      - listbox "Suggestions" [ref=f24e346]:
+        - group [ref=f24e348]:
+          - 'option "FND-2026-0108 Concern: no encryption at rest VERIFY-TPRM-8c9f" [selected] [ref=f24e349]':
+            - generic [ref=f24e350]: FND-2026-0108
+            - generic [ref=f24e351]: "Concern: no encryption at rest VERIFY-TPRM-8c9f"
+          - option "FND-2026-0107 GV.OC-01 organizational mission VERIFY-MATURITY-8c9f" [ref=f24e352]:
+            - generic [ref=f24e353]: FND-2026-0107
+            - generic [ref=f24e354]: GV.OC-01 organizational mission VERIFY-MATURITY-8c9f
+          - option "FND-2026-0106 A.5.18 Access Rights VERIFY-COMPLIANCE-8c9f" [ref=f24e355]:
+            - generic [ref=f24e356]: FND-2026-0106
+            - generic [ref=f24e357]: A.5.18 Access Rights VERIFY-COMPLIANCE-8c9f
+          - option "FND-2026-0105 No Post-Incident Lessons-Learned Feedback Loop" [ref=f24e358]:
+            - generic [ref=f24e359]: FND-2026-0105
+            - generic [ref=f24e360]: No Post-Incident Lessons-Learned Feedback Loop
+          - option "FND-2026-0104 Tier-2 Disaster-Recovery Runbooks Incomplete" [ref=f24e361]:
+            - generic [ref=f24e362]: FND-2026-0104
+            - generic [ref=f24e363]: Tier-2 Disaster-Recovery Runbooks Incomplete
+          - option "FND-2026-0103 On-Prem AD Security Logs Not Forwarded to SIEM" [ref=f24e364]:
+            - generic [ref=f24e365]: FND-2026-0103
+            - generic [ref=f24e366]: On-Prem AD Security Logs Not Forwarded to SIEM
+          - option "FND-2026-0102 Incomplete Vulnerability Scan Coverage" [ref=f24e367]:
+            - generic [ref=f24e368]: FND-2026-0102
+            - generic [ref=f24e369]: Incomplete Vulnerability Scan Coverage
+          - option "FND-2026-0101 Production RDS Instances Unencrypted at Rest" [ref=f24e370]:
+            - generic [ref=f24e371]: FND-2026-0101
+            - generic [ref=f24e372]: Production RDS Instances Unencrypted at Rest
+          - option "FND-2026-0012 Unsupported Windows Server 2012 in Production" [ref=f24e373]:
+            - generic [ref=f24e374]: FND-2026-0012
+            - generic [ref=f24e375]: Unsupported Windows Server 2012 in Production
+          - option "FND-2026-0011 Excessive Mailbox Delegation in O365" [ref=f24e376]:
+            - generic [ref=f24e377]: FND-2026-0011
+            - generic [ref=f24e378]: Excessive Mailbox Delegation in O365
+          - option "FND-2026-0010 Backups Reachable from Production Network" [ref=f24e379]:
+            - generic [ref=f24e380]: FND-2026-0010
+            - generic [ref=f24e381]: Backups Reachable from Production Network
+          - option "FND-2026-0009 RDP Exposed Directly to the Internet" [ref=f24e382]:
+            - generic [ref=f24e383]: FND-2026-0009
+            - generic [ref=f24e384]: RDP Exposed Directly to the Internet
+          - option "FND-2026-0008 No Endpoint Detection & Response on Servers" [ref=f24e385]:
+            - generic [ref=f24e386]: FND-2026-0008
+            - generic [ref=f24e387]: No Endpoint Detection & Response on Servers
+          - option "FND-2026-0007 Hardcoded Secrets in Source Repository" [ref=f24e388]:
+            - generic [ref=f24e389]: FND-2026-0007
+            - generic [ref=f24e390]: Hardcoded Secrets in Source Repository
+          - option "FND-2026-0006 Missing DMARC Policy on Corporate Email Domain" [ref=f24e391]:
+            - generic [ref=f24e392]: FND-2026-0006
+            - generic [ref=f24e393]: Missing DMARC Policy on Corporate Email Domain
+          - option "FND-2026-0005 Stale Service Accounts with Elevated Privileges" [ref=f24e394]:
+            - generic [ref=f24e395]: FND-2026-0005
+            - generic [ref=f24e396]: Stale Service Accounts with Elevated Privileges
+          - option "FND-2026-0004 Unencrypted Database Backups in Secondary Region" [ref=f24e397]:
+            - generic [ref=f24e398]: FND-2026-0004
+            - generic [ref=f24e399]: Unencrypted Database Backups in Secondary Region
+          - option "FND-2026-0003 Excessive S3 Bucket Permissions in Production" [ref=f24e400]:
+            - generic [ref=f24e401]: FND-2026-0003
+            - generic [ref=f24e402]: Excessive S3 Bucket Permissions in Production
+          - option "FND-2026-0002 Missing WAF on Public-Facing API Gateway" [ref=f24e403]:
+            - generic [ref=f24e404]: FND-2026-0002
+            - generic [ref=f24e405]: Missing WAF on Public-Facing API Gateway
+          - option "FND-2026-0001 Outdated TLS 1.0 Configuration on Edge Servers" [ref=f24e406]:
+            - generic [ref=f24e407]: FND-2026-0001
+            - generic [ref=f24e408]: Outdated TLS 1.0 Configuration on Edge Servers

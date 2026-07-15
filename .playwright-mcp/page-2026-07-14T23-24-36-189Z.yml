@@ -1,0 +1,45 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - complementary [ref=f5e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f5e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f5e8]:
+          - generic [ref=f5e9]: BetterThanSpreadsheets
+          - generic [ref=f5e10]: GRC Platform
+      - navigation [ref=f5e11]:
+        - link "Home" [ref=f5e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f5e18]
+        - button "Assessments" [ref=f5e27]
+        - button "Risk" [ref=f5e36]
+        - button "Compliance" [ref=f5e44]
+        - generic [ref=f5e51]:
+          - button "Third Party" [ref=f5e52]
+          - generic [ref=f5e61]:
+            - link "TPRM Dashboard" [ref=f5e63] [cursor=pointer]:
+              - /url: /tprm/dashboard
+            - link "Vendor Registry" [ref=f5e67] [cursor=pointer]:
+              - /url: /vendors
+        - button "Business Impact" [ref=f5e71]
+        - button "Help" [ref=f5e79]
+    - generic [ref=f5e87]:
+      - banner [ref=f5e88]:
+        - navigation "Breadcrumb" [ref=f5e89]:
+          - list [ref=f5e90]:
+            - listitem [ref=f5e91]:
+              - link "Home" [ref=f5e92] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f5e97]:
+              - generic [ref=f5e100]: Third Party
+            - listitem [ref=f5e101]:
+              - link "Assessments" [ref=f5e104] [cursor=pointer]:
+                - /url: /tprm/assessments
+            - listitem [ref=f5e106]:
+              - link "VA-2026-0002" [ref=f5e109] [cursor=pointer]:
+                - /url: /tprm/assessments/demo-vas-002
+            - listitem [ref=f5e111]:
+              - generic [ref=f5e114]: Questionnaire Responses
+        - button [ref=f5e116]
+      - main [ref=f5e117]
+  - region "Notifications alt+T"
+  - alert [ref=f5e121]

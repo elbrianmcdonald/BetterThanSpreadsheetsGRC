@@ -1,0 +1,14 @@
+[  161944ms] [ERROR] %c << mutation #14 %cpathway.create%c %O 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+   
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: bold; 
+    background-color: #904dfc;
+    color: white;
+    padding: 2px;
+  ; font-weight: normal; {input: Object, result: TRPCClientError: Assessment not found for this organization.
+    at e.from (http://localhost/_next/…, elapsedMs: 34, context: Object} @ http://localhost/_next/static/chunks/4911-824464324c31943d.js:4

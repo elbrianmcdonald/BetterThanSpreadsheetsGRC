@@ -1,0 +1,51 @@
+- generic [active] [ref=f2e1]:
+  - generic [ref=f2e2]:
+    - complementary [ref=f2e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f2e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f2e8]:
+          - generic [ref=f2e9]: BetterThanSpreadsheets
+          - generic [ref=f2e10]: GRC Platform
+      - navigation [ref=f2e11]:
+        - link "Home" [ref=f2e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f2e18]
+        - generic [ref=f2e26]:
+          - button "Assessments" [ref=f2e27]
+          - generic [ref=f2e35]:
+            - link "Overview" [ref=f2e37] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f2e41] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f2e46] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f2e50] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f2e54] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f2e58] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f2e62]
+        - button "Compliance" [ref=f2e70]
+        - button "Third Party" [ref=f2e78]
+        - button "Business Impact" [ref=f2e88]
+        - button "Help" [ref=f2e96]
+    - generic [ref=f2e104]:
+      - banner [ref=f2e105]:
+        - navigation "Breadcrumb" [ref=f2e106]:
+          - list [ref=f2e107]:
+            - listitem [ref=f2e108]:
+              - link "Home" [ref=f2e109] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f2e114]:
+              - link "Compliance" [ref=f2e117] [cursor=pointer]:
+                - /url: /compliance/assessments
+            - listitem [ref=f2e119]:
+              - link "Assessments" [ref=f2e122] [cursor=pointer]:
+                - /url: /compliance/assessments
+            - listitem [ref=f2e124]:
+              - generic [ref=f2e127]: Assessment
+        - button [ref=f2e129]
+      - main [ref=f2e130]
+  - region "Notifications alt+T"
+  - alert [ref=f2e134]

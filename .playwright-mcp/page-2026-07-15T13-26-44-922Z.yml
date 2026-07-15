@@ -1,0 +1,315 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+        - generic:
+          - button:
+            - generic: Risk
+          - generic:
+            - generic:
+              - link:
+                - /url: /risks/dashboard
+                - generic: Risk Dashboard
+            - generic:
+              - link:
+                - /url: /risks/enterprise
+                - generic: Enterprise Risks
+            - generic:
+              - link:
+                - /url: /risks
+                - generic: Risk Register
+            - generic:
+              - link:
+                - /url: /findings
+                - generic: Findings Register
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - link:
+                - /url: /risks
+                - generic: Risks
+            - listitem:
+              - generic: New Risk
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - generic:
+            - heading [level=1]: Create Risk
+            - paragraph: Define the risk and how it's scored — from linked findings, a manual judgment, or both.
+          - generic:
+            - generic:
+              - generic:
+                - text: Name
+                - generic: "*"
+              - textbox:
+                - /placeholder: Short, specific risk name...
+                - text: Pathway tag verification risk
+            - generic:
+              - generic:
+                - text: Description
+                - generic: "*"
+              - textbox:
+                - /placeholder: What could happen, why it matters, and the potential consequences...
+                - text: Risk created to verify pathway-level tagging links into the master library.
+            - generic:
+              - generic:
+                - generic: Owner
+                - combobox: Select person...
+                - paragraph: Accountable for this risk.
+              - generic:
+                - generic: Business Unit
+                - tree:
+                  - generic:
+                    - generic:
+                      - textbox:
+                        - /placeholder: Select or create business unit...
+                  - group:
+                    - generic:
+                      - treeitem:
+                        - generic:
+                          - generic: Engineering
+                          - generic: ENG
+                      - treeitem:
+                        - generic:
+                          - generic: Finance & Accounting
+                          - generic: FIN
+                      - treeitem:
+                        - generic:
+                          - generic: Human Resources
+                          - generic: HR
+                      - treeitem:
+                        - generic:
+                          - generic: IT Operations
+                          - generic: ITO
+                      - treeitem:
+                        - generic:
+                          - generic: Sales & Marketing
+                          - generic: SAL
+                      - treeitem:
+                        - generic: Verify Nested BU 8c9f
+              - generic:
+                - generic: Risk Category
+                - combobox:
+                  - generic: Uncategorized
+                - combobox
+                - paragraph: Aligned to the taxonomy managed in Administration → Taxonomy.
+              - generic:
+                - generic: Enterprise Risk
+                - combobox:
+                  - generic: Not aligned
+                - combobox
+                - paragraph: Optional roll-up parent for executive reporting.
+              - generic:
+                - generic:
+                  - text: Risk Matrix
+                  - generic: "*"
+                - combobox:
+                  - generic: Standard 3×3 Risk Matrix v1
+                - combobox
+                - paragraph: Locked to this risk at creation.
+              - generic:
+                - generic: Review interval (days)
+                - spinbutton
+                - paragraph: Leave empty for no scheduled review.
+            - generic:
+              - generic:
+                - generic: Score at creation
+                - paragraph: "A risk is never unscored: link the findings that evidence it (the score derives from the highest open finding) and/or set a manual judgment score. Both can be changed later."
+              - generic:
+                - generic:
+                  - generic: Linked Findings
+                  - generic:
+                    - textbox:
+                      - /placeholder: Search open findings...
+                  - generic:
+                    - generic:
+                      - checkbox [checked]
+                      - checkbox [checked]
+                      - generic: FND-2026-0108
+                      - generic: "Concern: no encryption at rest VERIFY-TPRM-8c9f"
+                      - generic: High
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0107
+                      - generic: GV.OC-01 organizational mission VERIFY-MATURITY-8c9f
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0106
+                      - generic: A.5.18 Access Rights VERIFY-COMPLIANCE-8c9f
+                      - generic: High
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0105
+                      - generic: No Post-Incident Lessons-Learned Feedback Loop
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0104
+                      - generic: Tier-2 Disaster-Recovery Runbooks Incomplete
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0103
+                      - generic: On-Prem AD Security Logs Not Forwarded to SIEM
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0102
+                      - generic: Incomplete Vulnerability Scan Coverage
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0101
+                      - generic: Production RDS Instances Unencrypted at Rest
+                      - generic: High
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0012
+                      - generic: Unsupported Windows Server 2012 in Production
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0011
+                      - generic: Excessive Mailbox Delegation in O365
+                      - generic: Low
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0010
+                      - generic: Backups Reachable from Production Network
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0009
+                      - generic: RDP Exposed Directly to the Internet
+                      - generic: High
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0008
+                      - generic: No Endpoint Detection & Response on Servers
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0007
+                      - generic: Hardcoded Secrets in Source Repository
+                      - generic: High
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0005
+                      - generic: Stale Service Accounts with Elevated Privileges
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0004
+                      - generic: Unencrypted Database Backups in Secondary Region
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0003
+                      - generic: Excessive S3 Bucket Permissions in Production
+                      - generic: Medium
+                    - generic:
+                      - checkbox
+                      - checkbox
+                      - generic: FND-2026-0001
+                      - generic: Outdated TLS 1.0 Configuration on Edge Servers
+                      - generic: Medium
+                  - paragraph: 1 finding linked — score will derive from the highest.
+                - generic:
+                  - checkbox
+                  - generic: Set a manual score (overrides the calculated rollup)
+            - generic:
+              - generic:
+                - checkbox [checked]
+                - checkbox [checked]
+                - generic:
+                  - generic: Link to exploitation pathways
+                  - paragraph: Optionally align this to one or more attack paths from the library. Creating a new one adds it to the library.
+              - generic:
+                - generic:
+                  - generic: Existing pathway
+                  - combobox [expanded]:
+                    - generic: Select a pathway…
+                  - combobox
+                - generic:
+                  - generic: Create new pathway
+                  - generic:
+                    - textbox:
+                      - /placeholder: New pathway name (e.g. Initial access → domain admin)
+                    - button [disabled]
+            - generic:
+              - button: Cancel
+              - button: Create Risk
+  - region "Notifications alt+T"
+  - alert
+  - listbox [ref=f18e408]:
+    - option "Playwright Verify Pathway" [active] [ref=f18e409]
+    - option "Ransomware Data-Exfiltration Chain" [ref=f18e412]

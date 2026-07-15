@@ -1,0 +1,128 @@
+- generic [ref=f24e1]:
+  - generic [ref=f24e113]:
+    - complementary [ref=f24e114]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f24e115] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f24e119]:
+          - generic [ref=f24e120]: BetterThanSpreadsheets
+          - generic [ref=f24e121]: GRC Platform
+      - generic [ref=f24e122]:
+        - combobox "Switch company" [ref=f24e128] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f24e129]
+      - navigation [ref=f24e131]:
+        - link "Home" [ref=f24e132] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f24e138]
+        - button "Governance" [ref=f24e147]
+        - button "Assessments" [ref=f24e155]
+        - generic [ref=f24e163]:
+          - button "Risk" [ref=f24e164]
+          - generic [ref=f24e171]:
+            - link "Risk Dashboard" [ref=f24e173] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f24e177] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f24e181] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f24e185] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f24e189]
+        - button "Third Party" [ref=f24e197]
+        - button "Business Impact" [ref=f24e207]
+        - button "Administration" [ref=f24e215]
+        - button "Help" [ref=f24e226]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f24e234] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f24e235]: A
+        - generic [ref=f24e236]:
+          - paragraph [ref=f24e237]: Alice Admin
+          - paragraph [ref=f24e238]: ADMINISTRATOR
+    - generic [ref=f24e239]:
+      - banner [ref=f24e240]:
+        - navigation "Breadcrumb" [ref=f24e241]:
+          - list [ref=f24e242]:
+            - listitem [ref=f24e243]:
+              - link "Home" [ref=f24e244] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f24e249]:
+              - link "Exploitation Pathways" [ref=f24e252] [cursor=pointer]:
+                - /url: /admin/pathways
+            - listitem [ref=f24e254]:
+              - generic [ref=f24e257]: Untitled pathway
+        - generic [ref=f24e258]:
+          - button [ref=f24e259]
+          - generic [ref=f24e260]:
+            - generic [ref=f24e261]: admin@acme-corp.com
+            - button "Sign Out" [ref=f24e262]
+      - main [ref=f24e265]:
+        - generic [ref=f24e266]:
+          - generic [ref=f24e267]:
+            - paragraph [ref=f24e268]: Exploitation Pathway
+            - heading [level=1] [ref=f24e269]:
+              - text: Untitled pathway
+              - button "Rename pathway" [ref=f24e270]
+            - paragraph [ref=f24e274]: Individually, these findings rate across severities. Chained together they form a single rehearsable path.
+          - button "Overall description Add an overall description and blast radius for this exploitation pathway." [ref=f24e275]:
+            - generic [ref=f24e276]: Overall description
+            - generic [ref=f24e281]: Add an overall description and blast radius for this exploitation pathway.
+          - generic [ref=f24e282]:
+            - complementary [ref=f24e283]:
+              - generic [ref=f24e284]:
+                - heading "Findings in the pathway" [level=3] [ref=f24e285]
+                - generic [ref=f24e286]: 0 linked
+              - paragraph [ref=f24e287]: No findings linked to this pathway yet.
+              - generic [ref=f24e288]:
+                - paragraph [ref=f24e289]:
+                  - text: Breaking
+                  - strong [ref=f24e290]: any single link
+                  - text: "collapses the pathway. Fastest break:"
+                - paragraph [ref=f24e291]: —
+            - generic [ref=f24e292]:
+              - generic [ref=f24e293]:
+                - generic [ref=f24e294]:
+                  - paragraph [ref=f24e295]: MITRE ATT&CK® · Technique flow
+                  - heading "How the chain executes" [level=2] [ref=f24e296]
+                - generic [ref=f24e297]:
+                  - tablist "Pathway visualization" [ref=f24e298]:
+                    - tab "Kill Chain" [ref=f24e299]
+                    - tab "ATT&CK Matrix" [ref=f24e300]
+                    - tab "Attack Narrative" [selected] [ref=f24e301]
+                  - button "Close" [expanded] [active] [ref=f24e312]
+              - generic [ref=f24e317]:
+                - generic [ref=f24e318]:
+                  - generic [ref=f24e319]: Add finding
+                  - combobox [ref=f24e320]: Search findings…
+                - generic [ref=f24e321]:
+                  - generic [ref=f24e322]: Add risk
+                  - combobox [ref=f24e323]: Search risks…
+                - generic [ref=f24e324]:
+                  - generic [ref=f24e325]:
+                    - text: Linked findings & risks
+                    - generic [ref=f24e326]: "*"
+                  - paragraph [ref=f24e327]: Add at least one finding or risk to this step.
+                - generic [ref=f24e328]:
+                  - generic [ref=f24e329]:
+                    - text: MITRE ATT&CK technique
+                    - generic [ref=f24e330]: "*"
+                  - button "Search MITRE ATT&CK…" [ref=f24e331]
+                - generic [ref=f24e332]:
+                  - generic [ref=f24e333]: Note (optional)
+                  - textbox "Note (optional)" [ref=f24e334]:
+                    - /placeholder: How this step compounds the chain…
+                - generic [ref=f24e335]:
+                  - button "Cancel" [ref=f24e336]
+                  - button "Add step" [disabled]
+              - paragraph [ref=f24e304]: No steps in this pathway yet.
+              - generic [ref=f24e305]:
+                - generic [ref=f24e306]: Sequence step
+                - generic [ref=f24e308]:
+                  - generic [ref=f24e309]: T0000
+                  - text: ATT&CK technique ID
+                - generic [ref=f24e310]: Hover any element to trace it across both panels.
+  - region "Notifications alt+T"
+  - alert [ref=f24e311]: BetterThanSpreadsheetsGRC

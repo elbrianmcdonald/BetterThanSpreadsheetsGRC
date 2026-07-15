@@ -1,0 +1,840 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+          - generic:
+            - generic:
+              - link:
+                - /url: /assessments
+                - generic: Overview
+            - generic:
+              - link:
+                - /url: /compliance/assessments
+                - generic: Compliance
+            - generic:
+              - link:
+                - /url: /tprm/assessments
+                - generic: Vendor
+            - generic:
+              - link:
+                - /url: /risk-assessments
+                - generic: Risk
+            - generic:
+              - link:
+                - /url: /maturity/dashboard
+                - generic: Maturity
+            - generic:
+              - link:
+                - /url: /bia/processes
+                - generic: BIA Assessment
+        - generic:
+          - button:
+            - generic: Risk
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - link:
+                - /url: /compliance/assessments
+                - generic: Compliance
+            - listitem:
+              - link:
+                - /url: /compliance/assessments
+                - generic: Assessments
+            - listitem:
+              - generic: COMP-2026-0001
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - button: Back to Assessments
+          - tablist:
+            - navigation:
+              - tab:
+                - generic: Executive Summary
+              - tab:
+                - generic: Overview
+              - tab:
+                - generic: Schedule
+              - tab:
+                - generic: Stakeholders
+              - tab [selected]:
+                - generic: Controls
+              - tab:
+                - generic: Findings
+              - tab:
+                - generic: Risks
+              - tab:
+                - generic: Evidence
+              - tab:
+                - generic: Exploitation Pathways
+              - tab:
+                - generic: Action Plans
+          - tabpanel:
+            - generic:
+              - generic:
+                - heading [level=2]: Control Assessments (45 groups)
+              - generic:
+                - generic: "Filter by status:"
+                - combobox:
+                  - generic: All (45)
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.12
+                        - generic: Classification of Information
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 50%
+                    - paragraph: Information shall be classified in terms of legal requirements, value, criticality and sensitivity to unauthorized disclosure or modification.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.13
+                        - generic: Labeling of Information
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 50%
+                    - paragraph: An appropriate set of procedures for information labeling shall be developed and implemented.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.14
+                        - generic: Information Transfer
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 50%
+                    - paragraph: Information transfer rules, procedures, or agreements shall be in place for all types of transfer facilities.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.15
+                        - generic: Access Control
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 50%
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: Group Compliance
+                          - paragraph: Based on control assessments
+                        - generic: 50%
+                      - generic:
+                        - generic:
+                          - generic: "0"
+                          - generic: Compliant
+                        - generic:
+                          - generic: "1"
+                          - generic: Partial
+                        - generic:
+                          - generic: "0"
+                          - generic: Non-Compl.
+                        - generic:
+                          - generic: "0"
+                          - generic: N/A
+                        - generic:
+                          - generic: "0"
+                          - generic: Unscored
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: A.5.15
+                              - generic: Partial ✗
+                            - paragraph: Access Control
+                          - generic:
+                            - button: Finding
+                        - generic:
+                          - button:
+                            - generic: Control Details
+                        - generic:
+                          - generic:
+                            - generic: Compliance Status
+                            - combobox:
+                              - generic: Partially Compliant
+                          - generic:
+                            - generic: Notes / Evidence
+                            - textbox:
+                              - /placeholder: Document evidence or rationale...
+                          - generic:
+                            - generic:
+                              - generic: Evidence
+                              - generic:
+                                - button: Attach
+                                - button: Upload
+                            - paragraph: No evidence attached.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.16
+                        - generic: Identity Management
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 50%
+                    - paragraph: The full lifecycle of identities shall be managed.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.17
+                        - generic: Authentication Information
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 50%
+                    - paragraph: Allocation and management of authentication information shall be controlled by a management process.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.18
+                        - generic: Access Rights
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 0%
+                    - paragraph: Access rights to information and other associated assets shall be provisioned, reviewed, modified and removed.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.19
+                        - generic: Information Security in Supplier Relationships
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 0%
+                    - paragraph: Processes and procedures shall be defined and implemented to manage the information security risks associated with the use of supplier's products or services.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.20
+                        - generic: Addressing Security Within Supplier Agreements
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 0%
+                    - paragraph: Relevant information security requirements shall be established and agreed with each supplier.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.21
+                        - generic: Managing Information Security in the ICT Supply Chain
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 0%
+                    - paragraph: Processes and procedures shall be defined and implemented to manage the information security risks associated with the ICT products and services supply chain.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.22
+                        - generic: Monitoring, Review and Change Management of Supplier Services
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 0%
+                    - paragraph: The organization shall regularly monitor, review, evaluate and manage change in supplier information security practices.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.23
+                        - generic: Information Security for Use of Cloud Services
+                      - generic:
+                        - generic: 0/1 controls
+                        - generic: Not Assessed
+                    - paragraph: Processes for acquisition, use, management and exit from cloud services shall be established.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.24
+                        - generic: Information Security Incident Management Planning and Preparation
+                      - generic:
+                        - generic: 0/1 controls
+                        - generic: Not Assessed
+                    - paragraph: The organization shall plan and prepare for managing information security incidents.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.25
+                        - generic: Assessment and Decision on Information Security Events
+                      - generic:
+                        - generic: 0/1 controls
+                        - generic: Not Assessed
+                    - paragraph: The organization shall assess information security events and decide if they are to be categorized as information security incidents.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.26
+                        - generic: Response to Information Security Incidents
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Information security incidents shall be responded to in accordance with the documented procedures.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.27
+                        - generic: Learning from Information Security Incidents
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Knowledge gained from information security incidents shall be used to strengthen and improve the information security controls.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.28
+                        - generic: Collection of Evidence
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: The organization shall establish and implement procedures for the identification, collection, acquisition and preservation of evidence.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.29
+                        - generic: Information Security During Disruption
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: The organization shall plan how to maintain information security at an appropriate level during disruption.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.30
+                        - generic: ICT Readiness for Business Continuity
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: ICT readiness shall be planned, implemented, maintained and tested based on business continuity objectives.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.33
+                        - generic: Protection of Records
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Records shall be protected from loss, destruction, falsification, unauthorized access and unauthorized release.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.5.34
+                        - generic: Privacy and Protection of PII
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: The organization shall identify and meet the requirements regarding the preservation of privacy and protection of PII.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.6.3
+                        - generic: Information Security Awareness, Education and Training
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Personnel of the organization and relevant interested parties shall receive appropriate information security awareness education and training.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.6.4
+                        - generic: Disciplinary Process
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: A disciplinary process shall be formalized and communicated to take actions against personnel and other relevant interested parties who have committed an information security policy violation.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.6.8
+                        - generic: Information Security Event Reporting
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: The organization shall provide a mechanism for personnel to report observed or suspected information security events.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.7.1
+                        - generic: Physical Security Perimeters
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Security perimeters shall be defined and used to protect areas that contain either sensitive or critical information and information processing facilities.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.7.2
+                        - generic: Physical Entry
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Secure areas shall be protected by appropriate entry controls to ensure that only authorized personnel are allowed access.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.7.3
+                        - generic: Securing Offices, Rooms and Facilities
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Physical security for offices, rooms and facilities shall be designed and implemented.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.7.4
+                        - generic: Physical Security Monitoring
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Premises shall be continuously monitored for unauthorized physical access.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.7.5
+                        - generic: Protecting Against Physical and Environmental Threats
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Protection against physical and environmental threats, such as natural disasters and other intentional or unintentional physical threats to infrastructure shall be designed and implemented.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.7.8
+                        - generic: Equipment Siting and Protection
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Equipment shall be sited securely and protected.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.13
+                        - generic: Information Backup
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Backup copies of information, software and systems shall be maintained and regularly tested.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.14
+                        - generic: Redundancy of Information Processing Facilities
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Information processing facilities shall be implemented with redundancy sufficient to meet availability requirements.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.15
+                        - generic: Logging
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Logs that record activities, exceptions, faults and other relevant events shall be produced, stored, protected and analysed.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.16
+                        - generic: Monitoring Activities
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Networks, systems and applications shall be monitored for anomalous behaviour and appropriate actions taken.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.17
+                        - generic: Clock Synchronization
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 50%
+                    - paragraph: The clocks of information processing systems used by the organization shall be synchronized to approved time sources.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.2
+                        - generic: Privileged Access Rights
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: The allocation and use of privileged access rights shall be restricted and managed.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.20
+                        - generic: Networks Security
+                      - generic:
+                        - generic: 0/1 controls
+                        - generic: Not Assessed
+                    - paragraph: Networks and network devices shall be secured, managed and controlled to protect information in systems and applications.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.21
+                        - generic: Security of Network Services
+                      - generic:
+                        - generic: 0/1 controls
+                        - generic: Not Assessed
+                    - paragraph: Security mechanisms, service levels and service requirements of network services shall be identified, implemented and monitored.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.22
+                        - generic: Segregation of Networks
+                      - generic:
+                        - generic: 0/1 controls
+                        - generic: Not Assessed
+                    - paragraph: Groups of information services, users and information systems shall be segregated in the organization's networks.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.24
+                        - generic: Use of Cryptography
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Rules for the effective use of cryptography, including cryptographic key management, shall be defined and implemented.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.3
+                        - generic: Information Access Restriction
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Access to information and other associated assets shall be restricted in accordance with the established topic-specific policy on access control.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.32
+                        - generic: Change Management
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Changes to information processing facilities and information systems shall be subject to change management procedures.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.5
+                        - generic: Secure Authentication
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Secure authentication technologies and procedures shall be implemented.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.8
+                        - generic: Management of Technical Vulnerabilities
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Information about technical vulnerabilities of information systems in use shall be obtained and appropriate measures shall be taken.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: A.8.9
+                        - generic: Configuration Management
+                      - generic:
+                        - generic: 1/1 controls
+                        - generic: 100%
+                    - paragraph: Configurations, including security configurations, of hardware, software, services and networks shall be established, documented, implemented, monitored and reviewed.
+  - region "Notifications alt+T"
+  - alert
+  - dialog:
+    - generic:
+      - heading [level=2]: Create finding
+      - paragraph: Capture an issue spotted during this assessment. It'll be linked back automatically so you can pick it up in the Findings register.
+      - generic: Spawned from A.5.15 — Access Control
+    - generic:
+      - generic:
+        - generic:
+          - text: Source
+          - generic: "*"
+        - combobox:
+          - generic:
+            - generic:
+              - generic: Audit
+              - generic: From security/compliance audit
+        - combobox
+      - generic:
+        - generic:
+          - generic: "Finding: A.5.15 — Access Control"
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Finding Title *
+                  - textbox:
+                    - /placeholder: Short, specific finding label...
+                    - text: A.5.15 — Access Control
+                - generic:
+                  - generic: Finding Category
+                  - combobox:
+                    - generic: Uncategorized
+                  - combobox
+                  - paragraph: Aligned to the taxonomy managed in Administration → Taxonomy.
+              - generic:
+                - generic: Description *
+                - textbox:
+                  - /placeholder: Describe the finding in detail. Include what was observed, why it matters, and the potential consequences...
+              - generic:
+                - generic: Linked Risks
+                - paragraph: Link this finding to one or more risks from the risk register.
+                - generic:
+                  - combobox:
+                    - generic: Link a risk...
+                  - combobox
+              - generic:
+                - generic:
+                  - heading [level=4]: MITRE ATT&CK Mapping
+                - generic:
+                  - generic: Initial Access Vector
+                  - paragraph: How would a threat actor initially gain access?
+                  - generic:
+                    - button: Select Initial Access Technique
+                - generic:
+                  - generic: Threat Actor Steps
+                  - paragraph: What techniques might be used during the attack?
+                  - generic:
+                    - button: Add Technique
+                - generic:
+                  - generic: Threat Actor Objectives
+                  - paragraph: What is the threat actor trying to achieve?
+                  - generic:
+                    - button: Add Objective
+              - generic:
+                - generic:
+                  - heading [level=4]: Controls
+                - generic:
+                  - generic: Mitigating Controls
+                  - paragraph: Controls currently in place that reduce this risk. Pulls from the organizational control library at /controls.
+                  - generic:
+                    - combobox: Add mitigating control...
+                - generic:
+                  - generic: Control Gaps
+                  - paragraph: Controls that are missing or insufficient and need to be implemented
+                  - generic:
+                    - combobox: Add control gap...
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=4]: Severity Scoring
+                  - generic:
+                    - checkbox
+                    - generic: Finding eliminated
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - heading [level=5]: Inherent Severity
+                        - paragraph: Risk severity before controls are applied
+                      - generic:
+                        - generic:
+                          - generic: Likelihood
+                          - combobox:
+                            - generic: Select...
+                          - combobox
+                        - generic:
+                          - generic: Impact
+                          - combobox:
+                            - generic: Select...
+                          - combobox
+                      - generic: "Score: ? × ?"
+                  - generic:
+                    - generic:
+                      - generic:
+                        - heading [level=5]: Residual Severity
+                        - paragraph: Risk severity after controls are applied
+                      - generic:
+                        - generic:
+                          - generic: Likelihood
+                          - combobox:
+                            - generic: Select...
+                          - combobox
+                        - generic:
+                          - generic: Impact
+                          - combobox:
+                            - generic: Select...
+                          - combobox
+                      - generic: "Score: ? × ?"
+              - generic:
+                - generic:
+                  - heading [level=4]: Remediation Options
+                - paragraph: Document the treatment alternatives evaluated for this finding. Each option is saved against the finding and available on its detail page.
+                - generic:
+                  - paragraph: No remediation options yet. Add one or more to document treatment alternatives for this risk.
+                  - button: Add remediation option
+              - generic:
+                - generic:
+                  - heading [level=4]: Evidence
+                - generic:
+                  - paragraph: Evidence files will be uploaded after the assessment is created.
+                  - generic:
+                    - paragraph: Evidence upload will be available after creating the assessment
+      - paragraph: Severity scored against Standard 3×3 Risk Matrix (org default).
+      - generic:
+        - generic:
+          - generic: Affected Business Units
+          - button: Create New
+        - tree:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search business units...
+          - group:
+            - generic:
+              - treeitem:
+                - generic:
+                  - generic: Engineering
+                  - generic: ENG
+              - treeitem:
+                - generic:
+                  - generic: Finance & Accounting
+                  - generic: FIN
+              - treeitem:
+                - generic:
+                  - generic: Human Resources
+                  - generic: HR
+              - treeitem:
+                - generic:
+                  - generic: IT Operations
+                  - generic: ITO
+              - treeitem:
+                - generic:
+                  - generic: Sales & Marketing
+                  - generic: SAL
+        - paragraph: Select business units affected by this finding. Can't find one? Click "Create New" above.
+      - generic:
+        - generic: Assignee
+        - combobox:
+          - generic: Select assignee...
+        - paragraph: Assign to a team member for triage
+      - generic:
+        - generic:
+          - checkbox
+          - checkbox
+          - generic:
+            - generic: Part of an exploitation pathway
+            - paragraph: Add this to an attack chain so it's flagged with ⬡ in the register.
+      - generic:
+        - button: Cancel
+        - button: Create Finding
+    - button:
+      - generic: Close
+  - dialog [ref=f7e2030]:
+    - generic [ref=f7e2031]:
+      - heading "Create Business Unit" [level=2] [ref=f7e2032]
+      - paragraph [ref=f7e2033]: Add a new business unit to your organization. It will be automatically added to the affected business units for this finding.
+    - generic [ref=f7e2034]:
+      - generic [ref=f7e2035]:
+        - generic [ref=f7e2036]:
+          - text: Name
+          - generic [ref=f7e2037]: "*"
+        - textbox "Name *" [active] [ref=f7e2038]:
+          - /placeholder: Enter business unit name
+      - generic [ref=f7e2039]:
+        - generic [ref=f7e2040]: Code (optional)
+        - textbox "Code (optional)" [ref=f7e2041]:
+          - /placeholder: e.g., ENG, SALES, HR
+        - paragraph [ref=f7e2042]: Short identifier for quick reference (max 20 characters)
+      - generic [ref=f7e2043]:
+        - generic [ref=f7e2044]: Parent Business Unit (optional)
+        - combobox "Parent Business Unit (optional)" [ref=f7e2045]:
+          - generic: None (top-level)
+        - paragraph [ref=f7e2048]: Optionally place this under an existing business unit
+    - generic [ref=f7e2049]:
+      - button "Cancel" [ref=f7e2050]
+      - button "Create Business Unit" [disabled]
+    - button "Close" [ref=f7e2051]

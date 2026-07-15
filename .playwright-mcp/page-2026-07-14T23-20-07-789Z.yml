@@ -1,0 +1,233 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+          - generic:
+            - generic:
+              - link:
+                - /url: /assessments
+                - generic: Overview
+            - generic:
+              - link:
+                - /url: /compliance/assessments
+                - generic: Compliance
+            - generic:
+              - link:
+                - /url: /tprm/assessments
+                - generic: Vendor
+            - generic:
+              - link:
+                - /url: /risk-assessments
+                - generic: Risk
+            - generic:
+              - link:
+                - /url: /maturity/dashboard
+                - generic: Maturity
+            - generic:
+              - link:
+                - /url: /bia/processes
+                - generic: BIA Assessment
+        - generic:
+          - button:
+            - generic: Risk
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - link:
+                - /url: /maturity/dashboard
+                - generic: Maturity
+            - listitem:
+              - generic: Dashboard
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - generic:
+            - paragraph: GOVERNANCE
+            - heading [level=1]:
+              - generic: Maturity Dashboard
+            - paragraph: Track and improve organizational maturity across security frameworks
+        - generic:
+          - generic:
+            - generic:
+              - generic: Maturity Overview
+              - generic:
+                - combobox:
+                  - generic: NIST CSF 2.0
+                - combobox:
+                  - generic: All Business Units
+                - button: New Assessment
+          - generic:
+            - generic:
+              - generic:
+                - link:
+                  - /url: /maturity
+                  - generic: —
+                  - generic: Maturity Level
+                - link:
+                  - /url: /maturity?filter=scored
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: Domains Scored
+                - link:
+                  - /url: /maturity
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: Total Domains
+                - link:
+                  - /url: /maturity?filter=below-target
+                  - generic:
+                    - generic:
+                      - generic: "0"
+                      - generic: Below Target
+              - generic:
+                - generic:
+                  - generic: Scoring Progress
+                  - generic: 0 / 0 domains
+              - generic:
+                - button: Start New Assessment
+        - generic:
+          - generic:
+            - generic:
+              - heading [level=2]: Maturity Assessments
+            - generic:
+              - button: New Assessment
+          - generic:
+            - tablist:
+              - tab [selected]:
+                - text: All
+                - generic: (0)
+              - tab:
+                - text: In Progress
+                - generic: (0)
+              - tab:
+                - text: Completed
+                - generic: (0)
+            - tabpanel:
+              - generic:
+                - generic:
+                  - generic: No Assessments
+                  - generic: Create your first maturity assessment to start tracking your organization's security posture.
+                  - button: Create Assessment
+  - region "Notifications alt+T"
+  - alert
+  - dialog [ref=f3e421]:
+    - generic [ref=f3e422]:
+      - heading "Create Maturity Assessment" [level=2] [ref=f3e423]
+      - paragraph [ref=f3e424]: Start a new maturity assessment to evaluate your organization against a security framework.
+    - generic [ref=f3e425]:
+      - generic [ref=f3e426]:
+        - generic [ref=f3e427]: Framework *
+        - combobox [active] [ref=f3e428]:
+          - generic: NIST Cybersecurity Framework 2.0 (v2.0)
+      - generic [ref=f3e431]:
+        - generic [ref=f3e432]: Assessment Name *
+        - textbox "Assessment Name *" [ref=f3e433]:
+          - /placeholder: e.g., 2024 Q1 Security Maturity Assessment
+      - generic [ref=f3e434]:
+        - generic [ref=f3e435]: Description
+        - textbox "Description" [ref=f3e436]:
+          - /placeholder: Describe the purpose of this assessment...
+      - generic [ref=f3e437]:
+        - generic [ref=f3e438]: Business Unit
+        - combobox [ref=f3e439]:
+          - generic [ref=f3e440]: All Business Units
+      - generic [ref=f3e471]:
+        - generic [ref=f3e472]: Scoring Scale
+        - combobox [ref=f3e473]:
+          - generic: NIST Implementation Tiers (0–4)
+        - paragraph [ref=f3e476]: "Tiers: None / Partial / Risk Informed / Repeatable / Adaptive"
+      - generic [ref=f3e477]:
+        - generic [ref=f3e478]: Target levels per Function
+        - paragraph [ref=f3e479]: Each item gets its own target. Children inherit their parent's target.
+        - generic [ref=f3e480]:
+          - generic [ref=f3e481]:
+            - generic [ref=f3e482]: GV
+            - generic "Govern" [ref=f3e483]
+            - combobox [ref=f3e484]:
+              - generic: No target
+          - generic [ref=f3e487]:
+            - generic [ref=f3e488]: ID
+            - generic "Identify" [ref=f3e489]
+            - combobox [ref=f3e490]:
+              - generic: No target
+          - generic [ref=f3e493]:
+            - generic [ref=f3e494]: PR
+            - generic "Protect" [ref=f3e495]
+            - combobox [ref=f3e496]:
+              - generic: No target
+          - generic [ref=f3e499]:
+            - generic [ref=f3e500]: DE
+            - generic "Detect" [ref=f3e501]
+            - combobox [ref=f3e502]:
+              - generic: No target
+          - generic [ref=f3e505]:
+            - generic [ref=f3e506]: RS
+            - generic "Respond" [ref=f3e507]
+            - combobox [ref=f3e508]:
+              - generic: No target
+          - generic [ref=f3e511]:
+            - generic [ref=f3e512]: RC
+            - generic "Recover" [ref=f3e513]
+            - combobox [ref=f3e514]:
+              - generic: No target
+      - generic [ref=f3e453]:
+        - generic [ref=f3e454]: Target Date
+        - textbox [ref=f3e455]
+    - generic [ref=f3e456]:
+      - button "Cancel" [ref=f3e457]
+      - button "Create Assessment" [ref=f3e458]
+    - button "Close" [ref=f3e459]

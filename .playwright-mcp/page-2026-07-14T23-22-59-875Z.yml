@@ -1,0 +1,601 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+        - generic:
+          - button:
+            - generic: Risk
+          - generic:
+            - generic:
+              - link:
+                - /url: /risks/dashboard
+                - generic: Risk Dashboard
+            - generic:
+              - link:
+                - /url: /risks/enterprise
+                - generic: Enterprise Risks
+            - generic:
+              - link:
+                - /url: /risks
+                - generic: Risk Register
+            - generic:
+              - link:
+                - /url: /findings
+                - generic: Findings Register
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - link:
+                - /url: /maturity
+                - generic: Maturity
+            - listitem:
+              - generic: Maturity Verify Run 8c9f
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - button: Back to Assessments
+          - tablist:
+            - navigation:
+              - tab:
+                - generic: Executive Summary
+              - tab [selected]:
+                - generic: Assessment
+              - tab:
+                - generic: Schedule
+              - tab:
+                - generic: Stakeholders
+              - tab:
+                - generic: Evidence
+              - tab:
+                - generic: Action Plans
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: NIST CSF 2.0
+                    - generic: Draft
+                  - generic: Maturity Verify Run 8c9f
+                  - generic: MAT-2026-0001 | Function Level | Self-Assessment
+                - generic:
+                  - link:
+                    - /url: /api/maturity/cmrl9xu7u000401pa4butgo8f/pdf
+                    - text: Export PDF
+                  - button [disabled]: Edit
+                  - button: Assign
+                  - button: Delete
+            - generic:
+              - generic:
+                - generic:
+                  - generic: AA
+                  - generic: Alice Admin
+                - generic: Created Jul 14, 2026
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=2]: Assessment (6 items)
+                - button: Start Assessment
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: GV
+                        - generic: Govern
+                      - generic:
+                        - generic: 0/31 scored
+                        - generic: Not Assessed
+                  - generic:
+                    - generic:
+                      - generic:
+                        - paragraph: The organization's cybersecurity risk management strategy, expectations, and policy are established, communicated, and monitored. The GOVERN Function provides outcomes to inform what an organization may do to achieve and prioritize the outcomes of the other five Functions in the context of its mission and stakeholder expectations.
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - paragraph: Average Implementation Tier
+                            - paragraph: Based on subcategory scoring
+                          - generic:
+                            - generic: Tier ?
+                            - paragraph: Not Assessed
+                      - generic:
+                        - generic:
+                          - generic:
+                            - paragraph: Target Tier
+                            - paragraph: Set your target implementation tier
+                          - combobox:
+                            - generic: Not Set
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: GV.OC
+                            - generic: Organizational Context
+                          - generic: 0/5
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: GV.OC-01
+                                  - paragraph: The organizational mission is understood and informs cybersecurity risk management
+                                - button: Finding
+                              - generic:
+                                - button:
+                                  - generic: Additional Guidance
+                              - generic:
+                                - button [expanded]:
+                                  - generic: Test Instructions
+                                - generic:
+                                  - generic:
+                                    - paragraph: "Task5 verify: interview the CISO about mission alignment."
+                              - generic:
+                                - generic:
+                                  - generic: Implementation Level
+                                  - combobox:
+                                    - generic: Select level...
+                                - generic:
+                                  - generic: Notes / Evidence
+                                  - textbox:
+                                    - /placeholder: Document evidence or rationale...
+                                - generic:
+                                  - generic:
+                                    - generic: Evidence
+                                    - generic:
+                                      - button: Attach
+                                      - button: Upload
+                                  - paragraph: No evidence attached.
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: GV.OC-02
+                                  - paragraph: Internal and external stakeholders are understood, and their needs and expectations regarding cybersecurity risk management are understood and considered
+                                - button: Finding
+                              - generic:
+                                - button:
+                                  - generic: Additional Guidance
+                              - generic:
+                                - generic:
+                                  - generic: Implementation Level
+                                  - combobox:
+                                    - generic: Select level...
+                                - generic:
+                                  - generic: Notes / Evidence
+                                  - textbox:
+                                    - /placeholder: Document evidence or rationale...
+                                - generic:
+                                  - generic:
+                                    - generic: Evidence
+                                    - generic:
+                                      - button: Attach
+                                      - button: Upload
+                                  - paragraph: No evidence attached.
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: GV.OC-03
+                                  - paragraph: Legal, regulatory, and contractual requirements regarding cybersecurity — including privacy and civil liberties obligations — are understood and managed
+                                - button: Finding
+                              - generic:
+                                - button:
+                                  - generic: Additional Guidance
+                              - generic:
+                                - generic:
+                                  - generic: Implementation Level
+                                  - combobox:
+                                    - generic: Select level...
+                                - generic:
+                                  - generic: Notes / Evidence
+                                  - textbox:
+                                    - /placeholder: Document evidence or rationale...
+                                - generic:
+                                  - generic:
+                                    - generic: Evidence
+                                    - generic:
+                                      - button: Attach
+                                      - button: Upload
+                                  - paragraph: No evidence attached.
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: GV.OC-04
+                                  - paragraph: Critical objectives, capabilities, and services that external stakeholders depend on or expect from the organization are understood and communicated
+                                - button: Finding
+                              - generic:
+                                - button:
+                                  - generic: Additional Guidance
+                              - generic:
+                                - generic:
+                                  - generic: Implementation Level
+                                  - combobox:
+                                    - generic: Select level...
+                                - generic:
+                                  - generic: Notes / Evidence
+                                  - textbox:
+                                    - /placeholder: Document evidence or rationale...
+                                - generic:
+                                  - generic:
+                                    - generic: Evidence
+                                    - generic:
+                                      - button: Attach
+                                      - button: Upload
+                                  - paragraph: No evidence attached.
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic: GV.OC-05
+                                  - paragraph: Outcomes, capabilities, and services that the organization depends on are understood and communicated
+                                - button: Finding
+                              - generic:
+                                - button:
+                                  - generic: Additional Guidance
+                              - generic:
+                                - generic:
+                                  - generic: Implementation Level
+                                  - combobox:
+                                    - generic: Select level...
+                                - generic:
+                                  - generic: Notes / Evidence
+                                  - textbox:
+                                    - /placeholder: Document evidence or rationale...
+                                - generic:
+                                  - generic:
+                                    - generic: Evidence
+                                    - generic:
+                                      - button: Attach
+                                      - button: Upload
+                                  - paragraph: No evidence attached.
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: GV.RM
+                            - generic: Risk Management Strategy
+                          - generic: 0/7
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: GV.RR
+                            - generic: Roles, Responsibilities, and Authorities
+                          - generic: 0/4
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: GV.PO
+                            - generic: Policy
+                          - generic: 0/2
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: GV.OV
+                            - generic: Oversight
+                          - generic: 0/3
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: GV.SC
+                            - generic: Cybersecurity Supply Chain Risk Management
+                          - generic: 0/10
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: NIST CSF Implementation Tiers
+                          - paragraph: Score each subcategory based on your implementation level. Fully/Largely Implemented counts as achieving the control.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: ID
+                        - generic: Identify
+                      - generic: Not Assessed
+                    - paragraph: The organization's current cybersecurity risks are understood. Understanding its assets, suppliers, and related cybersecurity risks enables an organization to prioritize its efforts consistent with its risk management strategy and the mission needs identified under GOVERN.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: PR
+                        - generic: Protect
+                      - generic: Not Assessed
+                    - paragraph: Safeguards to manage the organization's cybersecurity risks are used. Once assets and risks are identified, PROTECT supports the ability to secure those assets to prevent or lower the likelihood and impact of adverse cybersecurity events.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: DE
+                        - generic: Detect
+                      - generic: Not Assessed
+                    - paragraph: Possible cybersecurity attacks and compromises are found and analyzed. DETECT enables timely discovery and analysis of anomalies, indicators of compromise, and other potentially adverse events that may indicate that cybersecurity attacks and incidents are occurring.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: RS
+                        - generic: Respond
+                      - generic: Not Assessed
+                    - paragraph: Actions regarding a detected cybersecurity incident are taken. RESPOND supports the ability to contain the impact of cybersecurity incidents. Outcomes within this Function cover incident management, analysis, mitigation, reporting, and communication.
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic: RC
+                        - generic: Recover
+                      - generic: Not Assessed
+                    - paragraph: Assets and operations affected by a cybersecurity incident are restored. RECOVER supports timely restoration of normal operations to reduce the impact of cybersecurity incidents and enable appropriate communication during recovery efforts.
+            - generic:
+              - generic:
+                - generic: Overall Score
+                - generic:
+                  - generic:
+                    - generic: "?"
+                    - paragraph: Not Assessed
+                    - paragraph: Score domains to calculate
+                  - generic:
+                    - generic:
+                      - generic: Progress
+                      - generic: 0 / 6 domains
+                    - progressbar
+              - generic:
+                - generic: Target Planning
+                - generic:
+                  - paragraph: No target set
+              - generic:
+                - generic: Actions
+                - generic:
+                  - button [disabled]: Create Snapshot
+                  - button [disabled]: Submit for Review
+          - generic:
+            - generic:
+              - generic:
+                - generic: Domain Maturity
+                - generic: Current vs Target levels across domains
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: No scores yet
+                    - paragraph: Score domains to see progress
+            - generic:
+              - generic:
+                - generic: Maturity Trend
+                - generic: Historical maturity levels from snapshots
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: No trend data yet
+                    - paragraph: Create snapshots to track progress
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic: Findings from this assessment
+                  - generic: Every finding entered via the "Create finding" button on a control / subcategory / practice / activity in this assessment shows up here.
+            - generic:
+              - paragraph: No findings entered from this assessment yet. Click the "Finding" button next to any scored item above to capture one.
+  - region "Notifications alt+T"
+  - alert
+  - dialog [ref=f4e843]:
+    - generic [ref=f4e844]:
+      - heading "Create finding" [level=2] [ref=f4e845]
+      - paragraph [ref=f4e846]: Capture an issue spotted during this assessment. It'll be linked back automatically so you can pick it up in the Findings register.
+      - generic [ref=f4e847]: Spawned from GV.OC-01 — The organizational mission is understood and informs cybersecurity risk management in NIST Cybersecurity Framework 2.0
+    - generic [ref=f4e848]:
+      - generic [ref=f4e849]:
+        - generic [ref=f4e850]:
+          - text: Source
+          - generic [ref=f4e851]: "*"
+        - combobox "Source *" [ref=f4e852]:
+          - generic:
+            - generic:
+              - generic: Audit
+              - generic: From security/compliance audit
+        - combobox [ref=f4e855]
+      - generic [ref=f4e857]:
+        - generic [ref=f4e864] [cursor=pointer]:
+          - generic [ref=f4e865]: "Finding: GV.OC-01 organizational mission VERIFY-MATURITY-8c9f"
+          - generic [ref=f4e1097]: Medium
+        - generic [ref=f4e867]:
+          - generic [ref=f4e868]:
+            - generic [ref=f4e869]:
+              - generic [ref=f4e870]: Finding Title *
+              - textbox "Finding Title *" [ref=f4e871]:
+                - /placeholder: Short, specific finding label...
+                - text: GV.OC-01 organizational mission VERIFY-MATURITY-8c9f
+            - generic [ref=f4e872]:
+              - generic [ref=f4e873]: Finding Category
+              - combobox "Finding Category" [ref=f4e874]:
+                - generic: Uncategorized
+              - combobox [ref=f4e877]
+              - paragraph [ref=f4e878]: Aligned to the taxonomy managed in Administration → Taxonomy.
+          - generic [ref=f4e879]:
+            - generic [ref=f4e880]: Description *
+            - textbox "Description *" [ref=f4e881]:
+              - /placeholder: Describe the finding in detail. Include what was observed, why it matters, and the potential consequences...
+              - text: The organizational mission is not documented, so cybersecurity risk decisions are not consistently tied to mission priorities.
+          - generic [ref=f4e882]:
+            - generic [ref=f4e883]: Linked Risks
+            - paragraph [ref=f4e884]: Link this finding to one or more risks from the risk register.
+            - generic [ref=f4e885]:
+              - combobox "Linked Risks" [ref=f4e886]:
+                - generic: Link a risk...
+              - combobox [ref=f4e889]
+          - generic [ref=f4e890]:
+            - heading "MITRE ATT&CK Mapping" [level=4] [ref=f4e896]
+            - generic [ref=f4e897]:
+              - generic [ref=f4e898]: Initial Access Vector
+              - paragraph [ref=f4e899]: How would a threat actor initially gain access?
+              - button "Select Initial Access Technique" [ref=f4e901]
+            - generic [ref=f4e902]:
+              - generic [ref=f4e903]: Threat Actor Steps
+              - paragraph [ref=f4e904]: What techniques might be used during the attack?
+              - button "Add Technique" [ref=f4e906]
+            - generic [ref=f4e907]:
+              - generic [ref=f4e908]: Threat Actor Objectives
+              - paragraph [ref=f4e909]: What is the threat actor trying to achieve?
+              - button "Add Objective" [ref=f4e911]
+          - generic [ref=f4e912]:
+            - heading "Controls" [level=4] [ref=f4e916]
+            - generic [ref=f4e917]:
+              - generic [ref=f4e918]: Mitigating Controls
+              - paragraph [ref=f4e919]: Controls currently in place that reduce this risk. Pulls from the organizational control library at /controls.
+              - combobox [ref=f4e921]: Add mitigating control...
+            - generic [ref=f4e922]:
+              - generic [ref=f4e923]: Control Gaps
+              - paragraph [ref=f4e924]: Controls that are missing or insufficient and need to be implemented
+              - combobox [ref=f4e926]: Add control gap...
+          - generic [ref=f4e927]:
+            - generic [ref=f4e928]:
+              - heading "Severity Scoring" [level=4] [ref=f4e932]
+              - generic [ref=f4e933]:
+                - checkbox "Finding eliminated" [ref=f4e934]
+                - generic "Controls fully remove this finding — no residual score required." [ref=f4e935] [cursor=pointer]: Finding eliminated
+            - generic [ref=f4e936]:
+              - generic [ref=f4e938]:
+                - generic [ref=f4e939]:
+                  - heading "Inherent Severity" [level=5] [ref=f4e940]
+                  - paragraph [ref=f4e941]: Risk severity before controls are applied
+                - generic [ref=f4e942]:
+                  - generic [ref=f4e943]:
+                    - generic [ref=f4e944]: Likelihood
+                    - combobox "Likelihood" [ref=f4e945]:
+                      - generic:
+                        - generic:
+                          - generic: "2"
+                          - generic: Possible
+                    - combobox [ref=f4e948]
+                  - generic [ref=f4e949]:
+                    - generic [ref=f4e950]: Impact
+                    - combobox "Impact" [active] [ref=f4e951]:
+                      - generic:
+                        - generic:
+                          - generic: "2"
+                          - generic: Moderate
+                    - combobox [ref=f4e954]
+                - generic [ref=f4e955]:
+                  - generic [ref=f4e956]:
+                    - generic [ref=f4e957]:
+                      - text: "Score: 2 × 2"
+                      - generic [ref=f4e1098]: = 4
+                    - generic [ref=f4e1099]: Medium
+                  - paragraph [ref=f4e1100]: "SLA: 30 days"
+              - generic [ref=f4e959]:
+                - generic [ref=f4e960]:
+                  - heading "Residual Severity" [level=5] [ref=f4e961]
+                  - paragraph [ref=f4e962]: Risk severity after controls are applied
+                - generic [ref=f4e963]:
+                  - generic [ref=f4e964]:
+                    - generic [ref=f4e965]: Likelihood
+                    - combobox "Likelihood" [ref=f4e966]:
+                      - generic: Select...
+                    - combobox [ref=f4e969]
+                  - generic [ref=f4e970]:
+                    - generic [ref=f4e971]: Impact
+                    - combobox "Impact" [ref=f4e972]:
+                      - generic: Select...
+                    - combobox [ref=f4e975]
+                - generic [ref=f4e976]: "Score: ? × ?"
+          - generic [ref=f4e979]:
+            - heading "Remediation Options" [level=4] [ref=f4e985]
+            - paragraph [ref=f4e986]: Document the treatment alternatives evaluated for this finding. Each option is saved against the finding and available on its detail page.
+            - generic [ref=f4e987]:
+              - paragraph [ref=f4e988]: No remediation options yet. Add one or more to document treatment alternatives for this risk.
+              - button "Add remediation option" [ref=f4e989]
+          - generic [ref=f4e990]:
+            - heading "Evidence" [level=4] [ref=f4e995]
+            - generic [ref=f4e996]:
+              - paragraph [ref=f4e997]: Evidence files will be uploaded after the assessment is created.
+              - paragraph [ref=f4e1002]: Evidence upload will be available after creating the assessment
+      - paragraph [ref=f4e1003]: Severity scored against Standard 3×3 Risk Matrix (org default).
+      - generic [ref=f4e1004]:
+        - generic [ref=f4e1005]:
+          - generic [ref=f4e1006]: Affected Business Units
+          - button "Create New" [ref=f4e1007]
+        - tree "Business unit selection" [ref=f4e1008]:
+          - textbox "Search business units" [ref=f4e1014]:
+            - /placeholder: Search business units...
+          - group [ref=f4e1015]:
+            - generic [ref=f4e1016]:
+              - treeitem "Engineering ENG" [ref=f4e1017]:
+                - generic [ref=f4e1018] [cursor=pointer]:
+                  - generic [ref=f4e1020]: Engineering
+                  - generic [ref=f4e1021]: ENG
+              - treeitem "Finance & Accounting FIN" [ref=f4e1022]:
+                - generic [ref=f4e1023] [cursor=pointer]:
+                  - generic [ref=f4e1025]: Finance & Accounting
+                  - generic [ref=f4e1026]: FIN
+              - treeitem "Human Resources HR" [ref=f4e1027]:
+                - generic [ref=f4e1028] [cursor=pointer]:
+                  - generic [ref=f4e1030]: Human Resources
+                  - generic [ref=f4e1031]: HR
+              - treeitem "IT Operations ITO" [ref=f4e1032]:
+                - generic [ref=f4e1033] [cursor=pointer]:
+                  - generic [ref=f4e1035]: IT Operations
+                  - generic [ref=f4e1036]: ITO
+              - treeitem "Sales & Marketing SAL" [ref=f4e1037]:
+                - generic [ref=f4e1038] [cursor=pointer]:
+                  - generic [ref=f4e1040]: Sales & Marketing
+                  - generic [ref=f4e1041]: SAL
+        - paragraph [ref=f4e1042]: Select business units affected by this finding. Can't find one? Click "Create New" above.
+      - generic [ref=f4e1043]:
+        - generic [ref=f4e1044]: Assignee
+        - combobox "Select assignee..." [ref=f4e1045]
+        - paragraph [ref=f4e1047]: Assign to a team member for triage
+      - generic [ref=f4e1049]:
+        - checkbox "Part of an exploitation pathway" [ref=f4e1050]
+        - checkbox
+        - generic [ref=f4e1051]:
+          - generic [ref=f4e1052] [cursor=pointer]: Part of an exploitation pathway
+          - paragraph [ref=f4e1053]: Add this to an attack chain so it's flagged with ⬡ in the register.
+      - generic [ref=f4e1054]:
+        - button "Cancel" [ref=f4e1055]
+        - button "Create Finding" [ref=f4e1056]
+    - button "Close" [ref=f4e1057]

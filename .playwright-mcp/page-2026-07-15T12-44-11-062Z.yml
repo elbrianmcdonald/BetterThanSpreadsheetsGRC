@@ -1,0 +1,176 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+        - generic:
+          - button:
+            - generic: Risk
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+          - generic:
+            - generic:
+              - link:
+                - /url: /admin/evidence
+                - generic: Evidence
+            - generic:
+              - link:
+                - /url: /admin/users
+                - generic: User Management
+            - generic:
+              - generic: Platform
+              - link:
+                - /url: /admin/companies
+                - generic: Companies
+            - generic:
+              - link:
+                - /url: /admin/business-units
+                - generic: Business Units
+            - generic:
+              - link:
+                - /url: /admin/risk-matrices
+                - generic: Risk Matrices
+            - generic:
+              - link:
+                - /url: /admin/risk-assessment-templates
+                - generic: RA Templates
+            - generic:
+              - link:
+                - /url: /admin/backups
+                - generic: Backups
+            - generic:
+              - generic: Data
+              - link:
+                - /url: /admin/mappings
+                - generic: Mappings
+            - generic:
+              - link:
+                - /url: /mitre/tactics
+                - generic: MITRE ATT&CK
+            - generic:
+              - link:
+                - /url: /admin/pathways
+                - generic: Exploitation Pathways
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - generic: Administration
+            - listitem:
+              - generic: Exploitation Pathways
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - generic:
+            - paragraph: ADMINISTRATION
+            - heading [level=1]:
+              - generic: Exploitation Pathways
+            - paragraph: Your library of attack paths (MITRE ATT&CK kill chains). Create pathways here, then select them onto assessments and tag them on findings and risks. Editing a pathway updates it everywhere it is linked.
+          - generic:
+            - button: New pathway
+        - generic:
+          - generic:
+            - table:
+              - rowgroup:
+                - row:
+                  - columnheader: Name
+                  - columnheader: Steps
+                  - columnheader: Assessments
+                  - columnheader: Linked items
+                  - columnheader: Updated
+                  - columnheader
+              - rowgroup:
+                - row:
+                  - cell:
+                    - generic: Ransomware Data-Exfiltration Chain
+                    - generic: Plausible with current gaps
+                  - cell: "4"
+                  - cell: "0"
+                  - cell:
+                    - generic:
+                      - generic: 0 findings
+                      - generic: 0 risks
+                  - cell: 7/13/2026
+                  - cell:
+                    - generic:
+                      - link:
+                        - /url: /deliverables/pathway/demo-ra-pathway-1
+                      - button
+                      - button
+  - region "Notifications alt+T"
+  - alert
+  - dialog [ref=f9e224]:
+    - generic [ref=f9e225]:
+      - heading "New exploitation pathway" [level=2] [ref=f9e226]
+      - paragraph [ref=f9e227]: Add an attack path to the library. Steps and linked findings/risks are added later, from an assessment.
+    - generic [ref=f9e228]:
+      - generic [ref=f9e229]:
+        - generic [ref=f9e230]:
+          - text: Name
+          - generic [ref=f9e231]: "*"
+        - textbox "Name *" [active] [ref=f9e232]:
+          - /placeholder: e.g. Phishing → credential theft → lateral movement
+      - generic [ref=f9e233]:
+        - generic [ref=f9e234]: Verdict
+        - textbox "Verdict" [ref=f9e235]:
+          - /placeholder: Headline conclusion of this attack path
+      - generic [ref=f9e236]:
+        - generic [ref=f9e237]: Narrative
+        - textbox "Narrative" [ref=f9e238]:
+          - /placeholder: How the chain unfolds, step by step
+      - generic [ref=f9e239]:
+        - generic [ref=f9e240]: Blast radius
+        - textbox "Blast radius" [ref=f9e241]:
+          - /placeholder: What's exposed if this path is exploited
+      - generic [ref=f9e242]:
+        - button "Cancel" [ref=f9e243]
+        - button "Create pathway" [disabled]
+    - button "Close" [ref=f9e244]

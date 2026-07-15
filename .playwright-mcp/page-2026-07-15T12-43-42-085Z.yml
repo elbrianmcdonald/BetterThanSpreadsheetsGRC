@@ -1,0 +1,152 @@
+- generic [active] [ref=f8e1]:
+  - generic [ref=f8e37]:
+    - complementary [ref=f8e38]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f8e39] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f8e43]:
+          - generic [ref=f8e44]: BetterThanSpreadsheets
+          - generic [ref=f8e45]: GRC Platform
+      - generic [ref=f8e46]:
+        - combobox "Switch company" [ref=f8e52] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f8e53]
+      - navigation [ref=f8e55]:
+        - link "Home" [ref=f8e56] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f8e62]
+        - button "Governance" [ref=f8e71]
+        - button "Assessments" [ref=f8e79]
+        - generic [ref=f8e87]:
+          - button "Risk" [ref=f8e88]
+          - generic [ref=f8e95]:
+            - link "Risk Dashboard" [ref=f8e97] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f8e101] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f8e105] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f8e109] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f8e113]
+        - button "Third Party" [ref=f8e121]
+        - button "Business Impact" [ref=f8e131]
+        - button "Administration" [ref=f8e139]
+        - button "Help" [ref=f8e150]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f8e158] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f8e159]: A
+        - generic [ref=f8e160]:
+          - paragraph [ref=f8e161]: Alice Admin
+          - paragraph [ref=f8e162]: ADMINISTRATOR
+    - generic [ref=f8e163]:
+      - banner [ref=f8e164]:
+        - navigation "Breadcrumb" [ref=f8e165]:
+          - list [ref=f8e166]:
+            - listitem [ref=f8e167]:
+              - link "Home" [ref=f8e168] [cursor=pointer]:
+                - /url: /
+        - generic [ref=f8e173]:
+          - button [ref=f8e174]
+          - generic [ref=f8e175]:
+            - generic [ref=f8e176]: admin@acme-corp.com
+            - button "Sign Out" [ref=f8e177]
+      - main [ref=f8e180]:
+        - generic [ref=f8e181]:
+          - generic [ref=f8e182]:
+            - generic [ref=f8e183]:
+              - paragraph [ref=f8e184]: Workspace
+              - heading "Welcome back, Alice" [level=1] [ref=f8e185]
+              - paragraph [ref=f8e186]: 0 open tasks
+            - generic [ref=f8e187]:
+              - link "Open risks 13" [ref=f8e188] [cursor=pointer]:
+                - /url: /risks?status=OPEN,ASSIGNED
+                - generic [ref=f8e189]: Open risks
+                - generic [ref=f8e190]: "13"
+              - link "Findings 18" [ref=f8e191] [cursor=pointer]:
+                - /url: /findings?status=NEW,NEEDS_INFO,TRIAGED
+                - generic [ref=f8e192]: Findings
+                - generic [ref=f8e193]: "18"
+          - generic [ref=f8e194]:
+            - generic [ref=f8e195]:
+              - generic [ref=f8e196]:
+                - generic [ref=f8e199]: Assigned to me
+                - generic [ref=f8e202]: All types
+                - generic [ref=f8e205]: Any priority
+                - generic [ref=f8e208]: 0 items
+              - generic [ref=f8e209]:
+                - paragraph [ref=f8e213]: You're all caught up
+                - paragraph [ref=f8e214]: No tasks assigned to you right now.
+            - generic [ref=f8e215]:
+              - generic [ref=f8e217]:
+                - generic [ref=f8e218]:
+                  - heading "Task status" [level=3] [ref=f8e219]
+                  - generic [ref=f8e220]: 0% on track
+                - generic [ref=f8e221]:
+                  - generic [ref=f8e223]:
+                    - generic [ref=f8e224]: "0"
+                    - generic [ref=f8e225]: tasks
+                  - generic [ref=f8e226]:
+                    - generic [ref=f8e227]:
+                      - generic [ref=f8e229]: On-time
+                      - generic [ref=f8e230]: "0"
+                    - generic [ref=f8e231]:
+                      - generic [ref=f8e233]: Due today
+                      - generic [ref=f8e234]: "0"
+                    - generic [ref=f8e235]:
+                      - generic [ref=f8e237]: Overdue
+                      - generic [ref=f8e238]: "0"
+              - generic [ref=f8e240]:
+                - heading "Quick actions" [level=3] [ref=f8e241]
+                - generic [ref=f8e242]:
+                  - link "New Risk" [ref=f8e243] [cursor=pointer]:
+                    - /url: /risks/new
+                  - link "New Finding" [ref=f8e247] [cursor=pointer]:
+                    - /url: /findings/new
+              - generic [ref=f8e252]:
+                - generic [ref=f8e253]:
+                  - heading "Activity" [level=3] [ref=f8e254]
+                  - link "All" [ref=f8e255] [cursor=pointer]:
+                    - /url: /admin/settings
+                - generic [ref=f8e256]:
+                  - generic [ref=f8e263]:
+                    - generic [ref=f8e264]:
+                      - strong [ref=f8e265]: Alice Admin
+                      - text: assessment project created
+                      - strong [ref=f8e266]: risk assessment project
+                    - generic [ref=f8e267]: 1 hour ago
+                  - generic [ref=f8e274]:
+                    - generic [ref=f8e275]:
+                      - strong [ref=f8e276]: Alice Admin
+                      - text: system configuration changed
+                      - strong [ref=f8e277]: business unit
+                    - generic [ref=f8e278]: 13 hours ago
+                  - generic [ref=f8e285]:
+                    - generic [ref=f8e286]:
+                      - strong [ref=f8e287]: Alice Admin
+                      - text: finding created
+                      - strong [ref=f8e288]: finding
+                    - generic [ref=f8e289]: 13 hours ago
+                  - generic [ref=f8e296]:
+                    - generic [ref=f8e297]:
+                      - strong [ref=f8e298]: Alice Admin
+                      - text: finding created
+                      - strong [ref=f8e299]: finding
+                    - generic [ref=f8e300]: 13 hours ago
+                  - generic [ref=f8e307]:
+                    - generic [ref=f8e308]:
+                      - strong [ref=f8e309]: Alice Admin
+                      - text: finding created
+                      - strong [ref=f8e310]: finding
+                    - generic [ref=f8e311]: 13 hours ago
+                  - generic [ref=f8e317]:
+                    - generic [ref=f8e318]:
+                      - strong [ref=f8e319]: Alice Admin
+                      - text: create user
+                      - strong [ref=f8e320]: organization
+                    - generic [ref=f8e321]: 14 hours ago
+  - region "Notifications alt+T"
+  - alert [ref=f8e36]: BetterThanSpreadsheetsGRC

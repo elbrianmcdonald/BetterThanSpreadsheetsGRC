@@ -1,0 +1,59 @@
+- generic [active] [ref=f11e1]:
+  - generic [ref=f11e2]:
+    - complementary [ref=f11e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f11e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f11e8]:
+          - generic [ref=f11e9]: BetterThanSpreadsheets
+          - generic [ref=f11e10]: GRC Platform
+      - navigation [ref=f11e11]:
+        - link "Home" [ref=f11e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f11e18]
+        - button "Assessments" [ref=f11e27]
+        - button "Risk" [ref=f11e36]
+        - button "Compliance" [ref=f11e44]
+        - button "Third Party" [ref=f11e52]
+        - button "Business Impact" [ref=f11e62]
+        - button "Help" [ref=f11e70]
+    - generic [ref=f11e78]:
+      - banner [ref=f11e79]:
+        - navigation "Breadcrumb" [ref=f11e80]:
+          - list [ref=f11e81]:
+            - listitem [ref=f11e82]:
+              - link "Home" [ref=f11e83] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f11e88]:
+              - generic [ref=f11e91]: Administration
+            - listitem [ref=f11e92]:
+              - generic [ref=f11e95]: User Management
+        - button [ref=f11e97]
+      - main [ref=f11e98]:
+        - generic [ref=f11e99]:
+          - generic [ref=f11e100]:
+            - paragraph [ref=f11e101]: ADMINISTRATION
+            - heading "User Management" [level=1] [ref=f11e102]
+            - paragraph [ref=f11e110]: Manage users and roles for your organization. Only Organization Administrators can create, edit, or delete users.
+          - button "Create User" [ref=f11e112]
+        - paragraph [ref=f11e117]: Loading users...
+        - generic [ref=f11e118]:
+          - generic [ref=f11e119]:
+            - heading "Company Members" [level=2] [ref=f11e120]
+            - paragraph [ref=f11e121]: Attach existing users to the active company and manage their per-company role. A user can belong to more than one company — switch companies to manage their membership in each.
+          - generic [ref=f11e122]:
+            - generic [ref=f11e123]:
+              - generic [ref=f11e124]:
+                - text: Email
+                - textbox "Member email" [ref=f11e125]:
+                  - /placeholder: user@example.com
+              - generic [ref=f11e126]:
+                - text: Role
+                - combobox "New member role" [ref=f11e127]:
+                  - option "ADMINISTRATOR"
+                  - option "MANAGER"
+                  - option "ANALYST"
+                  - option "BUSINESS_USER" [selected]
+              - button "Add member" [disabled] [ref=f11e128]
+            - paragraph [ref=f11e129]: Loading members…
+  - region "Notifications alt+T"
+  - alert [ref=f11e130]

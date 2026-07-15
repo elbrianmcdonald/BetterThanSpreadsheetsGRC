@@ -1,0 +1,56 @@
+- generic [active] [ref=f4e1]:
+  - generic [ref=f4e2]:
+    - complementary [ref=f4e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f4e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f4e8]:
+          - generic [ref=f4e9]: BetterThanSpreadsheets
+          - generic [ref=f4e10]: GRC Platform
+      - navigation [ref=f4e11]:
+        - link "Home" [ref=f4e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f4e18]
+        - button "Governance" [ref=f4e27]
+        - button "Assessments" [ref=f4e35]
+        - generic [ref=f4e43]:
+          - button "Risk" [ref=f4e44]
+          - generic [ref=f4e51]:
+            - link "Risk Dashboard" [ref=f4e53] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f4e57] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f4e61] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f4e65] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f4e69]
+        - button "Third Party" [ref=f4e77]
+        - button "Business Impact" [ref=f4e87]
+        - button "Administration" [ref=f4e95]
+        - button "Help" [ref=f4e106]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f4e114] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f4e115]: A
+        - generic [ref=f4e116]:
+          - paragraph [ref=f4e117]: Alice Admin
+          - paragraph [ref=f4e118]: ADMINISTRATOR
+    - generic [ref=f4e119]:
+      - banner [ref=f4e120]:
+        - navigation "Breadcrumb" [ref=f4e121]:
+          - list [ref=f4e122]:
+            - listitem [ref=f4e123]:
+              - link "Home" [ref=f4e124] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f4e129]:
+              - link "Maturity" [ref=f4e132] [cursor=pointer]:
+                - /url: /maturity
+            - listitem [ref=f4e134]:
+              - generic [ref=f4e137]: Assessment
+        - generic [ref=f4e138]:
+          - button [ref=f4e139]
+          - generic [ref=f4e140]:
+            - generic [ref=f4e141]: admin@acme-corp.com
+            - button "Sign Out" [ref=f4e142]
+      - main [ref=f4e145]
+  - region "Notifications alt+T"
+  - alert [ref=f4e149]

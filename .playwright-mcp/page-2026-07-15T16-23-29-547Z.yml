@@ -1,0 +1,174 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e221]:
+    - complementary [ref=f1e222]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f1e223] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f1e227]:
+          - generic [ref=f1e228]: BetterThanSpreadsheets
+          - generic [ref=f1e229]: GRC Platform
+      - generic [ref=f1e230]:
+        - combobox "Switch company" [ref=f1e236] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f1e237]
+      - navigation [ref=f1e239]:
+        - link "Home" [ref=f1e240] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f1e246]
+        - button "Governance" [ref=f1e255]
+        - button "Assessments" [ref=f1e263]
+        - button "Risk" [ref=f1e272]
+        - button "Compliance" [ref=f1e280]
+        - button "Third Party" [ref=f1e288]
+        - button "Business Impact" [ref=f1e298]
+        - generic [ref=f1e305]:
+          - button "Administration" [ref=f1e306]
+          - generic [ref=f1e316]:
+            - link "Evidence" [ref=f1e318] [cursor=pointer]:
+              - /url: /admin/evidence
+            - link "User Management" [ref=f1e322] [cursor=pointer]:
+              - /url: /admin/users
+            - generic [ref=f1e325]:
+              - generic [ref=f1e326]: Platform
+              - link "Companies" [ref=f1e327] [cursor=pointer]:
+                - /url: /admin/companies
+            - link "Business Units" [ref=f1e331] [cursor=pointer]:
+              - /url: /admin/business-units
+            - link "Risk Matrices" [ref=f1e335] [cursor=pointer]:
+              - /url: /admin/risk-matrices
+            - link "RA Templates" [ref=f1e339] [cursor=pointer]:
+              - /url: /admin/risk-assessment-templates
+            - link "Backups" [ref=f1e343] [cursor=pointer]:
+              - /url: /admin/backups
+            - generic [ref=f1e346]:
+              - generic [ref=f1e347]: Data
+              - link "Mappings" [ref=f1e348] [cursor=pointer]:
+                - /url: /admin/mappings
+            - link "MITRE ATT&CK" [ref=f1e352] [cursor=pointer]:
+              - /url: /mitre/tactics
+            - link "Exploitation Pathways" [ref=f1e356] [cursor=pointer]:
+              - /url: /admin/pathways
+        - button "Help" [ref=f1e361]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f1e369] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f1e370]: A
+        - generic [ref=f1e371]:
+          - paragraph [ref=f1e372]: Alice Admin
+          - paragraph [ref=f1e373]: ADMINISTRATOR
+    - generic [ref=f1e374]:
+      - banner [ref=f1e375]:
+        - navigation "Breadcrumb" [ref=f1e376]:
+          - list [ref=f1e377]:
+            - listitem [ref=f1e378]:
+              - link "Home" [ref=f1e379] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f1e384]:
+              - generic [ref=f1e387]: Administration
+            - listitem [ref=f1e388]:
+              - generic [ref=f1e391]: Exploitation Pathways
+        - generic [ref=f1e392]:
+          - button [ref=f1e393]
+          - generic [ref=f1e394]:
+            - generic [ref=f1e395]: admin@acme-corp.com
+            - button "Sign Out" [ref=f1e396]
+      - main [ref=f1e399]:
+        - generic [ref=f1e400]:
+          - generic [ref=f1e401]:
+            - paragraph [ref=f1e402]: ADMINISTRATION
+            - heading "Exploitation Pathways" [level=1] [ref=f1e403]
+            - paragraph [ref=f1e408]: Your library of attack paths (MITRE ATT&CK kill chains). Create pathways here, then select them onto assessments and tag them on findings and risks. Editing a pathway updates it everywhere it is linked.
+          - button "New pathway" [ref=f1e410]
+        - table [ref=f1e413]:
+          - rowgroup [ref=f1e414]:
+            - row [ref=f1e415]:
+              - columnheader "Name" [ref=f1e416]
+              - columnheader "Steps" [ref=f1e417]
+              - columnheader "Assessments" [ref=f1e418]
+              - columnheader "Linked items" [ref=f1e419]
+              - columnheader "Updated" [ref=f1e420]
+              - columnheader [ref=f1e421]
+          - rowgroup [ref=f1e422]:
+            - row [ref=f1e423]:
+              - cell "test" [ref=f1e424]
+              - cell "0" [ref=f1e426]
+              - cell "0" [ref=f1e427]
+              - cell "0 findings 0 risks" [ref=f1e428]:
+                - generic [ref=f1e429]:
+                  - generic [ref=f1e430]: 0 findings
+                  - generic [ref=f1e431]: 0 risks
+              - cell "7/15/2026" [ref=f1e432]
+              - cell [ref=f1e433]:
+                - generic [ref=f1e434]:
+                  - link "Open pathway" [ref=f1e435] [cursor=pointer]:
+                    - /url: /deliverables/pathway/cmrm9ybae000201nxkesbarwf
+                  - button "Edit" [ref=f1e436]
+                  - button "Delete" [ref=f1e437]
+            - row [ref=f1e438]:
+              - cell "Untitled pathway" [ref=f1e439]
+              - cell "0" [ref=f1e441]
+              - cell "0" [ref=f1e442]
+              - cell "0 findings 0 risks" [ref=f1e443]:
+                - generic [ref=f1e444]:
+                  - generic [ref=f1e445]: 0 findings
+                  - generic [ref=f1e446]: 0 risks
+              - cell "7/15/2026" [ref=f1e447]
+              - cell [ref=f1e448]:
+                - generic [ref=f1e449]:
+                  - link "Open pathway" [ref=f1e450] [cursor=pointer]:
+                    - /url: /deliverables/pathway/cmrm9xyvt000101nxrylamxf5
+                  - button "Edit" [ref=f1e451]
+                  - button "Delete" [ref=f1e452]
+            - row [ref=f1e453]:
+              - cell "testttttt test" [ref=f1e454]:
+                - generic [ref=f1e455]: testttttt
+                - generic [ref=f1e456]: test
+              - cell "0" [ref=f1e457]
+              - cell "0" [ref=f1e458]
+              - cell "0 findings 0 risks" [ref=f1e459]:
+                - generic [ref=f1e460]:
+                  - generic [ref=f1e461]: 0 findings
+                  - generic [ref=f1e462]: 0 risks
+              - cell "7/15/2026" [ref=f1e463]
+              - cell [ref=f1e464]:
+                - generic [ref=f1e465]:
+                  - link "Open pathway" [ref=f1e466] [cursor=pointer]:
+                    - /url: /deliverables/pathway/cmrm538ie000201mns89yaup4
+                  - button "Edit" [ref=f1e467]
+                  - button "Delete" [ref=f1e468]
+            - row [ref=f1e469]:
+              - cell "test" [ref=f1e470]
+              - cell "0" [ref=f1e472]
+              - cell "1" [ref=f1e473]
+              - cell "0 findings 0 risks" [ref=f1e474]:
+                - generic [ref=f1e475]:
+                  - generic [ref=f1e476]: 0 findings
+                  - generic [ref=f1e477]: 0 risks
+              - cell "7/15/2026" [ref=f1e478]
+              - cell [ref=f1e479]:
+                - generic [ref=f1e480]:
+                  - link "Open pathway" [ref=f1e481] [cursor=pointer]:
+                    - /url: /deliverables/pathway/cmrm4h2t5000601mwb08ezww1
+                  - button "Edit" [ref=f1e482]
+                  - button "Delete" [ref=f1e483]
+            - row [ref=f1e484]:
+              - cell "Ransomware Data-Exfiltration Chain Plausible with current gaps" [ref=f1e485]:
+                - generic [ref=f1e486]: Ransomware Data-Exfiltration Chain
+                - generic [ref=f1e487]: Plausible with current gaps
+              - cell "4" [ref=f1e488]
+              - cell "0" [ref=f1e489]
+              - cell "0 findings 0 risks" [ref=f1e490]:
+                - generic [ref=f1e491]:
+                  - generic [ref=f1e492]: 0 findings
+                  - generic [ref=f1e493]: 0 risks
+              - cell "7/13/2026" [ref=f1e494]
+              - cell [ref=f1e495]:
+                - generic [ref=f1e496]:
+                  - link "Open pathway" [ref=f1e497] [cursor=pointer]:
+                    - /url: /deliverables/pathway/demo-ra-pathway-1
+                  - button "Edit" [ref=f1e498]
+                  - button "Delete" [ref=f1e499]
+  - region "Notifications alt+T"
+  - alert [ref=f1e120]: Exploitation Pathways | BetterThanSpreadsheetsGRC

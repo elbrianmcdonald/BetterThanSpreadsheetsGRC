@@ -1,0 +1,544 @@
+- generic [active] [ref=f7e1]:
+  - generic [ref=f7e2]:
+    - complementary [ref=f7e3]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f7e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f7e8]:
+          - generic [ref=f7e9]: BetterThanSpreadsheets
+          - generic [ref=f7e10]: GRC Platform
+      - generic [ref=f7e135]:
+        - combobox "Switch company" [ref=f7e141] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f7e142]
+      - navigation [ref=f7e11]:
+        - link "Home" [ref=f7e12] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f7e18]
+        - button "Governance" [ref=f7e145]
+        - generic [ref=f7e26]:
+          - button "Assessments" [ref=f7e27]
+          - generic [ref=f7e35]:
+            - link "Overview" [ref=f7e37] [cursor=pointer]:
+              - /url: /assessments
+            - link "Compliance" [ref=f7e41] [cursor=pointer]:
+              - /url: /compliance/assessments
+            - link "Vendor" [ref=f7e46] [cursor=pointer]:
+              - /url: /tprm/assessments
+            - link "Risk" [ref=f7e50] [cursor=pointer]:
+              - /url: /risk-assessments
+            - link "Maturity" [ref=f7e54] [cursor=pointer]:
+              - /url: /maturity/dashboard
+            - link "BIA Assessment" [ref=f7e58] [cursor=pointer]:
+              - /url: /bia/processes
+        - button "Risk" [ref=f7e62]
+        - button "Compliance" [ref=f7e70]
+        - button "Third Party" [ref=f7e78]
+        - button "Business Impact" [ref=f7e88]
+        - button "Administration" [ref=f7e153]
+        - button "Help" [ref=f7e96]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f7e163] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f7e164]: A
+        - generic [ref=f7e165]:
+          - paragraph [ref=f7e166]: Alice Admin
+          - paragraph [ref=f7e167]: ADMINISTRATOR
+    - generic [ref=f7e104]:
+      - banner [ref=f7e105]:
+        - navigation "Breadcrumb" [ref=f7e106]:
+          - list [ref=f7e107]:
+            - listitem [ref=f7e108]:
+              - link "Home" [ref=f7e109] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f7e114]:
+              - link "Compliance" [ref=f7e117] [cursor=pointer]:
+                - /url: /compliance/assessments
+            - listitem [ref=f7e119]:
+              - link "Assessments" [ref=f7e122] [cursor=pointer]:
+                - /url: /compliance/assessments
+            - listitem [ref=f7e124]:
+              - generic [ref=f7e127]: COMP-2026-0001
+        - generic [ref=f7e128]:
+          - button [ref=f7e129]
+          - generic [ref=f7e168]:
+            - generic [ref=f7e169]: admin@acme-corp.com
+            - button "Sign Out" [ref=f7e170]
+      - main [ref=f7e130]:
+        - generic [ref=f7e131]:
+          - button "Back to Assessments" [ref=f7e173]
+          - tablist [ref=f7e174]:
+            - navigation [ref=f7e175]:
+              - tab "Executive Summary" [ref=f7e176]
+              - tab "Overview" [ref=f7e180]
+              - tab "Schedule" [ref=f7e185]
+              - tab "Stakeholders" [ref=f7e189]
+              - tab "Controls" [selected] [ref=f7e196]
+              - tab "Findings" [ref=f7e200]
+              - tab "Risks" [ref=f7e211]
+              - tab "Evidence" [ref=f7e215]
+              - tab "Exploitation Pathways" [ref=f7e219]
+              - tab "Action Plans" [ref=f7e226]
+          - tabpanel [ref=f7e231]:
+            - generic [ref=f7e1197]:
+              - heading "Control Assessments (45 groups)" [level=2] [ref=f7e1199]
+              - generic [ref=f7e1202]:
+                - generic [ref=f7e1203]: "Filter by status:"
+                - combobox [ref=f7e1204]:
+                  - generic: All (45)
+              - generic [ref=f7e1207]:
+                - generic [ref=f7e1209] [cursor=pointer]:
+                  - generic [ref=f7e1210]:
+                    - generic [ref=f7e1211]:
+                      - generic [ref=f7e1214]: A.5.12
+                      - generic [ref=f7e1215]: Classification of Information
+                    - generic [ref=f7e1216]:
+                      - generic [ref=f7e1217]: 1/1 controls
+                      - generic [ref=f7e1218]: 50%
+                  - paragraph [ref=f7e1219]: Information shall be classified in terms of legal requirements, value, criticality and sensitivity to unauthorized disclosure or modification.
+                - generic [ref=f7e1221] [cursor=pointer]:
+                  - generic [ref=f7e1222]:
+                    - generic [ref=f7e1223]:
+                      - generic [ref=f7e1226]: A.5.13
+                      - generic [ref=f7e1227]: Labeling of Information
+                    - generic [ref=f7e1228]:
+                      - generic [ref=f7e1229]: 1/1 controls
+                      - generic [ref=f7e1230]: 50%
+                  - paragraph [ref=f7e1231]: An appropriate set of procedures for information labeling shall be developed and implemented.
+                - generic [ref=f7e1233] [cursor=pointer]:
+                  - generic [ref=f7e1234]:
+                    - generic [ref=f7e1235]:
+                      - generic [ref=f7e1238]: A.5.14
+                      - generic [ref=f7e1239]: Information Transfer
+                    - generic [ref=f7e1240]:
+                      - generic [ref=f7e1241]: 1/1 controls
+                      - generic [ref=f7e1242]: 50%
+                  - paragraph [ref=f7e1243]: Information transfer rules, procedures, or agreements shall be in place for all types of transfer facilities.
+                - generic [ref=f7e1244]:
+                  - generic [ref=f7e1246] [cursor=pointer]:
+                    - generic [ref=f7e1247]:
+                      - generic [ref=f7e1250]: A.5.15
+                      - generic [ref=f7e1251]: Access Control
+                    - generic [ref=f7e1252]:
+                      - generic [ref=f7e1253]: 1/1 controls
+                      - generic [ref=f7e1254]: 50%
+                  - generic [ref=f7e1750]:
+                    - generic [ref=f7e1751]:
+                      - generic [ref=f7e1752]:
+                        - generic [ref=f7e1753]:
+                          - paragraph [ref=f7e1754]: Group Compliance
+                          - paragraph [ref=f7e1755]: Based on control assessments
+                        - generic [ref=f7e1756]: 50%
+                      - generic [ref=f7e1758]:
+                        - generic [ref=f7e1759]:
+                          - generic [ref=f7e1760]: "0"
+                          - generic [ref=f7e1761]: Compliant
+                        - generic [ref=f7e1762]:
+                          - generic [ref=f7e1763]: "1"
+                          - generic [ref=f7e1764]: Partial
+                        - generic [ref=f7e1765]:
+                          - generic [ref=f7e1766]: "0"
+                          - generic [ref=f7e1767]: Non-Compl.
+                        - generic [ref=f7e1768]:
+                          - generic [ref=f7e1769]: "0"
+                          - generic [ref=f7e1770]: N/A
+                        - generic [ref=f7e1771]:
+                          - generic [ref=f7e1772]: "0"
+                          - generic [ref=f7e1773]: Unscored
+                    - generic [ref=f7e1775]:
+                      - generic [ref=f7e1776]:
+                        - generic [ref=f7e1777]:
+                          - generic [ref=f7e1778]:
+                            - generic [ref=f7e1779]: A.5.15
+                            - generic [ref=f7e1780]: Partial ✗
+                          - paragraph [ref=f7e1781]: Access Control
+                        - button "Finding" [ref=f7e1783]
+                      - button "Control Details" [ref=f7e1785]
+                      - generic [ref=f7e1793]:
+                        - generic [ref=f7e1794]:
+                          - generic [ref=f7e1795]: Compliance Status
+                          - combobox [ref=f7e1796]:
+                            - generic: Partially Compliant
+                        - generic [ref=f7e1799]:
+                          - generic [ref=f7e1800]: Notes / Evidence
+                          - textbox "Document evidence or rationale..." [ref=f7e1801]
+                        - generic [ref=f7e1802]:
+                          - generic [ref=f7e1803]:
+                            - generic [ref=f7e1804]: Evidence
+                            - generic [ref=f7e1808]:
+                              - button "Attach" [ref=f7e1809]
+                              - button "Upload" [ref=f7e1810]
+                          - paragraph [ref=f7e1811]: No evidence attached.
+                - generic [ref=f7e1257] [cursor=pointer]:
+                  - generic [ref=f7e1258]:
+                    - generic [ref=f7e1259]:
+                      - generic [ref=f7e1262]: A.5.16
+                      - generic [ref=f7e1263]: Identity Management
+                    - generic [ref=f7e1264]:
+                      - generic [ref=f7e1265]: 1/1 controls
+                      - generic [ref=f7e1266]: 50%
+                  - paragraph [ref=f7e1267]: The full lifecycle of identities shall be managed.
+                - generic [ref=f7e1269] [cursor=pointer]:
+                  - generic [ref=f7e1270]:
+                    - generic [ref=f7e1271]:
+                      - generic [ref=f7e1274]: A.5.17
+                      - generic [ref=f7e1275]: Authentication Information
+                    - generic [ref=f7e1276]:
+                      - generic [ref=f7e1277]: 1/1 controls
+                      - generic [ref=f7e1278]: 50%
+                  - paragraph [ref=f7e1279]: Allocation and management of authentication information shall be controlled by a management process.
+                - generic [ref=f7e1281] [cursor=pointer]:
+                  - generic [ref=f7e1282]:
+                    - generic [ref=f7e1283]:
+                      - generic [ref=f7e1286]: A.5.18
+                      - generic [ref=f7e1287]: Access Rights
+                    - generic [ref=f7e1288]:
+                      - generic [ref=f7e1289]: 1/1 controls
+                      - generic [ref=f7e1290]: 0%
+                  - paragraph [ref=f7e1291]: Access rights to information and other associated assets shall be provisioned, reviewed, modified and removed.
+                - generic [ref=f7e1293] [cursor=pointer]:
+                  - generic [ref=f7e1294]:
+                    - generic [ref=f7e1295]:
+                      - generic [ref=f7e1298]: A.5.19
+                      - generic [ref=f7e1299]: Information Security in Supplier Relationships
+                    - generic [ref=f7e1300]:
+                      - generic [ref=f7e1301]: 1/1 controls
+                      - generic [ref=f7e1302]: 0%
+                  - paragraph [ref=f7e1303]: Processes and procedures shall be defined and implemented to manage the information security risks associated with the use of supplier's products or services.
+                - generic [ref=f7e1305] [cursor=pointer]:
+                  - generic [ref=f7e1306]:
+                    - generic [ref=f7e1307]:
+                      - generic [ref=f7e1310]: A.5.20
+                      - generic [ref=f7e1311]: Addressing Security Within Supplier Agreements
+                    - generic [ref=f7e1312]:
+                      - generic [ref=f7e1313]: 1/1 controls
+                      - generic [ref=f7e1314]: 0%
+                  - paragraph [ref=f7e1315]: Relevant information security requirements shall be established and agreed with each supplier.
+                - generic [ref=f7e1317] [cursor=pointer]:
+                  - generic [ref=f7e1318]:
+                    - generic [ref=f7e1319]:
+                      - generic [ref=f7e1322]: A.5.21
+                      - generic [ref=f7e1323]: Managing Information Security in the ICT Supply Chain
+                    - generic [ref=f7e1324]:
+                      - generic [ref=f7e1325]: 1/1 controls
+                      - generic [ref=f7e1326]: 0%
+                  - paragraph [ref=f7e1327]: Processes and procedures shall be defined and implemented to manage the information security risks associated with the ICT products and services supply chain.
+                - generic [ref=f7e1329] [cursor=pointer]:
+                  - generic [ref=f7e1330]:
+                    - generic [ref=f7e1331]:
+                      - generic [ref=f7e1334]: A.5.22
+                      - generic [ref=f7e1335]: Monitoring, Review and Change Management of Supplier Services
+                    - generic [ref=f7e1336]:
+                      - generic [ref=f7e1337]: 1/1 controls
+                      - generic [ref=f7e1338]: 0%
+                  - paragraph [ref=f7e1339]: The organization shall regularly monitor, review, evaluate and manage change in supplier information security practices.
+                - generic [ref=f7e1341] [cursor=pointer]:
+                  - generic [ref=f7e1342]:
+                    - generic [ref=f7e1343]:
+                      - generic [ref=f7e1346]: A.5.23
+                      - generic [ref=f7e1347]: Information Security for Use of Cloud Services
+                    - generic [ref=f7e1348]:
+                      - generic [ref=f7e1349]: 0/1 controls
+                      - generic [ref=f7e1350]: Not Assessed
+                  - paragraph [ref=f7e1351]: Processes for acquisition, use, management and exit from cloud services shall be established.
+                - generic [ref=f7e1353] [cursor=pointer]:
+                  - generic [ref=f7e1354]:
+                    - generic [ref=f7e1355]:
+                      - generic [ref=f7e1358]: A.5.24
+                      - generic [ref=f7e1359]: Information Security Incident Management Planning and Preparation
+                    - generic [ref=f7e1360]:
+                      - generic [ref=f7e1361]: 0/1 controls
+                      - generic [ref=f7e1362]: Not Assessed
+                  - paragraph [ref=f7e1363]: The organization shall plan and prepare for managing information security incidents.
+                - generic [ref=f7e1365] [cursor=pointer]:
+                  - generic [ref=f7e1366]:
+                    - generic [ref=f7e1367]:
+                      - generic [ref=f7e1370]: A.5.25
+                      - generic [ref=f7e1371]: Assessment and Decision on Information Security Events
+                    - generic [ref=f7e1372]:
+                      - generic [ref=f7e1373]: 0/1 controls
+                      - generic [ref=f7e1374]: Not Assessed
+                  - paragraph [ref=f7e1375]: The organization shall assess information security events and decide if they are to be categorized as information security incidents.
+                - generic [ref=f7e1377] [cursor=pointer]:
+                  - generic [ref=f7e1378]:
+                    - generic [ref=f7e1379]:
+                      - generic [ref=f7e1382]: A.5.26
+                      - generic [ref=f7e1383]: Response to Information Security Incidents
+                    - generic [ref=f7e1384]:
+                      - generic [ref=f7e1385]: 1/1 controls
+                      - generic [ref=f7e1386]: 100%
+                  - paragraph [ref=f7e1387]: Information security incidents shall be responded to in accordance with the documented procedures.
+                - generic [ref=f7e1389] [cursor=pointer]:
+                  - generic [ref=f7e1390]:
+                    - generic [ref=f7e1391]:
+                      - generic [ref=f7e1394]: A.5.27
+                      - generic [ref=f7e1395]: Learning from Information Security Incidents
+                    - generic [ref=f7e1396]:
+                      - generic [ref=f7e1397]: 1/1 controls
+                      - generic [ref=f7e1398]: 100%
+                  - paragraph [ref=f7e1399]: Knowledge gained from information security incidents shall be used to strengthen and improve the information security controls.
+                - generic [ref=f7e1401] [cursor=pointer]:
+                  - generic [ref=f7e1402]:
+                    - generic [ref=f7e1403]:
+                      - generic [ref=f7e1406]: A.5.28
+                      - generic [ref=f7e1407]: Collection of Evidence
+                    - generic [ref=f7e1408]:
+                      - generic [ref=f7e1409]: 1/1 controls
+                      - generic [ref=f7e1410]: 100%
+                  - paragraph [ref=f7e1411]: The organization shall establish and implement procedures for the identification, collection, acquisition and preservation of evidence.
+                - generic [ref=f7e1413] [cursor=pointer]:
+                  - generic [ref=f7e1414]:
+                    - generic [ref=f7e1415]:
+                      - generic [ref=f7e1418]: A.5.29
+                      - generic [ref=f7e1419]: Information Security During Disruption
+                    - generic [ref=f7e1420]:
+                      - generic [ref=f7e1421]: 1/1 controls
+                      - generic [ref=f7e1422]: 100%
+                  - paragraph [ref=f7e1423]: The organization shall plan how to maintain information security at an appropriate level during disruption.
+                - generic [ref=f7e1425] [cursor=pointer]:
+                  - generic [ref=f7e1426]:
+                    - generic [ref=f7e1427]:
+                      - generic [ref=f7e1430]: A.5.30
+                      - generic [ref=f7e1431]: ICT Readiness for Business Continuity
+                    - generic [ref=f7e1432]:
+                      - generic [ref=f7e1433]: 1/1 controls
+                      - generic [ref=f7e1434]: 100%
+                  - paragraph [ref=f7e1435]: ICT readiness shall be planned, implemented, maintained and tested based on business continuity objectives.
+                - generic [ref=f7e1437] [cursor=pointer]:
+                  - generic [ref=f7e1438]:
+                    - generic [ref=f7e1439]:
+                      - generic [ref=f7e1442]: A.5.33
+                      - generic [ref=f7e1443]: Protection of Records
+                    - generic [ref=f7e1444]:
+                      - generic [ref=f7e1445]: 1/1 controls
+                      - generic [ref=f7e1446]: 100%
+                  - paragraph [ref=f7e1447]: Records shall be protected from loss, destruction, falsification, unauthorized access and unauthorized release.
+                - generic [ref=f7e1449] [cursor=pointer]:
+                  - generic [ref=f7e1450]:
+                    - generic [ref=f7e1451]:
+                      - generic [ref=f7e1454]: A.5.34
+                      - generic [ref=f7e1455]: Privacy and Protection of PII
+                    - generic [ref=f7e1456]:
+                      - generic [ref=f7e1457]: 1/1 controls
+                      - generic [ref=f7e1458]: 100%
+                  - paragraph [ref=f7e1459]: The organization shall identify and meet the requirements regarding the preservation of privacy and protection of PII.
+                - generic [ref=f7e1461] [cursor=pointer]:
+                  - generic [ref=f7e1462]:
+                    - generic [ref=f7e1463]:
+                      - generic [ref=f7e1466]: A.6.3
+                      - generic [ref=f7e1467]: Information Security Awareness, Education and Training
+                    - generic [ref=f7e1468]:
+                      - generic [ref=f7e1469]: 1/1 controls
+                      - generic [ref=f7e1470]: 100%
+                  - paragraph [ref=f7e1471]: Personnel of the organization and relevant interested parties shall receive appropriate information security awareness education and training.
+                - generic [ref=f7e1473] [cursor=pointer]:
+                  - generic [ref=f7e1474]:
+                    - generic [ref=f7e1475]:
+                      - generic [ref=f7e1478]: A.6.4
+                      - generic [ref=f7e1479]: Disciplinary Process
+                    - generic [ref=f7e1480]:
+                      - generic [ref=f7e1481]: 1/1 controls
+                      - generic [ref=f7e1482]: 100%
+                  - paragraph [ref=f7e1483]: A disciplinary process shall be formalized and communicated to take actions against personnel and other relevant interested parties who have committed an information security policy violation.
+                - generic [ref=f7e1485] [cursor=pointer]:
+                  - generic [ref=f7e1486]:
+                    - generic [ref=f7e1487]:
+                      - generic [ref=f7e1490]: A.6.8
+                      - generic [ref=f7e1491]: Information Security Event Reporting
+                    - generic [ref=f7e1492]:
+                      - generic [ref=f7e1493]: 1/1 controls
+                      - generic [ref=f7e1494]: 100%
+                  - paragraph [ref=f7e1495]: The organization shall provide a mechanism for personnel to report observed or suspected information security events.
+                - generic [ref=f7e1497] [cursor=pointer]:
+                  - generic [ref=f7e1498]:
+                    - generic [ref=f7e1499]:
+                      - generic [ref=f7e1502]: A.7.1
+                      - generic [ref=f7e1503]: Physical Security Perimeters
+                    - generic [ref=f7e1504]:
+                      - generic [ref=f7e1505]: 1/1 controls
+                      - generic [ref=f7e1506]: 100%
+                  - paragraph [ref=f7e1507]: Security perimeters shall be defined and used to protect areas that contain either sensitive or critical information and information processing facilities.
+                - generic [ref=f7e1509] [cursor=pointer]:
+                  - generic [ref=f7e1510]:
+                    - generic [ref=f7e1511]:
+                      - generic [ref=f7e1514]: A.7.2
+                      - generic [ref=f7e1515]: Physical Entry
+                    - generic [ref=f7e1516]:
+                      - generic [ref=f7e1517]: 1/1 controls
+                      - generic [ref=f7e1518]: 100%
+                  - paragraph [ref=f7e1519]: Secure areas shall be protected by appropriate entry controls to ensure that only authorized personnel are allowed access.
+                - generic [ref=f7e1521] [cursor=pointer]:
+                  - generic [ref=f7e1522]:
+                    - generic [ref=f7e1523]:
+                      - generic [ref=f7e1526]: A.7.3
+                      - generic [ref=f7e1527]: Securing Offices, Rooms and Facilities
+                    - generic [ref=f7e1528]:
+                      - generic [ref=f7e1529]: 1/1 controls
+                      - generic [ref=f7e1530]: 100%
+                  - paragraph [ref=f7e1531]: Physical security for offices, rooms and facilities shall be designed and implemented.
+                - generic [ref=f7e1533] [cursor=pointer]:
+                  - generic [ref=f7e1534]:
+                    - generic [ref=f7e1535]:
+                      - generic [ref=f7e1538]: A.7.4
+                      - generic [ref=f7e1539]: Physical Security Monitoring
+                    - generic [ref=f7e1540]:
+                      - generic [ref=f7e1541]: 1/1 controls
+                      - generic [ref=f7e1542]: 100%
+                  - paragraph [ref=f7e1543]: Premises shall be continuously monitored for unauthorized physical access.
+                - generic [ref=f7e1545] [cursor=pointer]:
+                  - generic [ref=f7e1546]:
+                    - generic [ref=f7e1547]:
+                      - generic [ref=f7e1550]: A.7.5
+                      - generic [ref=f7e1551]: Protecting Against Physical and Environmental Threats
+                    - generic [ref=f7e1552]:
+                      - generic [ref=f7e1553]: 1/1 controls
+                      - generic [ref=f7e1554]: 100%
+                  - paragraph [ref=f7e1555]: Protection against physical and environmental threats, such as natural disasters and other intentional or unintentional physical threats to infrastructure shall be designed and implemented.
+                - generic [ref=f7e1557] [cursor=pointer]:
+                  - generic [ref=f7e1558]:
+                    - generic [ref=f7e1559]:
+                      - generic [ref=f7e1562]: A.7.8
+                      - generic [ref=f7e1563]: Equipment Siting and Protection
+                    - generic [ref=f7e1564]:
+                      - generic [ref=f7e1565]: 1/1 controls
+                      - generic [ref=f7e1566]: 100%
+                  - paragraph [ref=f7e1567]: Equipment shall be sited securely and protected.
+                - generic [ref=f7e1569] [cursor=pointer]:
+                  - generic [ref=f7e1570]:
+                    - generic [ref=f7e1571]:
+                      - generic [ref=f7e1574]: A.8.13
+                      - generic [ref=f7e1575]: Information Backup
+                    - generic [ref=f7e1576]:
+                      - generic [ref=f7e1577]: 1/1 controls
+                      - generic [ref=f7e1578]: 100%
+                  - paragraph [ref=f7e1579]: Backup copies of information, software and systems shall be maintained and regularly tested.
+                - generic [ref=f7e1581] [cursor=pointer]:
+                  - generic [ref=f7e1582]:
+                    - generic [ref=f7e1583]:
+                      - generic [ref=f7e1586]: A.8.14
+                      - generic [ref=f7e1587]: Redundancy of Information Processing Facilities
+                    - generic [ref=f7e1588]:
+                      - generic [ref=f7e1589]: 1/1 controls
+                      - generic [ref=f7e1590]: 100%
+                  - paragraph [ref=f7e1591]: Information processing facilities shall be implemented with redundancy sufficient to meet availability requirements.
+                - generic [ref=f7e1593] [cursor=pointer]:
+                  - generic [ref=f7e1594]:
+                    - generic [ref=f7e1595]:
+                      - generic [ref=f7e1598]: A.8.15
+                      - generic [ref=f7e1599]: Logging
+                    - generic [ref=f7e1600]:
+                      - generic [ref=f7e1601]: 1/1 controls
+                      - generic [ref=f7e1602]: 100%
+                  - paragraph [ref=f7e1603]: Logs that record activities, exceptions, faults and other relevant events shall be produced, stored, protected and analysed.
+                - generic [ref=f7e1605] [cursor=pointer]:
+                  - generic [ref=f7e1606]:
+                    - generic [ref=f7e1607]:
+                      - generic [ref=f7e1610]: A.8.16
+                      - generic [ref=f7e1611]: Monitoring Activities
+                    - generic [ref=f7e1612]:
+                      - generic [ref=f7e1613]: 1/1 controls
+                      - generic [ref=f7e1614]: 100%
+                  - paragraph [ref=f7e1615]: Networks, systems and applications shall be monitored for anomalous behaviour and appropriate actions taken.
+                - generic [ref=f7e1617] [cursor=pointer]:
+                  - generic [ref=f7e1618]:
+                    - generic [ref=f7e1619]:
+                      - generic [ref=f7e1622]: A.8.17
+                      - generic [ref=f7e1623]: Clock Synchronization
+                    - generic [ref=f7e1624]:
+                      - generic [ref=f7e1625]: 1/1 controls
+                      - generic [ref=f7e1626]: 50%
+                  - paragraph [ref=f7e1627]: The clocks of information processing systems used by the organization shall be synchronized to approved time sources.
+                - generic [ref=f7e1629] [cursor=pointer]:
+                  - generic [ref=f7e1630]:
+                    - generic [ref=f7e1631]:
+                      - generic [ref=f7e1634]: A.8.2
+                      - generic [ref=f7e1635]: Privileged Access Rights
+                    - generic [ref=f7e1636]:
+                      - generic [ref=f7e1637]: 1/1 controls
+                      - generic [ref=f7e1638]: 100%
+                  - paragraph [ref=f7e1639]: The allocation and use of privileged access rights shall be restricted and managed.
+                - generic [ref=f7e1641] [cursor=pointer]:
+                  - generic [ref=f7e1642]:
+                    - generic [ref=f7e1643]:
+                      - generic [ref=f7e1646]: A.8.20
+                      - generic [ref=f7e1647]: Networks Security
+                    - generic [ref=f7e1648]:
+                      - generic [ref=f7e1649]: 0/1 controls
+                      - generic [ref=f7e1650]: Not Assessed
+                  - paragraph [ref=f7e1651]: Networks and network devices shall be secured, managed and controlled to protect information in systems and applications.
+                - generic [ref=f7e1653] [cursor=pointer]:
+                  - generic [ref=f7e1654]:
+                    - generic [ref=f7e1655]:
+                      - generic [ref=f7e1658]: A.8.21
+                      - generic [ref=f7e1659]: Security of Network Services
+                    - generic [ref=f7e1660]:
+                      - generic [ref=f7e1661]: 0/1 controls
+                      - generic [ref=f7e1662]: Not Assessed
+                  - paragraph [ref=f7e1663]: Security mechanisms, service levels and service requirements of network services shall be identified, implemented and monitored.
+                - generic [ref=f7e1665] [cursor=pointer]:
+                  - generic [ref=f7e1666]:
+                    - generic [ref=f7e1667]:
+                      - generic [ref=f7e1670]: A.8.22
+                      - generic [ref=f7e1671]: Segregation of Networks
+                    - generic [ref=f7e1672]:
+                      - generic [ref=f7e1673]: 0/1 controls
+                      - generic [ref=f7e1674]: Not Assessed
+                  - paragraph [ref=f7e1675]: Groups of information services, users and information systems shall be segregated in the organization's networks.
+                - generic [ref=f7e1677] [cursor=pointer]:
+                  - generic [ref=f7e1678]:
+                    - generic [ref=f7e1679]:
+                      - generic [ref=f7e1682]: A.8.24
+                      - generic [ref=f7e1683]: Use of Cryptography
+                    - generic [ref=f7e1684]:
+                      - generic [ref=f7e1685]: 1/1 controls
+                      - generic [ref=f7e1686]: 100%
+                  - paragraph [ref=f7e1687]: Rules for the effective use of cryptography, including cryptographic key management, shall be defined and implemented.
+                - generic [ref=f7e1689] [cursor=pointer]:
+                  - generic [ref=f7e1690]:
+                    - generic [ref=f7e1691]:
+                      - generic [ref=f7e1694]: A.8.3
+                      - generic [ref=f7e1695]: Information Access Restriction
+                    - generic [ref=f7e1696]:
+                      - generic [ref=f7e1697]: 1/1 controls
+                      - generic [ref=f7e1698]: 100%
+                  - paragraph [ref=f7e1699]: Access to information and other associated assets shall be restricted in accordance with the established topic-specific policy on access control.
+                - generic [ref=f7e1701] [cursor=pointer]:
+                  - generic [ref=f7e1702]:
+                    - generic [ref=f7e1703]:
+                      - generic [ref=f7e1706]: A.8.32
+                      - generic [ref=f7e1707]: Change Management
+                    - generic [ref=f7e1708]:
+                      - generic [ref=f7e1709]: 1/1 controls
+                      - generic [ref=f7e1710]: 100%
+                  - paragraph [ref=f7e1711]: Changes to information processing facilities and information systems shall be subject to change management procedures.
+                - generic [ref=f7e1713] [cursor=pointer]:
+                  - generic [ref=f7e1714]:
+                    - generic [ref=f7e1715]:
+                      - generic [ref=f7e1718]: A.8.5
+                      - generic [ref=f7e1719]: Secure Authentication
+                    - generic [ref=f7e1720]:
+                      - generic [ref=f7e1721]: 1/1 controls
+                      - generic [ref=f7e1722]: 100%
+                  - paragraph [ref=f7e1723]: Secure authentication technologies and procedures shall be implemented.
+                - generic [ref=f7e1725] [cursor=pointer]:
+                  - generic [ref=f7e1726]:
+                    - generic [ref=f7e1727]:
+                      - generic [ref=f7e1730]: A.8.8
+                      - generic [ref=f7e1731]: Management of Technical Vulnerabilities
+                    - generic [ref=f7e1732]:
+                      - generic [ref=f7e1733]: 1/1 controls
+                      - generic [ref=f7e1734]: 100%
+                  - paragraph [ref=f7e1735]: Information about technical vulnerabilities of information systems in use shall be obtained and appropriate measures shall be taken.
+                - generic [ref=f7e1737] [cursor=pointer]:
+                  - generic [ref=f7e1738]:
+                    - generic [ref=f7e1739]:
+                      - generic [ref=f7e1742]: A.8.9
+                      - generic [ref=f7e1743]: Configuration Management
+                    - generic [ref=f7e1744]:
+                      - generic [ref=f7e1745]: 1/1 controls
+                      - generic [ref=f7e1746]: 100%
+                  - paragraph [ref=f7e1747]: Configurations, including security configurations, of hardware, software, services and networks shall be established, documented, implemented, monitored and reviewed.
+  - region "Notifications alt+T"
+  - alert [ref=f7e134]

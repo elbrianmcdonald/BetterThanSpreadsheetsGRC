@@ -1,0 +1,201 @@
+- generic [active] [ref=f18e1]:
+  - generic [ref=f18e423]:
+    - complementary [ref=f18e424]:
+      - link "BetterThanSpreadsheets GRC Platform" [ref=f18e425] [cursor=pointer]:
+        - /url: /
+        - generic [ref=f18e429]:
+          - generic [ref=f18e430]: BetterThanSpreadsheets
+          - generic [ref=f18e431]: GRC Platform
+      - generic [ref=f18e432]:
+        - combobox "Switch company" [ref=f18e438] [cursor=pointer]:
+          - option "Acme Corporation" [selected]
+          - option "Globex Inc"
+          - option "Test Org Risk Creation"
+          - option "Test Org Risk Creation 2"
+          - option "Test Org Scenarios 1784069589222"
+        - button "New company" [ref=f18e439]
+      - navigation [ref=f18e441]:
+        - link "Home" [ref=f18e442] [cursor=pointer]:
+          - /url: /
+        - button "Assignments" [ref=f18e448]
+        - button "Governance" [ref=f18e457]
+        - button "Assessments" [ref=f18e465]
+        - generic [ref=f18e473]:
+          - button "Risk" [ref=f18e474]
+          - generic [ref=f18e481]:
+            - link "Risk Dashboard" [ref=f18e483] [cursor=pointer]:
+              - /url: /risks/dashboard
+            - link "Enterprise Risks" [ref=f18e487] [cursor=pointer]:
+              - /url: /risks/enterprise
+            - link "Risk Register" [ref=f18e491] [cursor=pointer]:
+              - /url: /risks
+            - link "Findings Register" [ref=f18e496] [cursor=pointer]:
+              - /url: /findings
+        - button "Compliance" [ref=f18e500]
+        - button "Third Party" [ref=f18e508]
+        - button "Business Impact" [ref=f18e518]
+        - button "Administration" [ref=f18e526]
+        - button "Help" [ref=f18e537]
+      - link "A Alice Admin ADMINISTRATOR" [ref=f18e545] [cursor=pointer]:
+        - /url: /profile
+        - generic [ref=f18e546]: A
+        - generic [ref=f18e547]:
+          - paragraph [ref=f18e548]: Alice Admin
+          - paragraph [ref=f18e549]: ADMINISTRATOR
+    - generic [ref=f18e550]:
+      - banner [ref=f18e551]:
+        - navigation "Breadcrumb" [ref=f18e552]:
+          - list [ref=f18e553]:
+            - listitem [ref=f18e554]:
+              - link "Home" [ref=f18e555] [cursor=pointer]:
+                - /url: /
+            - listitem [ref=f18e560]:
+              - link "Risk" [ref=f18e563] [cursor=pointer]:
+                - /url: /risks
+            - listitem [ref=f18e565]:
+              - generic [ref=f18e568]: Pathway tag verification risk
+        - generic [ref=f18e569]:
+          - button [ref=f18e570]
+          - generic [ref=f18e571]:
+            - generic [ref=f18e572]: admin@acme-corp.com
+            - button "Sign Out" [ref=f18e573]
+      - main [ref=f18e576]:
+        - generic [ref=f18e578]:
+          - generic [ref=f18e579]:
+            - heading "Pathway tag verification risk" [level=1] [ref=f18e580]
+            - generic [ref=f18e581]:
+              - generic [ref=f18e583]:
+                - text: HIGH
+                - generic [ref=f18e584]: (Critical)
+              - generic [ref=f18e585]: "0"
+              - generic [ref=f18e587]: Open
+            - generic [ref=f18e591]:
+              - generic [ref=f18e592]:
+                - generic [ref=f18e596]: Created by
+                - generic [ref=f18e597]: Alice Admin
+              - generic [ref=f18e598]:
+                - generic [ref=f18e601]: "on"
+                - generic [ref=f18e602]: Jul 15, 2026
+          - generic [ref=f18e603]:
+            - button "Edit" [ref=f18e604]
+            - button "Change Status" [ref=f18e605]
+            - button "Delete" [ref=f18e606]
+        - generic [ref=f18e607]:
+          - generic [ref=f18e609]:
+            - tablist "Risk detail tabs" [ref=f18e610]:
+              - navigation [ref=f18e611]:
+                - tab "Overview" [selected] [ref=f18e612]
+                - tab "Controls" [ref=f18e617]
+                - tab "Evidence" [ref=f18e621]
+                - tab "Remediation" [ref=f18e625]
+                - tab "Comments" [ref=f18e629]
+                - tab "Audit Trail" [ref=f18e633]
+                - tab "History" [ref=f18e639]
+            - tabpanel [ref=f18e644]:
+              - generic [ref=f18e645]:
+                - generic [ref=f18e646]:
+                  - generic [ref=f18e649]:
+                    - generic [ref=f18e650]:
+                      - paragraph [ref=f18e651]: Created
+                      - paragraph [ref=f18e654]: July 15th, 2026
+                    - generic [ref=f18e655]:
+                      - paragraph [ref=f18e656]: Last Updated
+                      - paragraph [ref=f18e659]: July 15th, 2026
+                  - generic [ref=f18e660]:
+                    - generic [ref=f18e661]: Finding Description
+                    - paragraph [ref=f18e665]: Risk created to verify pathway-level tagging links into the master library.
+                - generic [ref=f18e666]:
+                  - generic [ref=f18e667]:
+                    - generic [ref=f18e668]:
+                      - generic [ref=f18e669]:
+                        - text: Effective Severity
+                        - generic [ref=f18e672]: Calculated
+                      - button "Override" [ref=f18e673]
+                    - paragraph [ref=f18e674]: Calculated from the highest-scored open linked finding; a manual override wins when set.
+                  - generic [ref=f18e676]:
+                    - generic [ref=f18e677]:
+                      - paragraph [ref=f18e678]: Effective
+                      - generic [ref=f18e679]:
+                        - generic [ref=f18e680]: "9"
+                        - generic [ref=f18e681]: High
+                    - generic [ref=f18e682]:
+                      - paragraph [ref=f18e683]: Calculated
+                      - paragraph [ref=f18e684]: 9 · High
+                - generic [ref=f18e685]:
+                  - generic [ref=f18e686]:
+                    - generic [ref=f18e687]:
+                      - generic [ref=f18e688]: Treatment
+                      - button "Accept Risk" [ref=f18e693]
+                    - paragraph [ref=f18e694]: Acceptance is a risk-level decision — linked findings stay open observations. If the effective score later rises, the acceptance is flagged for re-review.
+                  - paragraph [ref=f18e696]: No treatment decision yet.
+                - generic [ref=f18e697]:
+                  - generic [ref=f18e698]:
+                    - generic [ref=f18e699]:
+                      - generic [ref=f18e700]:
+                        - text: Linked Findings
+                        - generic [ref=f18e706]: "1"
+                      - button "Link finding" [ref=f18e707]
+                    - paragraph [ref=f18e708]: Observations evidencing this risk. Their scores drive the risk's calculated severity once derived scoring lands (Epic 22).
+                  - list [ref=f18e710]:
+                    - listitem [ref=f18e711]:
+                      - link "FND-2026-0108" [ref=f18e712] [cursor=pointer]:
+                        - /url: /findings/cmrla5858000e01pafb6cqsze
+                      - generic [ref=f18e713]: "Concern: no encryption at rest VERIFY-TPRM-8c9f"
+                      - generic [ref=f18e714]: New
+                      - generic [ref=f18e717]: High
+                      - button "Unlink FND-2026-0108" [ref=f18e719]
+                - generic [ref=f18e720]:
+                  - generic [ref=f18e721]: Business Impact
+                  - generic [ref=f18e726]:
+                    - textbox "Describe the business impact of this risk..." [ref=f18e727]
+                    - generic [ref=f18e728]:
+                      - button "Save" [disabled]
+                - button "Residual Severity (After controls)" [ref=f18e730]:
+                  - generic [ref=f18e731]:
+                    - generic [ref=f18e736]: Residual Severity
+                    - generic [ref=f18e737]: (After controls)
+                - button "MITRE ATT&CK Threat Modeling" [ref=f18e739]
+          - generic [ref=f18e746]:
+            - generic [ref=f18e747]:
+              - generic [ref=f18e748]:
+                - generic [ref=f18e749]: Risk Context
+                - generic [ref=f18e751]:
+                  - generic [ref=f18e752]:
+                    - generic [ref=f18e753]: Asset Criticality
+                    - generic [ref=f18e757]: Medium
+                  - generic [ref=f18e759]:
+                    - generic [ref=f18e760]: Next Audit
+                    - generic [ref=f18e764]: Not set
+              - generic [ref=f18e766]:
+                - generic [ref=f18e767]: Assigned Owners
+                - generic [ref=f18e769]:
+                  - generic [ref=f18e770]:
+                    - generic [ref=f18e771]: IT Owner
+                    - generic [ref=f18e777]: Not assigned
+                  - generic [ref=f18e778]:
+                    - generic [ref=f18e779]: Business Owner
+                    - generic [ref=f18e784]: Not assigned
+              - generic [ref=f18e785]:
+                - generic [ref=f18e786]: Timeline
+                - generic [ref=f18e788]:
+                  - generic [ref=f18e789]:
+                    - generic [ref=f18e790]: Created
+                    - generic [ref=f18e795]: Jul 15, 2026
+                  - generic [ref=f18e796]:
+                    - generic [ref=f18e797]: Last Updated
+                    - generic "Jul 15, 2026, 8:27:19 AM" [ref=f18e802]: less than a minute ago
+            - generic [ref=f18e803]:
+              - generic [ref=f18e804]: Treatment SLA
+              - generic [ref=f18e809]:
+                - paragraph [ref=f18e810]: No treatment decision yet.
+                - link "Start Treatment" [ref=f18e811] [cursor=pointer]:
+                  - /url: /risks/cmrm4747m000101mwvmj17d3y/treatment
+            - generic [ref=f18e812]:
+              - generic [ref=f18e813]: Actions
+              - generic [ref=f18e817]:
+                - button "Assign Risk" [ref=f18e818]
+                - button "Change Status" [ref=f18e819]
+                - link "Start Treatment" [ref=f18e820] [cursor=pointer]:
+                  - /url: /risks/cmrm4747m000101mwvmj17d3y/treatment
+  - region "Notifications alt+T"
+  - alert [ref=f18e204]: BetterThanSpreadsheetsGRC

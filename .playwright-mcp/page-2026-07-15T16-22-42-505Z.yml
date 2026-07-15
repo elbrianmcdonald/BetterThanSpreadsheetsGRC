@@ -1,0 +1,140 @@
+- generic:
+  - generic:
+    - complementary:
+      - link:
+        - /url: /
+        - generic:
+          - generic: BetterThanSpreadsheets
+          - generic: GRC Platform
+      - generic:
+        - generic:
+          - combobox
+        - button: New company
+      - navigation:
+        - link:
+          - /url: /
+          - generic: Home
+        - generic:
+          - button:
+            - generic: Assignments
+        - generic:
+          - button:
+            - generic: Governance
+        - generic:
+          - button:
+            - generic: Assessments
+        - generic:
+          - button:
+            - generic: Risk
+          - generic:
+            - generic:
+              - link:
+                - /url: /risks/dashboard
+                - generic: Risk Dashboard
+            - generic:
+              - link:
+                - /url: /risks/enterprise
+                - generic: Enterprise Risks
+            - generic:
+              - link:
+                - /url: /risks
+                - generic: Risk Register
+            - generic:
+              - link:
+                - /url: /findings
+                - generic: Findings Register
+        - generic:
+          - button:
+            - generic: Compliance
+        - generic:
+          - button:
+            - generic: Third Party
+        - generic:
+          - button:
+            - generic: Business Impact
+        - generic:
+          - button:
+            - generic: Administration
+        - generic:
+          - button:
+            - generic: Help
+      - link:
+        - /url: /profile
+        - generic: A
+        - generic:
+          - paragraph: Alice Admin
+          - paragraph: ADMINISTRATOR
+    - generic:
+      - banner:
+        - navigation:
+          - list:
+            - listitem:
+              - link:
+                - /url: /
+                - generic: Home
+            - listitem:
+              - link:
+                - /url: /admin/pathways
+                - generic: Exploitation Pathways
+            - listitem:
+              - generic: Untitled pathway
+        - generic:
+          - button
+          - generic:
+            - generic: admin@acme-corp.com
+            - button: Sign Out
+      - main:
+        - generic:
+          - paragraph: Changes are saved automatically as you edit.
+          - generic:
+            - button: Delete
+            - button: Done
+        - generic:
+          - generic:
+            - paragraph: Exploitation Pathway
+            - heading [level=1]:
+              - text: Untitled pathway
+              - button
+            - paragraph: Individually, these findings rate across severities. Chained together they form a single rehearsable path.
+          - button:
+            - generic: Overall description
+            - generic: Add an overall description and blast radius for this exploitation pathway.
+          - generic:
+            - complementary:
+              - generic:
+                - heading [level=3]: Findings in the pathway
+                - generic: 0 linked
+              - paragraph: No findings linked to this pathway yet.
+              - generic:
+                - paragraph:
+                  - text: Breaking
+                  - strong: any single link
+                  - text: "collapses the pathway. Fastest break:"
+                - paragraph: —
+            - generic:
+              - generic:
+                - generic:
+                  - paragraph: MITRE ATT&CK® · Technique flow
+                  - heading [level=2]: How the chain executes
+                - generic:
+                  - tablist:
+                    - tab: Kill Chain
+                    - tab: ATT&CK Matrix
+                    - tab [selected]: Attack Narrative
+                  - button: Add step
+              - paragraph: No steps in this pathway yet.
+              - generic:
+                - generic: Sequence step
+                - generic:
+                  - generic: T0000
+                  - text: ATT&CK technique ID
+                - generic: Hover any element to trace it across both panels.
+  - region "Notifications alt+T"
+  - alert
+  - dialog [ref=f1e212]:
+    - heading "Delete pathway?" [level=2] [ref=f1e214]
+    - paragraph [ref=f1e215]: This permanently deletes Untitled pathway and its steps, and removes it from every assessment, finding, and risk it is linked to. The findings and risks themselves are not deleted. This cannot be undone.
+    - generic [ref=f1e216]:
+      - button "Cancel" [active] [ref=f1e217]
+      - button "Delete" [ref=f1e218]
+    - button "Close" [ref=f1e219]
