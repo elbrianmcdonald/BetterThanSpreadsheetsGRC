@@ -218,6 +218,12 @@ const ALLOWLIST_TABLES = new Set([
   // isolation is via their parent relations (step→pathway, risk/finding).
   "PathwayStepMember",
   "RiskFindingLink",
+  // Pathway master-library join tables with no organizationId; isolation is via
+  // the Pathway relation (has organizationId) and enforced in-code by
+  // assertPathwayInOrg/assertFindingInOrg/assertRiskInOrg on every write.
+  // (PathwayAssessmentLink has its own organizationId, so it stays filtered.)
+  "PathwayFinding",
+  "PathwayRisk",
   // ActionPlanItemFinding: join table; isolation via ActionPlanItem (has org).
   "ActionPlanItemFinding",
   // Epic 18: Engagement child tables have no organizationId; isolation is via

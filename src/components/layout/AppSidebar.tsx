@@ -26,7 +26,6 @@ import {
   ShieldAlert,
   ClipboardList,
   BarChart3,
-  Tag,
   GitMerge,
   GitCompare,
   Home,
@@ -41,7 +40,6 @@ import {
   Settings,
   Server,
   ScrollText,
-  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CompanySwitcher } from "@/components/layout/CompanySwitcher";
@@ -297,22 +295,9 @@ const NAV_SECTIONS: NavSection[] = [
         roles: [UserRole.ADMINISTRATOR],
       },
       {
-        href: "/admin/members",
-        label: "Company Members",
-        icon: <Building2 className="h-4 w-4" />,
-        roles: [UserRole.ADMINISTRATOR],
-      },
-      {
         href: "/admin/companies",
         label: "Companies",
         icon: <Building2 className="h-4 w-4" />,
-        platformAdmin: true,
-        group: "Platform",
-      },
-      {
-        href: "/admin/platform-admins",
-        label: "Platform Admins",
-        icon: <ShieldCheck className="h-4 w-4" />,
         platformAdmin: true,
         group: "Platform",
       },
@@ -349,17 +334,17 @@ const NAV_SECTIONS: NavSection[] = [
         group: "Data",
       },
       {
-        href: "/admin/taxonomy",
-        label: "Taxonomy",
-        icon: <Tag className="h-4 w-4" />,
-        roles: [UserRole.ADMINISTRATOR],
-        group: "Data",
-      },
-      {
         href: "/mitre/tactics",
         label: "MITRE ATT&CK",
         icon: <Crosshair className="h-4 w-4" />,
         roles: [UserRole.ADMINISTRATOR],
+        group: "Data",
+      },
+      {
+        href: "/admin/pathways",
+        label: "Exploitation Pathways",
+        icon: <Crosshair className="h-4 w-4" />,
+        roles: [UserRole.ADMINISTRATOR, UserRole.MANAGER, UserRole.ANALYST],
         group: "Data",
       },
     ],

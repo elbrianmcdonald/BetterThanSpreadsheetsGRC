@@ -1183,6 +1183,7 @@ model Risk {
   // truth (the legacy spawnedFromFindingId spine retired in Story 23.3).
   findingLinks       RiskFindingLink[]   @relation("RiskFindingLinks")
   pathwayStepMembers PathwayStepMember[] @relation("PathwayStepMemberRisk")
+  pathwayLinks       PathwayRisk[]       @relation("PathwayRisk")
 
   // Risk raised within a compliance assessment (mirrors Finding compliance source)
   sourceComplianceAssessment ComplianceAssessment? @relation("RiskComplianceSource", fields: [sourceComplianceAssessmentId], references: [id], onDelete: SetNull)
@@ -1902,6 +1903,7 @@ enum AuditAction {
   CREATE_ENTERPRISE_RISK
   UPDATE_ENTERPRISE_RISK
   REVIEW_ENTERPRISE_RISK
+  DELETE_ENTERPRISE_RISK
   // Multi-Tenancy Epic 1: company switching + creation
   SWITCH_ORGANIZATION
   CREATE_ORGANIZATION
@@ -2412,6 +2414,7 @@ model Finding {
   // A finding can roll up into multiple risks, and appear in multiple pathway steps.
   riskLinks          RiskFindingLink[]       @relation("FindingRiskLinks")
   pathwayStepMembers PathwayStepMember[]     @relation("PathwayStepMemberFinding")
+  pathwayLinks       PathwayFinding[]        @relation("PathwayFinding")
   actionPlanLinks    ActionPlanItemFinding[] @relation("ActionPlanItemFinding")
 
   // Story 20.1 follow-up: identified-risk-card parity relations
@@ -5576,27 +5579,86 @@ model EngagementEvidenceRequest {
 // ============================================================================
 // Epic 19: Exploitation Pathway (toxic chain / MITRE ATT&CK)
 // ============================================================================
-// A named exploitation pathway scoped to ONE assessment (polymorphic). An
-// assessment may have many pathways; a finding/risk may appear in many pathways
-// (many-to-many via PathwayStep across pathway records).
+// A named exploitation pathway. Pathways are an ORG-LEVEL master library
+// (shared: editing one updates it everywhere it is linked). A pathway may be
+// linked to any number of assessments (PathwayAssessmentLink) and, optionally,
+// to findings and risks directly at the pathway level (PathwayFinding /
+// PathwayRisk) — in addition to the finer step-level membership
+// (PathwayStepMember). The legacy assessmentKind/assessmentId columns are the
+// "home" assessment a pathway was authored in (nullable for master-list
+// pathways created outside any assessment); the assessmentLinks join is the
+// source of truth for which assessments a pathway appears in.
 model Pathway {
-  id             String         @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
-  assessmentKind AssessmentKind
-  assessmentId   String
+  assessmentKind AssessmentKind?
+  assessmentId   String?
   name           String
-  verdict        String?        @db.Text
-  narrative      String?        @db.Text
-  blastRadius    String?        @db.Text
+  verdict        String?         @db.Text
+  narrative      String?         @db.Text
+  blastRadius    String?         @db.Text
   createdById    String
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  steps        PathwayStep[]
+  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  steps           PathwayStep[]
+  assessmentLinks PathwayAssessmentLink[]
+  findingLinks    PathwayFinding[]
+  riskLinks       PathwayRisk[]
 
   @@index([organizationId])
   @@index([organizationId, assessmentKind, assessmentId])
+}
+
+// M2M: a pathway appears in an assessment (polymorphic). Selecting an existing
+// master pathway into an assessment's Exploitation Pathways tab creates one of
+// these; a pathway can be linked to many assessments (shared library).
+model PathwayAssessmentLink {
+  id             String         @id @default(cuid())
+  pathwayId      String
+  organizationId String
+  assessmentKind AssessmentKind
+  assessmentId   String
+  createdAt      DateTime       @default(now())
+
+  pathway Pathway @relation(fields: [pathwayId], references: [id], onDelete: Cascade)
+
+  @@unique([pathwayId, assessmentKind, assessmentId])
+  @@index([pathwayId])
+  @@index([organizationId, assessmentKind, assessmentId])
+}
+
+// Optional pathway-level M2M: a finding is aligned to a pathway (independent of
+// step membership). Used when tagging a pathway on a finding/risk form.
+model PathwayFinding {
+  id        String   @id @default(cuid())
+  pathwayId String
+  findingId String
+  createdAt DateTime @default(now())
+
+  pathway Pathway @relation(fields: [pathwayId], references: [id], onDelete: Cascade)
+  finding Finding @relation("PathwayFinding", fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@unique([pathwayId, findingId])
+  @@index([pathwayId])
+  @@index([findingId])
+}
+
+// Optional pathway-level M2M: a risk is aligned to a pathway (independent of
+// step membership).
+model PathwayRisk {
+  id        String   @id @default(cuid())
+  pathwayId String
+  riskId    String
+  createdAt DateTime @default(now())
+
+  pathway Pathway @relation(fields: [pathwayId], references: [id], onDelete: Cascade)
+  risk    Risk    @relation("PathwayRisk", fields: [riskId], references: [id], onDelete: Cascade)
+
+  @@unique([pathwayId, riskId])
+  @@index([pathwayId])
+  @@index([riskId])
 }
 
 model PathwayStep {

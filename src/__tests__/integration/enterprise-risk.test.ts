@@ -21,6 +21,7 @@ import { seedEnterpriseRisks, ENTERPRISE_RISK_BASELINES } from "../../../prisma/
 let testOrg: { id: string };
 let testOrg2: { id: string };
 let analyst: { id: string; email: string; role: UserRole; organizationId: string; name: string; assignedFrameworks: string[] };
+let manager: { id: string; email: string; role: UserRole; organizationId: string; name: string; assignedFrameworks: string[] };
 let auditor: { id: string; email: string; role: UserRole; organizationId: string; name: string; assignedFrameworks: string[] };
 let analystOrg2: { id: string; email: string; role: UserRole; organizationId: string; name: string; assignedFrameworks: string[] };
 
@@ -58,6 +59,7 @@ beforeAll(async () => {
     };
   };
   analyst = await mkUser("ANALYST", testOrg.id, "analyst@er.test", "ER Analyst");
+  manager = await mkUser("MANAGER", testOrg.id, "manager@er.test", "ER Manager");
   auditor = await mkUser("BUSINESS_USER", testOrg.id, "auditor@er.test", "ER Auditor");
   analystOrg2 = await mkUser("ANALYST", testOrg2.id, "analyst@er2.test", "ER Analyst Org2");
 });
@@ -266,6 +268,68 @@ describe("Enterprise Risk", () => {
         expect(row).toHaveProperty("name");
         expect(row).toHaveProperty("childCount");
       }
+    });
+  });
+
+  describe("Delete", () => {
+    it("ANALYST (write tier) cannot delete an enterprise risk", async () => {
+      const managerCaller = createCaller(manager);
+      const er = await managerCaller.enterpriseRisk.create({ name: "Undeletable by analyst" });
+
+      const analystCaller = createCaller(analyst);
+      await expect(analystCaller.enterpriseRisk.delete({ id: er.id })).rejects.toThrow();
+
+      // Still present.
+      const still = await rawPrisma.enterpriseRisk.findUnique({ where: { id: er.id } });
+      expect(still).not.toBeNull();
+    });
+
+    it("MANAGER can delete; tagged child risk is untagged (SetNull), not deleted", async () => {
+      const managerCaller = createCaller(manager);
+      const er = await managerCaller.enterpriseRisk.create({ name: "Deletable ER" });
+
+      const childRisk = await runWithOrganizationContext(testOrg.id, async () => {
+        return await db.risk.create({
+          data: {
+            organizationId: testOrg.id, title: "Orphaned Child", description: "Child risk for delete test",
+            severity: Severity.MEDIUM, enterpriseRiskId: er.id,
+          },
+        });
+      });
+
+      await managerCaller.enterpriseRisk.delete({ id: er.id });
+
+      const gone = await rawPrisma.enterpriseRisk.findUnique({ where: { id: er.id } });
+      expect(gone).toBeNull();
+
+      const child = await rawPrisma.risk.findUnique({ where: { id: childRisk.id } });
+      expect(child).not.toBeNull();
+      expect(child?.enterpriseRiskId).toBeNull();
+    });
+
+    it("cross-org delete returns NOT_FOUND", async () => {
+      const managerCaller = createCaller(manager);
+      const er = await managerCaller.enterpriseRisk.create({ name: "Org1 ER for cross-org delete" });
+
+      // Org2 has no manager; make one on the fly via a raw user is overkill — reuse
+      // a manager-scoped caller bound to org2's id but org1's ER should not resolve.
+      const crossCaller = appRouter.createCaller({
+        db,
+        session: {
+          user: {
+            id: manager.id, email: manager.email, role: manager.role,
+            organizationId: testOrg2.id, name: manager.name, image: null,
+            assignedFrameworks: manager.assignedFrameworks,
+          },
+          expires: new Date(Date.now() + 86400000).toISOString(),
+        },
+        organizationId: testOrg2.id,
+        headers: new Headers(),
+      });
+      await expect(crossCaller.enterpriseRisk.delete({ id: er.id })).rejects.toThrow();
+
+      const still = await rawPrisma.enterpriseRisk.findUnique({ where: { id: er.id } });
+      expect(still).not.toBeNull();
     });
   });
 

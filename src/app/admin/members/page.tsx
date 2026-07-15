@@ -1,16 +1,13 @@
 /**
- * Company Members Admin Page (Multi-Tenancy Epic 3 — Stories 3.1 / 3.2)
+ * Company Members — merged into User Management.
  *
- * Org-admin surface to attach users to the active company and manage roles.
+ * Company Members and User Management were collapsed into a single screen at
+ * /admin/users (the Company Members section lives there now). This route
+ * redirects for any remaining bookmarks/deep links.
  */
 
-import { MembersClient } from "./client";
-
-export const metadata = {
-  title: "Company Members | BetterThanSpreadsheetsGRC",
-  description: "Manage the members of the active company",
-};
+import { redirect } from "next/navigation";
 
 export default function MembersAdminPage() {
-  return <MembersClient />;
+  redirect("/admin/users");
 }

@@ -269,14 +269,18 @@ function serializePathway<
 
 export const pathwayRouter = createTRPCRouter({
   // -------------------------------------------------------------------------
-  // create — a named pathway scoped to one assessment (kind + id).
+  // create — a named pathway in the org master library. Optionally scoped to an
+  // assessment (kind + id): when provided the pathway is also linked to that
+  // assessment (PathwayAssessmentLink). Omit both to author a bare master
+  // pathway (e.g. from the Admin library or a finding/risk form with no
+  // assessment context).
   // -------------------------------------------------------------------------
   create: organizationProcedure
     .use(requireRole(PATHWAY_MANAGE_ROLES))
     .input(
       z.object({
-        assessmentKind: z.nativeEnum(AssessmentKind),
-        assessmentId: z.string().min(1),
+        assessmentKind: z.nativeEnum(AssessmentKind).optional(),
+        assessmentId: z.string().min(1).optional(),
         name: z.string().min(1, "Name is required").max(200),
         verdict: z.string().max(2000).optional(),
         narrative: z.string().max(10000).optional(),
@@ -284,25 +288,46 @@ export const pathwayRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Validate the referenced assessment exists for this kind + org (mirrors
-      // the polymorphic-link validation pattern used by the engagement router).
-      await assertAssessmentInOrg(
-        ctx.db,
-        input.assessmentKind,
-        input.assessmentId,
-        ctx.organizationId!,
-      );
+      // Both-or-neither: an assessment link needs a kind AND an id.
+      if ((input.assessmentKind == null) !== (input.assessmentId == null)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Provide both assessmentKind and assessmentId, or neither.",
+        });
+      }
+      const hasAssessment = input.assessmentKind != null && input.assessmentId != null;
+      if (hasAssessment) {
+        // Validate the referenced assessment exists for this kind + org (mirrors
+        // the polymorphic-link validation pattern used by the engagement router).
+        await assertAssessmentInOrg(
+          ctx.db,
+          input.assessmentKind!,
+          input.assessmentId!,
+          ctx.organizationId!,
+        );
+      }
 
       const pathway = await ctx.db.pathway.create({
         data: {
           organizationId: ctx.organizationId!,
-          assessmentKind: input.assessmentKind,
-          assessmentId: input.assessmentId,
+          assessmentKind: input.assessmentKind ?? null,
+          assessmentId: input.assessmentId ?? null,
           name: input.name,
           verdict: input.verdict ?? null,
           narrative: input.narrative ?? null,
           blastRadius: input.blastRadius ?? null,
           createdById: ctx.session!.user.id,
+          ...(hasAssessment
+            ? {
+                assessmentLinks: {
+                  create: {
+                    organizationId: ctx.organizationId!,
+                    assessmentKind: input.assessmentKind!,
+                    assessmentId: input.assessmentId!,
+                  },
+                },
+              }
+            : {}),
         },
       });
 
@@ -381,11 +406,21 @@ export const pathwayRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      // A pathway shows on an assessment via its legacy "home" columns OR an
+      // explicit PathwayAssessmentLink (shared library). No data backfill is
+      // needed for pre-existing pathways: the legacy columns still match, and
+      // unlinkFromAssessment clears those columns so unlink still hides them.
       const pathways = await ctx.db.pathway.findMany({
         where: {
           organizationId: ctx.organizationId!,
-          assessmentKind: input.assessmentKind,
-          assessmentId: input.assessmentId,
+          OR: [
+            { assessmentKind: input.assessmentKind, assessmentId: input.assessmentId },
+            {
+              assessmentLinks: {
+                some: { assessmentKind: input.assessmentKind, assessmentId: input.assessmentId },
+              },
+            },
+          ],
         },
         include: pathwayInclude,
         orderBy: { createdAt: "asc" },
@@ -829,6 +864,165 @@ export const pathwayRouter = createTRPCRouter({
 
       return { id: pathway.id };
     }),
+
+  // -------------------------------------------------------------------------
+  // list — the org's full pathway master library. Powers the Admin library
+  // page and the "select an existing pathway" pickers (assessment tab,
+  // finding/risk forms). Lightweight: name + counts, no steps.
+  // -------------------------------------------------------------------------
+  list: organizationProcedure
+    .use(requireRole(PATHWAY_READ_ROLES))
+    .query(async ({ ctx }) => {
+      const pathways = await ctx.db.pathway.findMany({
+        where: { organizationId: ctx.organizationId! },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          verdict: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: { steps: true, assessmentLinks: true, findingLinks: true, riskLinks: true },
+          },
+        },
+      });
+      return pathways.map((p) => ({
+        id: p.id,
+        name: p.name,
+        verdict: p.verdict,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        stepCount: p._count.steps,
+        assessmentCount: p._count.assessmentLinks,
+        findingCount: p._count.findingLinks,
+        riskCount: p._count.riskLinks,
+      }));
+    }),
+
+  // -------------------------------------------------------------------------
+  // linkToAssessment / unlinkFromAssessment — attach an existing master pathway
+  // to an assessment (idempotent) or detach it. Used by the assessment's
+  // Exploitation Pathways tab "select existing" flow.
+  // -------------------------------------------------------------------------
+  linkToAssessment: organizationProcedure
+    .use(requireRole(PATHWAY_MANAGE_ROLES))
+    .input(
+      z.object({
+        pathwayId: z.string(),
+        assessmentKind: z.nativeEnum(AssessmentKind),
+        assessmentId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertPathwayInOrg(ctx.db, input.pathwayId, ctx.organizationId!);
+      await assertAssessmentInOrg(ctx.db, input.assessmentKind, input.assessmentId, ctx.organizationId!);
+      await ctx.db.pathwayAssessmentLink.upsert({
+        where: {
+          pathwayId_assessmentKind_assessmentId: {
+            pathwayId: input.pathwayId,
+            assessmentKind: input.assessmentKind,
+            assessmentId: input.assessmentId,
+          },
+        },
+        create: {
+          pathwayId: input.pathwayId,
+          organizationId: ctx.organizationId!,
+          assessmentKind: input.assessmentKind,
+          assessmentId: input.assessmentId,
+        },
+        update: {},
+      });
+      return { ok: true };
+    }),
+
+  unlinkFromAssessment: organizationProcedure
+    .use(requireRole(PATHWAY_MANAGE_ROLES))
+    .input(
+      z.object({
+        pathwayId: z.string(),
+        assessmentKind: z.nativeEnum(AssessmentKind),
+        assessmentId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertPathwayInOrg(ctx.db, input.pathwayId, ctx.organizationId!);
+      await ctx.db.pathwayAssessmentLink.deleteMany({
+        where: {
+          pathwayId: input.pathwayId,
+          assessmentKind: input.assessmentKind,
+          assessmentId: input.assessmentId,
+        },
+      });
+      // Also clear the legacy "home" columns if they point at THIS assessment,
+      // so a pathway authored here (no explicit link row) also disappears.
+      await ctx.db.pathway.updateMany({
+        where: {
+          id: input.pathwayId,
+          organizationId: ctx.organizationId!,
+          assessmentKind: input.assessmentKind,
+          assessmentId: input.assessmentId,
+        },
+        data: { assessmentKind: null, assessmentId: null },
+      });
+      return { ok: true };
+    }),
+
+  // -------------------------------------------------------------------------
+  // Pathway-level finding/risk links (optional M2M, independent of the finer
+  // step-level membership). Used when tagging a pathway from a finding/risk
+  // form. These do NOT drive the ⬡ toxic mark — that stays step-membership
+  // driven — so a pathway-level tag is a lighter association.
+  // -------------------------------------------------------------------------
+  linkFinding: organizationProcedure
+    .use(requireRole(PATHWAY_MANAGE_ROLES))
+    .input(z.object({ pathwayId: z.string(), findingId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await assertPathwayInOrg(ctx.db, input.pathwayId, ctx.organizationId!);
+      await assertFindingInOrg(ctx.db, input.findingId, ctx.organizationId!);
+      await ctx.db.pathwayFinding.upsert({
+        where: { pathwayId_findingId: { pathwayId: input.pathwayId, findingId: input.findingId } },
+        create: { pathwayId: input.pathwayId, findingId: input.findingId },
+        update: {},
+      });
+      return { ok: true };
+    }),
+
+  unlinkFinding: organizationProcedure
+    .use(requireRole(PATHWAY_MANAGE_ROLES))
+    .input(z.object({ pathwayId: z.string(), findingId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await assertPathwayInOrg(ctx.db, input.pathwayId, ctx.organizationId!);
+      await ctx.db.pathwayFinding.deleteMany({
+        where: { pathwayId: input.pathwayId, findingId: input.findingId },
+      });
+      return { ok: true };
+    }),
+
+  linkRisk: organizationProcedure
+    .use(requireRole(PATHWAY_MANAGE_ROLES))
+    .input(z.object({ pathwayId: z.string(), riskId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await assertPathwayInOrg(ctx.db, input.pathwayId, ctx.organizationId!);
+      await assertRiskInOrg(ctx.db, input.riskId, ctx.organizationId!);
+      await ctx.db.pathwayRisk.upsert({
+        where: { pathwayId_riskId: { pathwayId: input.pathwayId, riskId: input.riskId } },
+        create: { pathwayId: input.pathwayId, riskId: input.riskId },
+        update: {},
+      });
+      return { ok: true };
+    }),
+
+  unlinkRisk: organizationProcedure
+    .use(requireRole(PATHWAY_MANAGE_ROLES))
+    .input(z.object({ pathwayId: z.string(), riskId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await assertPathwayInOrg(ctx.db, input.pathwayId, ctx.organizationId!);
+      await ctx.db.pathwayRisk.deleteMany({
+        where: { pathwayId: input.pathwayId, riskId: input.riskId },
+      });
+      return { ok: true };
+    }),
 });
 
 // ---------------------------------------------------------------------------
@@ -857,6 +1051,15 @@ function assertExactlyOneMember(
       message: "Provide exactly one of findingId or riskId.",
     });
   }
+}
+
+/** Verify a pathway exists in the org (throws NOT_FOUND otherwise). */
+async function assertPathwayInOrg(db: Db, pathwayId: string, organizationId: string) {
+  const exists = await db.pathway.findFirst({
+    where: { id: pathwayId, organizationId },
+    select: { id: true },
+  });
+  if (!exists) throw new TRPCError({ code: "NOT_FOUND", message: "Pathway not found" });
 }
 
 /** Verify the polymorphic assessment exists for the given kind + org. */

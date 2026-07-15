@@ -4,7 +4,8 @@
  * Displays a table of users in the current organization.
  * Includes actions for edit/delete (ORG_ADMIN only).
  *
- * Story 7.0.4: Added Business Unit column and filtering (AC1-AC5, AC11-AC15)
+ * Business-unit assignment was removed from this screen; company membership is
+ * managed via the Company Members section on the User Management page.
  */
 
 "use client";
@@ -14,20 +15,9 @@ import { api } from "@/trpc/react";
 import { RoleBadge } from "./RoleBadge";
 import { EditUserDialog } from "./EditUserDialog";
 import { DeleteUserDialog } from "./DeleteUserDialog";
-import { BusinessUnitPath } from "./BusinessUnitPath";
-import { BulkAssignBUDialog } from "./BulkAssignBUDialog";
 import { ProtectedElement } from "@/components/rbac";
 import { UserRole } from "@prisma/client";
 import { useSession } from "next-auth/react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 
 export function UserList() {
   const { data: session } = useSession();
@@ -36,63 +26,15 @@ export function UserList() {
   const [currentPage, setCurrentPage] = useState(0);
   const pageSize = 50;
 
-  // Story 7.0.4: Business Unit filter state (AC4-AC5)
-  const [buFilter, setBuFilter] = useState<string>("__all__");
-
-  // Story 7.0.4: Bulk selection state (AC11-AC15)
-  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
-  const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
-
-  // Fetch business units for filter dropdown
-  const { data: buData } = api.businessUnit.list.useQuery({ includeInactive: false });
-
-  // Build filter params based on buFilter state
-  const filterParams = {
+  // Query users from current organization with pagination.
+  const { data, isLoading, error, refetch, isFetching } = api.user.listUsers.useQuery({
     skip: currentPage * pageSize,
     take: pageSize,
-    ...(buFilter === "__unassigned__" ? { filterUnassigned: true } : {}),
-    ...(buFilter !== "__all__" && buFilter !== "__unassigned__" ? { businessUnitId: buFilter } : {}),
-  };
-
-  // Query users from current organization with pagination and BU filter
-  const { data, isLoading, error, refetch, isFetching } = api.user.listUsers.useQuery(filterParams);
+  });
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 0;
   const hasNextPage = currentPage < totalPages - 1;
   const hasPreviousPage = currentPage > 0;
-
-  // Story 7.0.4: Selection handlers (AC11)
-  const toggleUserSelection = (userId: string) => {
-    const newSelection = new Set(selectedUserIds);
-    if (newSelection.has(userId)) {
-      newSelection.delete(userId);
-    } else {
-      newSelection.add(userId);
-    }
-    setSelectedUserIds(newSelection);
-  };
-
-  const toggleAllSelection = () => {
-    if (!data?.users) return;
-    if (selectedUserIds.size === data.users.length) {
-      setSelectedUserIds(new Set());
-    } else {
-      setSelectedUserIds(new Set(data.users.map((u) => u.id)));
-    }
-  };
-
-  const handleBulkAssignSuccess = () => {
-    setIsBulkAssignOpen(false);
-    setSelectedUserIds(new Set());
-    void refetch();
-  };
-
-  // Reset selection when filter changes
-  const handleFilterChange = (value: string) => {
-    setBuFilter(value);
-    setCurrentPage(0);
-    setSelectedUserIds(new Set());
-  };
 
   if (isLoading) {
     return (
@@ -162,41 +104,6 @@ export function UserList() {
 
   return (
     <>
-      {/* Story 7.0.4: Filter Toolbar (AC4-AC5, AC11-AC12) */}
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <label htmlFor="bu-filter" className="text-sm font-medium text-gray-700">
-            Business Unit:
-          </label>
-          <Select value={buFilter} onValueChange={handleFilterChange}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="All Business Units" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All Business Units</SelectItem>
-              <SelectItem value="__unassigned__">Unassigned</SelectItem>
-              {buData?.flatOptions.map((opt) => (
-                <SelectItem key={opt.id} value={opt.id}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Bulk Action Button (AC12) */}
-        <ProtectedElement role={UserRole.ADMINISTRATOR}>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={selectedUserIds.size === 0}
-            onClick={() => setIsBulkAssignOpen(true)}
-          >
-            Assign Business Unit ({selectedUserIds.size})
-          </Button>
-        </ProtectedElement>
-      </div>
-
       <div className="relative">
         {/* Refetch Loading Overlay */}
         {isRefetching && (
@@ -212,16 +119,6 @@ export function UserList() {
         <table className="min-w-full divide-y divide-gray-300">
           <thead className="bg-gray-50">
             <tr>
-              {/* Story 7.0.4: Checkbox column (AC11) */}
-              <ProtectedElement role={UserRole.ADMINISTRATOR}>
-                <th scope="col" className="w-12 px-3 py-3.5">
-                  <Checkbox
-                    checked={data?.users && data.users.length > 0 && selectedUserIds.size === data.users.length}
-                    onCheckedChange={toggleAllSelection}
-                    aria-label="Select all users"
-                  />
-                </th>
-              </ProtectedElement>
               <th
                 scope="col"
                 className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
@@ -240,13 +137,6 @@ export function UserList() {
               >
                 Role
               </th>
-              {/* Story 7.0.4: Business Unit column (AC1) */}
-              <th
-                scope="col"
-                className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-              >
-                Business Unit
-              </th>
               <th
                 scope="col"
                 className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
@@ -263,16 +153,6 @@ export function UserList() {
           <tbody className="divide-y divide-gray-200 bg-white">
             {data.users.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50">
-                {/* Story 7.0.4: Row checkbox (AC11) */}
-                <ProtectedElement role={UserRole.ADMINISTRATOR}>
-                  <td className="w-12 px-3 py-4">
-                    <Checkbox
-                      checked={selectedUserIds.has(user.id)}
-                      onCheckedChange={() => toggleUserSelection(user.id)}
-                      aria-label={`Select ${user.name || user.email}`}
-                    />
-                  </td>
-                </ProtectedElement>
                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                   {user.name || "(No name)"}
                 </td>
@@ -281,10 +161,6 @@ export function UserList() {
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                   <RoleBadge role={user.role} />
-                </td>
-                {/* Story 7.0.4: Business Unit cell (AC2-AC3) */}
-                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                  <BusinessUnitPath businessUnit={user.businessUnit} />
                 </td>
                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                   {new Date(user.createdAt).toLocaleDateString()}
@@ -407,15 +283,6 @@ export function UserList() {
             setDeletingUserId(null);
             void refetch();
           }}
-        />
-      )}
-
-      {/* Story 7.0.4: Bulk Assign BU Dialog (AC13-AC15) */}
-      {isBulkAssignOpen && (
-        <BulkAssignBUDialog
-          userIds={Array.from(selectedUserIds)}
-          onClose={() => setIsBulkAssignOpen(false)}
-          onSuccess={handleBulkAssignSuccess}
         />
       )}
     </>

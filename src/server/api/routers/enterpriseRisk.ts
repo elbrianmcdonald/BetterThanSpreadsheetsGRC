@@ -20,9 +20,12 @@ import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 import { recomputeEnterpriseRiskScore } from "@/server/services/enterpriseRiskScore";
 import { PUBLISHED_FINDINGS_AND } from "@/server/services/findingVisibility";
 import { createAuditLog } from "@/server/services/audit-log.service";
-import { WRITE_ROLES } from "@/lib/auth/roles";
+import { WRITE_ROLES, APPROVE_ROLES } from "@/lib/auth/roles";
 
 const ENTERPRISE_RISK_WRITE_ROLES: UserRole[] = [...WRITE_ROLES];
+// Deleting an enterprise risk (incl. seeded baselines) is an admin/manager action —
+// narrower than write, since it destroys a rollup that child risks/findings align to.
+const ENTERPRISE_RISK_DELETE_ROLES: UserRole[] = [...APPROVE_ROLES];
 
 function addDays(base: Date, days: number): Date {
   const d = new Date(base);
@@ -413,6 +416,34 @@ export const enterpriseRiskRouter = createTRPCRouter({
         actorRole: ctx.session!.user.role,
       });
       return updated;
+    }),
+
+  delete: organizationProcedure
+    .use(requireRole(ENTERPRISE_RISK_DELETE_ROLES))
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const orgId = ctx.organizationId!;
+      const existing = await ctx.db.enterpriseRisk.findFirst({
+        where: { id: input.id, organizationId: orgId },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Enterprise risk not found" });
+      }
+      // Child Risks/Findings use onDelete: SetNull — their enterpriseRiskId is cleared,
+      // not cascade-deleted. Snapshots/Reviews cascade. Seeded baselines are deletable,
+      // but re-seeding re-upserts them.
+      await ctx.db.enterpriseRisk.delete({ where: { id: input.id } });
+      void createAuditLog({
+        organizationId: orgId,
+        userId: ctx.session!.user.id,
+        action: "DELETE_ENTERPRISE_RISK",
+        entityType: "EnterpriseRisk",
+        entityId: input.id,
+        changes: { before: existing },
+        actorName: ctx.session!.user.name ?? "Unknown",
+        actorRole: ctx.session!.user.role,
+      });
+      return { id: input.id };
     }),
 
   recordReview: organizationProcedure

@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { AppLayout, PageHeader, StatTile } from "@/components/layout";
+import { RiskScoreHeatmap, type HeatmapItem } from "@/components/risk/RiskScoreHeatmap";
 import {
   Select,
   SelectContent,
@@ -129,6 +130,20 @@ export function RiskRegisterClient() {
 
   // Fetch owners for filter
   const { data: owners } = api.riskRegister.getOwners.useQuery();
+
+  // Matrix-adaptive risk heatmap (parity with the Findings list; same wiring as the dashboard).
+  const { data: heatmapData } = api.risk.heatmap.useQuery();
+  const heatmapRows: HeatmapItem[] = (heatmapData?.rows ?? []).map((r) => ({
+    id: r.id,
+    label: r.label,
+    title: r.title,
+    likelihood: r.likelihood,
+    impact: r.impact,
+    score: r.score,
+    scoreLabel: r.scoreLabel,
+    color: r.color,
+    href: r.href,
+  }));
 
   // Fetch risk register entries with filters
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -270,6 +285,21 @@ export function RiskRegisterClient() {
           filled={(statusCounts?.overdue ?? 0) > 0}
         />
       </div>
+
+      {/* Risk Heatmap (parity with the Findings list) */}
+      {heatmapData?.matrix && (
+        <RiskScoreHeatmap
+          matrix={{
+            scales: heatmapData.matrix.scales,
+            thresholds: heatmapData.matrix.thresholds,
+            outputScaleMax: heatmapData.matrix.outputScaleMax,
+          }}
+          rows={heatmapRows}
+          title="Risk Heatmap"
+          subtitle={`All risks plotted on ${heatmapData.matrix.templateName}`}
+          emptyLabel="No scored risks yet."
+        />
+      )}
 
       {/* Filters (AC11-AC16) */}
       <div className="flex flex-wrap items-center gap-3">

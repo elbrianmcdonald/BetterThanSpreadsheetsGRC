@@ -244,7 +244,10 @@ export function PersonPicker({
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[400px] p-0" align="start">
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] min-w-[16rem] p-0"
+          align="start"
+        >
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="Search or create person..."

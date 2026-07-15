@@ -56,9 +56,9 @@ import { Label } from "@/components/ui/label";
 import { BusinessUnitPicker } from "@/components/business-unit/BusinessUnitPicker";
 import { AssigneePicker } from "@/components/assignment/AssigneePicker";
 import {
-  PathwayAttachSection,
-  type PathwayAttachState,
-} from "@/components/pathway/PathwayAttachSection";
+  PathwayTagSection,
+  type PathwayTagState,
+} from "@/components/pathway/PathwayTagSection";
 import { RiskItemCard } from "@/components/risk/RiskItemCard";
 import { severityFromLabel } from "@/lib/findings/scoring-options";
 import type { MatrixScales, Threshold } from "@/lib/matrix";
@@ -296,20 +296,21 @@ export function CreateFindingForm({
     });
   };
 
-  // Epic 19: exploitation-pathway attachment state (reported by the section).
-  const [pathwayState, setPathwayState] = useState<PathwayAttachState>({
+  // Epic 19: pathway-level tagging state (reported by the section).
+  const [pathwayState, setPathwayState] = useState<PathwayTagState>({
     enabled: false,
-    value: null,
+    existingIds: [],
+    newNames: [],
   });
   const handlePathwayChange = useCallback(
-    (s: PathwayAttachState) => setPathwayState(s),
+    (s: PathwayTagState) => setPathwayState(s),
     [],
   );
   const [submitting, setSubmitting] = useState(false);
 
   const createMutation = api.finding.create.useMutation();
   const createPathwayMutation = api.pathway.create.useMutation();
-  const addStepMutation = api.pathway.addStep.useMutation();
+  const linkFindingMutation = api.pathway.linkFinding.useMutation();
 
   const form = useForm<CreateFindingFormValues>({
     resolver: zodResolver(createFindingSchema),
@@ -333,13 +334,6 @@ export function CreateFindingForm({
   });
 
   const onSubmit = async (values: CreateFindingFormValues) => {
-    if (pathwayState.enabled && !pathwayState.value) {
-      toast.error(
-        "Complete the exploitation pathway details (assessment, pathway, and MITRE technique) or uncheck it.",
-      );
-      return;
-    }
-
     const item = values.risks[0]!;
 
     // Findings are scored observations — require the inherent score.
@@ -412,37 +406,25 @@ export function CreateFindingForm({
         return;
       }
 
-      // Epic 19: attach to an exploitation pathway if requested. The finding now
-      // exists, so a pathway failure is non-fatal — we warn and still navigate.
-      if (pathwayState.value) {
-        const v = pathwayState.value;
+      // Epic 19: link to exploitation pathways if requested. The finding now
+      // exists, so a link failure is non-fatal — we warn and still navigate.
+      if (pathwayState.enabled) {
         try {
-          let pathwayId = v.pathwayId;
-          if (!pathwayId && v.newPathwayName) {
-            const pathway = await createPathwayMutation.mutateAsync({
-              assessmentKind: v.assessmentKind,
-              assessmentId: v.assessmentId,
-              name: v.newPathwayName,
-            });
-            pathwayId = pathway.id;
+          for (const pathwayId of pathwayState.existingIds) {
+            await linkFindingMutation.mutateAsync({ pathwayId, findingId: finding.id });
           }
-          if (pathwayId) {
-            await addStepMutation.mutateAsync({
-              pathwayId,
-              tactic: v.tactic,
-              technique: v.technique,
-              mitreTid: v.mitreTid,
-              findingIds: [finding.id],
-            });
+          for (const name of pathwayState.newNames) {
+            const pathway = await createPathwayMutation.mutateAsync({ name });
+            await linkFindingMutation.mutateAsync({ pathwayId: pathway.id, findingId: finding.id });
           }
           if (!suppressSuccessToast) {
             toast.success(
-              `Finding ${finding.identifier} created and added to the exploitation pathway`,
+              `Finding ${finding.identifier} created and linked to the exploitation pathway`,
             );
           }
         } catch (error) {
           toast.error(
-            `Finding ${finding.identifier} created, but adding it to the pathway failed: ${
+            `Finding ${finding.identifier} created, but linking a pathway failed: ${
               error instanceof Error ? error.message : "unknown error"
             }`,
           );
@@ -591,8 +573,8 @@ export function CreateFindingForm({
           )}
         />
 
-        {/* Epic 19: Exploitation pathway attachment */}
-        <PathwayAttachSection onChange={handlePathwayChange} />
+        {/* Epic 19: Exploitation pathway tagging (optional, many-to-many) */}
+        <PathwayTagSection onChange={handlePathwayChange} />
 
         {/* Submit Button (AC17, AC18) */}
         <div className="flex justify-end gap-4">

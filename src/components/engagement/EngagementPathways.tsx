@@ -22,6 +22,13 @@ import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Plus, Trash2, Route, X } from "lucide-react";
 import { ExploitationPathwayView } from "@/components/pathway/ExploitationPathwayView";
 import { FindingDrawerProvider } from "@/components/deliverable/FindingDrawerProvider";
@@ -86,11 +93,25 @@ export function EngagementPathways({
     },
   });
 
-  const removePathway = api.pathway.remove.useMutation({
+  // Remove-from-assessment detaches the pathway from THIS assessment (shared
+  // library: the pathway itself and its other links survive). Permanent deletion
+  // lives in the Admin → Exploitation Pathways library.
+  const unlinkPathway = api.pathway.unlinkFromAssessment.useMutation({
     onSuccess: async () => {
       await invalidateList();
     },
   });
+
+  // ---- Link an existing master-library pathway into this assessment ----
+  const masterQuery = api.pathway.list.useQuery();
+  const linkExisting = api.pathway.linkToAssessment.useMutation({
+    onSuccess: async (_res, vars) => {
+      await invalidateList();
+      setSelectedId(vars.pathwayId);
+    },
+  });
+  const linkedIds = new Set(pathways.map((p) => p.id));
+  const unlinkedMaster = (masterQuery.data ?? []).filter((m) => !linkedIds.has(m.id));
 
   // ---- Selected pathway detail ----
   const detailQuery = api.pathway.getById.useQuery(
@@ -218,17 +239,42 @@ export function EngagementPathways({
               )
             ) : null}
 
-            {/* Delete selected */}
+            {/* Link an existing pathway from the master library. */}
+            {!readOnly && unlinkedMaster.length > 0 ? (
+              <Select
+                value=""
+                onValueChange={(id) =>
+                  linkExisting.mutate({ pathwayId: id, assessmentKind, assessmentId })
+                }
+                disabled={linkExisting.isPending}
+              >
+                <SelectTrigger className="h-8 w-52">
+                  <SelectValue placeholder="Link existing pathway…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {unlinkedMaster.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+
+            {/* Remove selected pathway from this assessment (does not delete it). */}
             {!readOnly && selectedId ? (
               <Button
                 variant="ghost"
                 size="icon"
                 className="ml-auto h-8 w-8"
-                onClick={() => removePathway.mutate({ id: selectedId })}
-                disabled={removePathway.isPending}
-                aria-label="Delete selected pathway"
+                onClick={() =>
+                  unlinkPathway.mutate({ pathwayId: selectedId, assessmentKind, assessmentId })
+                }
+                disabled={unlinkPathway.isPending}
+                aria-label="Remove selected pathway from this assessment"
+                title="Remove from this assessment"
               >
-                {removePathway.isPending ? (
+                {unlinkPathway.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Trash2 className="h-4 w-4 text-muted-foreground" />

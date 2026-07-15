@@ -202,6 +202,99 @@ describe("Pathway router - Epic 19", () => {
     ).rejects.toThrow();
   });
 
+  // --- Master library (org-level pathways + M2M links) ---
+
+  it("create without an assessment yields a master-library pathway that list() returns", async () => {
+    const caller = createCaller(userA);
+    const p = await caller.pathway.create({ name: "Master-only pathway" });
+    expect(p.assessmentId).toBeNull();
+    const list = await caller.pathway.list();
+    expect(list.some((x) => x.id === p.id)).toBe(true);
+  });
+
+  it("create with an assessment links it; unlinkFromAssessment removes it from the tab but keeps it in the library", async () => {
+    const caller = createCaller(userA);
+    const p = await caller.pathway.create({
+      assessmentKind: AssessmentKind.MATURITY,
+      assessmentId: assessmentA.id,
+      name: "Linked-on-create pathway",
+    });
+    let inTab = await caller.pathway.listByAssessment({
+      assessmentKind: AssessmentKind.MATURITY,
+      assessmentId: assessmentA.id,
+    });
+    expect(inTab.some((x) => x.id === p.id)).toBe(true);
+
+    await caller.pathway.unlinkFromAssessment({
+      pathwayId: p.id,
+      assessmentKind: AssessmentKind.MATURITY,
+      assessmentId: assessmentA.id,
+    });
+    inTab = await caller.pathway.listByAssessment({
+      assessmentKind: AssessmentKind.MATURITY,
+      assessmentId: assessmentA.id,
+    });
+    expect(inTab.some((x) => x.id === p.id)).toBe(false);
+
+    // Still in the master library after unlinking.
+    expect((await caller.pathway.list()).some((x) => x.id === p.id)).toBe(true);
+  });
+
+  it("linkToAssessment attaches an existing master pathway to an assessment", async () => {
+    const caller = createCaller(userA);
+    const p = await caller.pathway.create({ name: "To be linked" });
+    expect(
+      (
+        await caller.pathway.listByAssessment({
+          assessmentKind: AssessmentKind.MATURITY,
+          assessmentId: assessmentA.id,
+        })
+      ).some((x) => x.id === p.id),
+    ).toBe(false);
+
+    await caller.pathway.linkToAssessment({
+      pathwayId: p.id,
+      assessmentKind: AssessmentKind.MATURITY,
+      assessmentId: assessmentA.id,
+    });
+    expect(
+      (
+        await caller.pathway.listByAssessment({
+          assessmentKind: AssessmentKind.MATURITY,
+          assessmentId: assessmentA.id,
+        })
+      ).some((x) => x.id === p.id),
+    ).toBe(true);
+  });
+
+  it("pathway-level linkFinding / linkRisk are reflected in list() counts", async () => {
+    const caller = createCaller(userA);
+    const p = await caller.pathway.create({ name: "Tag targets" });
+    const finding = await seedFinding(orgA.id, userA.id, `FND-TAG-${Date.now()}`);
+    const risk = await seedRisk(orgA.id, userA.id, `RSK-TAG-${Date.now()}`);
+
+    await caller.pathway.linkFinding({ pathwayId: p.id, findingId: finding.id });
+    await caller.pathway.linkRisk({ pathwayId: p.id, riskId: risk.id });
+
+    const row = (await caller.pathway.list()).find((x) => x.id === p.id);
+    expect(row?.findingCount).toBe(1);
+    expect(row?.riskCount).toBe(1);
+
+    await caller.pathway.unlinkFinding({ pathwayId: p.id, findingId: finding.id });
+    expect((await caller.pathway.list()).find((x) => x.id === p.id)?.findingCount).toBe(0);
+  });
+
+  it("cross-org: userB cannot link userA's pathway to its own assessment", async () => {
+    const p = await createCaller(userA).pathway.create({ name: "Org A private" });
+    await expect(
+      createCaller(userB).pathway.linkToAssessment({
+        pathwayId: p.id,
+        assessmentKind: AssessmentKind.MATURITY,
+        assessmentId: assessmentB.id,
+      }),
+    ).rejects.toThrow();
+  });
+
   it("addStep with a finding sets Finding.isToxic = true", async () => {
     const caller = createCaller(userA);
     const pathway = await caller.pathway.create({

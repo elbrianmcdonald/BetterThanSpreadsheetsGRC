@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Loader2, ChevronLeft, Save, ClipboardCheck, Pencil, X, Tags } from "lucide-react";
+import { Loader2, ChevronLeft, Save, ClipboardCheck, Pencil, X, Tags, Trash2 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 import toast from "react-hot-toast";
 
 import { api } from "@/trpc/react";
-import { WRITE_ROLES as WRITE_ROLE_TIER } from "@/lib/auth/roles";
+import { WRITE_ROLES as WRITE_ROLE_TIER, APPROVE_ROLES as APPROVE_ROLE_TIER } from "@/lib/auth/roles";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,8 @@ import { score2D, thresholdForScore } from "@/lib/matrix/heatmap";
 
 /** Staff write tier — gates edit/review of enterprise risks. Source: @/lib/auth/roles. */
 const WRITE_ROLES: UserRole[] = [...WRITE_ROLE_TIER];
+/** Admin/Manager tier — gates deleting an enterprise risk (incl. seeded baselines). */
+const DELETE_ROLES: UserRole[] = [...APPROVE_ROLE_TIER];
 
 function TrendChart({ snapshots }: { snapshots: Array<{ score: unknown; capturedAt: Date }> }) {
   const valid = snapshots
@@ -75,6 +78,7 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
   const canWrite = userRole && WRITE_ROLES.includes(userRole);
+  const canDelete = userRole && DELETE_ROLES.includes(userRole);
 
   const { data, isLoading, refetch } = api.enterpriseRisk.byId.useQuery({ id });
   const personList = api.person.getAll.useQuery(undefined, { enabled: !!canWrite });
@@ -255,6 +259,7 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
               </Button>
             )}
             {canWrite && <RecordReviewButton id={id} onRecorded={() => void refetch()} />}
+            {canDelete && <DeleteEnterpriseRiskButton id={id} name={er.name} />}
           </div>
         </div>
 
@@ -643,6 +648,51 @@ export function EnterpriseRiskDetailClient({ id }: { id: string }) {
         )}
       </div>
     </AppLayout>
+  );
+}
+
+function DeleteEnterpriseRiskButton({ id, name }: { id: string; name: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const del = api.enterpriseRisk.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Enterprise risk deleted");
+      setOpen(false);
+      router.push("/risks/enterprise");
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="text-destructive hover:text-destructive">
+          <Trash2 className="h-4 w-4 mr-2" /> Delete
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete enterprise risk?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          This permanently deletes <span className="font-medium text-foreground">{name}</span> and its
+          review and trend history. Any risks or findings tagged to it will be untagged (not deleted).
+          This cannot be undone.
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={del.isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={del.isPending}
+            onClick={() => del.mutate({ id })}
+          >
+            {del.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

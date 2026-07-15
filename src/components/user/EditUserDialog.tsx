@@ -14,7 +14,6 @@ import toast from "react-hot-toast";
 import { api } from "@/trpc/react";
 import { UserRole } from "@prisma/client";
 import { roleDisplayConfig } from "@/schemas/user";
-import { BusinessUnitSelect } from "./BusinessUnitSelect";
 
 interface EditUserDialogProps {
   userId: string;
@@ -30,8 +29,6 @@ export function EditUserDialog({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>(UserRole.BUSINESS_USER);
-  // Story 7.0.4: Business Unit state (AC6)
-  const [businessUnitId, setBusinessUnitId] = useState<string | null>(null);
   // Admin password change
   const [newPassword, setNewPassword] = useState("");
   const [showPasswordSection, setShowPasswordSection] = useState(false);
@@ -48,8 +45,6 @@ export function EditUserDialog({
       setName(user.name ?? "");
       setEmail(user.email ?? "");
       setRole(user.role);
-      // Story 7.0.4: Pre-fill business unit (AC7)
-      setBusinessUnitId(user.businessUnitId ?? null);
     }
   }, [user]);
 
@@ -107,13 +102,11 @@ export function EditUserDialog({
     e.preventDefault();
     setError(null);
 
-    // Story 7.0.4: Include businessUnitId in update (AC10)
     updateUserMutation.mutate({
       id: userId,
       name,
       email,
       role,
-      businessUnitId,
       ...(newPassword ? { newPassword } : {}),
     });
   };
@@ -234,27 +227,6 @@ export function EditUserDialog({
                   ))}
                 </select>
               </div>
-            </div>
-
-            {/* Story 7.0.4: Business Unit Select (AC6-AC8) */}
-            <div>
-              <label
-                htmlFor="edit-business-unit"
-                className="block text-sm font-medium leading-6 text-gray-900"
-              >
-                Business Unit
-              </label>
-              <div className="mt-2">
-                <BusinessUnitSelect
-                  value={businessUnitId}
-                  onChange={setBusinessUnitId}
-                  allowNone={true}
-                  placeholder="Select Business Unit"
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Assign user to a business unit for department-based routing.
-              </p>
             </div>
 
             {/* Change Password (collapsible) */}

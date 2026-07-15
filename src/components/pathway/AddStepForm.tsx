@@ -7,13 +7,13 @@
  * `ExploitationPathwayView` can render it without a circular dependency:
  *   EngagementPathways → ExploitationPathwayView → AddStepForm (imports neither).
  *
- * MULTI-FINDING PICKER: a step may reference MANY findings. Pathways link
- * findings only (risks are aggregations built from findings). The finding list
- * is scoped to THIS assessment via `api.finding.listForAssessment` — only
- * findings raised within the assessment are selectable, not the org register.
- * The user adds findings to a chip list, requires ≥1, picks a MITRE ATT&CK
- * technique (`MitreTechniquePicker` → tactic/technique/mitreTid), an optional
- * note, then `pathway.addStep` with a `findingIds` array.
+ * MULTI-MEMBER PICKER: a step may reference MANY findings AND risks. Both lists
+ * are scoped to THIS assessment (`api.finding.listForAssessment` /
+ * `api.risk.listForAssessment`) — only items raised within the assessment are
+ * selectable, not the org register. The user adds findings/risks to a chip list,
+ * requires ≥1, picks a MITRE ATT&CK technique (`MitreTechniquePicker` →
+ * tactic/technique/mitreTid), an optional note, then `pathway.addStep` with
+ * `findingIds` + `riskIds` arrays.
  */
 
 import { useState } from "react";
@@ -82,6 +82,14 @@ export function AddStepForm({
 
   const findings = findingsQuery.data ?? [];
 
+  // Risks scoped to THIS assessment (available for COMPLIANCE/VENDOR; empty for
+  // MATURITY/RISK/BIA where there is no Risk↔assessment linkage).
+  const risksQuery = api.risk.listForAssessment.useQuery({
+    assessmentId,
+    assessmentType: assessmentKind,
+  });
+  const risks = risksQuery.data ?? [];
+
   const addStep = api.pathway.addStep.useMutation({ onSuccess: onDone });
 
   function isPicked(kind: MemberKind, id: string) {
@@ -108,8 +116,8 @@ export function AddStepForm({
       technique: technique.trim(),
       mitreTid: mitreTid.trim() || undefined,
       note: note.trim() || undefined,
-      findingIds: picked.map((m) => m.id),
-      riskIds: [],
+      findingIds: picked.filter((m) => m.kind === "finding").map((m) => m.id),
+      riskIds: picked.filter((m) => m.kind === "risk").map((m) => m.id),
     });
   }
 
@@ -139,14 +147,40 @@ export function AddStepForm({
         </Select>
       </div>
 
-      {/* Picked-finding chip list (source of truth for what gets submitted). */}
+      {/* Risk picker — a step may also reference risks directly. */}
+      <div className="space-y-1.5">
+        <Label>Add risk</Label>
+        <Select
+          value=""
+          onValueChange={(id) => {
+            const r = risks.find((x) => x.id === id);
+            if (r) addMember({ kind: "risk", id: r.id, identifier: r.identifier, title: r.title });
+          }}
+          disabled={risksQuery.isLoading || risks.length === 0}
+        >
+          <SelectTrigger>
+            <SelectValue
+              placeholder={risks.length === 0 ? "No risks in this assessment" : "Select a risk…"}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {risks.map((r) => (
+              <SelectItem key={r.id} value={r.id} disabled={isPicked("risk", r.id)}>
+                {r.identifier} · {r.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Picked-member chip list (source of truth for what gets submitted). */}
       <div className="space-y-1.5">
         <Label>
-          Linked findings <span className="text-destructive">*</span>
+          Linked findings &amp; risks <span className="text-destructive">*</span>
         </Label>
         {picked.length === 0 ? (
           <p className="text-xs text-muted-foreground">
-            Add at least one finding to this step.
+            Add at least one finding or risk to this step.
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -160,7 +194,7 @@ export function AddStepForm({
                 }}
               >
                 <span className="font-mono" style={{ color: "var(--muted-foreground)" }}>
-                  {m.identifier ?? "FINDING"}
+                  {m.identifier ?? m.kind.toUpperCase()}
                 </span>
                 <span className="max-w-[160px] truncate" style={{ color: "var(--foreground)" }}>
                   {m.title}
