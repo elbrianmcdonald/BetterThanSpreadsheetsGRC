@@ -178,7 +178,7 @@ const NAV_SECTIONS: NavSection[] = [
         icon: <ShieldAlert className="h-4 w-4" />,
       },
       {
-        href: "/risks",
+        href: "/risks/register",
         label: "Risk Register",
         icon: <ClipboardList className="h-4 w-4" />,
       },

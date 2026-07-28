@@ -285,6 +285,13 @@ export function MatrixPreview({
                               style={{
                                 backgroundColor: bgColor,
                                 color: textColor,
+                                // Risk appetite: dashed inset ring flags cells
+                                // whose band exceeds appetite (parity with the
+                                // Canvas view's boundary line).
+                                ...(threshold?.overAppetite && {
+                                  outline: "2px dashed var(--destructive)",
+                                  outlineOffset: "-3px",
+                                }),
                               }}
                             >
                               <div className="font-bold text-sm">

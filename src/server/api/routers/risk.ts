@@ -1342,6 +1342,21 @@ export const riskRouter = createTRPCRouter({
               id: true,
             },
           },
+          // Assessment origin ("Identified in") — resolved by resolveRiskOrigin.
+          // Intentionally omits `Assessment` (RiskAssessment): that FK is never
+          // populated on create and has no page route.
+          DiscoveryProject: {
+            select: { id: true, subject: true },
+          },
+          sourceComplianceAssessment: {
+            select: { id: true, identifier: true, name: true },
+          },
+          VendorAssessment: {
+            select: { id: true, identifier: true, title: true },
+          },
+          SourceRiskAssessmentQuestion: {
+            select: { id: true, number: true, text: true },
+          },
         },
       });
 
@@ -4880,6 +4895,121 @@ export const riskRouter = createTRPCRouter({
       };
     }),
 
+  /**
+   * Bulk-import risks from CSV rows (round-trips the exportRisks format).
+   *
+   * The client parses the CSV (see src/lib/riskCsv.ts) and sends already-typed
+   * rows — mirroring riskAssessmentTemplate.importCsv. Each row becomes a new
+   * Risk (org-scoped, identifier-generated, promoted to the register when the
+   * actor can self-approve). Rows whose title already exists in the org are
+   * skipped so re-importing an edited export doesn't duplicate. Returns a
+   * per-run summary; a single failing row never aborts the batch.
+   */
+  importRisks: organizationProcedure
+    .use(requireRole(RISK_CREATE_ROLES))
+    .input(
+      z.object({
+        rows: z
+          .array(
+            z.object({
+              title: z.string().min(1).max(500),
+              description: z.string().min(1).max(10000),
+              severity: z.nativeEnum(Severity),
+              affectedSystems: z.string().max(5000).optional(),
+              cveId: z.string().max(50).optional(),
+              findingSource: z.nativeEnum(RiskFindingSource).optional(),
+              assetCriticality: z.nativeEnum(AssetCriticality).optional(),
+              discoveryDate: z.string().datetime().optional(),
+            }),
+          )
+          .min(1, "No rows to import")
+          .max(2000, "Import is limited to 2000 rows at a time"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      const userId = ctx.session!.user.id;
+      const canSelfApprove = APPROVE_ROLES.includes(
+        ctx.session!.user.role as UserRole,
+      );
+      const initialStatus: RiskStatus = canSelfApprove
+        ? RiskStatus.OPEN
+        : RiskStatus.PENDING_REVIEW;
+
+      let created = 0;
+      let skipped = 0;
+      const errors: Array<{ title: string; message: string }> = [];
+
+      for (const row of input.rows) {
+        try {
+          // Dedupe by title within the org so re-importing an edited export
+          // doesn't create duplicates.
+          const existing = await ctx.db.risk.findFirst({
+            where: { organizationId, title: row.title },
+            select: { id: true },
+          });
+          if (existing) {
+            skipped++;
+            continue;
+          }
+
+          const identifier = await generateIdentifier(organizationId, "RISK");
+          const risk = await ctx.db.risk.create({
+            data: {
+              identifier,
+              title: row.title,
+              description: row.description,
+              severity: row.severity,
+              status: initialStatus,
+              affectedSystems: row.affectedSystems ?? null,
+              cveId: row.cveId ?? null,
+              findingSource: row.findingSource ?? null,
+              assetCriticality: row.assetCriticality ?? "MEDIUM",
+              discoveryDate: row.discoveryDate ? new Date(row.discoveryDate) : null,
+              createdById: userId,
+              organizationId,
+            },
+            select: { id: true },
+          });
+
+          // Match manual-create behaviour: an approver's own risk goes straight
+          // into the register; otherwise it waits for approval.
+          if (canSelfApprove) {
+            await promoteRiskToRegister(ctx.db, organizationId, risk.id, userId);
+          }
+          created++;
+        } catch (err) {
+          errors.push({
+            title: row.title,
+            message: err instanceof Error ? err.message : "Failed to create risk",
+          });
+        }
+      }
+
+      // Single summary audit entry (no dedicated IMPORT action in the enum).
+      void createAuditLog({
+        organizationId,
+        userId,
+        action: AuditAction.CREATE_RISK,
+        entityType: "Risk",
+        entityId: "CSV_IMPORT",
+        changes: {
+          before: null,
+          after: {
+            source: "CSV",
+            submitted: input.rows.length,
+            created,
+            skipped,
+            failed: errors.length,
+          },
+        },
+        actorName: ctx.session!.user.name ?? "Unknown",
+        actorRole: ctx.session!.user.role,
+      });
+
+      return { created, skipped, errors };
+    }),
+
   // ============================================================================
   // Story 15.5: MITRE ATT&CK Threat Modeling
   // ============================================================================
@@ -7606,6 +7736,7 @@ export const riskRouter = createTRPCRouter({
         score: number | null;
         scoreLabel: string | null;
         color: string;
+        overAppetite: boolean;
         href: string;
       }> };
     }
@@ -7646,6 +7777,8 @@ export const riskRouter = createTRPCRouter({
           score,
           scoreLabel: band?.label ?? null,
           color: band?.color ?? "#CCCCCC",
+          // Risk appetite: the (residual) band this risk lands in is flagged.
+          overAppetite: band?.overAppetite ?? false,
           href: `/risks/${r.id}`,
         };
       })

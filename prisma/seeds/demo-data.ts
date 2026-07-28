@@ -1883,5 +1883,95 @@ export async function seedDemoData(prisma: PrismaClient) {
     console.log(`  ⏭️  Risk assessments already seeded — skipping\n`);
   }
 
+  // --------------------------------------------------------------------------
+  // Origin-linked demo risks — one per remaining assessment-origin type so the
+  // risk detail "Identified in" link is exercised for the compliance, vendor,
+  // and questionnaire-question sources (the project source is already covered
+  // by demo-ra-risk-1/2 above). Self-guarding upserts by fixed id so this
+  // applies on a re-seed of an already-seeded database, outside the
+  // questionnaire guard.
+  // --------------------------------------------------------------------------
+  console.log('  Creating origin-linked demo risks (compliance / vendor / question)...');
+  const originQuestion = await prisma.riskAssessmentQuestion.findFirst({
+    where: { section: { questionnaireId: QUESTIONNAIRE_ID }, number: 'PR.DS-1' },
+    select: { id: true },
+  });
+
+  const originRisks = [
+    {
+      id: 'demo-origin-risk-comp',
+      identifier: 'RISK-2026-0111',
+      title: 'Unremediated ISO 27001 Control Gaps',
+      l: 3,
+      i: 2,
+      description:
+        'Partially-compliant access-control and encryption controls surfaced by the ISO 27001 annual assessment leave regulated data exposed pending remediation.',
+      findingSource: 'COMPLIANCE_ASSESSMENT' as const,
+      origin: { sourceComplianceAssessmentId: 'demo-ca-001' },
+    },
+    {
+      id: 'demo-origin-risk-vendor',
+      identifier: 'RISK-2026-0112',
+      title: 'Vendor Subprocessor Data-Residency Risk',
+      l: 2,
+      i: 3,
+      description:
+        "CloudGuard's annual security review flagged a subprocessor operating outside the approved data-residency region, risking a regulatory breach.",
+      findingSource: 'OTHER' as const,
+      origin: { vendorAssessmentId: 'demo-vas-001' },
+    },
+    ...(originQuestion
+      ? [
+          {
+            id: 'demo-origin-risk-question',
+            identifier: 'RISK-2026-0113',
+            title: 'Encryption-at-Rest Gap Raised During Interview',
+            l: 3,
+            i: 3,
+            description:
+              'Questionnaire item PR.DS-1 confirmed production databases are unencrypted at rest; raised directly as a risk during the assessment interview.',
+            findingSource: 'OTHER' as const,
+            origin: {
+              sourceRiskAssessmentQuestionId: originQuestion.id,
+              discoveryProjectId: PROJECT_WITH_Q_ID,
+            },
+          },
+        ]
+      : []),
+  ];
+
+  for (const r of originRisks) {
+    const s = scoreLI(r.l, r.i);
+    await prisma.risk.upsert({
+      where: { id: r.id },
+      update: {},
+      create: {
+        id: r.id,
+        organizationId: ORG_A,
+        identifier: r.identifier,
+        updatedAt: new Date(),
+        title: r.title,
+        description: r.description,
+        severity: s.severity,
+        status: 'OPEN',
+        findingSource: r.findingSource,
+        inherentLikelihood: r.l,
+        inherentImpact: r.i,
+        inherentScore: s.score,
+        inherentScoreLabel: s.label,
+        matrixVersionId: MATRIX_VERSION_ID,
+        isToxic: false,
+        useManualScore: false,
+        calculatedScore: s.score,
+        calculatedScoreLabel: s.label,
+        effectiveScore: s.score,
+        effectiveScoreLabel: s.label,
+        effectiveScoreSource: 'CALCULATED',
+        ...r.origin,
+      },
+    });
+  }
+  console.log(`  ✅ ${originRisks.length} origin-linked demo risks\n`);
+
   console.log('✅ Demo data seeding complete!\n');
 }

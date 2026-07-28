@@ -26,6 +26,8 @@ export interface HeatmapCell {
   score: number;
   color: string;
   label: string;
+  /** True when this cell's band is flagged as exceeding risk appetite. */
+  overAppetite: boolean;
 }
 
 export interface HeatmapGrid {
@@ -54,6 +56,46 @@ export function thresholdForScore(
     sorted.find((t) => score >= t.minValue && score <= t.maxValue) ??
     sorted[sorted.length - 1]
   );
+}
+
+/** A single boundary edge in CELL UNITS (multiply by cell size + offset to render). */
+export interface AppetiteBoundaryEdge {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/**
+ * Trace the outline of the over-appetite region on a grid. For each flagged
+ * cell, emits the edges it does NOT share with another flagged cell (grid edges
+ * included), producing a closed contour around the danger zone — correct for
+ * non-rectangular, holed, or disjoint regions since each boundary edge is
+ * emitted exactly once from the flagged side.
+ *
+ * `overGrid[r][c] === true` means the cell at row r, col c is over appetite.
+ * Endpoints are in cell units; the caller scales/offsets for SVG or canvas.
+ * Shared by the SVG (RiskScoreHeatmap) and canvas (CanvasHeatmap) renderers so
+ * the index math lives in one testable place.
+ */
+export function computeAppetiteBoundarySegments(
+  overGrid: boolean[][],
+): AppetiteBoundaryEdge[] {
+  const edges: AppetiteBoundaryEdge[] = [];
+  const isOver = (r: number, c: number) =>
+    r >= 0 && r < overGrid.length && c >= 0 && c < (overGrid[r]?.length ?? 0)
+      ? overGrid[r]![c]!
+      : false;
+  for (let r = 0; r < overGrid.length; r++) {
+    for (let c = 0; c < (overGrid[r]?.length ?? 0); c++) {
+      if (!overGrid[r]![c]) continue;
+      if (!isOver(r - 1, c)) edges.push({ x1: c, y1: r, x2: c + 1, y2: r });
+      if (!isOver(r + 1, c)) edges.push({ x1: c, y1: r + 1, x2: c + 1, y2: r + 1 });
+      if (!isOver(r, c - 1)) edges.push({ x1: c, y1: r, x2: c, y2: r + 1 });
+      if (!isOver(r, c + 1)) edges.push({ x1: c + 1, y1: r, x2: c + 1, y2: r + 1 });
+    }
+  }
+  return edges;
 }
 
 /** 2D normalized score for a likelihood/impact pair against the matrix scales. */
@@ -93,6 +135,7 @@ export function buildHeatmapGrid(
         score,
         color: t?.color ?? NEUTRAL,
         label: t?.label ?? "",
+        overAppetite: t?.overAppetite ?? false,
       } satisfies HeatmapCell;
     }),
   );

@@ -65,3 +65,5 @@ nul
 # Include Prisma Client
 ~node_modules/.prisma/client
 ~node_modules/@prisma/client
+# Playwright MCP session artifacts (snapshots, console logs, scratch files)
+.playwright-mcp/

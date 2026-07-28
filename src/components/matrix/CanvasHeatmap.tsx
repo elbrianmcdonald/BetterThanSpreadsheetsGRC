@@ -28,7 +28,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Download } from "lucide-react";
-import { getContrastColor, type ScaleLevel, type Threshold } from "@/lib/matrix";
+import {
+  getContrastColor,
+  computeAppetiteBoundarySegments,
+  type ScaleLevel,
+  type Threshold,
+} from "@/lib/matrix";
 
 interface CanvasHeatmapProps {
   scales: {
@@ -313,6 +318,55 @@ export function CanvasHeatmap({
           }
         });
       });
+
+      // Risk-appetite boundary: a closed contour around the flagged region
+      // (shared pure helper does the edge math; we scale cell-units into canvas
+      // coords). Dormant unless at least one band is flagged.
+      const overGrid = likelihoodLevels.map((likelihood) =>
+        impactLevels.map(
+          (impact) =>
+            getThreshold(
+              calculateScore(likelihood.value, impact.value, currentExposure?.value)
+            )?.overAppetite === true
+        )
+      );
+      if (overGrid.some((r) => r.some(Boolean))) {
+        const segs = computeAppetiteBoundarySegments(overGrid).map(
+          (e) =>
+            [
+              gridStartX + e.x1 * cellSize,
+              gridStartY + e.y1 * cellSize,
+              gridStartX + e.x2 * cellSize,
+              gridStartY + e.y2 * cellSize,
+            ] as [number, number, number, number]
+        );
+        const drawSegs = () =>
+          segs.forEach(([x1, y1, x2, y2]) => {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+          });
+        // Resolve --destructive from the live theme (canvas can't read CSS
+        // vars directly), falling back to the light-mode brick. Keeps the canvas
+        // boundary color in sync with the SVG one across light/dark.
+        const destructive =
+          getComputedStyle(ctx.canvas).getPropertyValue("--destructive").trim() ||
+          "#a3322f";
+        ctx.save();
+        ctx.lineCap = "round";
+        // Light casing so the line reads over any band color, then the dashed
+        // danger line.
+        ctx.setLineDash([]);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 5;
+        drawSegs();
+        ctx.setLineDash([6, 3]);
+        ctx.strokeStyle = destructive;
+        ctx.lineWidth = 2.5;
+        drawSegs();
+        ctx.restore();
+      }
     },
     [
       canvasDimensions,
@@ -639,6 +693,15 @@ export function CanvasHeatmap({
             </div>
           ))}
         </div>
+        {sortedThresholds.some((t) => t.overAppetite) && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span
+              className="inline-block w-5 border-t-2 border-dashed"
+              style={{ borderColor: "var(--destructive)" }}
+            />
+            Dashed line marks the risk-appetite boundary — bands flagged &ldquo;Over Appetite&rdquo;
+          </p>
+        )}
       </div>
 
       {/* Formula explanation (AC16) */}

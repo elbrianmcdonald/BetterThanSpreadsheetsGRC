@@ -35,7 +35,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { RiskRegisterStatus } from "@prisma/client";
+import { RiskRegisterStatus, UserRole } from "@prisma/client";
 
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { RiskRegisterStatusDropdown } from "@/components/risk/RiskRegisterStatusDropdown";
+import { RiskImportExport } from "@/components/risk/RiskImportExport";
 import { ToxicMark } from "@/components/pathway/ToxicMark";
 
 /** Status badge configuration */
@@ -106,6 +107,7 @@ export function RiskRegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
+  const utils = api.useUtils();
 
   // Filter state
   const [search, setSearch] = useState("");
@@ -145,6 +147,38 @@ export function RiskRegisterClient() {
     href: r.href,
   }));
 
+  // Risk appetite: the heatmap query resolves each risk's residual band (or
+  // inherent, when residual isn't assessed yet) against the matrix's flagged
+  // bands, producing the over-appetite risk-id set. That SAME set feeds both the
+  // card count and the click-through filter, so they stay in lockstep. The count
+  // is of register ENTRIES for those risks (a risk with no entry isn't counted),
+  // so the card's number always equals the rows the filter shows.
+  const appetiteConfigured = (heatmapData?.matrix?.thresholds ?? []).some(
+    (t) => t.overAppetite === true
+  );
+  const overAppetiteIds = useMemo(
+    () => (heatmapData?.rows ?? []).filter((r) => r.overAppetite).map((r) => r.id),
+    [heatmapData]
+  );
+  const { data: overAppetiteEntryCount } = api.riskRegister.getOverAppetiteCount.useQuery(
+    { riskIds: overAppetiteIds },
+    { enabled: appetiteConfigured && !!heatmapData }
+  );
+  const overAppetiteCount = overAppetiteEntryCount ?? 0;
+
+  // URL-driven so the card's click-through is shareable (?overAppetite=true).
+  const overAppetiteActive = searchParams.get("overAppetite") === "true";
+  const setOverAppetiteActive = useCallback(
+    (on: boolean) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (on) params.set("overAppetite", "true");
+      else params.delete("overAppetite");
+      const q = params.toString();
+      router.push(`/risks/register${q ? `?${q}` : ""}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
+
   // Fetch risk register entries with filters
   const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     api.riskRegister.list.useInfiniteQuery(
@@ -154,12 +188,22 @@ export function RiskRegisterClient() {
         ownerId: selectedOwner !== "all" ? selectedOwner : undefined,
         severityLabels: selectedSeverities.length > 0 ? selectedSeverities : undefined,
         search: search || undefined,
+        // Appetite click-through: filter to the over-appetite risk ids from the
+        // heatmap. While the filter is active but the heatmap hasn't resolved,
+        // the query is disabled (see `enabled` below), so this value is only
+        // consumed once `overAppetiteIds` is populated.
+        riskIds: overAppetiteActive && heatmapData ? overAppetiteIds : undefined,
         sortBy,
         sortOrder,
         limit: 20,
       },
       {
         getNextPageParam: (lastPage) => lastPage.nextCursor,
+        // When the appetite filter is active, hold the list query until the
+        // heatmap (source of the over-appetite ids) has resolved — otherwise it
+        // would run UNFILTERED and briefly render every entry under an active
+        // "Over appetite" chip on a shared ?overAppetite=true link.
+        enabled: !overAppetiteActive || !!heatmapData,
       }
     );
 
@@ -170,7 +214,7 @@ export function RiskRegisterClient() {
 
   // Check if any filters are active
   const hasFilters = selectedStatuses.length > 0 || selectedBusinessUnit !== "all" ||
-    selectedOwner !== "all" || selectedSeverities.length > 0 || search;
+    selectedOwner !== "all" || selectedSeverities.length > 0 || search || overAppetiteActive;
 
   // Clear all filters
   const clearFilters = useCallback(() => {
@@ -179,7 +223,8 @@ export function RiskRegisterClient() {
     setSelectedBusinessUnit("all");
     setSelectedOwner("all");
     setSelectedSeverities([]);
-  }, []);
+    setOverAppetiteActive(false);
+  }, [setOverAppetiteActive]);
 
   // Toggle status in multi-select
   const toggleStatus = useCallback((status: RiskRegisterStatus) => {
@@ -225,10 +270,25 @@ export function RiskRegisterClient() {
           title="Risk Register"
           icon={<ClipboardList />}
           description="Unified view of all organizational risks from assessments"
+          actions={
+            <RiskImportExport
+              search={search}
+              userRole={session?.user?.role as UserRole | undefined}
+              onImported={() => {
+                void utils.riskRegister.list.invalidate();
+                void utils.riskRegister.getStatusCounts.invalidate();
+                void utils.risk.heatmap.invalidate();
+              }}
+            />
+          }
         />
 
-      {/* Stats Cards (AC9, AC10) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      {/* Stats Cards (AC9, AC10) — 8th "Over Appetite" tile appears only when
+          the org has flagged at least one band, widening the row to 8. */}
+      <div className={cn(
+        "grid grid-cols-2 md:grid-cols-4 gap-4",
+        appetiteConfigured ? "lg:grid-cols-8" : "lg:grid-cols-7"
+      )}>
         <button type="button" className="block w-full text-left" onClick={() => setSelectedStatuses([])}>
           <StatTile
             label="Total"
@@ -284,6 +344,29 @@ export function RiskRegisterClient() {
           tone="critical"
           filled={(statusCounts?.overdue ?? 0) > 0}
         />
+
+        {/* Over Appetite — same tile size as the rest; only when the org has
+            flagged a band. Click toggles the ?overAppetite=true filter. */}
+        {appetiteConfigured && (
+          <button
+            type="button"
+            className={cn(
+              "block w-full rounded-lg text-left transition-shadow",
+              overAppetiteActive && "ring-2 ring-destructive ring-offset-2 ring-offset-background"
+            )}
+            onClick={() => setOverAppetiteActive(!overAppetiteActive)}
+            aria-pressed={overAppetiteActive}
+            title="Residual risk exceeding the organization's configured appetite. Based on each risk's residual score, or its inherent score where residual is not yet assessed."
+          >
+            <StatTile
+              label="Over Appetite"
+              value={overAppetiteCount}
+              tone="critical"
+              icon={<AlertTriangle />}
+              filled={overAppetiteCount > 0}
+            />
+          </button>
+        )}
       </div>
 
       {/* Risk Heatmap (parity with the Findings list) */}
@@ -436,6 +519,12 @@ export function RiskRegisterClient() {
               <X className="h-3 w-3 cursor-pointer" onClick={() => toggleSeverity(severity)} />
             </Badge>
           ))}
+          {overAppetiteActive && (
+            <Badge variant="secondary" className="gap-1">
+              Over appetite
+              <X className="h-3 w-3 cursor-pointer" onClick={() => setOverAppetiteActive(false)} />
+            </Badge>
+          )}
           {search && (
             <Badge variant="secondary" className="gap-1">
               Search: {search}

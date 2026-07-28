@@ -125,7 +125,7 @@ export function RemediationOptionsList({
           )}
         </CardTitle>
         {/* AC23: Add button for authorized users */}
-        {canAdd && <AddRemediationOptionDialog riskId={riskId} />}
+        {canAdd && <AddRemediationOptionDialog riskId={riskId} lockRisk />}
       </CardHeader>
       <CardContent>
         {/* AC34: Empty state */}
@@ -143,6 +143,7 @@ export function RemediationOptionsList({
             {canAdd && (
               <AddRemediationOptionDialog
                 riskId={riskId}
+                lockRisk
                 trigger={
                   <Button>
                     <Plus className="h-4 w-4 mr-1" />

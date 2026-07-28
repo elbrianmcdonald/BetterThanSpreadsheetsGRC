@@ -48,6 +48,11 @@ export interface Threshold {
   color: string;     // Hex color code, e.g., "#FF0000"
   sortOrder: number; // For consistent ordering (typically matches severity)
   slaDays: number;   // Story 11.1: Treatment SLA in days (e.g., Critical=7, High=14, Medium=30, Low=90)
+  // Risk appetite: when true, a risk whose (residual) score lands in this band
+  // is flagged as exceeding the organization's risk appetite. Optional so
+  // existing published matrix versions read as "not over appetite" with no
+  // migration. Set per-band in the admin matrix editor.
+  overAppetite?: boolean;
 }
 
 // ============================================================================
@@ -104,15 +109,35 @@ export const thresholdSchema = z.object({
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Invalid hex color format"),
   sortOrder: z.number().int().min(0, "Sort order must be non-negative"),
   slaDays: z.number().int().positive("SLA days must be a positive integer"),
+  // Risk appetite flag — optional (defaults to not-over). Must be declared here
+  // or Zod strips it on save and the flag never persists.
+  overAppetite: z.boolean().optional(),
 });
 
 /**
  * Threshold array validation
  * AC14-AC18: At least one threshold required
+ *
+ * Legacy/seeded matrix versions were stored without `sortOrder`, which made
+ * `updateVersion` reject any edit ("expected number, received undefined"). A
+ * preprocess backfills a missing `sortOrder` from each band's min-value rank
+ * (preserving any explicit values), so every inbound path self-heals at the
+ * validation boundary rather than requiring a data migration.
  */
-export const thresholdArraySchema = z
-  .array(thresholdSchema)
-  .min(1, "At least one threshold is required");
+export const thresholdArraySchema = z.preprocess((val) => {
+  if (!Array.isArray(val)) return val;
+  const items = val as Array<Record<string, unknown>>;
+  const rank = new Map<unknown, number>(
+    [...items]
+      .sort((a, b) => (Number(a?.minValue) || 0) - (Number(b?.minValue) || 0))
+      .map((t, i) => [t, i]),
+  );
+  return items.map((t) =>
+    t && typeof t === "object" && t.sortOrder == null
+      ? { ...t, sortOrder: rank.get(t) ?? 0 }
+      : t,
+  );
+}, z.array(thresholdSchema).min(1, "At least one threshold is required"));
 
 // ============================================================================
 // Type Guards and Utilities

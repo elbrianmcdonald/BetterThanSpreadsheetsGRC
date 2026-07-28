@@ -373,6 +373,9 @@ export function ThresholdEditor({
                 <TableHead className="w-40">Label</TableHead>
                 <TableHead className="w-24">Color</TableHead>
                 <TableHead className="w-24">SLA Days</TableHead> {/* Story 11.6 AC1 */}
+                <TableHead className="w-28" title="Risks landing in this band are flagged as exceeding the organization's risk appetite">
+                  Over Appetite
+                </TableHead>
                 {!readOnly && <TableHead className="w-16"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -393,7 +396,7 @@ export function ThresholdEditor({
               {sortedThresholds.length === 0 && (
                 <TableRow>
                   <td
-                    colSpan={readOnly ? 5 : 6}
+                    colSpan={readOnly ? 6 : 7}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No thresholds defined. Click &quot;Add Threshold&quot; or apply a template.

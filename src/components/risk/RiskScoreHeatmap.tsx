@@ -14,7 +14,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Grid3X3 } from "lucide-react";
 
-import { buildHeatmapGrid, getContrastColor } from "@/lib/matrix";
+import { buildHeatmapGrid, getContrastColor, computeAppetiteBoundarySegments } from "@/lib/matrix";
 import type { MatrixScales, Threshold } from "@/lib/matrix/types";
 import {
   Card,
@@ -113,6 +113,20 @@ export function RiskScoreHeatmap({
   const gh = cell * grid.rows.length;
   const W = pad + gw;
   const H = gh + pad;
+
+  // Risk-appetite boundary: a closed contour around the flagged region (shared
+  // pure helper does the edge math; we just scale cell-units into SVG coords).
+  // Empty unless the matrix has at least one flagged band, so the heatmap is
+  // unchanged for orgs that haven't configured an appetite.
+  const appetiteSegments = useMemo(() => {
+    const overGrid = grid.cells.map((row) => row.map((c) => c.overAppetite));
+    return computeAppetiteBoundarySegments(overGrid).map((e) => ({
+      x1: pad + e.x1 * cell,
+      y1: e.y1 * cell,
+      x2: pad + e.x2 * cell,
+      y2: e.y2 * cell,
+    }));
+  }, [grid, cell, pad]);
 
   return (
     <Card>
@@ -217,6 +231,39 @@ export function RiskScoreHeatmap({
                   }),
                 )}
 
+                {/* Risk-appetite boundary contour (drawn above cell fills). A
+                    light casing keeps it legible over any band color; the dashed
+                    danger line reads as a distinct channel from cell borders. */}
+                {appetiteSegments.length > 0 && (
+                  <g aria-hidden="true">
+                    {appetiteSegments.map((s, i) => (
+                      <line
+                        key={`ac-${i}`}
+                        x1={s.x1}
+                        y1={s.y1}
+                        x2={s.x2}
+                        y2={s.y2}
+                        stroke="var(--card)"
+                        strokeWidth={5}
+                        strokeLinecap="round"
+                      />
+                    ))}
+                    {appetiteSegments.map((s, i) => (
+                      <line
+                        key={`al-${i}`}
+                        x1={s.x1}
+                        y1={s.y1}
+                        x2={s.x2}
+                        y2={s.y2}
+                        stroke="var(--destructive)"
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                        strokeDasharray="6 3"
+                      />
+                    ))}
+                  </g>
+                )}
+
                 {/* Axis tick labels: impact down the left, likelihood across the bottom. */}
                 {grid.rows.map((r, rowIdx) => (
                   <text
@@ -250,6 +297,15 @@ export function RiskScoreHeatmap({
               <div className="eyebrow mt-1 text-center">
                 Likelihood → · Impact ↑
               </div>
+              {appetiteSegments.length > 0 && (
+                <div className="mt-1.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                  <span
+                    className="inline-block w-5 border-t-2 border-dashed"
+                    style={{ borderColor: "var(--destructive)" }}
+                  />
+                  Dashed line marks the risk-appetite boundary
+                </div>
+              )}
             </div>
 
             {/* Ranked list */}

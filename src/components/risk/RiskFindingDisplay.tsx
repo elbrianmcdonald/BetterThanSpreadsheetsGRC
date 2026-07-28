@@ -17,10 +17,12 @@
  */
 
 import { useState } from "react";
+import Link from "next/link";
 import { format } from "date-fns";
 import {
   ChevronDown,
   ChevronRight,
+  ClipboardList,
   ExternalLink,
   Server,
   Calendar,
@@ -36,6 +38,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import type { RiskOrigin } from "@/lib/risk/origin";
 import type { Severity, RiskFindingSource, RiskStatus } from "@prisma/client";
 
 /**
@@ -104,6 +107,12 @@ interface RiskFindingDisplayProps {
     mitigatingControlsNeeded?: string | null;
     preventativeControlsNeeded?: string | null;
   };
+  /**
+   * The assessment this risk was identified in, resolved via resolveRiskOrigin.
+   * Rendered as a link (or plain text when href is null); omitted when the risk
+   * has no assessment origin.
+   */
+  origin?: RiskOrigin | null;
   /** Whether to show the header with title */
   showHeader?: boolean;
   /** Additional CSS classes */
@@ -137,6 +146,7 @@ function getCveUrl(cveId: string): string {
 
 export function RiskFindingDisplay({
   risk,
+  origin,
   showHeader = true,
   className,
 }: RiskFindingDisplayProps) {
@@ -169,6 +179,29 @@ export function RiskFindingDisplay({
       <Card className="bg-muted/30">
         <CardContent className="p-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            {/* Assessment origin — "Identified in" the assessment that created
+                this risk. A navigable link when the record has a page, else
+                plain text. Absent for manually-created / imported risks. */}
+            {origin && (
+              <div className="space-y-1">
+                <p className="text-muted-foreground flex items-center gap-1">
+                  <ClipboardList className="h-3 w-3" />
+                  Identified in
+                </p>
+                {origin.href ? (
+                  <Link
+                    href={origin.href}
+                    className="text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    {origin.label}
+                    <ExternalLink className="h-3 w-3 shrink-0" />
+                  </Link>
+                ) : (
+                  <p className="font-medium">{origin.label}</p>
+                )}
+              </div>
+            )}
+
             {/* AC26: CVE ID as clickable link */}
             {risk.cveId && (
               <div className="space-y-1">
@@ -229,7 +262,7 @@ export function RiskFindingDisplay({
       {/* AC23: Description as rendered markdown */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Finding Description</CardTitle>
+          <CardTitle className="text-lg">Risk Statement</CardTitle>
         </CardHeader>
         <CardContent>
           <MarkdownPreview content={risk.description} />

@@ -32,6 +32,8 @@ import { RiskDetailTabs, useActiveTab } from "@/components/risk/RiskDetailTabs";
 import { RiskMetadataSidebar } from "@/components/risk/RiskMetadataSidebar";
 import { RiskActionsSidebar } from "@/components/risk/RiskActionsSidebar";
 
+import { resolveRiskOrigin } from "@/lib/risk/origin";
+
 // Tab content components
 import { RiskFindingDisplay } from "@/components/risk/RiskFindingDisplay";
 import { RiskEvidenceSection } from "@/components/risk/RiskEvidenceSection";
@@ -277,6 +279,7 @@ export function RiskDetailClient({ riskId }: RiskDetailClientProps) {
                 mitigatingControlsNeeded: risk.mitigatingControlsNeeded,
                 preventativeControlsNeeded: risk.preventativeControlsNeeded,
               }}
+              origin={resolveRiskOrigin(risk)}
               showHeader={false}
             />
             {/* Story 22.1: Effective severity (derived from linked findings) */}

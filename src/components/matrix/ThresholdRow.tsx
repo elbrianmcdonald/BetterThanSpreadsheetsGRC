@@ -16,6 +16,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { TableCell, TableRow } from "@/components/ui/table";
 import {
   Popover,
@@ -265,6 +266,22 @@ export function ThresholdRow({
             step={1}
             className="w-20 font-mono text-sm"
             placeholder="Days"
+          />
+        )}
+      </TableCell>
+
+      {/* Over Appetite — flags risks that land in this band as exceeding the
+          organization's risk appetite (shown on the register heatmap + count). */}
+      <TableCell>
+        {readOnly ? (
+          <span className="text-sm">{threshold.overAppetite ? "Yes" : "—"}</span>
+        ) : (
+          <Checkbox
+            checked={threshold.overAppetite ?? false}
+            onCheckedChange={(checked) =>
+              onChange({ overAppetite: checked === true })
+            }
+            aria-label={`Flag ${threshold.label || "this band"} as exceeding risk appetite`}
           />
         )}
       </TableCell>

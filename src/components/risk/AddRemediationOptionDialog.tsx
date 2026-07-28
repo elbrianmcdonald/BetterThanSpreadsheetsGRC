@@ -133,6 +133,12 @@ interface AddRemediationOptionDialogProps {
   onSuccess?: () => void;
   /** Custom trigger element (optional) */
   trigger?: React.ReactNode;
+  /**
+   * When true, hide the "Link to Risk" picker and always attach the option to
+   * `riskId`. Used when adding from within a specific risk's Remediation tab,
+   * where the target risk is unambiguous and should not be re-selected.
+   */
+  lockRisk?: boolean;
 }
 
 /**
@@ -160,6 +166,7 @@ export function AddRemediationOptionDialog({
   riskId,
   onSuccess,
   trigger,
+  lockRisk = false,
 }: AddRemediationOptionDialogProps) {
   const [open, setOpen] = useState(false);
   const [costDisplay, setCostDisplay] = useState("");
@@ -261,26 +268,33 @@ export function AddRemediationOptionDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Link to a specific Risk (defaults to the current page's risk) */}
-            <FormField
-              control={form.control}
-              name="riskId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Link to Risk *</FormLabel>
-                  <FormControl>
-                    <RiskPickerCombobox
-                      value={field.value}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    The remediation option will be attached to the selected risk.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/*
+              Link to a specific Risk (defaults to the current page's risk).
+              When `lockRisk` is set, the target risk is unambiguous (we're
+              inside that risk's Remediation tab), so we skip the picker and
+              silently attach to `riskId`.
+            */}
+            {!lockRisk && (
+              <FormField
+                control={form.control}
+                name="riskId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Link to Risk *</FormLabel>
+                    <FormControl>
+                      <RiskPickerCombobox
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      The remediation option will be attached to the selected risk.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Title Field */}
             <FormField

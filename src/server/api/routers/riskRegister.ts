@@ -121,6 +121,12 @@ export const riskRegisterRouter = createTRPCRouter({
         severityLabels: z.array(z.string()).optional(),
         // Story 16.5: Search by ID or title (AC15)
         search: z.string().optional(),
+        // Risk appetite: restrict to entries whose backing risk is over
+        // appetite. The set of over-appetite risk ids is computed once by
+        // risk.heatmap (residual band vs the matrix's flagged bands) and passed
+        // in. The same set feeds getOverAppetiteCount, so the card's number and
+        // these filtered rows match exactly.
+        riskIds: z.array(z.string()).optional(),
         // Story 16.5: Sort options (AC6)
         sortBy: z.enum(["createdAt", "dueDate", "severity"]).default("createdAt"),
         sortOrder: z.enum(["asc", "desc"]).default("desc"),
@@ -177,6 +183,10 @@ export const riskRegisterRouter = createTRPCRouter({
         ...(input.status && input.status.length > 0 && { status: { in: input.status } }),
         ...(input.ownerId && { ownerId: input.ownerId }),
         ...(hasAssessmentFilter && { assessment: { is: assessmentSubFilter } }),
+        // Risk appetite click-through: entries whose backing risk is over
+        // appetite. Assessment-backed (finding) entries have no risk row, so
+        // they are correctly excluded from an appetite-scoped view.
+        ...(input.riskIds && { risk: { is: { id: { in: input.riskIds } } } }),
         ...(searchClause ?? {}),
       };
 
@@ -318,6 +328,28 @@ export const riskRegisterRouter = createTRPCRouter({
         entries: serializedEntries,
         nextCursor,
       };
+    }),
+
+  /**
+   * Count register entries whose backing risk is in the given set.
+   *
+   * Powers the risk-appetite card: the client passes the SAME over-appetite
+   * risk-id set it uses for the click-through filter, so the card's number
+   * equals the total rows that filter shows across all pages. A risk that is
+   * over appetite but has no register entry is not counted (RiskRegisterEntry
+   * has at most one row per risk), keeping the card and the table in lockstep.
+   */
+  getOverAppetiteCount: organizationProcedure
+    .input(z.object({ riskIds: z.array(z.string()) }))
+    .query(async ({ ctx, input }) => {
+      const organizationId = ctx.organizationId!;
+      if (input.riskIds.length === 0) return 0;
+      return ctx.db.riskRegisterEntry.count({
+        where: {
+          organizationId,
+          risk: { is: { id: { in: input.riskIds } } },
+        },
+      });
     }),
 
   /**
